@@ -65,7 +65,8 @@ def procesar_pedido(pedido, carrito):
 # Función para mostrar el carrito y calcular el total
 def mostrar_carrito(carrito):
     if not carrito:
-        return "Tu carrito está vacío."
+        print("Tu carrito está vacío.")
+        return 0
     
     total = sum(precio for _, precio in carrito)
     print("\nEste es tu pedido hasta ahora:")
