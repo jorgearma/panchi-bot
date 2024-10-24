@@ -1,7 +1,11 @@
+from twilio.rest import Client
+from flask import Flask, request
+import urllib.parse  # Para codificar la dirección en una URL
+
+# Importa tus funciones personalizadas
 from menu import mostrar_menu, procesar_pedido, mostrar_carrito
 from openai_api import obtener_respuesta_openai
-
-import urllib.parse  # Para codificar la dirección en una URL
+from pago import preguntar_metodo_pago, procesar_pago
 
 # Simulamos una "base de datos" de usuarios registrados.
 usuarios_registrados = {
@@ -9,106 +13,70 @@ usuarios_registrados = {
     # Puedes agregar más usuarios registrados aquí.
 }
 
-# Base de datos de calles válidas
+app = Flask(__name__)
+carrito = {}
 
-# Función para generar el enlace de Google Maps a partir de una dirección
-def generar_enlace_google_maps(direccion):
-    direccion_codificada = urllib.parse.quote(direccion)
-    url = f"https://www.google.com/maps/place/{direccion_codificada},+16400+Taranc%C3%B3n,+Cuenca,+Espa%C3%B1a/"
-    return url
+# Credenciales de Twilio (reemplaza con tus credenciales)
+TWILIO_ACCOUNT_SID = 'AC01bddb839117c02af0a1fe2ade2e1d4e'
+TWILIO_AUTH_TOKEN = '6817bfa1828c017d726821d6f6934f2a'
+TWILIO_PHONE_NUMBER = 'whatsapp:+14155238886'  # Reemplaza con el número de WhatsApp de Twilio
 
-# Función para registrar un nuevo usuario
-def registrar_usuario(numero):
-    print("\nNo estás registrado, por favor proporciona tus datos para continuar.")
-    nombre = input("Por favor, ingresa tu nombre: ")
+client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+destinatario = '+4531822092'
+def enviar_mensaje_whatsapp(mensaje, destinatario):
+    client.messages.create(
+        body=mensaje,
+        from_=TWILIO_PHONE_NUMBER,
+        to=f'whatsapp:+4531822092'
+    )
+
+
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    numero_cliente = request.form['From']
+    mensaje_cliente = request.form['Body']
+
+    print(f"Mensaje recibido de {numero_cliente}: {mensaje_cliente}") 
     
-    # Comprobación de dirección válida
-    direccion = ingresar_direccion()
+    # Identificamos al usuario por su número de WhatsApp
+    if numero_cliente not in carrito:
+        carrito[numero_cliente] = []
     
-    # Guardamos los datos del nuevo usuario en nuestra "base de datos"
-    usuarios_registrados[numero] = {
-        "nombre": nombre,
-        "numero": numero,
-        "direccion": direccion
-    }
+    if mensaje_cliente.lower() in ["revisar pedido", "ver carrito", "revisar", "carrito"]:
+        contenido_carrito = mostrar_carrito(carrito[numero_cliente])
+        enviar_mensaje_whatsapp(contenido_carrito, numero_cliente)
+        return "Mensaje enviado", 200
     
-    print(f"\n¡Gracias {nombre}! Ahora estás registrado.\n")
-    return usuarios_registrados[numero]
-
-# Función para comprobar si el usuario ya está registrado
-def comprobar_usuario():
-    numero = input("Por favor, ingresa tu número de teléfono: ").strip()  # Limpiamos espacios extra
-    
-    if numero in usuarios_registrados:
-        usuario = usuarios_registrados[numero]
-        print(f"\n¡Bienvenido de nuevo, {usuario['nombre']}!")
-        return usuario
-    else:
-        return registrar_usuario(numero)
-
-# Función para ingresar y validar la dirección
-def ingresar_direccion():
-    while True:
-        calle = input("Ingresa el nombre de tu calle: ").strip()
-
-        # Generamos el enlace de Google Maps
-        enlace_maps = generar_enlace_google_maps(calle)
-        print(f"\nAquí tienes un enlace de Google Maps con la ubicación de tu calle: {enlace_maps}")
-
-        # Preguntamos si la dirección es correcta
-        confirmacion = input("¿Es esta tu dirección? Escribe 'si' para confirmar o 'no' para volver a ingresarla: ").strip().lower()
-
-        if confirmacion == 'si':
-            print(f"\nDirección válida: {calle}")
-            return calle  # Si es correcta, la retornamos
+    if mensaje_cliente.lower() in ["salir", "nada más", "eso es todo", "pagar"]:
+        if not carrito[numero_cliente]:
+            enviar_mensaje_whatsapp("No tienes ningún pedido. ¡Gracias y que tenga un buen día!", numero_cliente)
         else:
-            print("\nVamos a intentar de nuevo.\n")
-
-carrito = []
-
-def camarero_bot():
-    print("¡Bienvenido al restaurante! Soy su camarero virtual.")
-    
-    # Comprobamos si el usuario ya está registrado
-    usuario = comprobar_usuario()
-    
-    print("\nAquí tienes nuestro menú:\n")
-    mostrar_menu()
-    
-    
-    
-    while True:
-        cliente_input = input("Cliente: ")
-        
-        if cliente_input.lower() in ["revisar pedido", "ver carrito", "revisar", "carrito"]:
-            mostrar_carrito(carrito)
-            continue
-        
-        if cliente_input.lower() in ["salir", "nada más", "eso es todo", "pagar"]:
-            if not carrito:
-                print("Camarero: No tienes ningún pedido. ¡Gracias y que tenga un buen día!")
+            total = mostrar_carrito(carrito[numero_cliente])
+            confirmar = enviar_mensaje_whatsapp("\n¿Te gustaría proceder al pago? (sí/no):", numero_cliente)
+            if confirmar.lower() == "si":
+                metodo_pago = preguntar_metodo_pago()
+                procesar_pago(total, metodo_pago)
+                enviar_mensaje_whatsapp("Pago realizado con éxito. ¡Gracias por tu compra!", numero_cliente)
             else:
-                total = mostrar_carrito(carrito)
-                confirmar = input("\n¿Te gustaría proceder al pago? (sí/no): ").lower()
-                if confirmar == "sí":
-                    print(f"Camarero: ¡Perfecto! El total de tu pedido es ${total:.2f}. Gracias por tu compra, {usuario['nombre']}.\nTu pedido será enviado a {usuario['direccion']}.")
-                else:
-                    print("Camarero: Pedido cancelado. ¡Que tenga un buen día!")
-            break
-        
-        # Procesa el pedido
-        respuesta_camarero = procesar_pedido(cliente_input, carrito)
-        
-        if "no reconocí ningún ítem" in respuesta_camarero:
-            # Si no se reconoció un ítem, se asume que el cliente hizo una pregunta
-            respuesta_openai = obtener_respuesta_openai(cliente_input,carrito)
-            print(f"Camarero: {respuesta_openai}")
-            
-        else:
-            print(f"Camarero: {respuesta_camarero}")
-            if "Has agregado" in respuesta_camarero:
-                mostrar_carrito(carrito)
+                enviar_mensaje_whatsapp("Pedido cancelado. ¡Que tenga un buen día!", numero_cliente)
+        carrito.pop(numero_cliente, None)
+        return "Mensaje enviado", 200
 
-# Ejecuta el bot
+    # Procesa el pedido
+    respuesta_camarero = procesar_pedido(mensaje_cliente, carrito[numero_cliente])
+    
+    if "no reconocí ningún ítem" in respuesta_camarero:
+        # Si no se reconoció un ítem, se asume que el cliente hizo una pregunta
+        respuesta_openai = obtener_respuesta_openai(mensaje_cliente, carrito[numero_cliente])
+        enviar_mensaje_whatsapp(f"Camarero: {respuesta_openai}", numero_cliente)
+    else:
+        enviar_mensaje_whatsapp(f"Camarero: {respuesta_camarero}", numero_cliente)
+        if "Has agregado" in respuesta_camarero:
+            contenido_carrito = mostrar_carrito(carrito[numero_cliente])
+            enviar_mensaje_whatsapp(contenido_carrito, numero_cliente)
+
+    return "Mensaje recibido", 200
+
 if __name__ == "__main__":
-    camarero_bot()
+    app.run(debug=True, port=5000)
