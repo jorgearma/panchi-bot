@@ -37,13 +37,14 @@ def limpiar_texto(texto):
 
 # Función para mostrar el menú con precios
 def mostrar_menu():
-    print("Aquí tienes el menú del restaurante:\n")
+    resultado = "Aquí tienes el menú del restaurante:\n\n"
     for categoria, items in menu.items():
-        print(f"{categoria.capitalize()}:")
+        resultado += f"{categoria.capitalize()}:\n"
         for item, precio in items.items():
             item_limpio = limpiar_texto(item)
-            print(f" - {item_limpio}: ${precio:.2f}")
-        print()
+            resultado += f" - {item_limpio}: ${precio:.2f}\n"
+        resultado += "\n"
+    return resultado
 
 # Función para procesar el pedido del cliente
 def procesar_pedido(pedido, carrito):
@@ -63,15 +64,20 @@ def procesar_pedido(pedido, carrito):
         return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pedido. Por favor elige algo de lo que ofrecemos."
 
 # Función para mostrar el carrito y calcular el total
-def mostrar_carrito(carrito):
+def mostrar_carrito_sin_mensaje(carrito):
     if not carrito:
-        print("Tu carrito está vacío.")
-        return 0
+        return "Tu carrito está vacío.\n"
     
     total = sum(precio for _, precio in carrito)
-    print("\nEste es tu pedido hasta ahora:")
+    resultado = "\nEste es tu pedido hasta ahora:\n"
     for item, precio in carrito:
-        print(f" - {item}: ${precio:.2f}")
-    print(f"\nTotal a pagar: ${total:.2f}")
-    print(f"\n¿Quieres sumar algo más? Escribe 'pagar' para proceder al pago.")
-    return total
+        resultado += f" - {item}: ${precio:.2f}\n"
+    resultado += f"\nTotal a pagar: ${total:.2f}\n"
+    
+    
+    return resultado, total
+
+def mostrar_carrito(carrito):
+    resultado, total = mostrar_carrito_sin_mensaje(carrito)
+    resultado += "\n¿Quieres sumar algo más? Escribe 'pagar' para proceder al pago."
+    return resultado, total
