@@ -1,29 +1,31 @@
 # archivo: pago.py
 
-def preguntar_metodo_pago():
+def preguntar_metodo_pago(numero_cliente, enviar_mensaje_whatsapp):
     """
-    Pregunta al cliente si pagará en efectivo o con tarjeta.
+    Pregunta al cliente si pagará en efectivo o con tarjeta a través de WhatsApp.
+    
+    Esta función no espera respuesta, solo envía el mensaje. 
+    La respuesta será manejada en el webhook del archivo principal.
     """
-    while True:
-        metodo_pago = input("¿Te gustaría pagar en efectivo o con tarjeta? (escribe 'efectivo' o 'tarjeta'): ").strip().lower()
-        
-        if metodo_pago in ['efectivo', 'tarjeta']:
-            return metodo_pago
-        else:
-            print("Opción no válida. Por favor, elige 'efectivo' o 'tarjeta'.")
+    mensaje = "¿Te gustaría pagar en efectivo o con tarjeta? (responde 'efectivo' o 'tarjeta')"
+    enviar_mensaje_whatsapp(mensaje, numero_cliente)
 
-def procesar_pago(total, metodo_pago):
+def procesar_pago(total, metodo_pago, numero_cliente, enviar_mensaje_whatsapp):
     """
-    Confirma el pago según el método seleccionado por el cliente.
+    Procesa el pago según el método seleccionado y envía la confirmación por WhatsApp.
+    
+    Este es un procesamiento simulado para el pago en efectivo o tarjeta.
     """
     if metodo_pago == 'efectivo':
-        print(f"El total es de ${total:.2f}. El pago se realizará en efectivo al momento de la entrega.")
+        mensaje_pago = f"El total es de ${total:.2f}. El pago se realizará en efectivo al momento de la entrega."
     elif metodo_pago == 'tarjeta':
-        # Simulación de cobro con tarjeta (puedes expandir esto si quisieras agregar más lógica)
-        print(f"El total es de ${total:.2f}. El pago se procesará mediante tarjeta en el momento de la entrega.")
+        # Aquí podrías agregar más lógica si fuera necesario para simular el procesamiento de tarjetas.
+        mensaje_pago = f"El total es de ${total:.2f}. El pago se procesará mediante tarjeta en el momento de la entrega."
     else:
-        print("Método de pago no reconocido.")
-    
-    print("Tu pedido ha sido registrado con éxito. ¡Gracias por tu compra!\n")
+        mensaje_pago = "Método de pago no reconocido."
 
-# Puedes añadir funciones adicionales para mejorar el proceso de pago, si es necesario.
+    # Enviar el mensaje con la información del pago al cliente
+    enviar_mensaje_whatsapp(mensaje_pago, numero_cliente)
+
+    # Confirmar al cliente que su pedido ha sido registrado correctamente
+    enviar_mensaje_whatsapp("Tu pedido ha sido registrado con éxito. ¡Gracias por tu compra!\n", numero_cliente)
