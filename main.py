@@ -7,7 +7,7 @@ from openai_api import obtener_respuesta_openai
 from pago import preguntar_metodo_pago, procesar_pago
 
 usuarios_registrados = {
-    "whatsapp:+4531822092": {"nombre": "pendejo", "numero": "whatsapp:+4531822092", "direccion": "Calle Falsa 123"},
+    "whatsapp:+453182209": {"nombre": "pendejo", "numero": "whatsapp:+4531822092", "direccion": "Calle Falsa 123"},
 }
 
 app = Flask(__name__)
@@ -21,6 +21,8 @@ TWILIO_PHONE_NUMBER = 'whatsapp:+14155238886'
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 def enviar_mensaje_whatsapp(mensaje, destinatario):
+
+    print(f"bot {mensaje}")
     client.messages.create(
         body=mensaje,
         from_=TWILIO_PHONE_NUMBER,
@@ -46,6 +48,9 @@ def webhook():
     mensaje_cliente = request.form['Body'].strip().lower()
 
     print(f"Mensaje recibido de {numero_cliente}: {mensaje_cliente}")
+    
+    print(carrito)
+    print(usuarios_registrados)
 
     if numero_cliente not in usuarios_registrados:
         return manejar_registro(numero_cliente, mensaje_cliente)
@@ -63,7 +68,7 @@ def manejar_registro(numero_cliente, mensaje_cliente):
 
     elif estado["estado"] == "esperando_nombre":
         estado_usuarios[numero_cliente] = {"estado": "esperando_direccion", "nombre": mensaje_cliente}
-        enviar_mensaje_whatsapp("Gracias. Ahora, por favor envía tu dirección (solo el nombre de la calle).", numero_cliente)
+        enviar_mensaje_whatsapp("Gracias. Ahora, por favor envía tu dirección. EJEMPLO: calle los labradores 3 1b", numero_cliente)
         return "Solicitud de dirección enviada", 200
 
     elif estado["estado"] == "esperando_direccion":
@@ -77,8 +82,10 @@ def manejar_registro(numero_cliente, mensaje_cliente):
     elif estado["estado"] == "confirmando_direccion":
         if mensaje_cliente == 'si':
             registrar_usuario(numero_cliente, estado["nombre"], estado["direccion"])
-            enviar_mensaje_whatsapp(f"¡Gracias {estado['nombre']}! Ahora estás registrado. ¿Te gustaría ver nuestro menú?", numero_cliente)
-            del estado_usuarios[numero_cliente]
+            menu_despues_registro = mostrar_menu()
+            enviar_mensaje_whatsapp(f"¡Gracias {estado['nombre']}! Ahora estás registrado. {menu_despues_registro}", numero_cliente)
+            estado_usuarios[numero_cliente] = {"recien_registrado": True}
+            carrito[numero_cliente] = []
             return "Usuario registrado", 200
         else:
             estado_usuarios[numero_cliente]["estado"] = "esperando_direccion"
@@ -86,11 +93,17 @@ def manejar_registro(numero_cliente, mensaje_cliente):
             return "Solicitud de dirección enviada de nuevo", 200
 
 def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
-    if numero_cliente not in carrito:
-        carrito[numero_cliente] = []
-        menu_texto = mostrar_menu()
-        enviar_mensaje_whatsapp(f"¡Hola {usuarios_registrados[numero_cliente]['nombre']}! Bienvenido de nuevo. {menu_texto}", numero_cliente)
-        return "Mensaje enviado", 200
+    # Verificar si el usuario recién se registró
+    if estado_usuarios.get(numero_cliente, {}).get("recien_registrado"):
+        # Eliminar el indicador para futuras interacciones
+        del estado_usuarios[numero_cliente]["recien_registrado"]
+    else:
+        # Envía el menú solo si el usuario no es recién registrado
+        if numero_cliente not in carrito:
+            carrito[numero_cliente] = []
+            menu_texto = mostrar_menu()
+            enviar_mensaje_whatsapp(f"¡Hola {usuarios_registrados[numero_cliente]['nombre']}! Bienvenido de nuevo. {menu_texto}", numero_cliente)
+            return "Mensaje enviado", 200
 
     if mensaje_cliente in ["revisar pedido", "ver carrito", "revisar", "carrito"]:
         contenido_carrito = mostrar_carrito(carrito[numero_cliente])
