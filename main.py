@@ -7,7 +7,7 @@ from openai_api import obtener_respuesta_openai
 from pago import preguntar_metodo_pago, procesar_pago
 
 usuarios_registrados = {
-    "whatsapp:+4531822092": {"nombre": "pendejo", "numero": "whatsapp:+4531822092", "direccion": "Calle Falsa 123"},
+    "whatsapp:+453182209": {"nombre": "pendejo", "numero": "whatsapp:+4531822092", "direccion": "Calle Falsa 123"},
 }
 
 app = Flask(__name__)
@@ -21,6 +21,8 @@ TWILIO_PHONE_NUMBER = 'whatsapp:+14155238886'
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 def enviar_mensaje_whatsapp(mensaje, destinatario):
+
+    print(f"bot {mensaje}")
     client.messages.create(
         body=mensaje,
         from_=TWILIO_PHONE_NUMBER,
@@ -46,6 +48,9 @@ def webhook():
     mensaje_cliente = request.form['Body'].strip().lower()
 
     print(f"Mensaje recibido de {numero_cliente}: {mensaje_cliente}")
+    
+    print(carrito)
+    print(usuarios_registrados)
 
     if numero_cliente not in usuarios_registrados:
         return manejar_registro(numero_cliente, mensaje_cliente)
