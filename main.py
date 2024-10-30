@@ -1,7 +1,7 @@
 from flask import Flask, request
 from controllers.registro import manejar_registro
 from controllers.mensajes_registrados import manejar_mensajes_registrados
-from data.usuarios import usuarios_registrados
+from data.usuarios import usuarios_registrados , guardar_usuario_bd
 from data.carrito import carrito
 from data.estado_usuarios import estado_usuarios
 import pyodbc
@@ -23,28 +23,34 @@ def conectar_bd():
         print("Error al conectar con la base de datos:", e)
         return None
 
-def guardar_usuario_bd(numero, nombre, direccion):
-    connection = conectar_bd()
-    if connection:
-        try:
-            cursor = connection.cursor()
-            cursor.execute("""
-                INSERT INTO UsuariosRegistrados (nombre, numero, direccion)
-                VALUES (?, ?, ?)
-            """, (nombre, numero, direccion))
-            connection.commit()
-            print(f"Usuario {nombre} guardado en la base de datos.")
-        except Exception as e:
-            print("Error al guardar el usuario en la base de datos:", e)
-        finally:
+
+def verificar_usuario_bd(numero_cliente):
+    try:
+        connection = pyodbc.connect(
+            "DRIVER={ODBC Driver 17 for SQL Server};"
+            "SERVER=localhost,1433;"
+            "DATABASE=pruebabot;"
+            "UID=sa;"
+            "PWD=Jorgejorge1"
+        )
+        cursor = connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE numero_cliente = ?", numero_cliente)
+        result = cursor.fetchone()
+        return result[0] > 0
+    except Exception as e:
+        print("Error al verificar el usuario en la base de datos:", e)
+        return False
+    finally:
+        if connection:
             connection.close()
-            
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     numero_cliente = request.form['From']
     mensaje_cliente = request.form['Body'].strip().lower()
 
-    if numero_cliente not in usuarios_registrados:
+    # Verificar si el usuario está registrado en la base de datos
+    if not verificar_usuario_bd(numero_cliente):
         return manejar_registro(numero_cliente, mensaje_cliente)
     else:
         return manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
