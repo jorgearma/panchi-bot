@@ -31,7 +31,7 @@ def manejar_registro(numero_cliente, mensaje_cliente):
 
     elif estado["estado"] == "confirmando_direccion":
         if mensaje_cliente == 'si':
-            registrar_usuario(numero_cliente, estado["nombre"], estado["direccion"],guardar_usuario_bd)
+            registrar_usuario(numero_cliente, estado["nombre"], estado["direccion"])
             menu_despues_registro = mostrar_menu()
             enviar_mensaje_whatsapp(f"¡Gracias {estado['nombre']}! Ahora estás registrado. {menu_despues_registro}", numero_cliente)
             estado_usuarios[numero_cliente] = {"recien_registrado": True}

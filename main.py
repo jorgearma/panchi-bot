@@ -1,7 +1,7 @@
 from flask import Flask, request
 from controllers.registro import manejar_registro
 from controllers.mensajes_registrados import manejar_mensajes_registrados
-from data.usuarios import usuarios_registrados , guardar_usuario_bd
+from data.usuarios import guardar_usuario_bd
 from data.carrito import carrito
 from data.estado_usuarios import estado_usuarios
 import pyodbc

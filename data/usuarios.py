@@ -1,23 +1,4 @@
-# data/usuarios.py
-
 import pyodbc
-usuarios_registrados = {
-    "whatsapp:+453182209": {"nombre": "pendejo", "numero": "whatsapp:+4531822092", "direccion": "Calle Falsa 123"},
-}
-
-def obtener_usuario_bd(numero_cliente):
-    try:
-        connection = conectar_bd()
-        cursor = connection.cursor()
-        cursor.execute("SELECT nombre FROM usuarios WHERE numero_cliente = ?", numero_cliente)
-        result = cursor.fetchone()
-        return result[0] if result else None
-    except Exception as e:
-        print("Error al obtener el usuario de la base de datos:", e)
-        return None
-    finally:
-        if connection:
-            connection.close()
 
 def conectar_bd():
     try:
@@ -33,6 +14,24 @@ def conectar_bd():
     except Exception as e:
         print("Error al conectar con la base de datos:", e)
         return None
+
+def obtener_usuario_bd(numero_cliente):
+    try:
+        connection = conectar_bd()
+        cursor = connection.cursor()
+        cursor.execute("SELECT nombre, numero_cliente, direccion FROM usuarios WHERE numero_cliente = ?", numero_cliente)
+        result = cursor.fetchone()
+        return {
+            "nombre": result[0],
+            "numero": result[1],
+            "direccion": result[2]
+        } if result else None
+    except Exception as e:
+        print("Error al obtener el usuario de la base de datos:", e)
+        return None
+    finally:
+        if connection:
+            connection.close()
 
 def guardar_usuario_bd(numero, nombre, direccion):
     connection = conectar_bd()
@@ -50,16 +49,9 @@ def guardar_usuario_bd(numero, nombre, direccion):
         finally:
             connection.close()
 
-def registrar_usuario(numero, nombre, direccion, guardar_usuario_bd=None):
-    # Registrar el usuario en el diccionario
-    usuarios_registrados[numero] = {
-        "nombre": nombre,
-        "numero": numero,
-        "direccion": direccion
-    }
+def registrar_usuario(numero, nombre, direccion):
+    # Registrar el usuario directamente en la base de datos
+    guardar_usuario_bd(numero, nombre, direccion)
     
-    # Llamar a la función de guardado en la base de datos si se proporciona
-    if guardar_usuario_bd:
-        guardar_usuario_bd(numero, nombre, direccion)
-    
-    return usuarios_registrados[numero]
+    # Devolver el usuario registrado
+    return obtener_usuario_bd(numero)
