@@ -4,6 +4,21 @@ import pyodbc
 usuarios_registrados = {
     "whatsapp:+453182209": {"nombre": "pendejo", "numero": "whatsapp:+4531822092", "direccion": "Calle Falsa 123"},
 }
+
+def obtener_usuario_bd(numero_cliente):
+    try:
+        connection = conectar_bd()
+        cursor = connection.cursor()
+        cursor.execute("SELECT nombre FROM usuarios WHERE numero_cliente = ?", numero_cliente)
+        result = cursor.fetchone()
+        return result[0] if result else None
+    except Exception as e:
+        print("Error al obtener el usuario de la base de datos:", e)
+        return None
+    finally:
+        if connection:
+            connection.close()
+
 def conectar_bd():
     try:
         connection = pyodbc.connect(
