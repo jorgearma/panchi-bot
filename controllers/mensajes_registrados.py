@@ -2,7 +2,7 @@ from utils.mensajes import enviar_mensaje_whatsapp
 from menu import mostrar_menu, procesar_pedido, mostrar_carrito, mostrar_carrito_sin_mensaje
 from pago import preguntar_metodo_pago, procesar_pago
 from openai_api import obtener_respuesta_openai
-from data.usuarios import usuarios_registrados , obtener_usuario_bd
+from data.usuarios import  obtener_usuario_bd
 from data.carrito import carrito
 from data.estado_usuarios import estado_usuarios
 
@@ -13,7 +13,7 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
         if numero_cliente not in carrito:
             carrito[numero_cliente] = []
             menu_texto = mostrar_menu()
-            nombre_usuario = obtener_usuario_bd(numero_cliente)
+            nombre_usuario = obtener_usuario_bd(numero_cliente)["nombre"]
             enviar_mensaje_whatsapp(f"¡Hola {nombre_usuario}! Bienvenido de nuevo. {menu_texto}", numero_cliente)
             return "Mensaje enviado", 200
 
