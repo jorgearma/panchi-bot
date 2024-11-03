@@ -13,7 +13,7 @@ def conectar_bd():
         connection = pyodbc.connect(
             "DRIVER={ODBC Driver 17 for SQL Server};"
             "SERVER=localhost,1433;"
-            "DATABASE=master;"
+            "DATABASE=pruebabot;"
             "UID=sa;"
             "PWD=Jorgejorge1"
         )
@@ -26,13 +26,7 @@ def conectar_bd():
 
 def verificar_usuario_bd(numero_cliente):
     try:
-        connection = pyodbc.connect(
-            "DRIVER={ODBC Driver 17 for SQL Server};"
-            "SERVER=localhost,1433;"
-            "DATABASE=pruebabot;"
-            "UID=sa;"
-            "PWD=Jorgejorge1"
-        )
+        connection = conectar_bd()
         cursor = connection.cursor()
         cursor.execute("SELECT COUNT(*) FROM usuarios WHERE numero_cliente = ?", numero_cliente)
         result = cursor.fetchone()
