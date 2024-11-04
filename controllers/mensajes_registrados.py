@@ -3,7 +3,7 @@ from menu import mostrar_menu, procesar_pedido, mostrar_carrito, mostrar_carrito
 from pago import preguntar_metodo_pago, procesar_pago
 from openai_api import obtener_respuesta_openai
 from data.usuarios import  obtener_usuario_bd
-from data.carrito import carrito
+from data.carrito import carrito , guardar_pedido
 from data.estado_usuarios import estado_usuarios
 
 import random
@@ -39,6 +39,7 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
     if mensaje_cliente in ["revisar pedido", "ver carrito", "revisar", "carrito"]:
         contenido_carrito = mostrar_carrito(carrito[numero_cliente])
         enviar_mensaje_whatsapp(contenido_carrito, numero_cliente)
+        print(carrito)
         return "Mensaje enviado", 200
 
     # Salir o proceder al pago
@@ -61,7 +62,7 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
         
         # Guardar el pedido con el identificador en pedidos_activos
         pedidos_activos[numero_cliente] = {"id_pedido": id_pedido, "contenido": carrito[numero_cliente]}
-        
+        guardar_pedido(numero_cliente, carrito , id_pedido)
         # Informar al cliente sobre el identificador del pedido
         enviar_mensaje_whatsapp(f"Su pedido está confirmado y en preparación. Su número de pedido es: {id_pedido}", numero_cliente)
         
