@@ -1,15 +1,15 @@
 carrito = {}
-
+from data.usuarios import  obtener_usuario_bd
 import pyodbc
 from database import conectar_bd
 
 
-import pyodbc
-from database import conectar_bd
+
 
 def guardar_pedido(numero_cliente, carrito, id_pedido):
     """Guarda el pedido y sus detalles en la base de datos utilizando el número de WhatsApp."""
-    
+    nombre = obtener_usuario_bd(numero_cliente)
+    nombre_usuario = nombre["nombre"]
     if not numero_cliente:
         print("El número de WhatsApp no está registrado en la tabla de usuarios.")
         return
@@ -35,9 +35,9 @@ def guardar_pedido(numero_cliente, carrito, id_pedido):
             for producto_nombre, precio in carrito[numero_cliente]:
                 print(f"Inserting into detalle_pedido: id_pedido={id_pedido}, producto_nombre={producto_nombre}, precio={precio}, cantidad=1")
                 cursor.execute("""
-                    INSERT INTO detalle_pedido (id_pedido, producto_nombre, precio, cantidad)
-                    VALUES (?, ?, ?, ?)
-                """, (id_pedido, producto_nombre, precio, 1))  # Asumimos cantidad 1
+                    INSERT INTO detalle_pedido (id_pedido, producto_nombre, precio, cantidad,nombre_usuario)
+                    VALUES (?, ?, ?, ?,?)
+                """, (id_pedido, producto_nombre, precio, 1, nombre_usuario))  # Asumimos cantidad 1
             
             connection.commit()  # Confirma todos los cambios
             print("Pedido y detalles guardados exitosamente.")
