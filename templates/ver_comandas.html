@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comandas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .comanda {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        h2 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Comandas en Cocina</h1>
+    {% for comanda in comandas %}
+        <div class="comanda">
+            <h2>Comanda ID: {{ comanda.id }}</h2>
+            <p><strong>ID Pedido:</strong> {{ comanda.id_pedido }}</p>
+            <p><strong>Contenido:</strong></p>
+            <ul>
+                {% for item in comanda.contenido %}
+                    <li>{{ item[0] }} - ${{ item[1] }}</li>
+                {% endfor %}
+            </ul>
+            <p><strong>Fecha:</strong> {{ comanda.fecha }}</p>
+        </div>
+    {% endfor %}
+</body>
+</html>
