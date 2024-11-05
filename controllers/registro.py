@@ -1,5 +1,5 @@
 from utils.mensajes import enviar_mensaje_whatsapp
-from utils.maps import generar_enlace_google_maps
+from utils.maps import generar_enlace_google_maps , validar_direccion
 from data.usuarios import registrar_usuario , guardar_usuario_bd
 from data.estado_usuarios import estado_usuarios
 from data.carrito import carrito
@@ -25,9 +25,21 @@ def manejar_registro(numero_cliente, mensaje_cliente):
         estado["direccion"] = mensaje_cliente
         estado["estado"] = "confirmando_direccion"
         enlace_maps = generar_enlace_google_maps(mensaje_cliente)
-        enviar_mensaje_whatsapp(f"Aquí tienes un enlace de Google Maps con la ubicación de tu calle: {enlace_maps}", numero_cliente)
-        enviar_mensaje_whatsapp("Si tu dirección es esta, responde 'sí' para confirmar.", numero_cliente)
-        return "Solicitud de confirmación de dirección enviada", 200
+
+        validar = validar_direccion(mensaje_cliente)
+
+        if validar:
+        # Si la dirección es válida, enviamos el enlace de Google Maps y pedimos confirmación
+            enviar_mensaje_whatsapp(f"Aquí tienes un enlace de Google Maps con la ubicación de tu calle: {enlace_maps}", numero_cliente)
+            enviar_mensaje_whatsapp("Si tu dirección es esta, responde 'sí' para confirmar.", numero_cliente)
+            return "Solicitud de confirmación de dirección enviada", 200
+        else:
+            # Si la dirección no es válida, pedimos una nueva dirección
+            enviar_mensaje_whatsapp("La dirección que has proporcionado no es válida. Por favor, revisa y vuelve a enviar una dirección completa y correcta.", numero_cliente)
+            estado["estado"] = "esperando_direccion"  # Vuelve al estado de esperar una dirección
+
+            
+            return "Solicitud de confirmación de dirección enviada", 200
 
     elif estado["estado"] == "confirmando_direccion":
         if mensaje_cliente == 'si':
