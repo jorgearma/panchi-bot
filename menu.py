@@ -69,7 +69,7 @@ def mostrar_carrito_sin_mensaje(carrito):
         return "Tu carrito está vacío.\n"
     
     total = sum(precio for _, precio in carrito)
-    resultado = "\nEste es tu pedido hasta ahora:\n"
+    resultado = "\nEste es tu pedido hasta ahora:\n\n"
     for item, precio in carrito:
         resultado += f" - {item}: ${precio:.2f}\n"
     resultado += f"\nTotal a pagar: ${total:.2f}\n"
@@ -79,5 +79,5 @@ def mostrar_carrito_sin_mensaje(carrito):
 
 def mostrar_carrito(carrito):
     resultado, total = mostrar_carrito_sin_mensaje(carrito)
-    resultado += "\n¿Quieres sumar algo más? Escribe 'pagar' para proceder al pago."
+    resultado += "\n🔺¿Algo más? escribe:\n *el nombre del producto* \n🔺¿ya estás listo? escribe:\n *pagar* para proceder al pago "
     return resultado, total

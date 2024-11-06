@@ -33,7 +33,9 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
             carrito[numero_cliente] = []
             menu_texto = mostrar_menu()
             nombre_usuario = obtener_usuario_bd(numero_cliente)["nombre"]
-            enviar_mensaje_whatsapp(f"¡Hola {nombre_usuario}! Bienvenido de nuevo. {menu_texto}", numero_cliente)
+            enviar_mensaje_whatsapp(f"¡Hola {nombre_usuario}! 👋 Bienvenido de nuevo. {menu_texto}❗*Para agregar un producto*❗\n\n escribe el *nombre del producto* \n 👇 *Ejemplos:* 👇 \n\n 🔺pollo asado \n 🔺flan \n 🔺cafe y agua " , numero_cliente)
+
+
             return "Mensaje enviado", 200
 
     # Revisar si el cliente está consultando el carrito

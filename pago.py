@@ -7,7 +7,7 @@ def preguntar_metodo_pago(numero_cliente, enviar_mensaje_whatsapp):
     Esta función no espera respuesta, solo envía el mensaje. 
     La respuesta será manejada en el webhook del archivo principal.
     """
-    mensaje = "¿Te gustaría pagar en efectivo o con tarjeta? (responde 'efectivo' o 'tarjeta')"
+    mensaje = "¿como te gustaria pagar? *Escribe:* \n🔺 *efectivo*\n🔺 *tarjeta*"
     enviar_mensaje_whatsapp(mensaje, numero_cliente)
 
 def procesar_pago(total, metodo_pago, numero_cliente, enviar_mensaje_whatsapp):
