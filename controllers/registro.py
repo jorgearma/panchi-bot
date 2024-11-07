@@ -26,13 +26,13 @@ def manejar_registro(numero_cliente, mensaje_cliente):
     elif estado["estado"] == "esperando_direccion":
         estado["direccion"] = mensaje_cliente
         estado["estado"] = "confirmando_direccion"
-        enlace_maps = generar_enlace_google_maps(mensaje_cliente)
+        ##enlace_maps = generar_enlace_google_maps(mensaje_cliente)
 
-        validar = validar_direccion(mensaje_cliente)
+        validar, direccion_resultante = validar_direccion(mensaje_cliente)
 
         if validar:
         # Si la dirección es válida, enviamos el enlace de Google Maps y pedimos confirmación
-            enviar_mensaje_whatsapp(f"({enlace_maps})", numero_cliente)
+            enviar_mensaje_whatsapp(f"({direccion_resultante})", numero_cliente)
             enviar_mensaje_whatsapp("⬆️ *Verifica tu Ubicación* ⬆️\n\n✅ ¿Es correcta?     *escribe:* *Si* \n❌¿No es correcta? *escribe:* *No*\n\n", numero_cliente)
 
 
@@ -50,7 +50,7 @@ def manejar_registro(numero_cliente, mensaje_cliente):
         if mensaje_cliente == 'si':
             registrar_usuario(numero_cliente, estado["nombre"], estado["direccion"])
             menu_despues_registro = mostrar_menu()
-            enviar_mensaje_whatsapp(f"¡Gracias {estado['nombre']}! Ahora estás registrado. {menu_despues_registro}", numero_cliente)
+            enviar_mensaje_whatsapp(f"¡Gracias {estado['nombre']}! Ahora estás registrado. {menu_despues_registro}, ❗*Para agregar un producto*❗\n\n escribe el *nombre del producto* \n 👇 *Ejemplos:* 👇 \n\n 🔺pollo asado \n 🔺flan \n 🔺cafe y agua " , numero_cliente)
             estado_usuarios[numero_cliente] = {"recien_registrado": True}
             carrito[numero_cliente] = []
             return "Usuario registrado", 200
