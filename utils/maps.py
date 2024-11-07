@@ -12,7 +12,8 @@ import requests
 
 def validar_direccion(direccion):
     api_key = 'AIzaSyBkKYaPKMICRDfY95r9kp0NSmeXXRMb458'  # Reemplaza con tu clave de API de Google Maps
-    
+    direccion = re.sub(r"\bpaseo\s+de\s+la\s+estacion\b|\bpaseo\s+la\s+estacion\b", "paseo estación", direccion, flags=re.IGNORECASE)
+    print("Dirección después de reemplazo de 'paseo de la estación' =", direccion)
     direccion_para_verificar = re.sub(r"\bportal\b", "", direccion, flags=re.IGNORECASE)
     direccion_codificada = urllib.parse.quote(direccion_para_verificar)
 
@@ -24,7 +25,7 @@ def validar_direccion(direccion):
         datos = response.json()
         if datos['status'] == 'OK' and len(datos['results']) > 0:
             resultado = datos['results'][0]['formatted_address']
-            if resultado == "16400 Tarancón, Cuenca, Spain":
+            if resultado == "16400 Tarancón, Cuenca, Spain" or resultado =="Tarancón, 16400, Cuenca, Spain":
                 print("La dirección es demasiado general y se considera inválida.")
                 return False, None  # Retorna False y None cuando la dirección es demasiado general
                 

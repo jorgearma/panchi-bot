@@ -83,7 +83,7 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
     respuesta_camarero = procesar_pedido(mensaje_cliente, carrito[numero_cliente])
     if "no reconocí ningún ítem" in respuesta_camarero:
         respuesta_openai = obtener_respuesta_openai(mensaje_cliente, carrito[numero_cliente])
-        enviar_mensaje_whatsapp(f"Camarero: {respuesta_openai}", numero_cliente)
+        enviar_mensaje_whatsapp(f"{respuesta_openai}", numero_cliente)
     else:
         enviar_mensaje_whatsapp(f"Camarero: {respuesta_camarero}", numero_cliente)
         if "Has agregado" in respuesta_camarero:
