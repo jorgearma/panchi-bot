@@ -5,27 +5,27 @@ from unidecode import unidecode
 
 menu = {
     "entradas": {
-        "ensalada mixta": 5.00,
-        "sopa de tomate": 4.50,
-        "gazpacho": 6.00
+        "ensalada mixta": {"precio": 5.00, "codigo": 301},
+        "sopa de tomate": {"precio": 4.50, "codigo": 302},
+        "gazpacho": {"precio": 6.00, "codigo": 303}
     },
     "platos principales": {
-        "pollo asado": 12.00,
-        "paella": 15.00,
-        "pasta carbonara": 11.00,
-        "bistec a la parrilla": 18.00
+        "pollo asado": {"precio": 12.00, "codigo": 401},
+        "paella": {"precio": 15.00, "codigo": 402},
+        "pasta carbonara": {"precio": 11.00, "codigo": 403},
+        "bistec a la parrilla": {"precio": 18.00, "codigo": 404}
     },
     "postres": {
-        "flan": 4.00,
-        "tarta de queso": 5.00,
-        "helado de chocolate": 3.50
+        "flan": {"precio": 4.00, "codigo": 501},
+        "tarta de queso": {"precio": 5.00, "codigo": 502},
+        "helado de chocolate": {"precio": 3.50, "codigo": 503}
     },
     "bebidas": {
-        "agua": 1.50,
-        "vino tinto": 4.00,
-        "cerveza": 3.00,
-        "refresco": 2.50,
-        "café": 2.00
+        "agua": {"precio": 1.50, "codigo": 601},
+        "vino tinto": {"precio": 4.00, "codigo": 602},
+        "cerveza": {"precio": 3.00, "codigo": 603},
+        "refresco": {"precio": 2.50, "codigo": 604},
+        "café": {"precio": 2.00, "codigo": 605}
     }
 }
 
@@ -52,9 +52,13 @@ def procesar_pedido(pedido, carrito):
     items_agregados = []
     
     for categoria, items in menu.items():
-        for item, precio in items.items():
+        for item, info in items.items():
             item_limpio = limpiar_texto(item)
-            if item_limpio in pedido_limpio:
+            codigo_producto = str(info["codigo"])
+            precio = info["precio"]
+            
+            # Verifica si el nombre o el código están en el pedido
+            if item_limpio in pedido_limpio or codigo_producto in pedido_limpio:
                 carrito.append((item, precio))
                 items_agregados.append(f"{item} por ${precio:.2f}")
     

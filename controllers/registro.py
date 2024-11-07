@@ -29,6 +29,7 @@ def manejar_registro(numero_cliente, mensaje_cliente):
         ##enlace_maps = generar_enlace_google_maps(mensaje_cliente)
 
         validar, direccion_resultante = validar_direccion(mensaje_cliente)
+        
 
         if validar:
         # Si la dirección es válida, enviamos el enlace de Google Maps y pedimos confirmación
