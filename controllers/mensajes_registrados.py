@@ -5,6 +5,7 @@ from openai_api import obtener_respuesta_openai
 from data.usuarios import  obtener_usuario_bd
 from data.carrito import carrito , guardar_pedido
 from data.estado_usuarios import estado_usuarios
+from data.pedidos import enviar_comanda_a_cocina
 
 import random
 
@@ -32,7 +33,9 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
             carrito[numero_cliente] = []
             menu_texto = mostrar_menu()
             nombre_usuario = obtener_usuario_bd(numero_cliente)["nombre"]
-            enviar_mensaje_whatsapp(f"¡Hola {nombre_usuario}! Bienvenido de nuevo. {menu_texto}", numero_cliente)
+            enviar_mensaje_whatsapp(f"¡Hola {nombre_usuario}! 👋 Bienvenido de nuevo. {menu_texto}❗*Para agregar un producto*❗\n\n escribe el *nombre del producto* \n 👇 *Ejemplos:* 👇 \n\n 🔺pollo asado \n 🔺flan \n 🔺cafe y agua " , numero_cliente)
+
+
             return "Mensaje enviado", 200
 
     # Revisar si el cliente está consultando el carrito
@@ -63,6 +66,9 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
         # Guardar el pedido con el identificador en pedidos_activos
         pedidos_activos[numero_cliente] = {"id_pedido": id_pedido, "contenido": carrito[numero_cliente]}
         guardar_pedido(numero_cliente, carrito , id_pedido)
+        contenido_pedido = carrito[numero_cliente]
+        print(contenido_pedido)
+        enviar_comanda_a_cocina(id_pedido, contenido_pedido)
         # Informar al cliente sobre el identificador del pedido
         enviar_mensaje_whatsapp(f"Su pedido está confirmado y en preparación. Su número de pedido es: {id_pedido}", numero_cliente)
         
