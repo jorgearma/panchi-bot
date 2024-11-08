@@ -33,7 +33,7 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
             carrito[numero_cliente] = []
             menu_texto = mostrar_menu()
             nombre_usuario = obtener_usuario_bd(numero_cliente)["nombre"]
-            enviar_mensaje_whatsapp(f"¡Hola {nombre_usuario}! 👋 Bienvenido de nuevo. {menu_texto}❗*Para agregar un producto*❗\n\n escribe el *nombre del producto* \n 👇 *Ejemplos:* 👇 \n\n 🔺pollo asado \n 🔺flan \n 🔺cafe y agua " , numero_cliente)
+            enviar_mensaje_whatsapp(f"¡Hola {nombre_usuario}! 👋 Bienvenido de nuevo. {menu_texto}                ⬆️ *MENU* ⬆️ \n❗*Para agregar un producto*❗\n\nescribe el *numero* o su *nombre* \n\n      👇 *Ejemplos* 👇 \n\n ▪️ *clasica*    o    *301* \n ▪️ *helado*    o    *503* " , numero_cliente)
 
 
             return "Mensaje enviado", 200
@@ -83,9 +83,9 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
     respuesta_camarero = procesar_pedido(mensaje_cliente, carrito[numero_cliente])
     if "no reconocí ningún ítem" in respuesta_camarero:
         respuesta_openai = obtener_respuesta_openai(mensaje_cliente, carrito[numero_cliente])
-        enviar_mensaje_whatsapp(f"Camarero: {respuesta_openai}", numero_cliente)
+        enviar_mensaje_whatsapp(f"{respuesta_openai}", numero_cliente)
     else:
-        enviar_mensaje_whatsapp(f"Camarero: {respuesta_camarero}", numero_cliente)
+        enviar_mensaje_whatsapp(f"{respuesta_camarero}", numero_cliente)
         if "Has agregado" in respuesta_camarero:
             contenido_carrito = mostrar_carrito(carrito[numero_cliente])
             enviar_mensaje_whatsapp(contenido_carrito, numero_cliente)
