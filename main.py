@@ -6,11 +6,20 @@ from data.carrito import carrito
 from data.estado_usuarios import estado_usuarios
 from database import conectar_bd
 import json
+import unicodedata
 
 app = Flask(__name__)
 
 
-
+def limpiar_texto(texto):
+    # Convierte a minúsculas y elimina espacios en los extremos
+    texto = texto.strip().lower()
+    # Elimina acentos y tildes
+    texto = ''.join(
+        c for c in unicodedata.normalize('NFD', texto)
+        if unicodedata.category(c) != 'Mn'
+    )
+    return texto
 
 def verificar_usuario_bd(numero_cliente):
     try:
@@ -58,7 +67,9 @@ def ver_comandas():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     numero_cliente = request.form['From']
-    mensaje_cliente = request.form['Body'].strip().lower()
+    mensaje_cliente1 = request.form['Body'].strip().lower()
+    mensaje_cliente = limpiar_texto(mensaje_cliente1)
+    print("mensaje-cliente",mensaje_cliente)
 
     # Verificar si el usuario está registrado en la base de datos
     if not verificar_usuario_bd(numero_cliente):
