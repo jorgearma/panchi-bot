@@ -1,21 +1,12 @@
 # archivo: pago.py
 
 def preguntar_metodo_pago(numero_cliente, enviar_mensaje_whatsapp):
-    """
-    Pregunta al cliente si pagará en efectivo o con tarjeta a través de WhatsApp.
     
-    Esta función no espera respuesta, solo envía el mensaje. 
-    La respuesta será manejada en el webhook del archivo principal.
-    """
-    mensaje = "¿como te gustaria pagar? *Escribe:* \n🔺 *efectivo*\n🔺 *tarjeta*"
+    mensaje = "🔷¿como te gustaria pagar?🔷\n           👇 Escribe 👇 \n\n▪️ *Efectivo*  O   *Tarjeta* ▪️"
     enviar_mensaje_whatsapp(mensaje, numero_cliente)
 
 def procesar_pago(total, metodo_pago, numero_cliente, enviar_mensaje_whatsapp):
-    """
-    Procesa el pago según el método seleccionado y envía la confirmación por WhatsApp.
-    
-    Este es un procesamiento simulado para el pago en efectivo o tarjeta.
-    """
+   
     if metodo_pago == 'efectivo':
         mensaje_pago = f"El total es de ${total:.2f}. El pago se realizará en efectivo al momento de la entrega."
     elif metodo_pago == 'tarjeta':
