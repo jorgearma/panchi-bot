@@ -2,6 +2,7 @@
 
 import re
 from unidecode import unidecode
+from utils.es_pregunta import es_pregunta
 
 menu = {
     "🍔 *HAMBURGuESAS*": {
@@ -61,6 +62,10 @@ def mostrar_menu():
 
 # Función para procesar el pedido del cliente
 def procesar_pedido(pedido, carrito):
+    pregunta = es_pregunta(pedido)
+
+    if pregunta:
+        return  "Lo siento, no reconocí ningún ítem de nuestro menú en"
     pedido_limpio = limpiar_texto(pedido)
     items_agregados = []
     
