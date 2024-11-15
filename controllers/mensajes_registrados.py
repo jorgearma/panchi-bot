@@ -89,5 +89,6 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
         if "Has agregado" in respuesta_camarero:
             contenido_carrito = mostrar_carrito(carrito[numero_cliente])
             enviar_mensaje_whatsapp(contenido_carrito, numero_cliente)
+            print(carrito)
 
     return "Mensaje recibido", 200

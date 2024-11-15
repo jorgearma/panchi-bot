@@ -7,8 +7,48 @@ from data.estado_usuarios import estado_usuarios
 from database import conectar_bd
 import json
 import unicodedata
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
+
+
+
+from data.carrito import carrito  # Suponiendo que el carrito está en otro archivo
+
+app = Flask(__name__)
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app, origins=["http://127.0.0.1:5500"])  # Permite solo este origen
+
+@app.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
+def agregar_pedido():
+    if request.method == 'OPTIONS':
+        response = app.make_response('')
+        response.headers.add("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        return response, 204
+
+    if request.method == 'POST':
+        data = request.json
+        print(data)  # Verifica qué JSON se recibe
+
+        # Extraer el número de WhatsApp y los productos del pedido
+        for numero_whatsapp, productos in data.items():
+            # Verificar si el número de WhatsApp ya está en el carrito
+            if numero_whatsapp in carrito:
+                # Si ya existe, agregar los productos al carrito
+                carrito[numero_whatsapp].extend(productos)
+            else:
+                # Si no existe, crear una nueva entrada para el número de WhatsApp
+                carrito[numero_whatsapp] = productos
+
+        return jsonify({"message": "Pedido recibido correctamente"}), 200
+
 
 
 def limpiar_texto(texto):
