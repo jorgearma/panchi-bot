@@ -1,27 +1,17 @@
 from flask import Flask, request , jsonify ,render_template
 from controllers.registro import manejar_registro
 from controllers.mensajes_registrados import manejar_mensajes_registrados
-from data.usuarios import guardar_usuario_bd
+from data.usuarios import guardar_usuario_bd , verificar_usuario_bd
 from data.carrito import carrito
 from data.estado_usuarios import estado_usuarios
+from utils.text_utils import limpiar_texto
 from database import conectar_bd
 import json
-import unicodedata
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-
-
-from data.carrito import carrito  # Suponiendo que el carrito está en otro archivo
-
-app = Flask(__name__)
-
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-
-app = Flask(__name__)
 CORS(app, origins=["http://127.0.0.1:5500"])  # Permite solo este origen
 
 @app.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
@@ -51,29 +41,6 @@ def agregar_pedido():
 
 
 
-def limpiar_texto(texto):
-    # Convierte a minúsculas y elimina espacios en los extremos
-    texto = texto.strip().lower()
-    # Elimina acentos y tildes
-    texto = ''.join(
-        c for c in unicodedata.normalize('NFD', texto)
-        if unicodedata.category(c) != 'Mn'
-    )
-    return texto
-
-def verificar_usuario_bd(numero_cliente):
-    try:
-        connection = conectar_bd()
-        cursor = connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE numero_cliente = ?", numero_cliente)
-        result = cursor.fetchone()
-        return result[0] > 0
-    except Exception as e:
-        print("Error al verificar el usuario en la base de datos:", e)
-        return False
-    finally:
-        if connection:
-            connection.close()
 
 @app.route('/comandas', methods=['GET'])
 def ver_comandas():

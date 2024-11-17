@@ -41,3 +41,18 @@ def registrar_usuario(numero, nombre, direccion):
     
     # Devolver el usuario registrado
     return obtener_usuario_bd(numero)
+
+
+def verificar_usuario_bd(numero_cliente):
+    try:
+        connection = conectar_bd()
+        cursor = connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE numero_cliente = ?", numero_cliente)
+        result = cursor.fetchone()
+        return result[0] > 0
+    except Exception as e:
+        print("Error al verificar el usuario en la base de datos:", e)
+        return False
+    finally:
+        if connection:
+            connection.close()
