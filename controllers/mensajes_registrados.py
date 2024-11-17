@@ -5,27 +5,38 @@ from openai_api import obtener_respuesta_openai
 from data.usuarios import  obtener_usuario_bd
 from data.carrito import carrito , guardar_pedido
 from data.estado_usuarios import estado_usuarios
-from data.pedidos import enviar_comanda_a_cocina
+from data.pedidos import enviar_comanda_a_cocina , verificar_pedido_activo
+
 
 import random
 
 # Diccionario para almacenar pedidos activos y sus identificadores
 pedidos_activos = {}
-
-def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
-
-    if mensaje_cliente.isdigit() and len(mensaje_cliente) == 4:
-        id_pedido_cliente = int(mensaje_cliente)
-        pedido_cliente = pedidos_activos.get(numero_cliente)
-
-        # Verificar si el identificador corresponde a un pedido activo del cliente
-        if pedido_cliente and pedido_cliente["id_pedido"] == id_pedido_cliente:
-            enviar_mensaje_whatsapp(f"Su pedido #{id_pedido_cliente} está en preparación.", numero_cliente)
+def manejar_consulta_carrito(mensaje_cliente, numero_cliente):
+    # Normaliza el mensaje para evitar problemas con mayúsculas/minúsculas
+    mensaje_cliente = mensaje_cliente.lower()
+    
+    # Lista de palabras clave para identificar la consulta
+    palabras_clave = ["revisar pedido", "ver carrito", "revisar", "carrito"]
+    
+    # Verifica si el mensaje coincide con las palabras clave
+    if mensaje_cliente in palabras_clave:
+        # Verifica si el cliente tiene un carrito activo
+        if numero_cliente in carrito:
+            # Obtiene el contenido del carrito
+            contenido_carrito = mostrar_carrito(carrito[numero_cliente])
+            # Envía el mensaje al cliente
+            enviar_mensaje_whatsapp(contenido_carrito, numero_cliente)
         else:
-            enviar_mensaje_whatsapp("No se encontró ningún pedido con ese identificador.", numero_cliente)
-        return "Mensaje enviado", 200
+            # Maneja el caso de un carrito vacío o inexistente
+            enviar_mensaje_whatsapp("Tu carrito está vacío.", numero_cliente)
+        return True
+    
+    # Retorna False si el mensaje no está relacionado con el carrito
+    return False
 
-        
+
+def manejar_usuario(numero_cliente):
     if estado_usuarios.get(numero_cliente, {}).get("recien_registrado"):
         del estado_usuarios[numero_cliente]["recien_registrado"]
     else:
@@ -33,16 +44,26 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
             carrito[numero_cliente] = []
             menu_texto = mostrar_menu()
             nombre_usuario = obtener_usuario_bd(numero_cliente)["nombre"]
-            enviar_mensaje_whatsapp(f"¡Hola {nombre_usuario}! 👋 Bienvenido de nuevo. {menu_texto}                ⬆️ *MENU* ⬆️ \n❗*Para agregar un producto*❗\n\nescribe el *numero* o su *nombre* \n\n      👇 *Ejemplos* 👇 \n\n ▪️ *clasica*    o    *301* \n ▪️ *helado*    o    *503* " , numero_cliente)
-
-
+            enviar_mensaje_whatsapp(
+                f"¡Hola {nombre_usuario}! 👋 Bienvenido de nuevo. {menu_texto}                ⬆️ *MENU* ⬆️ \n❗*Para agregar un producto*❗\n\nescribe el *numero* o su *nombre* \n\n      👇 *Ejemplos* 👇 \n\n ▪️ *clasica*    o    *301* \n ▪️ *helado*    o    *503* ", 
+                numero_cliente
+            )
             return "Mensaje enviado", 200
 
-    # Revisar si el cliente está consultando el carrito
-    if mensaje_cliente in ["revisar pedido", "ver carrito", "revisar", "carrito"]:
-        contenido_carrito = mostrar_carrito(carrito[numero_cliente])
-        enviar_mensaje_whatsapp(contenido_carrito, numero_cliente)
-        print(carrito)
+
+def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
+    
+    respuesta = verificar_pedido_activo(numero_cliente, mensaje_cliente, pedidos_activos)
+    if respuesta:
+        return respuesta
+
+        
+    respuesta_usuario = manejar_usuario(numero_cliente)
+    if respuesta_usuario:
+        return respuesta_usuario
+
+     # Consultar el carrito
+    if manejar_consulta_carrito(mensaje_cliente, numero_cliente):
         return "Mensaje enviado", 200
 
     # Salir o proceder al pago
@@ -89,5 +110,6 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
         if "Has agregado" in respuesta_camarero:
             contenido_carrito = mostrar_carrito(carrito[numero_cliente])
             enviar_mensaje_whatsapp(contenido_carrito, numero_cliente)
+            print(carrito)
 
     return "Mensaje recibido", 200
