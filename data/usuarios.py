@@ -1,5 +1,9 @@
 import pyodbc
 from database import conectar_bd
+from menu import mostrar_menu
+from utils.mensajes import enviar_mensaje_whatsapp
+from data.estado_usuarios import estado_usuarios
+
 
 def obtener_usuario_bd(numero_cliente):
     try:
@@ -56,3 +60,19 @@ def verificar_usuario_bd(numero_cliente):
     finally:
         if connection:
             connection.close()
+
+
+def manejar_usuario(numero_cliente ):
+    from data.carrito import carrito
+    if estado_usuarios.get(numero_cliente, {}).get("recien_registrado"):
+        del estado_usuarios[numero_cliente]["recien_registrado"]
+    else:
+        if numero_cliente not in carrito:
+            carrito[numero_cliente] = []
+            menu_texto = mostrar_menu()
+            nombre_usuario = obtener_usuario_bd(numero_cliente)["nombre"]
+            enviar_mensaje_whatsapp(
+                f"¡Hola {nombre_usuario}! 👋 Bienvenido de nuevo. {menu_texto}                ⬆️ *MENU* ⬆️ \n❗*Para agregar un producto*❗\n\nescribe el *numero* o su *nombre* \n\n      👇 *Ejemplos* 👇 \n\n ▪️ *clasica*    o    *301* \n ▪️ *helado*    o    *503* ", 
+                numero_cliente
+            )
+            return "Mensaje enviado", 200
