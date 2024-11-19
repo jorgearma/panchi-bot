@@ -24,7 +24,7 @@ def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
         return respuesta_usuario
 
      # Consultar el carrito
-    if manejar_consulta_carrito(mensaje_cliente, numero_cliente):
+    if manejar_consulta_carrito(mensaje_cliente, numero_cliente,carrito):
         return "Mensaje enviado", 200
 
     # Salir o proceder al pago
