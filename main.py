@@ -1,5 +1,5 @@
 from flask import Flask, request , jsonify ,render_template
-from controllers.registro import manejar_registro
+from controllers.registro_de_usuarios.registro import manejar_registro
 from controllers.mensajes_registrados import manejar_mensajes_registrados
 from data.usuarios import guardar_usuario_bd , verificar_usuario_bd
 from data.carrito import carrito
@@ -7,7 +7,7 @@ from data.estado_usuarios import estado_usuarios
 from utils.text_utils import limpiar_texto
 from database import conectar_bd
 import json
-from flask_cors import CORS
+from flask_cors import CORS 
 
 app = Flask(__name__)
 CORS(app)

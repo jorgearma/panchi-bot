@@ -86,21 +86,4 @@ def procesar_pedido(pedido, carrito):
         return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pedido. Por favor elige algo de lo que ofrecemos."
 
 # Función para mostrar el carrito y calcular el total
-def mostrar_carrito_sin_mensaje(carrito):
-    if not carrito:
-        return "Tu carrito está vacío.\n" , 0
-    
-    total = sum(precio for _, precio in carrito)
-    resultado = "\n _⬇️ *Este es tu pedido* ⬇️_ \n\n"
-    for item, precio in carrito:
-        resultado += f" ▪️ {item}: *€{precio:.2f}*\n"
-    resultado += f"\nTotal a pagar: *€{total:.2f}*\n"
-    resultado += f"➖➖➖➖➖➖➖➖➖➖\n"
-    
-    
-    return resultado, total
 
-def mostrar_carrito(carrito):
-    resultado, total = mostrar_carrito_sin_mensaje(carrito)
-    resultado += "\n ❗¿Algo más?❗Escribe📝\n👉 el *NUMERO* o su *NOMBRE*\n\n❗¿ya estás list@?❗Escribe📝\n👉 *PAGAR* 👈 para continuar "
-    return resultado, total
