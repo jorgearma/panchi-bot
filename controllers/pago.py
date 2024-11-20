@@ -1,6 +1,6 @@
-from data.carrito import carrito, mostrar_carrito_sin_mensaje ,mostrar_carrito , guardar_pedido
+from data.carrito import carrito, mostrar_carrito_sin_mensaje ,mostrar_carrito 
 from utils.mensajes import enviar_mensaje_whatsapp
-from data.pedidos import  enviar_comanda_a_cocina
+from data.pedidos import  enviar_comanda_a_cocina ,guardar_pedido
 import random
 from data.pedidos_activos import pedidos_activos
 
