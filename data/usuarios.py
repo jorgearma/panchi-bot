@@ -62,13 +62,15 @@ def verificar_usuario_bd(numero_cliente):
             connection.close()
 
 
-def manejar_usuario(numero_cliente ):
-    from data.carrito import carrito
+def manejar_usuario(numero_cliente):
+    from data.carrito import carrito_instancia
+    # Verifica si el usuario está recién registrado
     if estado_usuarios.get(numero_cliente, {}).get("recien_registrado"):
         del estado_usuarios[numero_cliente]["recien_registrado"]
     else:
-        if numero_cliente not in carrito:
-            carrito[numero_cliente] = []
+        # Inicializa el carrito si el cliente no lo tiene
+        if not carrito_instancia.verificar_carrito(numero_cliente):
+            carrito_instancia.inicializar_carrito(numero_cliente)
             menu_texto = mostrar_menu()
             nombre_usuario = obtener_usuario_bd(numero_cliente)["nombre"]
             enviar_mensaje_whatsapp(

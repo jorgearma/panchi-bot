@@ -3,7 +3,7 @@ from menu import mostrar_menu, procesar_pedido
 from controllers.pago import preguntar_metodo_pago, procesar_pago, salir_o_proceder_al_pago, procesar_metodo_pago
 from openai_api import obtener_respuesta_openai
 from data.usuarios import obtener_usuario_bd, manejar_usuario
-from data.carrito import carrito, manejar_consulta_carrito, mostrar_carrito, mostrar_carrito_sin_mensaje
+from data.carrito import carrito_instancia, manejar_consulta_carrito, mostrar_carrito, mostrar_carrito_sin_mensaje
 from data.estado_usuarios import estado_usuarios
 from data.pedidos import enviar_comanda_a_cocina, verificar_pedido_activo
 from data.pedidos_activos import pedidos_activos
@@ -12,7 +12,7 @@ from controllers.pedido_Y_respuestas import procesar_mensaje_como_pedido
 import random
 
 class ManejadorMensajesRegistrados:
-    def __init__(self):
+    def __init__(self , carrito):
         self.carrito = carrito
         self.pedidos_activos = pedidos_activos
 
@@ -38,7 +38,8 @@ class ManejadorMensajesRegistrados:
         return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente)
 
 def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
-    manejador = ManejadorMensajesRegistrados()
+    carrito = {}
+    manejador = ManejadorMensajesRegistrados(carrito)
     return manejador.manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
 
 
