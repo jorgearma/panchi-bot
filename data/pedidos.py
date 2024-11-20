@@ -79,7 +79,7 @@ def guardar_pedido(numero_cliente, carrito, id_pedido):
         return
     
     nombre_usuario = obtener_nombre_usuario(numero_cliente)
-    total = sum(item[1] for item in carrito[numero_cliente])
+    total = sum(item[1] for item in carrito)
     
     connection = conectar_bd()
     cursor = None
@@ -88,7 +88,7 @@ def guardar_pedido(numero_cliente, carrito, id_pedido):
         if connection:
             cursor = connection.cursor()
             insertar_pedido(cursor, id_pedido, numero_cliente, total)
-            insertar_detalle_pedido(cursor, id_pedido, carrito[numero_cliente], nombre_usuario)
+            insertar_detalle_pedido(cursor, id_pedido, carrito, nombre_usuario)
             connection.commit()
             print("Pedido y detalles guardados exitosamente.")
     

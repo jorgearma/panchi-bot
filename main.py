@@ -2,7 +2,7 @@ from flask import Flask, request , jsonify ,render_template
 from controllers.registro_de_usuarios.registro import manejar_registro
 from controllers.mensajes_registrados import manejar_mensajes_registrados
 from data.usuarios import guardar_usuario_bd , verificar_usuario_bd
-from data.carrito import carrito
+from data.carrito import carrito_instancia
 from data.estado_usuarios import estado_usuarios
 from utils.text_utils import limpiar_texto
 from database import conectar_bd
@@ -29,15 +29,11 @@ def agregar_pedido():
 
         # Extraer el número de WhatsApp y los productos del pedido
         for numero_whatsapp, productos in data.items():
-            # Verificar si el número de WhatsApp ya está en el carrito
-            if numero_whatsapp in carrito:
-                # Si ya existe, agregar los productos al carrito
-                carrito[numero_whatsapp].extend(productos)
-            else:
-                # Si no existe, crear una nueva entrada para el número de WhatsApp
-                carrito[numero_whatsapp] = productos
+            # Usar el método de la instancia para agregar productos al carrito
+            carrito_instancia.agregar_productos(numero_whatsapp, productos)
 
         return jsonify({"message": "Pedido recibido correctamente"}), 200
+
 
 
 

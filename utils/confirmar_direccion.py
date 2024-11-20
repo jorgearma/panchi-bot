@@ -1,7 +1,7 @@
 from data.estado_usuarios import estado_usuarios , obtener_estado_usuario, actualizar_estado_usuario
 from data.usuarios import registrar_usuario 
 from menu import mostrar_menu   
-from data.carrito import inicializar_carrito
+from data.carrito import  carrito_instancia
 from utils.mensajes import enviar_mensaje_whatsapp
 
 
@@ -11,7 +11,7 @@ def manejar_respuesta_positiva(numero_cliente):
     menu_despues_registro = mostrar_menu()
     enviar_mensaje_registro(numero_cliente, estado["nombre"], menu_despues_registro)
     actualizar_estado_usuario(numero_cliente)
-    inicializar_carrito(numero_cliente)
+    carrito_instancia.inicializar_carrito(numero_cliente)
     return "Usuario registrado", 200
 
 def manejar_respuesta_negativa(numero_cliente):
