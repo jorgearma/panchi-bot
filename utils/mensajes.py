@@ -13,3 +13,5 @@ def enviar_mensaje_whatsapp(mensaje, destinatario):
         from_=TWILIO_PHONE_NUMBER,
         to=destinatario
     )
+
+
