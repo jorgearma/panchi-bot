@@ -1,6 +1,6 @@
 from data.carrito import carrito_instancia, mostrar_carrito_sin_mensaje, mostrar_carrito 
 from utils.mensajes import enviar_mensaje_whatsapp
-from data.pedidos import  enviar_comanda_a_cocina ,guardar_pedido
+from data.pedidos import  enviar_comanda_a_cocina ,guardar_pedido , pedido 
 import random
 from data.pedidos_activos import pedidos_activos
 
@@ -41,21 +41,39 @@ def salir_o_proceder_al_pago(mensaje_cliente, numero_cliente):
 
 
 
-def procesar_metodo_pago(mensaje_cliente, numero_cliente):
-    
+def procesar_metodo_pago(mensaje_cliente, numero_cliente ):
     if mensaje_cliente in ["efectivo", "tarjeta"]:
-        carrito = carrito_instancia.carrito[numero_cliente]
-        productos, total = mostrar_carrito(carrito)
+        # Crear una instancia de Pedido
+        pedido1 = pedido(numero_cliente, mensaje_cliente)
+
+        # Mostrar el carrito y calcular el total
+        productos, total = mostrar_carrito(pedido1.contenido_pedido)
+
+        # Realizar operaciones relacionadas con el pago (por ejemplo, generar mensaje de confirmación)
         procesar_pago(total, mensaje_cliente, numero_cliente, enviar_mensaje_whatsapp)
-        
-        id_pedido = random.randint(1000, 9999)
-        pedidos_activos[numero_cliente] = {"id_pedido": id_pedido, "contenido": carrito}
-        guardar_pedido(numero_cliente, carrito, id_pedido)
-        contenido_pedido = carrito
-        print(f"este es el contenido del pedido " ,contenido_pedido)
-        enviar_comanda_a_cocina(id_pedido, contenido_pedido)
-        enviar_mensaje_whatsapp(f"Su pedido está confirmado y en preparación. Su número de pedido es: {id_pedido}", numero_cliente)
+
+        # Guardar el pedido en pedidos activos
+        pedidos_activos[numero_cliente] = {
+            "id_pedido": pedido1.id_pedido,
+            "contenido": pedido1.contenido_pedido
+        }
+
+        # Guardar el pedido en la base de datos
+        guardar_pedido(numero_cliente, pedido1.contenido_pedido, pedido1.id_pedido)
+
+        # Enviar la comanda a la cocina
+        pedido1.enviar_comanda_a_cocina()
+
+        # Confirmar el pedido al cliente
+        enviar_mensaje_whatsapp(
+            f"Su pedido está confirmado y en preparación. Su número de pedido es: {pedido1.id_pedido}",
+            numero_cliente
+        )
+
+        # Eliminar el carrito del cliente
         carrito_instancia.eliminar_carrito(numero_cliente)
-        ##carrito.pop(numero_cliente, None)
+
         return True
-    return False    
+
+    return False
+    
