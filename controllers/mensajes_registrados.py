@@ -5,7 +5,7 @@ from openai_api import obtener_respuesta_openai
 from data.usuarios import obtener_usuario_bd, manejar_usuario
 from data.carrito import carrito_instancia, manejar_consulta_carrito, mostrar_carrito, mostrar_carrito_sin_mensaje
 from data.estado_usuarios import estado_usuarios
-from data.pedidos import enviar_comanda_a_cocina, verificar_pedido_activo
+from data.pedidos import enviar_comanda_a_cocina, verificar_pedido_activo , pedido
 from data.pedidos_activos import pedidos_activos
 from controllers.pedido_Y_respuestas import procesar_mensaje_como_pedido
 
@@ -38,8 +38,8 @@ class ManejadorMensajesRegistrados:
         return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente)
 
 def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
-    carrito = {}
-    manejador = ManejadorMensajesRegistrados(carrito)
+    
+    manejador = ManejadorMensajesRegistrados(carrito_instancia)
     return manejador.manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
 
 
