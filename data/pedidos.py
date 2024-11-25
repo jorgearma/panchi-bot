@@ -80,7 +80,8 @@ gestor_pedido_db = GestorPedidoDB()
 # Funciones globales que llaman a los métodos de las clases Pedido y GestorPedidoDB
 def enviar_comanda_a_cocina(id_pedido, contenido_pedido):
     estancia_pedido.enviar_comanda_a_cocina(id_pedido, contenido_pedido)
-
+    
+##utils para ver si el pedido esta activo
 def verificar_pedido_activo(numero_cliente, mensaje_cliente, pedidos_activos):
         if mensaje_cliente.isdigit() and len(mensaje_cliente) == 4:
             id_pedido_cliente = int(mensaje_cliente)
