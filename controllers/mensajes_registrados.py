@@ -1,6 +1,6 @@
 from utils.mensajes import enviar_mensaje_whatsapp
 from menu import mostrar_menu, procesar_pedido
-from controllers.pago import preguntar_metodo_pago, procesar_pago, salir_o_proceder_al_pago, procesar_metodo_pago
+from controllers.pago import PedidoHandler
 from openai_api import obtener_respuesta_openai
 from data.usuarios import obtener_usuario_bd, manejar_usuario
 from data.carrito import carrito_instancia, manejar_consulta_carrito, mostrar_carrito, mostrar_carrito_sin_mensaje
@@ -29,10 +29,11 @@ class ManejadorMensajesRegistrados:
         if manejar_consulta_carrito(mensaje_cliente, numero_cliente, self.carrito):
             return "Mensaje enviado", 200
 
-        if salir_o_proceder_al_pago(mensaje_cliente, numero_cliente):
+        Pago_Handler = PedidoHandler(numero_cliente)
+        if Pago_Handler.salir_o_proceder_al_pago(mensaje_cliente):
             return "Mensaje enviado", 200
 
-        if procesar_metodo_pago(mensaje_cliente, numero_cliente):
+        if Pago_Handler.procesar_metodo_pago(mensaje_cliente):
             return "Mensaje enviado", 200
 
         return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente)
