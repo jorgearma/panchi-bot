@@ -68,20 +68,24 @@ class TestPedidoHandler(unittest.TestCase):
             self.numero_cliente
         )
 
+    
     @patch('controllers.pago.guardar_pedido')
     @patch('controllers.pago.pedido')
     @patch('controllers.pago.enviar_mensaje_whatsapp')
     @patch('controllers.pago.mostrar_carrito')
     @patch('controllers.pago.carrito_instancia')
     def test_procesar_metodo_pago(self, mock_carrito_instancia, mock_mostrar_carrito, mock_enviar_mensaje, mock_pedido, mock_guardar_pedido):
+        # Configurar los mocks
         mock_pedido.return_value.id_pedido = "1234"
         mock_pedido.return_value.contenido_pedido = ["item1", "item2"]
         mock_mostrar_carrito.return_value = (["item1", "item2"], 200)
 
+        # Llamar al método
         result = self.handler.procesar_metodo_pago("efectivo")
         self.assertTrue(result)
 
-        mock_pedido.assert_called_once_with(self.numero_cliente, "efectivo")
+        # Verificar que los mocks fueron llamados
+        mock_pedido.assert_called_once_with(self.numero_cliente, "efectivo", mock_carrito_instancia)
         mock_mostrar_carrito.assert_called_once_with(["item1", "item2"])
         mock_guardar_pedido.assert_called_once_with(self.numero_cliente, ["item1", "item2"], "1234")
         mock_carrito_instancia.eliminar_carrito.assert_called_once_with(self.numero_cliente)
@@ -89,4 +93,5 @@ class TestPedidoHandler(unittest.TestCase):
             "Su pedido está confirmado y en preparación. Su número de pedido es: 1234",
             self.numero_cliente
         )
+
 
