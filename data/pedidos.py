@@ -7,7 +7,7 @@ from data.pedidos_activos import pedidos_activos
 import random
 
 class pedido:
-    def __init__(self,  numero_cliente, mensaje_cliente):
+    def __init__(self,  numero_cliente, mensaje_cliente , carrito_instancia):
         self.id_pedido = self.generar_id_pedido()
         self.contenido_pedido = carrito_instancia.carrito[numero_cliente]
 

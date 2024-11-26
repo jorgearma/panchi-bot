@@ -36,7 +36,7 @@ class PedidoHandler:
 
     def procesar_metodo_pago(self, mensaje_cliente):
         if mensaje_cliente in ["efectivo", "tarjeta"]:
-            pedido1 = pedido(self.numero_cliente, mensaje_cliente)
+            pedido1 = pedido(self.numero_cliente, mensaje_cliente, carrito_instancia)
             productos, total = mostrar_carrito(pedido1.contenido_pedido)
             self.procesar_pago(total, mensaje_cliente)
 
