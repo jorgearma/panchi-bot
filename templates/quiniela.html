@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú de Pedidos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        #orderForm {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        #menu {
+            margin: 20px 0;
+        }
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f3f3f3;
+            border-radius: 5px;
+        }
+        .menu-item span {
+            flex: 1;
+            font-size: 16px;
+        }
+        .quantity-control {
+            display: flex;
+            align-items: center;
+        }
+        .quantity-control button {
+            width: 30px;
+            height: 30px;
+            font-size: 16px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .quantity-control button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .quantity-display {
+            width: 40px;
+            text-align: center;
+            font-size: 16px;
+            margin: 0 5px;
+        }
+        label, input, button {
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>Menú</h1>
+    <form id="orderForm">
+        <div id="menu"></div>
+        <label for="phone">Teléfono (con código país):</label>
+        <input type="text" id="phone" placeholder="Ej: +4531822092" required>
+        <button type="button" id="submitOrder">Enviar</button>
+    </form>
+
+    <script>
+        const menu = {
+            "🍔 *HAMBURGUESAS*": {
+                "clasica": {"precio": 5.00, "codigo": 301},
+                "ranchera": {"precio": 5.50, "codigo": 302},
+                "crispy": {"precio": 6.00, "codigo": 303}
+            },
+            "🌭 *PERRITOS*": {
+                "clasico": {"precio": 4.00, "codigo": 401},
+                "picanton": {"precio": 4.00, "codigo": 402},
+                "texano": {"precio": 4.00, "codigo": 403},
+                "bbq": {"precio": 4.00, "codigo": 404}
+            },
+            "🍨 *POSTRES*": {
+                "flan": {"precio": 4.00, "codigo": 501},
+                "tarta": {"precio": 5.00, "codigo": 502},
+                "helado": {"precio": 3.50, "codigo": 503}
+            },
+            "🥤 *BEBIDAS*": {
+                "agua": {"precio": 1.50, "codigo": 601},
+                "vino": {"precio": 4.00, "codigo": 602},
+                "cerveza": {"precio": 3.00, "codigo": 603},
+                "refresco": {"precio": 2.50, "codigo": 604},
+                "café": {"precio": 2.00, "codigo": 605}
+            }
+        };
+
+        const menuDiv = document.getElementById('menu');
+
+        // Crear elementos dinámicos del menú
+        Object.keys(menu).forEach(category => {
+            const categoryDiv = document.createElement('div');
+            categoryDiv.innerHTML = `<h2>${category}</h2>`;
+            Object.keys(menu[category]).forEach(item => {
+                const { precio } = menu[category][item];
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'menu-item';
+                itemDiv.innerHTML = `
+                    <span>${item} - $${precio.toFixed(2)}</span>
+                    <div class="quantity-control">
+                        <button class="decrease" data-item="${item}" disabled>-</button>
+                        <span class="quantity-display" id="quantity-${item}">0</span>
+                        <button class="increase" data-item="${item}">+</button>
+                    </div>
+                `;
+                categoryDiv.appendChild(itemDiv);
+            });
+            menuDiv.appendChild(categoryDiv);
+        });
+
+        const quantities = {};
+
+        // Controlar la cantidad de productos
+        document.addEventListener('click', (event) => {
+            if (event.target.classList.contains('increase') || event.target.classList.contains('decrease')) {
+                const item = event.target.dataset.item;
+                if (!quantities[item]) quantities[item] = 0;
+
+                if (event.target.classList.contains('increase')) {
+                    quantities[item]++;
+                } else if (event.target.classList.contains('decrease')) {
+                    quantities[item] = Math.max(0, quantities[item] - 1);
+                }
+
+                // Actualizar la interfaz
+                document.getElementById(`quantity-${item}`).innerText = quantities[item];
+                const decreaseButton = event.target.closest('.quantity-control').querySelector('.decrease');
+                decreaseButton.disabled = quantities[item] === 0;
+            }
+        });
+
+        // Capturar y procesar el pedido
+        document.getElementById('submitOrder').addEventListener('click', async () => {
+            const phone = document.getElementById('phone').value.trim();
+            if (!phone) {
+                alert('Por favor, ingresa un número de teléfono válido.');
+                return;
+            }
+
+            const selectedItems = Object.entries(quantities)
+                .filter(([_, quantity]) => quantity > 0)
+                .map(([item, quantity]) => ({
+                    item,
+                    quantity,
+                    precio: menu[Object.keys(menu).find(cat => menu[cat][item])][item].precio
+                }));
+
+            if (selectedItems.length === 0) {
+                alert('Por favor, selecciona al menos un producto.');
+                return;
+            }
+
+            const order = {
+                phone,
+                items: selectedItems
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/agregar_pedido', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(order)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(result.message);
+                } else {
+                    const error = await response.json();
+                    alert('Error al enviar el pedido: ' + (error.message || 'Desconocido'));
+                }
+            } catch (err) {
+                console.error('Error de conexión:', err);
+                alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+            }
+        });
+    </script>
+</body>
+</html>
