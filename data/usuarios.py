@@ -92,6 +92,34 @@ class GestorUsuarios:
                 )
                 return "Mensaje enviado", 200
 
+class Usuario:
+    def __init__(self, nombre, numero_cliente, direccion):
+        self.nombre = nombre
+        self.numero_cliente = numero_cliente
+        self.direccion = direccion
+
+    @classmethod
+    def desde_diccionario(cls, datos):
+        """
+        Crea una instancia de Usuario a partir de un diccionario.
+        """
+        return cls(
+            nombre=datos["nombre"],
+            numero_cliente=datos["numero"],
+            direccion=datos["direccion"]
+        )
+
+    def to_dict(self):
+        """
+        Convierte la instancia de Usuario a un diccionario.
+        """
+        return {
+            "nombre": self.nombre,
+            "numero_cliente": self.numero_cliente,
+            "direccion": self.direccion
+        }
+
+
 # Alias de funciones globales para evitar que el código actual se rompa
 obtener_usuario_bd = GestorUsuariosBD.obtener_usuario
 guardar_usuario_bd = GestorUsuariosBD.guardar_usuario
