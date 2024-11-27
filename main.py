@@ -10,32 +10,35 @@ import json
 from flask_cors import CORS 
 
 app = Flask(__name__)
-CORS(app)
 
-CORS(app, origins=["http://127.0.0.1:5500"])  # Permite solo este origen
+CORS(app, resources={r"/api/*": {"origins": ["http://127.0.0.1:5500", "http://localhost:5000"]}})
+  # Permite solo este origen
 
 @app.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
 def agregar_pedido():
     if request.method == 'OPTIONS':
+        # Respuesta al preflight
         response = app.make_response('')
-        response.headers.add("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5000")  # Ajusta al origen correcto
         response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        return response, 204
+        return response, 200  # HTTP 200 es requerido aquí
 
     if request.method == 'POST':
         data = request.json
-        print(data)  # Verifica qué JSON se recibe
+        print(data)  # Verifica el JSON recibido
 
-        # Extraer el número de WhatsApp y los productos del pedido
         for numero_whatsapp, productos in data.items():
-            # Usar el método de la instancia para agregar productos al carrito
             carrito_instancia.agregar_productos(numero_whatsapp, productos)
 
-        return jsonify({"message": "Pedido recibido correctamente"}), 200
+        response = jsonify({"message": "Pedido recibido correctamente"})
+        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5000")  # Ajusta al origen correcto
+        return response, 200
 
 
-
+@app.route('/quiniela', methods=['GET'])
+def quiniela():
+    return render_template('quiniela.html')
 
 
 @app.route('/comandas', methods=['GET'])
