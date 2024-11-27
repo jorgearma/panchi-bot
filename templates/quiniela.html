@@ -141,23 +141,26 @@
         const quantities = {};
 
         // Controlar la cantidad de productos
+        // Controlar la cantidad de productos
         document.addEventListener('click', (event) => {
-            if (event.target.classList.contains('increase') || event.target.classList.contains('decrease')) {
-                const item = event.target.dataset.item;
-                if (!quantities[item]) quantities[item] = 0;
+        if (event.target.classList.contains('increase') || event.target.classList.contains('decrease')) {
+            event.preventDefault(); // Prevenir el comportamiento predeterminado
 
-                if (event.target.classList.contains('increase')) {
-                    quantities[item]++;
-                } else if (event.target.classList.contains('decrease')) {
-                    quantities[item] = Math.max(0, quantities[item] - 1);
-                }
+            const item = event.target.dataset.item;
+            if (!quantities[item]) quantities[item] = 0;
 
-                // Actualizar la interfaz
-                document.getElementById(`quantity-${item}`).innerText = quantities[item];
-                const decreaseButton = event.target.closest('.quantity-control').querySelector('.decrease');
-                decreaseButton.disabled = quantities[item] === 0;
+            if (event.target.classList.contains('increase')) {
+                quantities[item]++;
+            } else if (event.target.classList.contains('decrease')) {
+                quantities[item] = Math.max(0, quantities[item] - 1);
             }
-        });
+
+            // Actualizar la interfaz
+            document.getElementById(`quantity-${item}`).innerText = quantities[item];
+            const decreaseButton = event.target.closest('.quantity-control').querySelector('.decrease');
+            decreaseButton.disabled = quantities[item] === 0;
+    }
+});
 
         // Capturar y procesar el pedido
         document.getElementById('submitOrder').addEventListener('click', async () => {
