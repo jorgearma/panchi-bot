@@ -27,6 +27,7 @@ class ManejadorMensajesRegistrados:
 
         # Consultar el carrito
         if manejar_consulta_carrito(mensaje_cliente, numero_cliente, self.carrito):
+            print(carrito_instancia.carrito)
             return "Mensaje enviado", 200
 
         Pago_Handler = PedidoHandler(numero_cliente)
