@@ -9,10 +9,24 @@ from database import conectar_bd
 import json
 from flask_cors import CORS 
 
+
+from data.usuarios import GestorUsuariosBD , Usuario
+
 app = Flask(__name__)
 
 CORS(app, resources={r"/api/*": {"origins": ["http://127.0.0.1:5500", "http://localhost:5000"]}})
   # Permite solo este origen
+
+@app.route('/api/usuario/<numero_cliente>', methods=['GET'])
+def obtener_usuario(numero_cliente):
+    datos = GestorUsuariosBD.obtener_usuario(numero_cliente)  # Usa el método existente
+    if datos is None:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+    
+    # Crear una instancia de Usuario
+    usuario = Usuario(datos['nombre'], datos['numero'], datos['direccion'])
+    return jsonify(usuario.to_dict()), 200
+
 
 @app.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
 def agregar_pedido():
@@ -36,9 +50,19 @@ def agregar_pedido():
         return response, 200
 
 
-@app.route('/quiniela', methods=['GET'])
-def quiniela():
-    return render_template('quiniela.html')
+@app.route('/quiniela/<numero_cliente>', methods=['GET'])
+def quiniela(numero_cliente):
+    # Obtener los datos del usuario utilizando el método GestorUsuariosBD.obtener_usuario
+    datos = GestorUsuariosBD.obtener_usuario(numero_cliente)
+    
+    if datos is None:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    # Crear una instancia de Usuario
+    usuario = Usuario(datos['nombre'], datos['numero'], datos['direccion'])
+    
+    # Renderizar una plantilla personalizada para el cliente, pasando los datos del usuario
+    return render_template('quiniela.html', usuario=usuario)
 
 
 @app.route('/comandas', methods=['GET'])
