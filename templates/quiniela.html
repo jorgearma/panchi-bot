@@ -20,22 +20,39 @@
             background-color: #007bff;
             color: white;
             padding: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 5px;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            gap: 10px;
+            gap: 3px;
         }
+        
         #user-info h2 {
-            margin: 0;
-            font-size: 1.8em;
-            font-weight: bold;
+        margin: 0 auto; /* Centra el bloque horizontalmente */
+        font-size: 1.5em; /* Tamaño profesional */
+        font-weight: bold; /* Resalta el texto */
+        font-family: 'Roboto', 'Arial', sans-serif; /* Tipografía profesional */
+        line-height: 1.2; /* Espaciado entre líneas */
+        color: #333; /* Color oscuro suave */
+        text-transform: uppercase; /* Convierte a mayúsculas */
+        letter-spacing: 1px; /* Espaciado entre letras */
+        text-align: center; /* Centra el texto */
+        border-bottom: 2px solid #007BFF; /* Línea decorativa */
+        padding-bottom: 5px; /* Espacio entre texto y línea */
+        max-width: 600px; /* Limita el ancho para mejor diseño */
+        display: block; /* Asegura el comportamiento de bloque */
+        }
+
+        .icon-delivery {
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        fill: currentColor;
         }
         .user-detail {
-            display: flex;
-            align-items: center;
-            font-size: 1.1em;
-            gap: 10px;
+        display: flex;
+        align-items: center;
+        margin-top: 1px;
         }
         .user-detail i {
             font-size: 1.3em;
@@ -55,7 +72,7 @@
         #orderForm {
             max-width: 800px;
             margin: 20px auto;
-            padding: 20px;
+            padding: 5px;
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -167,28 +184,75 @@
         transform: translateY(0);
         transition: opacity 0.5s ease, transform 0.5s ease;
     }
+
+    .menu-title {
+    text-align: center; /* Centra el título */
+    margin-bottom: 20px; /* Espaciado hacia abajo */
+    font-family: 'Roboto', sans-serif; /* Tipografía profesional */
+    color: #333; /* Color oscuro suave */
+}
+
+    .restaurant-name {
+        display: block; /* Se asegura que sea un bloque separado */
+        font-size: 1.1em; /* Tamaño más pequeño */
+        font-weight: bold; /* Texto en negrita */
+        color: #007bff; /* Azul elegante */
+        text-transform: uppercase; /* Convierte a mayúsculas */
+        letter-spacing: 1px; /* Espaciado entre letras */
+        margin-bottom: 5px; /* Espaciado con el subtítulo */
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); /* Sombra ligera */
+    }
+
+    .menu-label {
+        font-size: 1.2em; /* Más pequeño que el nombre */
+        font-weight: 500; /* Peso medio para diferenciación */
+        color: #555; /* Color más tenue */
+        letter-spacing: 0.8px; /* Espaciado elegante */
+    }
+    .title-divider {
+        width: 60%; /* Ajusta el ancho */
+        margin: 10px auto 0; /* Centra y da espacio superior */
+        border: 0;
+        border-top: 2px solid #007bff; /* Línea decorativa */
+    }
+
 </style>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const deliveryCost = 3.50;
+        const notificationPopup = document.getElementById('notification-popup');
+        notificationPopup.textContent = `Total: €${deliveryCost.toFixed(2)}`;
+    });
+</script>
 <body>
     <div id="user-info">
-        <h2>Bienvenido, {{ usuario.nombre }}</h2>
+        <h2>{{ usuario.nombre }}</h2>
         <div class="user-detail">
             <!-- Icon for address -->
             <svg class="icon-address" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
             </svg>
-            <span>{{ usuario.direccion }}</span>
+            <span>&nbsp;&nbsp;&nbsp;{{ usuario.direccion }}</span>
         </div>
         <div class="user-detail">
-            <!-- Icon for phone -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-                <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.09-.23 11.05 11.05 0 003.47.57 1 1 0 011 1v3.06a1 1 0 01-1 1A19.05 19.05 0 015 5a1 1 0 011-1h3.06a1 1 0 011 1c0 1.21.2 2.38.57 3.47a1 1 0 01-.23 1.09l-2.2 2.2z" fill="white"/>
+            <!-- Icon for delivery price -->
+            <svg class="icon-delivery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                <path d="M4 4h16v2H4V4zm0 6h16v2H4v-2zm0 6h16v2H4v-2z"/>
             </svg>
-            <span>{{ usuario.numero_cliente }}</span>
+            <span>&nbsp;Precio del delivery: <strong style="color: rgb(36, 35, 35); font-size: 1.1em; font-family: 'Arial Black', sans-serif;">3,50€</strong></span>
+
         </div>
     </div>
-    <h1>Menú</h1>
+        
+    
+    <h1 class="menu-title">
+        <span class="restaurant-name">Urban Kitchen</span>
+        <span class="menu-label">Menú</span>
+        <hr class="title-divider">
+    </h1>
+    
     <form id="orderForm">
         <div id="menu"></div>
         <button type="button" id="submitOrder">Enviar</button>
@@ -196,29 +260,29 @@
     <div id="notification-popup"></div>
     <script>
         const menu = {
-            "🍔 *HAMBURGUESAS*": {
+            "🍔 HAMBURGUESAS": {
                 "clasica": {"precio": 5.00, "codigo": 301, "ingredientes": "Carne, Queso, Lechuga, Tomate"},
                 "ranchera": {"precio": 5.50, "codigo": 302, "ingredientes": "Carne, Queso, Bacon, Salsa BBQ"},
                 "crispy": {"precio": 6.00, "codigo": 303, "ingredientes": "Pollo, Queso, Lechuga, Tomate"}
             },
-            "🌭 *PERRITOS*": {
+            "🌭 PERRITOS": {
                 "clasico": {"precio": 4.00, "codigo": 401, "ingredientes": "Salchicha, Pan, Mostaza, Ketchup"},
                 "picanton": {"precio": 4.00, "codigo": 402, "ingredientes": "Salchicha, Pan, Jalapeños, Salsa Picante"},
                 "texano": {"precio": 4.00, "codigo": 403, "ingredientes": "Salchicha, Pan, Cebolla Frita, Salsa BBQ"},
-        "bbq": {"precio": 4.00, "codigo": 404, "ingredientes": "Salchicha, Pan, Bacon, Salsa BBQ"}
-    },
-    "🍨 *POSTRES*": {
-        "flan": {"precio": 4.00, "codigo": 501, "ingredientes": "Leche, Azúcar, Huevos"},
-        "tarta": {"precio": 5.00, "codigo": 502, "ingredientes": "Harina, Azúcar, Huevos, Frutas"},
-        "helado": {"precio": 3.50, "codigo": 503, "ingredientes": "Leche, Azúcar, Saborizante"}
-    },
-    "🥤 *BEBIDAS*": {
-        "agua": {"precio": 1.50, "codigo": 601, "ingredientes": "Agua"},
-        "vino": {"precio": 4.00, "codigo": 602, "ingredientes": "Uvas"},
-        "cerveza": {"precio": 3.00, "codigo": 603, "ingredientes": "Cebada, Lúpulo, Agua"},
-        "refresco": {"precio": 2.50, "codigo": 604, "ingredientes": "Agua, Azúcar, Saborizante"},
-        "café": {"precio": 2.00, "codigo": 605, "ingredientes": "Café"}
-    }
+                "bbq": {"precio": 4.00, "codigo": 404, "ingredientes": "Salchicha, Pan, Bacon, Salsa BBQ"}
+            },
+            "🍨 POSTRES": {
+                "flan": {"precio": 4.00, "codigo": 501, "ingredientes": "Leche, Azúcar, Huevos"},
+                "tarta": {"precio": 5.00, "codigo": 502, "ingredientes": "Harina, Azúcar, Huevos, Frutas"},
+                "helado": {"precio": 3.50, "codigo": 503, "ingredientes": "Leche, Azúcar, Saborizante"}
+            },
+            "🥤 BEBIDAS": {
+                "agua": {"precio": 1.50, "codigo": 601, "ingredientes": "Agua"},
+                "vino": {"precio": 4.00, "codigo": 602, "ingredientes": "Uvas"},
+                "cerveza": {"precio": 3.00, "codigo": 603, "ingredientes": "Cebada, Lúpulo, Agua"},
+                "refresco": {"precio": 2.50, "codigo": 604, "ingredientes": "Agua, Azúcar, Saborizante"},
+                "café": {"precio": 2.00, "codigo": 605, "ingredientes": "Café"}
+            }
 };
 const menuDiv = document.getElementById('menu');
 const notificationPopup = document.getElementById('notification-popup');
