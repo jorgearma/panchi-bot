@@ -73,7 +73,6 @@ class GestorUsuarios:
     def obtener_nombre_usuario(numero_cliente):
         nombre = obtener_usuario_bd(numero_cliente)
         return nombre["nombre"] 
-
     @staticmethod
     def manejar_usuario(numero_cliente):
         from data.carrito import carrito_instancia
@@ -90,6 +89,7 @@ class GestorUsuarios:
                     f"¡Hola {nombre_usuario}! 👋 Bienvenido de nuevo. {menu_texto}                ⬆️ *MENU* ⬆️ \n❗*Para agregar un producto*❗\n\nescribe el *numero* o su *nombre* \n\n      👇 *Ejemplos* 👇 \n\n ▪️ *clasica*    o    *301* \n ▪️ *helado*    o    *503* ", 
                     numero_cliente
                 )
+   
                 return "Mensaje enviado", 200
 
 class Usuario:
