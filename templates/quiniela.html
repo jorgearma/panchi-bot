@@ -4,228 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menú de Pedidos</title>
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f9f9f9;
-        }
-        h1, h2 {
-            text-align: center;
-            color: #333;
-            font-weight: 500;
-        }
-        #user-info {
-            background-color: #007bff;
-            color: white;
-            padding: 20px;
-            margin-bottom: 5px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 3px;
-        }
-        
-        #user-info h2 {
-        margin: 0 auto; /* Centra el bloque horizontalmente */
-        font-size: 1.5em; /* Tamaño profesional */
-        font-weight: bold; /* Resalta el texto */
-        font-family: 'Roboto', 'Arial', sans-serif; /* Tipografía profesional */
-        line-height: 1.2; /* Espaciado entre líneas */
-        color: #333; /* Color oscuro suave */
-        text-transform: uppercase; /* Convierte a mayúsculas */
-        letter-spacing: 1px; /* Espaciado entre letras */
-        text-align: center; /* Centra el texto */
-        border-bottom: 2px solid #007BFF; /* Línea decorativa */
-        padding-bottom: 5px; /* Espacio entre texto y línea */
-        max-width: 600px; /* Limita el ancho para mejor diseño */
-        display: block; /* Asegura el comportamiento de bloque */
-        }
-
-        .icon-delivery {
-        width: 16px;
-        height: 16px;
-        margin-right: 8px;
-        fill: currentColor;
-        }
-        .user-detail {
-        display: flex;
-        align-items: center;
-        margin-top: 1px;
-        }
-        .user-detail i {
-            font-size: 1.3em;
-            color: #ffffff;
-        }
-        .user-detail span {
-            font-weight: 400;
-        }
-        .user-detail svg {
-            width: 24px;
-            height: 24px;
-        }
-        /* Icon styles */
-        .icon-address path {
-            fill: white;
-        }
-        #orderForm {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 5px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        #menu {
-            margin: 20px 0;
-        }
-
-        .menu-ingredients {
-        color: #888; /* Color gris tenue */
-        font-size: 0.9em; /* Fuente más pequeña */
-        }
-
-        .menu-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #f3f3f3;
-            border-radius: 5px;
-            
-
-        }
-        .item-title {
-            font-weight: bold;
-            font-size: 1.2em; /* Ajusta según el tamaño deseado */
-        }
-        .menu-item .menu-details {
-            display: flex;
-            
-            flex-direction: column;
-            justify-content: space-between;
-            max-width: 70%;
-        }
-        .menu-item img {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 5px;
-            margin-left: 20px;
-        }
-        .quantity-control {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-        }
-        .quantity-control button {
-            width: 40px;
-            height: 40px;
-        font-size: 20px;
-        border: none;
-        background-color: #007bff;
-        color: white;
-        border-radius: 50%;
-        cursor: pointer;
-        transition: background-color 0.3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .quantity-control button.decrease {
-        background-color: #ff4d4d;
-    }
-    .quantity-control button.decrease:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-    }
-    .quantity-control button:hover:not(:disabled) {
-        background-color: #0056b3;
-    }
-    .quantity-control button.decrease:hover:not(:disabled) {
-        background-color: #cc0000;
-    }
-    .quantity-display {
-        width: 50px;
-        text-align: center;
-        font-size: 20px;
-        font-weight: bold;
-        margin: 0 10px;
-        color: #007bff;
-    }
-    label, input, button {
-        font-size: 16px;
-    }
-    button {
-        padding: 10px 20px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    button:hover {
-        background-color: #218838;
-    }
-    #notification-popup {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background-color: #007bff;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        font-size: 16px;
-        font-weight: bold;
-        opacity: 1;
-        transform: translateY(0);
-        transition: opacity 0.5s ease, transform 0.5s ease;
-    }
-
-    .menu-title {
-    text-align: center; /* Centra el título */
-    margin-bottom: 20px; /* Espaciado hacia abajo */
-    font-family: 'Roboto', sans-serif; /* Tipografía profesional */
-    color: #333; /* Color oscuro suave */
-}
-
-    .restaurant-name {
-        display: block; /* Se asegura que sea un bloque separado */
-        font-size: 1.1em; /* Tamaño más pequeño */
-        font-weight: bold; /* Texto en negrita */
-        color: #007bff; /* Azul elegante */
-        text-transform: uppercase; /* Convierte a mayúsculas */
-        letter-spacing: 1px; /* Espaciado entre letras */
-        margin-bottom: 5px; /* Espaciado con el subtítulo */
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); /* Sombra ligera */
-    }
-
-    .menu-label {
-        font-size: 1.2em; /* Más pequeño que el nombre */
-        font-weight: 500; /* Peso medio para diferenciación */
-        color: #555; /* Color más tenue */
-        letter-spacing: 0.8px; /* Espaciado elegante */
-    }
-    .title-divider {
-        width: 60%; /* Ajusta el ancho */
-        margin: 10px auto 0; /* Centra y da espacio superior */
-        border: 0;
-        border-top: 2px solid #007bff; /* Línea decorativa */
-    }
-
-</style>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const deliveryCost = 3.50;
-        const notificationPopup = document.getElementById('notification-popup');
-        notificationPopup.textContent = `Total: €${deliveryCost.toFixed(2)}`;
-    });
-</script>
+
 <body>
     <div id="user-info">
         <h2>{{ usuario.nombre }}</h2>
@@ -245,6 +28,7 @@
 
         </div>
     </div>
+    
         
     
     <h1 class="menu-title">
@@ -287,7 +71,8 @@
 const menuDiv = document.getElementById('menu');
 const notificationPopup = document.getElementById('notification-popup');
 const quantities = {};
-// Función para calcular el total
+
+// Function to calculate the total
 const calculateTotal = () => {
     return Object.entries(quantities)
         .filter(([_, quantity]) => quantity > 0)
@@ -297,10 +82,39 @@ const calculateTotal = () => {
             return total + (precio * quantity);
         }, 0);
 };
-// Función para mostrar el popup
-const showNotification = (message) => {
-    notificationPopup.innerText = message;
+
+// Function to show the notification with the total and hidden list of added products
+const showNotification = () => {
+    const total = calculateTotal().toFixed(2);
+    const itemsList = Object.entries(quantities)
+        .filter(([_, quantity]) => quantity > 0)
+        .map(([item, quantity]) => {
+            const category = Object.keys(menu).find(cat => menu[cat][item]);
+            const { precio } = menu[category][item];
+            return `<li>${item} - ${quantity} x ${precio.toFixed(2)}€</li>`;
+        }).join('');
+    notificationPopup.innerHTML = `<p>Total: ${total}€</p><ul style="display: none;">${itemsList}</ul>`;
 };
+
+// Toggle expanded state and visibility of the list on click
+notificationPopup.addEventListener('click', () => {
+    notificationPopup.classList.toggle('expanded');
+    const itemsList = notificationPopup.querySelector('ul');
+    if (notificationPopup.classList.contains('expanded')) {
+        itemsList.style.display = 'block';
+    } else {
+        itemsList.style.display = 'none';
+    }
+});
+// Close the notification popup when clicking outside of it
+document.addEventListener('click', (event) => {
+    if (!notificationPopup.contains(event.target)) {
+        notificationPopup.classList.remove('expanded');
+        const itemsList = notificationPopup.querySelector('ul');
+        itemsList.style.display = 'none';
+    }
+});
+
 // Crear elementos dinámicos del menú
 Object.keys(menu).forEach(category => {
     const categoryDiv = document.createElement('div');
@@ -346,7 +160,7 @@ Object.keys(menu).forEach(category => {
         });
 
         // Mostrar el total inicial
-        showNotification(`Total: $${calculateTotal().toFixed(2)}`);
+        showNotification();
 
         document.getElementById('submitOrder').addEventListener('click', async () => {
         // Capturamos el teléfono del usuario proporcionado por Flask
