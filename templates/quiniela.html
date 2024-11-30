@@ -4,191 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menú de Pedidos</title>
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f9f9f9;
-        }
-        h1, h2 {
-            text-align: center;
-            color: #333;
-            font-weight: 500;
-        }
-        #user-info {
-            background-color: #007bff;
-            color: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-        }
-        #user-info h2 {
-            margin: 0;
-            font-size: 1.8em;
-            font-weight: bold;
-        }
-        .user-detail {
-            display: flex;
-            align-items: center;
-            font-size: 1.1em;
-            gap: 10px;
-        }
-        .user-detail i {
-            font-size: 1.3em;
-            color: #ffffff;
-        }
-        .user-detail span {
-            font-weight: 400;
-        }
-        .user-detail svg {
-            width: 24px;
-            height: 24px;
-        }
-        /* Icon styles */
-        .icon-address path {
-            fill: white;
-        }
-        #orderForm {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        #menu {
-            margin: 20px 0;
-        }
-
-        .menu-ingredients {
-        color: #888; /* Color gris tenue */
-        font-size: 0.9em; /* Fuente más pequeña */
-        }
-
-        .menu-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #f3f3f3;
-            border-radius: 5px;
-            
-
-        }
-        .item-title {
-            font-weight: bold;
-            font-size: 1.2em; /* Ajusta según el tamaño deseado */
-        }
-        .menu-item .menu-details {
-            display: flex;
-            
-            flex-direction: column;
-            justify-content: space-between;
-            max-width: 70%;
-        }
-        .menu-item img {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 5px;
-            margin-left: 20px;
-        }
-        .quantity-control {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-        }
-        .quantity-control button {
-            width: 40px;
-            height: 40px;
-        font-size: 20px;
-        border: none;
-        background-color: #007bff;
-        color: white;
-        border-radius: 50%;
-        cursor: pointer;
-        transition: background-color 0.3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .quantity-control button.decrease {
-        background-color: #ff4d4d;
-    }
-    .quantity-control button.decrease:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-    }
-    .quantity-control button:hover:not(:disabled) {
-        background-color: #0056b3;
-    }
-    .quantity-control button.decrease:hover:not(:disabled) {
-        background-color: #cc0000;
-    }
-    .quantity-display {
-        width: 50px;
-        text-align: center;
-        font-size: 20px;
-        font-weight: bold;
-        margin: 0 10px;
-        color: #007bff;
-    }
-    label, input, button {
-        font-size: 16px;
-    }
-    button {
-        padding: 10px 20px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    button:hover {
-        background-color: #218838;
-    }
-    #notification-popup {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background-color: #007bff;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        font-size: 16px;
-        font-weight: bold;
-        opacity: 1;
-        transform: translateY(0);
-        transition: opacity 0.5s ease, transform 0.5s ease;
-    }
-</style>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div id="user-info">
-        <h2>Bienvenido, {{ usuario.nombre }}</h2>
+        <h2>{{ usuario.nombre }}</h2>
         <div class="user-detail">
             <!-- Icon for address -->
             <svg class="icon-address" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
             </svg>
-            <span>{{ usuario.direccion }}</span>
+            <span>&nbsp;&nbsp;&nbsp;{{ usuario.direccion }}</span>
         </div>
         <div class="user-detail">
-            <!-- Icon for phone -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-                <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.09-.23 11.05 11.05 0 003.47.57 1 1 0 011 1v3.06a1 1 0 01-1 1A19.05 19.05 0 015 5a1 1 0 011-1h3.06a1 1 0 011 1c0 1.21.2 2.38.57 3.47a1 1 0 01-.23 1.09l-2.2 2.2z" fill="white"/>
+            <!-- Icon for delivery price -->
+            <svg class="icon-delivery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                <path d="M4 4h16v2H4V4zm0 6h16v2H4v-2zm0 6h16v2H4v-2z"/>
             </svg>
-            <span>{{ usuario.numero_cliente }}</span>
+            <span>&nbsp;Precio del delivery: <strong style="color: rgb(36, 35, 35); font-size: 1.1em; font-family: 'Arial Black', sans-serif;">3,50€</strong></span>
+
         </div>
     </div>
-    <h1>Menú</h1>
+    
+        
+    
+    <h1 class="menu-title">
+        <span class="restaurant-name">Urban Kitchen</span>
+        <span class="menu-label">Menú</span>
+        <hr class="title-divider">
+    </h1>
+    
     <form id="orderForm">
         <div id="menu"></div>
         <button type="button" id="submitOrder">Enviar</button>
@@ -196,34 +44,35 @@
     <div id="notification-popup"></div>
     <script>
         const menu = {
-            "🍔 *HAMBURGUESAS*": {
+            "🍔 HAMBURGUESAS": {
                 "clasica": {"precio": 5.00, "codigo": 301, "ingredientes": "Carne, Queso, Lechuga, Tomate"},
                 "ranchera": {"precio": 5.50, "codigo": 302, "ingredientes": "Carne, Queso, Bacon, Salsa BBQ"},
                 "crispy": {"precio": 6.00, "codigo": 303, "ingredientes": "Pollo, Queso, Lechuga, Tomate"}
             },
-            "🌭 *PERRITOS*": {
+            "🌭 PERRITOS": {
                 "clasico": {"precio": 4.00, "codigo": 401, "ingredientes": "Salchicha, Pan, Mostaza, Ketchup"},
                 "picanton": {"precio": 4.00, "codigo": 402, "ingredientes": "Salchicha, Pan, Jalapeños, Salsa Picante"},
                 "texano": {"precio": 4.00, "codigo": 403, "ingredientes": "Salchicha, Pan, Cebolla Frita, Salsa BBQ"},
-        "bbq": {"precio": 4.00, "codigo": 404, "ingredientes": "Salchicha, Pan, Bacon, Salsa BBQ"}
-    },
-    "🍨 *POSTRES*": {
-        "flan": {"precio": 4.00, "codigo": 501, "ingredientes": "Leche, Azúcar, Huevos"},
-        "tarta": {"precio": 5.00, "codigo": 502, "ingredientes": "Harina, Azúcar, Huevos, Frutas"},
-        "helado": {"precio": 3.50, "codigo": 503, "ingredientes": "Leche, Azúcar, Saborizante"}
-    },
-    "🥤 *BEBIDAS*": {
-        "agua": {"precio": 1.50, "codigo": 601, "ingredientes": "Agua"},
-        "vino": {"precio": 4.00, "codigo": 602, "ingredientes": "Uvas"},
-        "cerveza": {"precio": 3.00, "codigo": 603, "ingredientes": "Cebada, Lúpulo, Agua"},
-        "refresco": {"precio": 2.50, "codigo": 604, "ingredientes": "Agua, Azúcar, Saborizante"},
-        "café": {"precio": 2.00, "codigo": 605, "ingredientes": "Café"}
-    }
+                "bbq": {"precio": 4.00, "codigo": 404, "ingredientes": "Salchicha, Pan, Bacon, Salsa BBQ"}
+            },
+            "🍨 POSTRES": {
+                "flan": {"precio": 4.00, "codigo": 501, "ingredientes": "Leche, Azúcar, Huevos"},
+                "tarta": {"precio": 5.00, "codigo": 502, "ingredientes": "Harina, Azúcar, Huevos, Frutas"},
+                "helado": {"precio": 3.50, "codigo": 503, "ingredientes": "Leche, Azúcar, Saborizante"}
+            },
+            "🥤 BEBIDAS": {
+                "agua": {"precio": 1.50, "codigo": 601, "ingredientes": "Agua"},
+                "vino": {"precio": 4.00, "codigo": 602, "ingredientes": "Uvas"},
+                "cerveza": {"precio": 3.00, "codigo": 603, "ingredientes": "Cebada, Lúpulo, Agua"},
+                "refresco": {"precio": 2.50, "codigo": 604, "ingredientes": "Agua, Azúcar, Saborizante"},
+                "café": {"precio": 2.00, "codigo": 605, "ingredientes": "Café"}
+            }
 };
 const menuDiv = document.getElementById('menu');
 const notificationPopup = document.getElementById('notification-popup');
 const quantities = {};
-// Función para calcular el total
+
+// Function to calculate the total
 const calculateTotal = () => {
     return Object.entries(quantities)
         .filter(([_, quantity]) => quantity > 0)
@@ -233,10 +82,39 @@ const calculateTotal = () => {
             return total + (precio * quantity);
         }, 0);
 };
-// Función para mostrar el popup
-const showNotification = (message) => {
-    notificationPopup.innerText = message;
+
+// Function to show the notification with the total and hidden list of added products
+const showNotification = () => {
+    const total = calculateTotal().toFixed(2);
+    const itemsList = Object.entries(quantities)
+        .filter(([_, quantity]) => quantity > 0)
+        .map(([item, quantity]) => {
+            const category = Object.keys(menu).find(cat => menu[cat][item]);
+            const { precio } = menu[category][item];
+            return `<li>${item} - ${quantity} x ${precio.toFixed(2)}€</li>`;
+        }).join('');
+    notificationPopup.innerHTML = `<p>Total: ${total}€</p><ul style="display: none;">${itemsList}</ul>`;
 };
+
+// Toggle expanded state and visibility of the list on click
+notificationPopup.addEventListener('click', () => {
+    notificationPopup.classList.toggle('expanded');
+    const itemsList = notificationPopup.querySelector('ul');
+    if (notificationPopup.classList.contains('expanded')) {
+        itemsList.style.display = 'block';
+    } else {
+        itemsList.style.display = 'none';
+    }
+});
+// Close the notification popup when clicking outside of it
+document.addEventListener('click', (event) => {
+    if (!notificationPopup.contains(event.target)) {
+        notificationPopup.classList.remove('expanded');
+        const itemsList = notificationPopup.querySelector('ul');
+        itemsList.style.display = 'none';
+    }
+});
+
 // Crear elementos dinámicos del menú
 Object.keys(menu).forEach(category => {
     const categoryDiv = document.createElement('div');
@@ -282,7 +160,7 @@ Object.keys(menu).forEach(category => {
         });
 
         // Mostrar el total inicial
-        showNotification(`Total: $${calculateTotal().toFixed(2)}`);
+        showNotification();
 
         document.getElementById('submitOrder').addEventListener('click', async () => {
         // Capturamos el teléfono del usuario proporcionado por Flask
