@@ -26,7 +26,7 @@ def confirmar_direccion(numero_cliente, mensaje_cliente):
         return manejar_respuesta_negativa(numero_cliente)
 
 def enviar_mensaje_registro(numero_cliente, nombre, menu_despues_registro):
-    mensaje = (f"¡Gracias {nombre}! Ahora estás registrado. {menu_despues_registro}                ⬆️ *MENU* ⬆️ \n"
-               "❗*Para agregar un producto*❗\n\nescribe el *numero* o su *nombre* \n\n      👇 *Ejemplos* 👇 \n\n"
-               " ▪️ *clasica*    o    *301* \n ▪️ *helado*    o    *503* ")
+    mensaje = (f"¡Gracias {nombre}! Ahora estás registrado. {menu_despues_registro} "
+               "\nescribe el *numero* para elegir\n  "
+               )
     enviar_mensaje_whatsapp(mensaje, numero_cliente)
