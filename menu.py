@@ -3,6 +3,7 @@
 import re
 from unidecode import unidecode
 from utils.es_pregunta import es_pregunta
+from utils.crear_token import generar_enlace
 
 menu = {
     "👇 *Restaurantes*👇": {
@@ -38,29 +39,30 @@ def mostrar_menu():
 
 
 # Función para procesar el pedido del cliente
-def procesar_pedido(pedido, carrito):
+def procesar_pedido(pedido, carrito, numero_cliente):
     pregunta = es_pregunta(pedido)
 
     if pregunta:
-        return  "Lo siento, no reconocí ningún ítem de nuestro menú en"
+        return "Lo siento, no reconocí ningún ítem de nuestro menú en"
+    
     pedido_limpio = limpiar_texto(pedido)
     items_agregados = []
+    restaurante_elegido = None
     
     for categoria, items in menu.items():
         for item, info in items.items():
             item_limpio = limpiar_texto(item)
             codigo_producto = str(info["codigo"])
             
-            
             # Verifica si el nombre o el código están en el pedido
             if item_limpio in pedido_limpio or codigo_producto in pedido_limpio:
-                
                 items_agregados.append(f"{item}")
+                restaurante_elegido = item.capitalize()
+                enlace = generar_enlace(numero_cliente , restaurante_elegido)
     
     if items_agregados:
-        return f" elegiste 📌 *{', '.join(items_agregados)}*📌"
+        return f" ❗Elegiste {restaurante_elegido}❗\n\n  👇 enlace unico 👇    \n\n{(enlace)}"
     else:
         return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pedido. Por favor elige algo de lo que ofrecemos."
-
 # Función para mostrar el carrito y calcular el total
 
