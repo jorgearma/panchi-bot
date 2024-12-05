@@ -6,7 +6,7 @@ from data.carrito import  mostrar_carrito , carrito_instancia
 def procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente):
     carrito_cliente = carrito_instancia.carrito[numero_cliente]
 
-    respuesta_camarero = procesar_pedido(mensaje_cliente, carrito_cliente)
+    respuesta_camarero = procesar_pedido(mensaje_cliente, carrito_cliente , numero_cliente)
     
     if "no reconocí ningún ítem" in respuesta_camarero:
         respuesta_openai = obtener_respuesta_openai(mensaje_cliente, carrito_cliente)
