@@ -62,14 +62,14 @@ class Mensajeria:
             "💻 *Registro en el Sistema* 💻\n       ✨ *Urban Kitchen* ✨\n\n"
             "¡Hola!👋 No estás registrado en nuestro sistema. "
             "¿Te gustaría continuar con tu registro? 📝\n\n"
-            "▪️Escribe: *Si*\n\nSolo necesito tu *Nombre* y *Dirección* para la _entrega_ 🛵",
+            "▪️Escribe: *Si*",
             numero_cliente
         )
 
     @staticmethod
     def confirmar_cancelacion(numero_cliente):
         enviar_mensaje_whatsapp(
-            "No se ha realizado el registro. Si deseas continuar más tarde, solo avísanos. 😊",
+            "No se ha realizado el registro , escriba si para continuar. 😊",
             numero_cliente
         )
 
@@ -91,7 +91,7 @@ class Mensajeria:
     @staticmethod
     def confirmar_direccion(numero_cliente, direccion):
         enviar_mensaje_whatsapp(
-            f"⬆️ *Verifica tu Ubicación* ⬆️\n\n✅¿Es correcta esta dirección? 👉 *{direccion}* \n"
+            f"{direccion} \n\n ⬆️ *Verifica tu Ubicación* ⬆️\n\n"
             "👉 *Escribe:* *Si* para confirmar\n"
             "👉 *Escribe:* *No* para corregir\n\n",
             numero_cliente
