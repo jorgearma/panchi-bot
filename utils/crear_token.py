@@ -12,4 +12,4 @@ def generar_token_temporal(numero_cliente):
 # Generar enlace único
 def generar_enlace(numero_cliente , restaurante_elegido):
     token = generar_token_temporal(numero_cliente)
-    return f"http://panchi.{restaurante_elegido}.es/menu/{token}"
+    return f"http://localhost:5000/menu/{token}"
