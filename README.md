@@ -4,7 +4,7 @@
 
 This project is an API based on Flask that allows for the management of orders through WhatsApp using the Twilio API. The application receives customer messages via Twilio, registers the user in the database if they are not already registered, and takes their order. It also uses Redis for generating and validating unique links and connects to a database for user and order management.
 
-![](pictures/resized.jpeg) , ![](pictures/2.resized.jpeg) , ![alt text](pictures/3.resized.jpeg) , ![alt text](pictures/5.resized.jpeg) , ![alt text](pictures/4.resized.jpeg) 
+![](pictures/resized.jpeg) , ![](pictures/2.resized.jpeg) ,![alt text](pictures/5.resized.jpeg) ,![alt text](pictures/3.resized.jpeg)  
 ## Code Flow
 
 ### 1. Receiving Messages from WhatsApp
