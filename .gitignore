@@ -1,0 +1,7 @@
+.env
+virtual-panchi/
+notas.txt
+
+__pycache__/
+*.pyc
+*.pyo

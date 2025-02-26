@@ -1,4 +1,6 @@
 import urllib.parse
+from dotenv import load_dotenv
+load_dotenv()
 
 def generar_enlace_google_maps(direccion):
     direccion1 = re.sub(r"\bportal\b", "", direccion, flags=re.IGNORECASE)
@@ -9,9 +11,10 @@ def generar_enlace_google_maps(direccion):
 
 
 import requests
+import os
 
 def validar_direccion(direccion):
-    api_key = 'AIzaSyBkKYaPKMICRDfY95r9kp0NSmeXXRMb458'  # Reemplaza con tu clave de API de Google Maps
+    api_key = os.getenv("api_key")  # Reemplaza con tu clave de API de Google Maps
     direccion = re.sub(r"\bpaseo\s+de\s+la\s+estacion\b|\bpaseo\s+la\s+estacion\b", "paseo estación", direccion, flags=re.IGNORECASE)
     print("Dirección después de reemplazo de 'paseo de la estación' =", direccion)
     direccion_para_verificar = re.sub(r"\bportal\b", "", direccion, flags=re.IGNORECASE)
