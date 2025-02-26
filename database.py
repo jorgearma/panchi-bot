@@ -34,7 +34,7 @@ def conectar_bd():
     db = DatabaseConnection(
         driver="ODBC Driver 17 for SQL Server",
         server="localhost,1433",
-        database="pruebabot",
+        database="pruebabot;",
         uid="sa",
         pwd="Jorgejorge1"
     )

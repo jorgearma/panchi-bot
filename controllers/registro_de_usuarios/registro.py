@@ -159,4 +159,5 @@ class RegistroUsuario:
 
 def manejar_registro(numero_cliente, mensaje_cliente):
     registro_usuario = RegistroUsuario(numero_cliente)
+    print("estdo" , estado_usuarios)
     return registro_usuario.manejar_registro(mensaje_cliente)
