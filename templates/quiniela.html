@@ -188,26 +188,26 @@ Object.keys(menu).forEach(category => {
 
         // Enviar el pedido al servidor
         try {
-            const response = await fetch('http://127.0.0.1:5000/api/agregar_pedido', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(order)
-            });
+        const response = await fetch('http://127.0.0.1:5000/api/agregar_pedido', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order)
+        });
 
-            if (response.ok) {
-                const result = await response.json();
-                alert(result.message || 'Pedido enviado correctamente.');
-            } else {
-                const error = await response.json();
-                alert('Error al enviar el pedido: ' + (error.message || 'Desconocido'));
-            }
-        } catch (err) {
-            console.error('Error de conexión:', err);
-            alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+        const result = await response.json();
+
+        if (result.redirect_url) {
+            // Redirigir al usuario usando la URL devuelta por el servidor
+            window.location.href = result.redirect_url;
+        } else {
+            alert(result.message || 'Pedido enviado correctamente.');
         }
-    });
+    } catch (err) {
+        console.error('Error de conexión:', err);
+        alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+    }
+});
+   
     
     </script>
 </body>
