@@ -9,7 +9,7 @@ def procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente):
     respuesta_camarero = procesar_pedido(mensaje_cliente, carrito_cliente , numero_cliente)
     
     if "no reconocí ningún ítem" in respuesta_camarero:
-        respuesta_openai = obtener_respuesta_openai(mensaje_cliente, carrito_cliente)
+        respuesta_openai = "comando no reconosido"  #obtener_respuesta_openai(mensaje_cliente, carrito_cliente)
         enviar_mensaje_whatsapp(f"{respuesta_openai}", numero_cliente)
     else:
         enviar_mensaje_whatsapp(f"{respuesta_camarero}", numero_cliente)

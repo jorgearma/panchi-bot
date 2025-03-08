@@ -86,7 +86,7 @@ class GestorUsuarios:
                 menu_texto = mostrar_menu()
                 nombre_usuario = GestorUsuarios.obtener_nombre_usuario(numero_cliente)
                 enviar_mensaje_whatsapp(
-                    f"¡Hola {nombre_usuario}! 👋 Bienvenido. {menu_texto} \nescribe el *numero* para elegir ", 
+                    f"¡Holaa {nombre_usuario}! 👋 Bienvenido. {menu_texto} \nescribe el *numero* para elegir ", 
                     numero_cliente
                 )
    
