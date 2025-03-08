@@ -38,7 +38,8 @@ def agregar_pedido():
         # Procesa el pedido (por ejemplo, agregar productos al carrito)
         for numero_whatsapp, productos in data.items():
             carrito_instancia.agregar_productos(numero_whatsapp, productos)
-        
+            xxx = carrito_instancia.obtener_carrito_cliente(numero_whatsapp)
+            print("este es el carrito " , xxx)
         # Datos de pago. Puedes extraerlos del request o definirlos aquí.
         payment_data = {
             'amount': 1250,  # 12.50€
