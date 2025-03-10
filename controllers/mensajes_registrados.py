@@ -20,7 +20,8 @@ class ManejadorMensajesRegistrados:
         respuesta = verificar_pedido_activo(numero_cliente, mensaje_cliente, self.pedidos_activos)
         if respuesta:
             return respuesta
-
+        #el primer mensaje del cliente asa por aqui para darle un carrito 
+        
         respuesta_usuario = manejar_usuario(numero_cliente)
         if respuesta_usuario:
             return respuesta_usuario
