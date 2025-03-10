@@ -44,8 +44,27 @@ class GestorPedidos:
         Verifica si existe un pedido pendiente para el cliente indicado.
         Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'pendiente' indica que aún no se ha procesado.
         """
-        pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='pendiente').first()
+        pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='Pendiente').first()
         return pedido is not None
+    
+    def hay_pedido_enlace(self, cliente_id):
+        """
+        Verifica si existe un pedido pendiente para el cliente indicado.
+        Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'pendiente' indica que aún no se ha procesado.
+        """
+        pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='enlace').first()
+        return pedido is not None
+    
+    def obtener_pedido_mas_reciente(self, id_usuario):
+        pedido = (
+            self.session.query(Pedido)
+            .filter(Pedido.ClienteID == id_usuario)
+            .order_by(Pedido.FechaCreacion.desc())
+            .first()
+        )
+        return pedido
+
+
     
     def agregar_productos_a_pedido(self, pedido_id, productos):
         """
