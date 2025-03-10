@@ -39,3 +39,42 @@ def conectar_bd():
         pwd="Jorgejorge1"
     )
     return db.connect()
+
+
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+# Definir la base para los modelos
+Base = declarative_base()
+
+# URL de conexión a SQL Server (asegúrate de que sea correcta)
+DATABASE_URL = "mssql+pyodbc://sa:Jorgejorge1@localhost:1433/pruebabot?driver=ODBC+Driver+17+for+SQL+Server"
+
+# Crear el motor de la base de datos
+engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+
+# 📌 Crear un `SessionLocal` reutilizable en toda la aplicación
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+# 📌 Crear una única sesión que se usará en toda la aplicación
+db_session = SessionLocal()
+
+# 📌 Función para inicializar la base de datos (crear tablas)
+def conectar_bd1():
+    """Crea todas las tablas en la base de datos si no existen."""
+    try:
+
+        from models import Usuario , Pedido , PedidoDetalle , Producto 
+        
+        Base.metadata.create_all(engine, tables=[Usuario.__table__])  # Crea `usuarios` primero
+        Base.metadata.create_all(engine, tables=[Producto.__table__])
+        Base.metadata.create_all(engine, tables=[Pedido.__table__]) 
+        Base.metadata.create_all(engine, tables=[PedidoDetalle.__table__])
+        
+        print("✅ Base de datos inicializada correctamente.")
+    except Exception as e:
+        print(f"❌ Error al inicializar la base de datos: {e}")
+
+# Ejecutar la inicialización al importar el módulo
+conectar_bd1()
