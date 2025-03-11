@@ -13,7 +13,7 @@ from flask_cors import CORS
 import json
 import redis
 import os
-from utils.crear_token import generar_enlace , obtener_numero_cliente , generar_token_y_guardar_cliente
+from utils.crear_token import   obtener_numero_cliente , generar_token_y_guardar_cliente
 
 from data.order import GestorPedidos
 
@@ -42,13 +42,14 @@ def agregar_pedido():
         data = request.json
         print("Datos recibidos:", data)
         
-        productos = [[1, 4], [2, 4], [3, 4]]
+        productos = [[1, 4], [2, 4], [3, 4]] #aqui  devo recoger los datos enviados desde la pagina 
         print("prudcutos" , productos)
         id_usuario = data.get("userId")
         print("id pasado" , id_usuario)
 
         pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
         pedido_activo_id = pedido_activo.PedidoID
+        pedido_activo_id_srt = str(pedido_activo_id)
         gestor_pedidos.agregar_productos_a_pedido(pedido_activo_id , productos)
 
         print(pedido_activo_id , "id  pedido /api")
@@ -57,7 +58,7 @@ def agregar_pedido():
         # Datos de pago. Puedes extraerlos del request o definirlos aquí.
         payment_data = {
             'amount': 1250,  # 12.50€
-            'order_id': '100200000008',  # Usar order_id en lugar de orderId
+            'order_id': pedido_activo_id_srt,  # Usar order_id en lugar de orderId
             'currency': 'EUR',
             'description': 'Items description',
             'customer': {
@@ -111,6 +112,7 @@ def quiniela(token=None):
 
      
 numero_cliente_token_global = None
+
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
