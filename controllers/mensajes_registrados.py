@@ -30,14 +30,18 @@ class ManejadorMensajesRegistrados:
         #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante 
         if gestor_pedidos.hay_pedido_pendiente(id_usuario):
             print("hola guapo")
-            pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-            id_pedido_activo = pedido_activo.PedidoID
+            #pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+            #id_pedido_activo = pedido_activo.PedidoID
             #gestor_pedidos.actualizar_estado(id_pedido_activo, "enlace")
             return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente)
         
         if gestor_pedidos.hay_pedido_enlace(id_usuario):
             print("salte guapo")
             return "mensaje eniado" , 200
+        
+        if gestor_pedidos.hay_pedido_confirmando_pago(id_usuario):
+            print("estas en pagina de pago")
+            return "mensaje enviado" , 200
         
         #esta es la primera interaccion del usuario aqui se crea el pedido y se le envia el mensaje de las obciones
         respuesta_usuario = manejar_usuario(numero_cliente)

@@ -124,6 +124,7 @@ class Usuario_web:
         Inicializa una instancia de Usuario usando un diccionario con los datos.
         Se esperan las claves 'nombre', 'numero' y 'direccion'.
         """
+        self.id = datos.get("id", "")
         self.nombre = datos.get("nombre", "")
         self.numero = datos.get("numero", "")
         self.direccion = datos.get("direccion", "")
