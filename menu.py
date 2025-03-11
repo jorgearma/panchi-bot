@@ -38,8 +38,12 @@ def mostrar_menu():
 
 
 
-# Función para procesar el pedido del cliente
-def procesar_pedido(pedido, carrito, numero_cliente):
+# aqui proceso el segundo mennsaje tengo que actualizar y mejorarlo para optimizar que la leccion es un retaurante 
+
+def procesar_pedido(pedido, numero_cliente):
+    from main import gestor_usuarios
+    from main import gestor_pedidos
+
     pregunta = es_pregunta(pedido)
 
     if pregunta:
@@ -48,6 +52,16 @@ def procesar_pedido(pedido, carrito, numero_cliente):
     pedido_limpio = limpiar_texto(pedido)
     items_agregados = []
     restaurante_elegido = None
+
+    usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
+    print(usuario_datos ,"usario datos")
+    id_usuario = usuario_datos["id"]
+
+    pedido = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+    
+    id_pedido = pedido.PedidoID
+    print(id_pedido)
+
     
     for categoria, items in menu.items():
         for item, info in items.items():
@@ -61,6 +75,7 @@ def procesar_pedido(pedido, carrito, numero_cliente):
                 enlace = generar_enlace(numero_cliente , restaurante_elegido)
     
     if items_agregados:
+        gestor_pedidos.actualizar_estado(id_pedido, "enlace")
         return f" ❗Elegiste {restaurante_elegido}❗\n\n  👇 enlace unico 👇    \n\n{(enlace)}"
     else:
         return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pedido. Por favor elige algo de lo que ofrecemos."

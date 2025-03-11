@@ -103,8 +103,7 @@ class GestorUsuarios:
             direccion_usuario = datos_usuario["direccion"]
             numero_usuario = datos_usuario["nombre"]
 
-            actualizar = gestor_pedidos.actualizar_estado(id_usuario, "abandonado")
-            print(actualizar)
+            
             
             if not gestor_pedidos.hay_pedido_pendiente(id_usuario):
                 gestor_pedidos.iniciar_pedido(id_usuario,direccion_usuario, numero_usuario)
@@ -125,6 +124,7 @@ class Usuario_web:
         Inicializa una instancia de Usuario usando un diccionario con los datos.
         Se esperan las claves 'nombre', 'numero' y 'direccion'.
         """
+        self.id = datos.get("id", "")
         self.nombre = datos.get("nombre", "")
         self.numero = datos.get("numero", "")
         self.direccion = datos.get("direccion", "")

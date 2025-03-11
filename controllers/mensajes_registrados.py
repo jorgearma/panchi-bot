@@ -12,16 +12,38 @@ from controllers.pedido_Y_respuestas import procesar_mensaje_como_pedido
 import random
 
 class ManejadorMensajesRegistrados:
+    
+
     def __init__(self , carrito):
         self.carrito = carrito
         self.pedidos_activos = pedidos_activos
 
     def manejar_mensajes_registrados(self, numero_cliente, mensaje_cliente):
-        respuesta = verificar_pedido_activo(numero_cliente, mensaje_cliente, self.pedidos_activos)
-        if respuesta:
-            return respuesta
-        #el primer mensaje del cliente asa por aqui para darle un carrito 
+        from main import gestor_pedidos
+        from main import gestor_usuarios
+
+        usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
+        print(usuario_datos ,"usario datos 2 ")
+        id_usuario = usuario_datos["id"]
+
         
+        #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante 
+        if gestor_pedidos.hay_pedido_pendiente(id_usuario):
+            print("hola guapo")
+            #pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+            #id_pedido_activo = pedido_activo.PedidoID
+            #gestor_pedidos.actualizar_estado(id_pedido_activo, "enlace")
+            return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente)
+        
+        if gestor_pedidos.hay_pedido_enlace(id_usuario):
+            print("salte guapo")
+            return "mensaje eniado" , 200
+        
+        if gestor_pedidos.hay_pedido_confirmando_pago(id_usuario):
+            print("estas en pagina de pago")
+            return "mensaje enviado" , 200
+        
+        #esta es la primera interaccion del usuario aqui se crea el pedido y se le envia el mensaje de las obciones
         respuesta_usuario = manejar_usuario(numero_cliente)
         if respuesta_usuario:
             return respuesta_usuario
@@ -31,14 +53,7 @@ class ManejadorMensajesRegistrados:
             print(carrito_instancia.carrito)
             return "Mensaje enviado", 200
 
-        Pago_Handler = PedidoHandler(numero_cliente)
-        if Pago_Handler.salir_o_proceder_al_pago(mensaje_cliente):
-            return "Mensaje enviado", 200
-
-        if Pago_Handler.procesar_metodo_pago(mensaje_cliente):
-            return "Mensaje enviado", 200
-
-        return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente)
+        
 
 def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
     

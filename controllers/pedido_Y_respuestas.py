@@ -3,10 +3,11 @@ from menu import mostrar_menu, procesar_pedido
 from utils.mensajes import enviar_mensaje_whatsapp
 from data.carrito import  mostrar_carrito , carrito_instancia
 
+#aqui proceso los posibles problemas que puedan surgir  en al elecion del menu  como malos comandos 
 def procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente):
     
-    otro = "prueba"
-    respuesta_camarero = procesar_pedido(mensaje_cliente , numero_cliente , otro)
+    
+    respuesta_camarero = procesar_pedido(mensaje_cliente , numero_cliente )
     
     if "no reconocí ningún ítem" in respuesta_camarero:
         respuesta_openai = "comando no reconosido"  #obtener_respuesta_openai(mensaje_cliente, carrito_cliente)

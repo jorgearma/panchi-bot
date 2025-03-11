@@ -183,7 +183,9 @@ Object.keys(menu).forEach(category => {
 
         // Crear el objeto del pedido
         const order = {
-            [phone]: selectedItems
+            name: `{{ usuario.nombre }}`,
+            userId: `{{ usuario.id }}`,
+            productos: selectedItems
         };
 
         // Enviar el pedido al servidor
