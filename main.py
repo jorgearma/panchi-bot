@@ -1,6 +1,6 @@
 import Monei
 from Monei import ApiException
-from flask import Flask, request, jsonify, render_template, redirect
+from flask import Flask, request, jsonify, render_template, redirect , session, jsonify
 from pprint import pprint
 from controllers.registro_de_usuarios.registro import manejar_registro
 from controllers.mensajes_registrados import manejar_mensajes_registrados
@@ -12,6 +12,7 @@ from database import conectar_bd1 , db_session
 from flask_cors import CORS 
 import json
 import redis
+import os
 from utils.crear_token import generar_enlace , obtener_numero_cliente , generar_token_y_guardar_cliente
 
 from data.order import GestorPedidos
@@ -23,6 +24,7 @@ gestor_usuarios = GestorUsuariosBD()
 monei = Monei.MoneiClient(api_key='pk_test_d0b6b6a4723919770f88997d1dbe584b')
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY')
 CORS(app, resources={r"/api/*": {"origins": ["http://127.0.0.1:5500", "http://localhost:5000"]}})
 
 # Endpoint para agregar pedido y crear el pago
@@ -38,13 +40,20 @@ def agregar_pedido():
 
     if request.method == 'POST':
         data = request.json
-        print("Datos recibidos:", data)  # Verificar el JSON recibido
+        print("Datos recibidos:", data)
+        
+        productos = [[1, 4], [2, 4], [3, 4]]
+        print("prudcutos" , productos)
+        id_usuario = data.get("userId")
+        print("id pasado" , id_usuario)
 
-        # Procesa el pedido (por ejemplo, agregar productos al carrito)
-        for numero_whatsapp, productos in data.items():
-            carrito_instancia.agregar_productos(numero_whatsapp, productos)
-            xxx = carrito_instancia.obtener_carrito_cliente(numero_whatsapp)
-            print("este es el carrito " , xxx)
+        pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+        pedido_activo_id = pedido_activo.PedidoID
+        gestor_pedidos.agregar_productos_a_pedido(pedido_activo_id , productos)
+
+        print(pedido_activo_id , "id  pedido /api")
+
+        
         # Datos de pago. Puedes extraerlos del request o definirlos aquí.
         payment_data = {
             'amount': 1250,  # 12.50€
@@ -65,6 +74,7 @@ def agregar_pedido():
             # Extraer la URL de redirección desde next_action
             
             redirect_url = result.get('next_action', {}).get('redirect_url')
+            gestor_pedidos.actualizar_estado(pedido_activo_id,"confirmando-pago")
             print("url =>",redirect_url)
 
             if redirect_url:
@@ -84,12 +94,17 @@ def quiniela(token=None):
     if not numero_cliente:
         return jsonify({"error": "Enlace no válido o expirado"}), 403
 
-    datos = gestor_usuarios.obtener_usuario(numero_cliente)
-    print(datos,"datos")
-    if datos is None:
+    
+    datos_completos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
+    id_usuario_activo = datos_completos["id"]
+    print("usuario id activo " , id_usuario_activo)
+
+    print(datos_completos,"datos")
+    if datos_completos is None:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    usuario = Usuario_web(datos)
+    usuario = Usuario_web(datos_completos)
+    
     print(usuario,"user")
     return render_template('quiniela.html', usuario=usuario)
 

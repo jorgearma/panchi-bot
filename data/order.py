@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 
-from models import Pedido , PedidoDetalle
+from models import Pedido , PedidoDetalle , Producto
 
 
 
@@ -53,6 +53,14 @@ class GestorPedidos:
         Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'pendiente' indica que aún no se ha procesado.
         """
         pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='enlace').first()
+        return pedido is not None
+    
+    def hay_pedido_confirmando_pago(self, cliente_id):
+        """
+        Verifica si existe un pedido pendiente para el cliente indicado.
+        Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'pendiente' indica que aún no se ha procesado.
+        """
+        pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='confirmando-pago').first()
         return pedido is not None
     
     def obtener_pedido_mas_reciente(self, id_usuario):
@@ -150,5 +158,5 @@ class GestorPedidos:
                 self.agregar_producto(nombre.capitalize(), datos["precio"])
 
 
-    
+
     
