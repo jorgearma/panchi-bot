@@ -45,7 +45,14 @@ def agregar_pedido():
         productos = [[1, 4], [2, 4], [3, 4]] #aqui  devo recoger los datos enviados desde la pagina 
         print("prudcutos" , productos)
         id_usuario = data.get("userId")
+        numero_cliente = data.get("numero")
+        nombre_cliente = data.get("name")
+        
+        print(nombre_cliente, "nombre cliente ")
+        direccion_cliente = data.get("direccion")
+
         print("id pasado" , id_usuario)
+        print("nombre de agregar" , nombre_cliente)
 
         pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
         pedido_activo_id = pedido_activo.PedidoID
@@ -55,17 +62,28 @@ def agregar_pedido():
         print(pedido_activo_id , "id  pedido /api")
 
         
+        
         # Datos de pago. Puedes extraerlos del request o definirlos aquí.
         payment_data = {
-            'amount': 1250,  # 12.50€
-            'order_id': pedido_activo_id_srt,  # Usar order_id en lugar de orderId
-            'currency': 'EUR',
-            'description': 'Items description',
-            'customer': {
-                'email': 'john.doe@monei.com',
-                'name': 'John Doe'
+        'amount': 1250,  # 12.50€
+        'order_id': pedido_activo_id_srt,  # Usar order_id en lugar de orderId
+        'currency': 'EUR',
+        'description': nombre_cliente,
+        'customer': {
+            'email': 'john.doe@monei.com',
+            'name': "nombre",
+            'phone': numero_cliente  # Número del cliente
+        },
+        'billingDetails': {
+            'address': {
+                'line1': direccion_cliente,
+                'city': 'tarancon',
+                'postalCode': '16400',
+                'country': 'ES'
             }
         }
+    }
+
         
         try:
             # Crear el pago usando la API de Monei
@@ -128,6 +146,49 @@ def webhook():
         return manejar_registro(numero_cliente, mensaje_cliente)
     else:
         return manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
+
+
+
+
+
+
+import hmac
+import hashlib
+from utils.mensajes import enviar_mensaje_whatsapp
+
+WEBHOOK_SECRET = b'tu_clave_secreta'
+
+def verify_signature(request_data, received_signature):
+    computed_signature = hmac.new(WEBHOOK_SECRET, request_data, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(computed_signature, received_signature)
+
+
+@app.route('/webhoo/monei', methods=['POST'])
+def webhoo():
+    # Obtener el cuerpo de la petición
+    request_data = request.get_data()
+    print("Request data:", request_data)
+    
+    # Parsear el JSON recibido
+    data = request.get_json()
+    order_id = data.get('object', {}).get('orderId')
+    nombre_usuario = data.get('object', {}).get('description')
+    customer_phone = data.get('object', {}).get('customer', {}).get('phone')
+    costumer_adress = data.get('object', {}).get('billingDetails', {}).get('address',{}).get("line1")
+    
+    print("Data recibida:", data)
+    
+    # Condición para determinar si el pedido está pagado
+    # Puedes adaptar esta condición según lo que envíe Monei
+    if data.get('object', {}).get('status') == 'SUCCEEDED' or data.get('type') == 'charge.succeeded':
+        gestor_pedidos.actualizar_estado(order_id, "pagado")
+        mensaje = f"❕ *Pedido registrado* ❕\n\n▪️ ID pedido : *{order_id}*\n Tiempo estimado *30m*\n        👇🏼 *direccion* 👇🏼\n 📍{costumer_adress}"
+        enviar_mensaje_whatsapp(mensaje, customer_phone )
+
+        print("El pedido está pagado")
+    
+    return jsonify({'message': 'Webhook recibido correctamente'}), 200
+
 
 if __name__ == "__main__":
     db_conn = conectar_bd1()
