@@ -76,7 +76,8 @@ def procesar_pedido(pedido, numero_cliente):
     
     if items_agregados:
         gestor_pedidos.actualizar_estado(id_pedido, "enlace")
-        return f" ❗Elegiste {restaurante_elegido}❗\n\n  👇 enlace unico 👇    \n\n{(enlace)}"
+        gestor_pedidos.guardar_enlace(id_pedido,enlace)
+        return f" ❕Elegiste *{restaurante_elegido}*❕\n\n▪*Enlace* unico 👇    \n\n{(enlace)}"
     else:
         return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pedido. Por favor elige algo de lo que ofrecemos."
 # Función para mostrar el carrito y calcular el total

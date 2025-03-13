@@ -30,17 +30,21 @@ class ManejadorMensajesRegistrados:
         #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante 
         if gestor_pedidos.hay_pedido_pendiente(id_usuario):
             print("hola guapo")
-            #pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-            #id_pedido_activo = pedido_activo.PedidoID
-            #gestor_pedidos.actualizar_estado(id_pedido_activo, "enlace")
             return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente)
         
+        #desarrollar logica de  cuando el usuario este en el enlace
         if gestor_pedidos.hay_pedido_enlace(id_usuario):
-            print("salte guapo")
+            peido_receinte = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+            enlace = peido_receinte.enlace
+            mensaje = f"Puede continuar con su pedido en el *enlace* proporcionado \n\n▪*Enlace* unico 👇 \n\n🔗{(enlace)}"
+            enviar_mensaje_whatsapp(mensaje, numero_cliente)
             return "mensaje eniado" , 200
         
+        #desarrollar logica de cuando el usuario este la pagina de pago
         if gestor_pedidos.hay_pedido_confirmando_pago(id_usuario):
-            print("estas en pagina de pago")
+            peido_receinte = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+            enlace_pago = peido_receinte.enlace
+            enviar_mensaje_whatsapp(f"🔗 {enlace_pago}\n ✅ Pago seguro  con *MONEI*" , numero_cliente)
             return "mensaje enviado" , 200
         
         #esta es la primera interaccion del usuario aqui se crea el pedido y se le envia el mensaje de las obciones
