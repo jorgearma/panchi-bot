@@ -111,7 +111,7 @@ class GestorUsuarios:
                 nombre_usuario = datos_usuario["nombre"]
                 
                 enviar_mensaje_whatsapp(
-                    f"¡Holaa {nombre_usuario}! 👋 Bienvenido. {menu_texto} \nescribe el *numero* para elegir ", 
+                    f"¡Hola *{nombre_usuario}*! 🙂 {menu_texto} \nescribe el *numero* para elegir ", 
                     numero_cliente
                 )
    

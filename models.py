@@ -21,6 +21,7 @@ class Pedido(Base):
     Total = Column(DECIMAL(18, 2), default=0.0)
     DireccionEntrega = Column(String(255), nullable=False)
     TelefonoEntrega = Column(String(50), nullable=False)
+    enlace = Column(String(255), nullable=True)
 
     cliente = relationship("Usuario", back_populates="pedidos")  
     detalles = relationship("PedidoDetalle", back_populates="pedido", cascade="all, delete-orphan")  # ✅ Relación agregada

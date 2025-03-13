@@ -38,6 +38,21 @@ class GestorPedidos:
             print("No se encontró un pedido pendiente para actualizar.")
 
 
+    def guardar_enlace(self, pedido_id, enlace):
+    # Busca el pedido por su ID
+        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+        if pedido:
+            # Actualiza el campo Enlace del pedido
+            pedido.enlace = enlace
+            self.session.commit()
+            print(f"El enlace ha sido guardado en el pedido {pedido_id}.")
+            return True
+        else:
+            print("No se encontró un pedido con el ID proporcionado.")
+            return False
+            
+
+
     
     def hay_pedido_pendiente(self, cliente_id):
         """
