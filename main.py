@@ -72,7 +72,8 @@ def agregar_pedido():
         'customer': {
             'email': 'john.doe@monei.com',
             'name': "nombre",
-            'phone': numero_cliente  # Número del cliente
+            'phone': numero_cliente
+
         },
         'billingDetails': {
             'address': {
@@ -94,6 +95,7 @@ def agregar_pedido():
             
             redirect_url = result.get('next_action', {}).get('redirect_url')
             gestor_pedidos.actualizar_estado(pedido_activo_id,"confirmando-pago")
+            gestor_pedidos.guardar_enlace(pedido_activo_id, redirect_url)
             print("url =>",redirect_url)
 
             if redirect_url:
@@ -175,6 +177,9 @@ def webhoo():
     nombre_usuario = data.get('object', {}).get('description')
     customer_phone = data.get('object', {}).get('customer', {}).get('phone')
     costumer_adress = data.get('object', {}).get('billingDetails', {}).get('address',{}).get("line1")
+
+    importe_cents = data.get('object', {}).get('amount', 0)
+    importe_euros = importe_cents / 100  # Convertir a euros
     
     print("Data recibida:", data)
     
@@ -182,7 +187,7 @@ def webhoo():
     # Puedes adaptar esta condición según lo que envíe Monei
     if data.get('object', {}).get('status') == 'SUCCEEDED' or data.get('type') == 'charge.succeeded':
         gestor_pedidos.actualizar_estado(order_id, "pagado")
-        mensaje = f"❕ *Pedido registrado* ❕\n\n▪️ ID pedido : *{order_id}*\n Tiempo estimado *30m*\n        👇🏼 *direccion* 👇🏼\n 📍{costumer_adress}"
+        mensaje = f"❕*Pedido registrado*❕\n      ------------------  \n▪️Nombre: *{nombre_usuario}* ▪️importe: *{importe_euros}*€\n▪️ID pedido: *#{order_id}*\n▪️Tiempo estimado: *30m*\n▪️Direccion: 👇🏼 \n\n{costumer_adress}"
         enviar_mensaje_whatsapp(mensaje, customer_phone )
 
         print("El pedido está pagado")
