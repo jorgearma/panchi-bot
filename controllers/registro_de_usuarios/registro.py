@@ -119,7 +119,7 @@ class ValidacionDireccion:
             Mensajeria.direccion_invalida(numero_cliente)
             return False
 
-
+#cambair esto con estados  gestionados desde la base de datos
 class RegistroUsuario:
     """Clase principal para gestionar el registro del usuario."""
     def __init__(self, numero_cliente):
