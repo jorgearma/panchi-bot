@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL ,Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -38,11 +38,36 @@ class PedidoDetalle(Base):
     pedido = relationship("Pedido", back_populates="detalles")
     producto = relationship("Producto", back_populates="detalles")  
 
+
+from datetime import datetime
+
 class Producto(Base):
-    __tablename__ = 'productos'  # ✅ Se mantiene en minúsculas
+    __tablename__ = 'productos'
 
     ProductoID = Column(Integer, primary_key=True, autoincrement=True)
     Nombre = Column(String(255), nullable=False, unique=True)
     Precio = Column(DECIMAL(10, 2), nullable=False)
+    Categoria = Column(String(50), nullable=False)
+    Ingredientes = Column(String(255), nullable=True)
+    Ubicacion = Column(String(255), nullable=True)
+    Stock = Column(Integer, nullable=False, default=0)
+    ImagenURL = Column(String(255), nullable=True)
+    Descripcion = Column(String(500), nullable=True)
+    Descuento = Column(DECIMAL(10, 2), nullable=True, default=0.00)
+    Disponible = Column(Boolean, default=True)
+    
 
     detalles = relationship("PedidoDetalle", back_populates="producto", cascade="all, delete-orphan")
+  
+
+class Empleado(Base):
+    __tablename__ = 'empleados'
+
+    EmpleadoID = Column(Integer, primary_key=True, autoincrement=True)
+    Nombre = Column(String(255), nullable=False)
+    Apellido = Column(String(255), nullable=False)
+    Email = Column(String(255), nullable=False, unique=True)
+    Telefono = Column(String(50), nullable=True)
+    Direccion = Column(String(255), nullable=True)
+    Puesto = Column(String(100), nullable=False)  # Ej: Repartidor, Cajero, Administrador
+    Salario = Column(DECIMAL(10, 2), nullable=False, default=0.00)
