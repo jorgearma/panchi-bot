@@ -65,12 +65,13 @@ def conectar_bd1():
     """Crea todas las tablas en la base de datos si no existen."""
     try:
 
-        from models import Usuario , Pedido , PedidoDetalle , Producto 
+        from models import Usuario , Pedido , PedidoDetalle , Producto , Empleado
         
         Base.metadata.create_all(engine, tables=[Usuario.__table__])  # Crea `usuarios` primero
         Base.metadata.create_all(engine, tables=[Producto.__table__])
         Base.metadata.create_all(engine, tables=[Pedido.__table__]) 
         Base.metadata.create_all(engine, tables=[PedidoDetalle.__table__])
+        Base.metadata.create_all(engine, tables=[Empleado.__table__])
         
         print("✅ Base de datos inicializada correctamente.")
     except Exception as e:

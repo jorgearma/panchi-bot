@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            width: 100%;
+            background: #fff;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 10px;
+        }
+        .info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        .info p {
+            margin: 5px 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .comanda-container {
+            width: 95%;
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .comanda {
+            width: 100%;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            border-left: 5px solid #333;
+            position: relative;
+        }
+        .comanda-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        .comanda-header::after {
+            content: "";
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #333;
+        }
+        .comanda h3 {
+            margin: 5px 0;
+            font-size: 20px;
+            text-transform: uppercase;
+        }
+        .comanda .pedido-id {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            color: #333;
+        }
+        .comanda ul {
+            list-style: none;
+            padding: 0;
+        }
+        .comanda li {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+            background: #fafafa;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 5px;
+            padding: 10px 15px;
+        }
+        .comanda li span:first-child {
+            flex: 2;
+            text-align: left;
+        }
+        .comanda li span:last-child {
+            flex: 1;
+            text-align: right;
+            font-weight: bold;
+        }
+        .total {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 15px;
+            text-align: right;
+        }
+        .buttons {
+            margin-top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            flex: 1;
+            margin: 5px;
+        }
+        .confirmar {
+            background: green;
+            color: white;
+        }
+        .cancelar {
+            background: red;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="info">
+            <p>👤 {{ name }}</p>
+            <p>📍 {{ direccion }}</p>
+        </div>
+    </div>
+
+    <div class="comanda-container">
+        <div class="comanda">
+            <div class="comanda-header">
+                <h3>Pedido</h3>
+                <span class="pedido-id">ID: 422</span>
+            </div>
+            <ul id="productos">
+                {% for producto in productos %}
+                <li data-codigo="{{ producto.codigo }}">
+                    <span>{{ producto.nombre }} - x {{ producto.cantidad }}</span>
+                    <span>{{ producto.precio }}€</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <p class="total">Total: {{ total }}€</p>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button id="confirmarPedido" class="confirmar">Confirmar</button>
+        <button class="cancelar">Cancelar</button>
+    </div>
+
+    <script>
+    document.getElementById('confirmarPedido').addEventListener('click', async () => {
+    // Obtener los datos del pedido desde el DOM
+    const productos = Array.from(document.querySelectorAll('#productos li')).map(li => {
+        const codigo = li.getAttribute('data-codigo'); // Obtener el código del producto
+        const [nombreCantidad, precio] = li.textContent.split('€');
+        const [nombre, cantidad] = nombreCantidad.split('- x').map(s => s.trim());
+        return {
+            codigo, // Código del producto
+            nombre,
+            cantidad: parseInt(cantidad),
+            precio: parseFloat(precio),
+        };
+    });
+
+    if (productos.length === 0) {
+        alert('Por favor, selecciona al menos un producto.');
+        return;
+    }
+
+    // Crear el objeto del pedido
+    const order = {
+        name: `{{ name }}`,
+        direccion: `{{ direccion }}`,
+        userID: `{{ userID }}`,
+        numero: `{{ numero }}`,
+        productos,
+        total: parseFloat(`{{ total }}`)
+    };
+
+    // Enviar el pedido al servidor
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/agregar_pedido', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order)
+        });
+        const result = await response.json();
+        if (result.redirect_url) {
+            window.location.href = result.redirect_url;
+        } else {
+            alert(result.message || 'Pedido enviado correctamente.');
+        }
+    } catch (err) {
+        console.error('Error de conexión:', err);
+        alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+    }
+});
+    </script>
+</body>
+</html>
