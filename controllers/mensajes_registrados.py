@@ -33,7 +33,7 @@ class ManejadorMensajesRegistrados:
             return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente)
         
         #desarrollar logica de  cuando el usuario este en el enlace
-        if gestor_pedidos.hay_pedido_enlace(id_usuario):
+        if gestor_pedidos.hay_pedido_enlace(id_usuario) or gestor_pedidos.hay_pedido_enlace2(id_usuario):
             peido_receinte = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
             enlace = peido_receinte.enlace
             mensaje = f"Puede continuar con su pedido en el *enlace* proporcionado \n\n▪*Enlace* unico 👇 \n\n🔗{(enlace)}"

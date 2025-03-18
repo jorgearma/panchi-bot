@@ -3,38 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comandas</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .comanda {
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 10px;
-            background-color: #f9f9f9;
-        }
-        h2 {
-            color: #333;
-        }
-    </style>
+    <title>Menú de Pedidos</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
+
 <body>
-    <h1>Comandas en Cocina</h1>
-    {% for comanda in comandas %}
-        <div class="comanda">
-            <h2>Comanda ID: {{ comanda.id }}</h2>
-            <p><strong>ID Pedido:</strong> {{ comanda.id_pedido }}</p>
-            <p><strong>Contenido:</strong></p>
-            <ul>
-                {% for item in comanda.contenido %}
-                    <li>{{ item[0] }} - ${{ item[1] }}</li>
-                {% endfor %}
-            </ul>
-            <p><strong>Fecha:</strong> {{ comanda.fecha }}</p>
+    <div id="user-info">
+        <h2>{{ usuario.nombre }}</h2>
+        <div class="user-detail">
+            <span>📍 {{ usuario.direccion }}</span>
         </div>
-    {% endfor %}
+        <div class="user-detail">
+            <span>💰 Precio del delivery: <strong>3,50€</strong></span>
+        </div>
+    </div>
+
+    <h1 class="menu-title">
+        <span class="restaurant-name">Urban Kitchen</span>
+        <span class="menu-label">Menú</span>
+        <hr class="title-divider">
+    </h1>
+
+    <form id="orderForm">
+        <div id="menu"></div>
+        <button type="button" id="submitOrder">Enviar</button>
+    </form>
+
+    <!-- Modal para confirmar el pedido -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Confirmar Pedido</h2>
+            <div id="orderDetails"></div>
+            <button id="confirmOrder">Confirmar</button>
+        </div>
+    </div>
+
+    <script>
+        const menu = {
+            "🍔 HAMBURGUESAS": {
+                "clasica": {"precio": 5.00, "ingredientes": "Carne, Queso, Lechuga, Tomate"},
+                "ranchera": {"precio": 5.50, "ingredientes": "Carne, Queso, Bacon, Salsa BBQ"},
+                "crispy": {"precio": 6.00, "ingredientes": "Pollo, Queso, Lechuga, Tomate"}
+            },
+            "🌭 PERRITOS": {
+                "clasico": {"precio": 4.00, "ingredientes": "Salchicha, Pan, Mostaza, Ketchup"},
+                "picanton": {"precio": 4.00, "ingredientes": "Salchicha, Pan, Jalapeños, Salsa Picante"}
+            },
+            "🍨 POSTRES": {
+                "flan": {"precio": 4.00, "ingredientes": "Leche, Azúcar, Huevos"},
+                "tarta": {"precio": 5.00, "ingredientes": "Harina, Azúcar, Huevos, Frutas"}
+            },
+            "🥤 BEBIDAS": {
+                "agua": {"precio": 1.50, "ingredientes": "Agua"},
+                "café": {"precio": 2.00, "ingredientes": "Café"}
+            }
+        };
+
+        const menuDiv = document.getElementById('menu');
+        const quantities = {};
+
+        // Crear elementos del menú
+        Object.keys(menu).forEach(category => {
+            const categoryDiv = document.createElement('div');
+            categoryDiv.innerHTML = `<h2>${category}</h2>`;
+            Object.keys(menu[category]).forEach(item => {
+                const { precio, ingredientes } = menu[category][item];
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'menu-item';
+                itemDiv.innerHTML = `
+                    <div class="menu-details">
+                        <strong>${item} - ${precio.toFixed(2)}€</strong>
+                        <span>Ingredientes: ${ingredientes}</span>
+                        <div class="quantity-control">
+                            <button class="decrease" data-item="${item}" disabled>-</button>
+                            <span class="quantity-display" id="quantity-${item}">0</span>
+                            <button class="increase" data-item="${item}">+</button>
+                        </div>
+                    </div>
+                `;
+                categoryDiv.appendChild(itemDiv);
+            });
+            menuDiv.appendChild(categoryDiv);
+        });
+
+        // Control de cantidad
+        document.addEventListener('click', (event) => {
+            if (event.target.classList.contains('increase') || event.target.classList.contains('decrease')) {
+                event.preventDefault();
+                const item = event.target.dataset.item;
+                if (!quantities[item]) quantities[item] = 0;
+                if (event.target.classList.contains('increase')) {
+                    quantities[item]++;
+                } else if (event.target.classList.contains('decrease')) {
+                    quantities[item] = Math.max(0, quantities[item] - 1);
+                }
+                document.getElementById(`quantity-${item}`).innerText = quantities[item];
+                document.querySelector(`button.decrease[data-item="${item}"]`).disabled = quantities[item] === 0;
+            }
+        });
+
+        // Mostrar el modal de confirmación
+        document.getElementById('submitOrder').addEventListener('click', () => {
+            const total = Object.entries(quantities)
+                .filter(([_, quantity]) => quantity > 0)
+                .reduce((sum, [item, quantity]) => {
+                    const category = Object.keys(menu).find(cat => menu[cat][item]);
+                    return sum + (menu[category][item].precio * quantity);
+                }, 0).toFixed(2);
+
+            const selectedItems = Object.entries(quantities)
+                .filter(([_, quantity]) => quantity > 0)
+                .map(([item, quantity]) => {
+                    const category = Object.keys(menu).find(cat => menu[cat][item]);
+                    const { precio } = menu[category][item];
+                    return `<li>${item} - ${quantity} x ${precio.toFixed(2)}€</li>`;
+                }).join('');
+
+            if (selectedItems.length === 0) {
+                alert('Por favor, selecciona al menos un producto.');
+                return;
+            }
+
+            document.getElementById('orderDetails').innerHTML = `
+                <p><strong>Nombre:</strong> {{ usuario.nombre }}</p>
+                <p><strong>Dirección:</strong> {{ usuario.direccion }}</p>
+                <p><strong>Total:</strong> ${total}€</p>
+                <ul>${selectedItems}</ul>
+            `;
+
+            document.getElementById('orderModal').style.display = 'flex';
+        });
+
+        // Cerrar el modal
+        document.querySelector('.close').addEventListener('click', () => {
+            document.getElementById('orderModal').style.display = 'none';
+        });
+
+        // Confirmar y enviar el pedido
+        document.getElementById('confirmOrder').addEventListener('click', async () => {
+            const selectedItems = Object.entries(quantities)
+                .filter(([_, quantity]) => quantity > 0)
+                .map(([item, quantity]) => {
+                    const category = Object.keys(menu).find(cat => menu[cat][item]);
+                    const { precio } = menu[category][item];
+                    return [item, precio];
+                });
+
+            const order = {
+                name: `{{ usuario.nombre }}`,
+                userId: `{{ usuario.id }}`,
+                numero: `{{ usuario.numero }}`,
+                direccion: `{{ usuario.direccion }}`,
+                productos: selectedItems
+            };
+
+            try {
+                const response = await fetch('/api/agregar_pedido', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(order)
+                });
+
+                const result = await response.json();
+                document.getElementById('submitOrder').disabled = true; // Bloquear el botón
+
+                if (result.redirect_url) {
+                    setTimeout(() => window.location.href = result.redirect_url, 2000);
+                } else {
+                    alert('Pedido enviado correctamente.');
+                }
+            } catch (err) {
+                alert('No se pudo conectar con el servidor.');
+            }
+        });
+    </script>
 </body>
 </html>
