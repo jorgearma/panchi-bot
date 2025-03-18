@@ -27,8 +27,8 @@
   </div>
 
   <h1 class="menu-title">
-    <span class="restaurant-name">Urban Kitchen</span>
-    <span class="menu-label">Menú</span>
+    <span class="restaurant-name">Panchi bot</span>
+    <span class="menu-label">Productos</span>
     <hr class="title-divider">
   </h1>
 
@@ -188,7 +188,7 @@ const order = {
 
   // Enviar el pedido al servidor
   try {
-    const response = await fetch('http://127.0.0.1:5000/api/confirmacion', {
+    const response = await fetch('https://57fd-62-116-223-170.ngrok-free.app/api/confirmacion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
