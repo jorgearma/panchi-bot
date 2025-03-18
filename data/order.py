@@ -70,6 +70,14 @@ class GestorPedidos:
         pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='enlace').first()
         return pedido is not None
     
+    def hay_pedido_enlace2(self, cliente_id):
+        """
+        Verifica si existe un pedido pendiente para el cliente indicado.
+        Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'pendiente' indica que aún no se ha procesado.
+        """
+        pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='enlace2').first()
+        return pedido is not None
+    
     def hay_pedido_confirmando_pago(self, cliente_id):
         """
         Verifica si existe un pedido pendiente para el cliente indicado.
@@ -125,6 +133,14 @@ class GestorPedidos:
         pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
         if pedido:
             pedido.Estado = nuevo_estado
+            self.session.commit()
+            return True
+        return False
+    
+    def introudcir_dato_redisID(self, pedido_id, id_redis):
+        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+        if pedido:
+            pedido.redisID = id_redis
             self.session.commit()
             return True
         return False

@@ -1,218 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menú de Pedidos</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menú de Pedidos</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    <div id="user-info">
-        <h2>{{ usuario.nombre }}</h2>
-        <div class="user-detail">
-            <!-- Icon for address -->
-            <svg class="icon-address" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
-            </svg>
-            <span>&nbsp;&nbsp;&nbsp;{{ usuario.direccion }}</span>
-        </div>
-        <div class="user-detail">
-            <!-- Icon for delivery price -->
-            <svg class="icon-delivery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-                <path d="M4 4h16v2H4V4zm0 6h16v2H4v-2zm0 6h16v2H4v-2z"/>
-            </svg>
-            <span>&nbsp;Precio del delivery: <strong style="color: rgb(36, 35, 35); font-size: 1.1em; font-family: 'Arial Black', sans-serif;">3,50€</strong></span>
-
-        </div>
+  <div id="user-info">
+    <h2>{{ usuario.nombre }}</h2>
+    <div class="user-detail">
+      <!-- Icon for address -->
+      <svg class="icon-address" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+      </svg>
+      <span>&nbsp;&nbsp;&nbsp;{{ usuario.direccion }}</span>
     </div>
-    
-        
-    
-    <h1 class="menu-title">
-        <span class="restaurant-name">Urban Kitchen</span>
-        <span class="menu-label">Menú</span>
-        <hr class="title-divider">
-    </h1>
-    
-    <form id="orderForm">
-        <div id="menu"></div>
-        <button type="button" id="submitOrder">Enviar</button>
-    </form>
-    <div id="notification-popup"></div>
-    <script>
-        const menu = {
-            "🍔 HAMBURGUESAS": {
-                "clasica": {"precio": 5.00, "codigo": 301, "ingredientes": "Carne, Queso, Lechuga, Tomate"},
-                "ranchera": {"precio": 5.50, "codigo": 302, "ingredientes": "Carne, Queso, Bacon, Salsa BBQ"},
-                "crispy": {"precio": 6.00, "codigo": 303, "ingredientes": "Pollo, Queso, Lechuga, Tomate"}
-            },
-            "🌭 PERRITOS": {
-                "clasico": {"precio": 4.00, "codigo": 401, "ingredientes": "Salchicha, Pan, Mostaza, Ketchup"},
-                "picanton": {"precio": 4.00, "codigo": 402, "ingredientes": "Salchicha, Pan, Jalapeños, Salsa Picante"},
-                "texano": {"precio": 4.00, "codigo": 403, "ingredientes": "Salchicha, Pan, Cebolla Frita, Salsa BBQ"},
-                "bbq": {"precio": 4.00, "codigo": 404, "ingredientes": "Salchicha, Pan, Bacon, Salsa BBQ"}
-            },
-            "🍨 POSTRES": {
-                "flan": {"precio": 4.00, "codigo": 501, "ingredientes": "Leche, Azúcar, Huevos"},
-                "tarta": {"precio": 5.00, "codigo": 502, "ingredientes": "Harina, Azúcar, Huevos, Frutas"},
-                "helado": {"precio": 3.50, "codigo": 503, "ingredientes": "Leche, Azúcar, Saborizante"}
-            },
-            "🥤 BEBIDAS": {
-                "agua": {"precio": 1.50, "codigo": 601, "ingredientes": "Agua"},
-                "vino": {"precio": 4.00, "codigo": 602, "ingredientes": "Uvas"},
-                "cerveza": {"precio": 3.00, "codigo": 603, "ingredientes": "Cebada, Lúpulo, Agua"},
-                "refresco": {"precio": 2.50, "codigo": 604, "ingredientes": "Agua, Azúcar, Saborizante"},
-                "café": {"precio": 2.00, "codigo": 605, "ingredientes": "Café"}
-            }
-};
-const menuDiv = document.getElementById('menu');
-const notificationPopup = document.getElementById('notification-popup');
-const quantities = {};
+    <div class="user-detail">
+      <!-- Icon for delivery price -->
+      <svg class="icon-delivery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+        <path d="M4 4h16v2H4V4zm0 6h16v2H4v-2zm0 6h16v2H4v-2z"/>
+      </svg>
+      <span>&nbsp;Precio del delivery: <strong style="color: rgb(36, 35, 35); font-size: 1.1em; font-family: 'Arial Black', sans-serif;">3,50€</strong></span>
+    </div>
+  </div>
 
-// Function to calculate the total
-const calculateTotal = () => {
-    return Object.entries(quantities)
-        .filter(([_, quantity]) => quantity > 0)
-        .reduce((total, [item, quantity]) => {
-            const category = Object.keys(menu).find(cat => menu[cat][item]);
-            const { precio } = menu[category][item];
-            return total + (precio * quantity);
-        }, 0);
-};
+  <h1 class="menu-title">
+    <span class="restaurant-name">Urban Kitchen</span>
+    <span class="menu-label">Menú</span>
+    <hr class="title-divider">
+  </h1>
 
-// Function to show the notification with the total and hidden list of added products
-const showNotification = () => {
-    const total = calculateTotal().toFixed(2);
-    const itemsList = Object.entries(quantities)
-        .filter(([_, quantity]) => quantity > 0)
-        .map(([item, quantity]) => {
-            const category = Object.keys(menu).find(cat => menu[cat][item]);
-            const { precio } = menu[category][item];
-            return `<li>${item} - ${quantity} x ${precio.toFixed(2)}€</li>`;
-        }).join('');
-    notificationPopup.innerHTML = `<p>Total: ${total}€</p><ul style="display: none;">${itemsList}</ul>`;
-};
+  <form id="orderForm">
+    <div id="menu"></div>
+    <button type="button" id="submitOrder">Enviar</button>
+  </form>
+  <div id="notification-popup"></div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      let menuData = {}; // Variable donde se guardarán los datos dinámicos
+      const menuDiv = document.getElementById('menu');
+      const notificationPopup = document.getElementById('notification-popup');
+      const quantities = {};
 
-// Toggle expanded state and visibility of the list on click
-notificationPopup.addEventListener('click', () => {
-    notificationPopup.classList.toggle('expanded');
-    const itemsList = notificationPopup.querySelector('ul');
-    if (notificationPopup.classList.contains('expanded')) {
-        itemsList.style.display = 'block';
-    } else {
-        itemsList.style.display = 'none';
-    }
-});
-// Close the notification popup when clicking outside of it
-document.addEventListener('click', (event) => {
-    if (!notificationPopup.contains(event.target)) {
-        notificationPopup.classList.remove('expanded');
-        const itemsList = notificationPopup.querySelector('ul');
-        itemsList.style.display = 'none';
-    }
-});
-
-// Crear elementos dinámicos del menú
-Object.keys(menu).forEach(category => {
-    const categoryDiv = document.createElement('div');
-    categoryDiv.innerHTML = `<h2>${category}</h2>`;
-    Object.keys(menu[category]).forEach(item => {
-        const { precio, ingredientes } = menu[category][item];
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'menu-item';
-        itemDiv.innerHTML = `
+      // Función que construye el menú dinámicamente usando menuData
+    function buildMenu() {
+      Object.keys(menuData).forEach(category => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.innerHTML = `<h2>${category}</h2>`;
+        Object.keys(menuData[category]).forEach(item => {
+          const producto = menuData[category][item];
+          const precio = parseFloat(producto.Precio);
+          const ingredientes = producto.ingredientes;
+          const imagen = producto.Imagen;
+          const productoID = producto.ProductoID; // Asegúrate de que ProductoID esté disponible
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'menu-item';
+          itemDiv.innerHTML = `
             <div class="menu-details">
-                <span class="item-name">
+              <span class="item-name">
                 <strong><span class="item-title">${item}</span> - ${precio.toFixed(2)}€</strong>
-                </span>
-                <span class="menu-ingredients">Ingredientes: ${ingredientes}</span>
-                <div class="quantity-control">
-                    <button class="decrease" data-item="${item}" disabled>-</button>
-                    <span class="quantity-display" id="quantity-${item}">0</span>
-                    <button class="increase" data-item="${item}">+</button>
-                </div>
+              </span>
+              <span class="menu-ingredients">Ingredientes: ${ingredientes}</span>
+              <div class="quantity-control">
+                <button class="decrease" data-item="${item}" data-product-id="${productoID}" disabled>-</button>
+                <span class="quantity-display" id="quantity-${item}">0</span>
+                <button class="increase" data-item="${item}" data-product-id="${productoID}">+</button>
+              </div>
             </div>
-            <img src="{{ url_for('static', filename='imagenes/clasica.jpeg') }}" alt="Hamburguesa Clásica">
-        `;
-        categoryDiv.appendChild(itemDiv);
-    });
-    menuDiv.appendChild(categoryDiv);
-});
-
-        // Controlar la cantidad de productos
-        document.addEventListener('click', (event) => {
-            if (event.target.classList.contains('increase') || event.target.classList.contains('decrease')) {
-                event.preventDefault();
-                const item = event.target.dataset.item;
-                if (!quantities[item]) quantities[item] = 0;
-                if (event.target.classList.contains('increase')) {
-                    quantities[item]++;
-                } else if (event.target.classList.contains('decrease')) {
-                    quantities[item] = Math.max(0, quantities[item] - 1);
-                }
-                document.getElementById(`quantity-${item}`).innerText = quantities[item];
-                document.querySelector(`button.decrease[data-item="${item}"]`).disabled = quantities[item] === 0;
-                showNotification(`Total: $${calculateTotal().toFixed(2)}`);
-            }
+            <img src="${imagen}" alt="${item}">
+          `;
+          categoryDiv.appendChild(itemDiv);
         });
-
-        // Mostrar el total inicial
-        showNotification();
-
-        document.getElementById('submitOrder').addEventListener('click', async () => {
-        // Capturamos el teléfono del usuario proporcionado por Flask
-        const phone = `{{ usuario.numero_cliente }}`;
-
-        // Filtramos y transformamos los productos seleccionados
-        const selectedItems = Object.entries(quantities)
-            .filter(([_, quantity]) => quantity > 0)
-            .map(([item, quantity]) => {
-                const category = Object.keys(menu).find(cat => menu[cat][item]);
-                const { precio } = menu[category][item];
-                return [item, precio]; // Formato requerido: [item, precio]
-            });
-
-        // Validación: asegurarnos de que haya al menos un producto seleccionado
-        if (selectedItems.length === 0) {
-            alert('Por favor, selecciona al menos un producto.');
-            return;
-        }
-
-        // Crear el objeto del pedido
-        const order = {
-            name: `{{ usuario.nombre }}`,
-            userId: `{{ usuario.id }}`,
-            numero: `{{ usuario.numero }}`,
-            direccion: `{{ usuario.direccion }}`,
-            productos: selectedItems
-        };
-
-        // Enviar el pedido al servidor
-        try {
-        const response = await fetch('http://127.0.0.1:5000/api/agregar_pedido', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(order)
-        });
-
-        const result = await response.json();
-
-        if (result.redirect_url) {
-            // Redirigir al usuario usando la URL devuelta por el servidor
-            window.location.href = result.redirect_url;
-        } else {
-            alert(result.message || 'Pedido enviado correctamente.');
-        }
-    } catch (err) {
-        console.error('Error de conexión:', err);
-        alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+        menuDiv.appendChild(categoryDiv);
+      });
     }
+
+      // Función para calcular el total del pedido
+      const calculateTotal = () => {
+        return Object.entries(quantities)
+          .filter(([_, quantity]) => quantity > 0)
+          .reduce((total, [item, quantity]) => {
+            const category = Object.keys(menuData).find(cat => menuData[cat][item]);
+            if (!category) return total;
+            const { Precio } = menuData[category][item];
+            return total + (parseFloat(Precio) * quantity);
+          }, 0);
+      };
+
+      // Función para mostrar la notificación con el total y los productos agregados (lista oculta)
+      const showNotification = () => {
+        const total = calculateTotal().toFixed(2);
+        const itemsList = Object.entries(quantities)
+          .filter(([_, quantity]) => quantity > 0)
+          .map(([item, quantity]) => {
+            const category = Object.keys(menuData).find(cat => menuData[cat][item]);
+            if (!category) return '';
+            const { Precio } = menuData[category][item];
+            return `<li>${item} - ${quantity} x ${parseFloat(Precio).toFixed(2)}€</li>`;
+          }).join('');
+        notificationPopup.innerHTML = `<p>Total: ${total}€</p><ul style="display: none;">${itemsList}</ul>`;
+      };
+
+      // Toggle de la notificación al hacer click
+      notificationPopup.addEventListener('click', () => {
+        notificationPopup.classList.toggle('expanded');
+        const itemsList = notificationPopup.querySelector('ul');
+        itemsList.style.display = notificationPopup.classList.contains('expanded') ? 'block' : 'none';
+      });
+
+      // Cerrar la notificación al hacer click fuera de ella
+      document.addEventListener('click', (event) => {
+        if (!notificationPopup.contains(event.target)) {
+          notificationPopup.classList.remove('expanded');
+          notificationPopup.querySelector('ul').style.display = 'none';
+        }
+      });
+
+      // Obtener los datos del menú desde el endpoint
+      fetch('/api/productos')
+        .then(response => response.json())
+        .then(data => {
+          menuData = data;
+          buildMenu();
+          
+          // Asignar listener para los botones de aumento y disminución de cantidad
+          document.addEventListener('click', (event) => {
+            if (event.target.classList.contains('increase') || event.target.classList.contains('decrease')) {
+              event.preventDefault();
+              const item = event.target.dataset.item;
+              if (!quantities[item]) quantities[item] = 0;
+              if (event.target.classList.contains('increase')) {
+                quantities[item]++;
+              } else if (event.target.classList.contains('decrease')) {
+                quantities[item] = Math.max(0, quantities[item] - 1);
+              }
+              document.getElementById(`quantity-${item}`).innerText = quantities[item];
+              document.querySelector(`button.decrease[data-item="${item}"]`).disabled = quantities[item] === 0;
+              showNotification();
+            }
+          });
+
+          // Mostrar la notificación inicial
+          showNotification();
+        })
+        .catch(error => console.error('Error al obtener el menú:', error));
+
+  document.getElementById('submitOrder').addEventListener('click', async () => {
+  // Filtrar los productos seleccionados
+  const selectedItems = Object.entries(quantities)
+    .filter(([_, quantity]) => quantity > 0)
+    .map(([item, quantity]) => {
+      const category = Object.keys(menuData).find(cat => menuData[cat][item]);
+      if (!category) return null;
+      // Extraer el identificador (codigo) del producto y la cantidad
+      const { Codigo, Precio, ingredientes } = menuData[category][item];
+      return {
+        Codigo, // Identificador único del producto
+        nombre: item, // Nombre del producto
+         // Cantidad seleccionada
+        precio_unitario: parseFloat(Precio), // Precio unitario
+        precio_total: parseFloat(Precio) * quantity, // Precio total por cantidad
+        ingredientes // Ingredientes del producto
+      };
+    })
+    .filter(item => item !== null);
+
+  if (selectedItems.length === 0) {
+    alert('Por favor, selecciona al menos un producto.');
+    return;
+  }
+
+  // Crear el objeto del pedido
+  // Crear el objeto del pedido
+const order = {
+  name: `{{ usuario.nombre }}`,
+  userId: `{{ usuario.id }}`,
+  numero: `{{ usuario.numero }}`,
+  direccion: `{{ usuario.direccion }}`,
+  productos: selectedItems.map(item => ({
+    ...item,
+    cantidad: quantities[item.nombre] // Agregar la cantidad seleccionada
+  }))
+};
+
+  // Enviar el pedido al servidor
+  try {
+    const response = await fetch('http://127.0.0.1:5000/api/confirmacion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    });
+    const result = await response.json();
+    if (result.redirect_url) {
+      window.location.href = result.redirect_url;
+    } else {
+      alert(result.message || 'Pedido enviado correctamente.');
+    }
+  } catch (err) {
+    console.error('Error de conexión:', err);
+    alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+  }
 });
-   
-    
-    </script>
+    });
+  </script>
 </body>
 </html>
