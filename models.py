@@ -14,7 +14,7 @@ class Usuario(Base):
 class Pedido(Base):
     __tablename__ = 'pedidos'
     
-    PedidoID = Column(Integer, primary_key=True, autoincrement=True)
+    PedidoID = Column(Integer, primary_key=True, autoincrement=True, nullable=False, server_default="IDENTITY(2000,1)")
     ClienteID = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     FechaCreacion = Column(DateTime, default=datetime.utcnow)
     Estado = Column(String(20), default='Pendiente')
@@ -22,6 +22,7 @@ class Pedido(Base):
     DireccionEntrega = Column(String(255), nullable=False)
     TelefonoEntrega = Column(String(50), nullable=False)
     enlace = Column(String(255), nullable=True)
+    redisID = Column(String(255), nullable=True)
 
     cliente = relationship("Usuario", back_populates="pedidos")  
     detalles = relationship("PedidoDetalle", back_populates="pedido", cascade="all, delete-orphan")  # ✅ Relación agregada

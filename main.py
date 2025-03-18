@@ -145,23 +145,28 @@ cache = redis.Redis(host='localhost', port=6379, db=0)
 @app.route('/menu/<token>', methods=['GET'])
 def quiniela(token=None):
     numero_cliente = obtener_numero_cliente(numero_cliente_token_global)
-    print(numero_cliente,"cleinte numeor")
+    print(numero_cliente, "cleinte numeor")
     if not numero_cliente:
         return jsonify({"error": "Enlace no válido o expirado"}), 403
 
-    
     datos_completos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
-    id_usuario_activo = datos_completos["id"]
-    print("usuario id activo " , id_usuario_activo)
-
-    print(datos_completos,"datos")
     if datos_completos is None:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
+    last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(datos_completos["id"])
+    estado = last_pedido.Estado
+
     usuario = Usuario_web(datos_completos)
-    
-    print(usuario,"user")
-    return render_template('quiniela.html', usuario=usuario)
+    print(usuario, "user")
+
+    # Lógica para redirigir o renderizar según el estado
+    if estado == "enlace":
+        return render_template('quiniela.html', usuario=usuario)
+    elif estado == "enlace2":
+        pedido_id = last_pedido.redisID  # Asegúrate de que PedidoID esté disponible en last_pedido
+        return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
+    else:
+        return jsonify({"error": "Estado no reconocido"}), 400
 
 
 #esta ruta esta conectada con tiwlio  cuando el usuario envia un mensaje este end point 
@@ -280,6 +285,7 @@ def agregar_pedido_confirmacion():
         data = request.json
         print("Datos recibidos pai confimacion:", data)
         
+        
         name = data.get("name", "Nombre no especificado")
         userID = data.get("userId", "ID no especificado")
         numero = data.get("numero", "Numero no especificado")
@@ -311,8 +317,12 @@ def agregar_pedido_confirmacion():
 
         # Guardar los datos en Redis
         cache.set(pedido_id, json.dumps({"name": name, "userID":userID, "numero": numero,"direccion": direccion, "productos": productos, "total": total}), ex=3600)
+        pedidoID = gestor_pedidos.obtener_pedido_mas_reciente(userID)
+        gestor_pedidos.introudcir_dato_redisID(pedidoID.PedidoID, pedido_id)
+        gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"http://localhost:5000/confirmacion_pago?pedido_id={pedido_id}"
+        confirmacion_url = f"http://localhost:5000/confirmacion_pago?pedido_id={pedido_id}" 
+        
 
         return jsonify({"redirect_url": confirmacion_url})
 
@@ -336,6 +346,7 @@ def mostrar_confirmacion():
     numero = pedido["numero"]
 
     print("productos, confirmas pago",productos)
+    
 
     return render_template("confirmacion_pago.html", name=name,userID=userID, numero=numero, direccion=direccion, total=total, productos=productos)
     
