@@ -141,7 +141,6 @@ class GestorUsuarios:
         else:
             # Inicializa el carrito si el cliente no lo tiene
             datos_usuario = gestor_usuarios.obtener_usuario_completo(numero_cliente)
-            print(datos_usuario)
             id_usuario = datos_usuario["id"]
             direccion_usuario = datos_usuario["direccion"]
             numero_usuario = datos_usuario["nombre"]
@@ -171,6 +170,7 @@ class Usuario_web:
         self.nombre = datos.get("nombre", "")
         self.numero = datos.get("numero", "")
         self.direccion = datos.get("direccion", "")
+        self.token = datos.get("token", "")
 
     def __repr__(self):
         return f"<Usuario: {self.nombre}>"

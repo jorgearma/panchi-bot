@@ -226,10 +226,38 @@
 
     <div class="buttons">
         <button id="confirmarPedido" class="confirmar">Confirmar</button>
-        <button class="cancelar" onclick="window.history.back()">Volver</button>
+        <button class="cancelar" onclick="handleBack()">Volver</button>
+
     </div>
 
     <script>
+        async function handleBack() {
+        if (window.history.length > 1) {
+            // Si hay historial, volver atrás
+            window.history.back();
+        } else {
+            // Si no hay historial, cambiar el estado en el servidor
+            try {
+                const pedidoID = "{{ pedidoID }}"; // Asegúrate de que `pedidoID` esté disponible en el contexto
+                const response = await fetch(`/api/cambiar_estado_a_enlace`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pedidoID })
+                });
+
+                if (response.ok) {
+                    // Redirigir a la página de quiniela
+                    window.location.href = `/menu/{{ numero }}/{{ token }}`;
+                } else {
+                    alert('Error al cambiar el estado. Inténtalo de nuevo.');
+                }
+            } catch (error) {
+                console.error('Error al cambiar el estado:', error);
+                alert('No se pudo conectar con el servidor.');
+            }
+        }
+    }
+
         document.getElementById('confirmarPedido').addEventListener('click', async () => {
             // Obtener los datos del pedido desde el DOM
             const productos = Array.from(document.querySelectorAll('#productos li')).map(li => {
@@ -265,7 +293,7 @@
         
             // Enviar el pedido al servidor
             try {
-                const response = await fetch('https://6d6d-62-116-223-170.ngrok-free.app/api/agregar_pedido', {
+                const response = await fetch('https://59a5-62-116-223-170.ngrok-free.app/api/agregar_pedido', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(order)
