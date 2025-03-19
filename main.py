@@ -26,7 +26,7 @@ monei = Monei.MoneiClient(api_key='pk_test_d0b6b6a4723919770f88997d1dbe584b')
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY')
-CORS(app, resources={r"/api/*": {"origins": ["http://127.0.0.1:5500", "http://localhost:5000"]}})
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Endpoint para agregar pedido y crear el pago
 @app.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
@@ -34,7 +34,7 @@ def agregar_pedido():
     if request.method == 'OPTIONS':
         # Respuesta al preflight
         response = app.make_response('')
-        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5000")
+        response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         response.headers.add("Access-Control-Allow-Headers", "Content-Type")
         return response, 200
@@ -54,26 +54,43 @@ def agregar_pedido():
         #         {"codigo": 302, "cantidad": 1}
         #   ]
         # }
-        productos_recibidos = data.get("productos", [])
-        productos_validos = []
-        total_calculado = 0.0
+
+# Obtener el ID del usuario
+    id_usuario = data.get("userID")
+    if not id_usuario:
+        return jsonify({"error": "ID de usuario no proporcionado"}), 400
+
+        # Verificar el estado del pedido más reciente
+    pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+    enlace_pago = pedido_activo.enlace
+    print(enlace_pago)
+
+    if not pedido_activo:
+        return jsonify({"error": "No se encontró un pedido activo para este usuario"}), 404
+
+    if pedido_activo.Estado in ["confirmando-pago", "pagado", "procesado"]:
+        return jsonify({"redirect_url": enlace_pago, "message": "Pedido enviado correctamente."}), 200
+        
+    productos_recibidos = data.get("productos", [])
+    productos_validos = []
+    total_calculado = 0.0
         
         # Validar cada producto y recalcular el precio usando la base de datos
-        for item in productos_recibidos:
-            codigo = item.get("codigo")
-            cantidad = item.get("cantidad", 1)
-            
-            # Consulta el producto por código en la base de datos
-            producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
-            print("Producto DB:", producto_db)
-            if not producto_db:
-                return jsonify({"error": f"Producto con código {codigo} no encontrado"}), 400
-            
-            precio_db = float(producto_db["Precio"])
-            print("Precio DB:", precio_db)
-            total_calculado += precio_db * cantidad
-            productos_validos.append([codigo, cantidad])
-            print("Productos válidos:", productos_validos)
+    for item in productos_recibidos:
+        codigo = item.get("codigo")
+        cantidad = item.get("cantidad", 1)  # Asignar 1 como valor predeterminado si cantidad es None
+        
+        # Consulta el producto por código en la base de datos
+        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
+        print("Producto DB:", producto_db)
+        if not producto_db:
+            return jsonify({"error": f"Producto con código {codigo} no encontrado"}), 400
+        
+        precio_db = float(producto_db["Precio"])
+        print("Precio DB:", precio_db)
+        total_calculado += precio_db * cantidad
+        productos_validos.append([codigo, cantidad])
+        print("Productos válidos:", productos_validos)
         
         id_usuario = data.get("userID")
         numero_cliente = data.get("numero")
@@ -162,7 +179,7 @@ def quiniela(token=None):
     # Lógica para redirigir o renderizar según el estado
     if estado == "enlace":
         return render_template('quiniela.html', usuario=usuario)
-    elif estado == "enlace2":
+    elif estado == "confirmando-pago":
         pedido_id = last_pedido.redisID  # Asegúrate de que PedidoID esté disponible en last_pedido
         return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
     else:
@@ -268,7 +285,7 @@ def obtener_productos():
 
 
 
-
+#este el el end  point que se encarga de recibir la confirmacion del pago para pasrlo a la pagina de commfirmacion 
 
 import uuid  # Para generar un identificador único
 
@@ -276,7 +293,7 @@ import uuid  # Para generar un identificador único
 def agregar_pedido_confirmacion():
     if request.method == 'OPTIONS':
         response = app.make_response('')
-        response.headers.add("Access-Control-Allow-Origin", "http://localhost:5000")
+        response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         response.headers.add("Access-Control-Allow-Headers", "Content-Type")
         return response, 200
@@ -315,13 +332,17 @@ def agregar_pedido_confirmacion():
         # Generar un ID único para este pedido
         pedido_id = str(uuid.uuid4())
 
-        # Guardar los datos en Redis
-        cache.set(pedido_id, json.dumps({"name": name, "userID":userID, "numero": numero,"direccion": direccion, "productos": productos, "total": total}), ex=3600)
+
         pedidoID = gestor_pedidos.obtener_pedido_mas_reciente(userID)
+        pedido_ID_DB = pedidoID.PedidoID
+        # Guardar los datos en Redis
+
+        cache.set(pedido_id, json.dumps({"name": name, "userID":userID, "pedidoID":pedido_ID_DB, "numero": numero,"direccion": direccion, "productos": productos, "total": total}), ex=3600)
+        
         gestor_pedidos.introudcir_dato_redisID(pedidoID.PedidoID, pedido_id)
         gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"http://localhost:5000/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://6d6d-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -344,17 +365,18 @@ def mostrar_confirmacion():
     total = pedido["total"]
     productos = pedido["productos"]
     numero = pedido["numero"]
+    pedidoID = pedido["pedidoID"]
 
     print("productos, confirmas pago",productos)
     
 
-    return render_template("confirmacion_pago.html", name=name,userID=userID, numero=numero, direccion=direccion, total=total, productos=productos)
+    return render_template("confirmacion_pago.html", name=name,userID=userID, numero=numero, direccion=direccion, total=total, productos=productos, pedidoID=pedidoID)
     
 if __name__ == "__main__":
     db_conn = conectar_bd1()
     if db_conn:
         db_conn.close()
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
 
 
 
