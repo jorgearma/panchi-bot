@@ -13,28 +13,86 @@ h1, h2 {
     background-color: #007bff;
     color: white;
     padding: 20px;
-    margin-bottom: 5px;
+    margin: 30px auto; /* Espacio superior e inferior, centrado horizontal */
+    width: 85%; /* Reduce el ancho para crear espacio en los lados */
+    max-width: 600px; /* Limita el ancho máximo para pantallas grandes */
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 3px;
+    border-radius: 20px; /* Bordes redondeados más pronunciados */
+    box-shadow: 0 10px 10px rgba(0, 0, 0, 0.3), 0 15px 20px rgba(0, 0, 0, 0.25); /* Sombra más profunda para un efecto 3D */
+    border: 1px solid rgba(0, 0, 0, 0.15); /* Borde más definido */
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Transición para hover */
+}
+
+#user-info:hover {
+    transform: translateY(-8px); /* Eleva la tarjeta al pasar el mouse */
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.35), 0 20px 60px rgba(0, 0, 0, 0.3); /* Sombra más intensa en hover */
 }
 
 #user-info h2 {
-margin: 0 auto; /* Centra el bloque horizontalmente */
-font-size: 1.5em; /* Tamaño profesional */
-font-weight: bold; /* Resalta el texto */
-font-family: 'Roboto', 'Arial', sans-serif; /* Tipografía profesional */
-line-height: 1.2; /* Espaciado entre líneas */
-color: #333; /* Color oscuro suave */
-text-transform: uppercase; /* Convierte a mayúsculas */
-letter-spacing: 1px; /* Espaciado entre letras */
-text-align: center; /* Centra el texto */
-border-bottom: 2px solid #007BFF; /* Línea decorativa */
-padding-bottom: 5px; /* Espacio entre texto y línea */
-max-width: 600px; /* Limita el ancho para mejor diseño */
-display: block; /* Asegura el comportamiento de bloque */
+    margin: 0; /* Elimina el centrado horizontal */
+    font-size: 1.5em; /* Tamaño profesional */
+    font-weight: bold; /* Resalta el texto */
+    font-family: 'Roboto', 'Arial', sans-serif; /* Tipografía profesional */
+    line-height: 1.2; /* Espaciado entre líneas */
+    color: #fdfdfd; /* Color oscuro suave */
+    text-transform: uppercase; /* Convierte a mayúsculas */
+    letter-spacing: 1px; /* Espaciado entre letras */
+    text-align: left; /* Alinea el texto a la izquierda */
+    border-bottom: none; /* Elimina la línea decorativa */
+    padding-bottom: 0; /* Elimina el espacio adicional */
+    max-width: 100%; /* Permite que ocupe todo el ancho disponible */
+    display: block; /* Asegura el comportamiento de bloque */
 }
+/* Contenedor de navegación horizontal y sticky */
+#category-nav {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    white-space: nowrap;
+    width: 100%;
+    position: sticky;
+    top: 0;
+    background-color: #ffffff;  /* Fondo blanco para resaltar */
+    z-index: 100;
+    padding: 10px 0;            /* Espaciado vertical */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);  /* Sombra sutil para separarlo del contenido */
+  }
+  
+  /* Estilos para los botones de categoría */
+  #category-nav button {
+    flex: 0 0 auto;             /* Evita que se estiren los botones */
+    margin: 0 8px;              /* Espaciado lateral entre botones */
+    padding: 8px 16px;          /* Espaciado interno */
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    font-size: 1rem;
+    background-color: #007BFF;  /* Color de fondo suave */
+    border: none;
+    border-radius: 10px;         /* Bordes redondeados */
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;  /* Transiciones para hover y click */
+  }
+  
+  /* Efecto hover para los botones */
+  #category-nav button:hover {
+    background-color: #e0e0e0;
+    transform: translateY(-2px);
+  }
+  
+  /* Efecto al hacer clic en el botón */
+  #category-nav button:active {
+    background-color: #d0d0d0;
+    transform: translateY(0);
+  }
+  
+  /* Enfocar el botón para accesibilidad */
+  #category-nav button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #007BFF;
+  }
 
 .icon-delivery {
 width: 16px;
@@ -150,13 +208,14 @@ color: #007bff;
 }
 label, input, button {
 font-size: 16px;
+font-weight: bold
 }
 button {
 padding: 10px 20px;
 background-color: #28a745;
 color: white;
 border: none;
-border-radius: 5px;
+border-radius: 25px;
 cursor: pointer;
 }
 button:hover {
@@ -186,18 +245,19 @@ color: #333; /* Color oscuro suave */
 }
 
 .restaurant-name {
-display: block; /* Se asegura que sea un bloque separado */
-font-size: 1.1em; /* Tamaño más pequeño */
-font-weight: bold; /* Texto en negrita */
-color: #007bff; /* Azul elegante */
-text-transform: uppercase; /* Convierte a mayúsculas */
-letter-spacing: 1px; /* Espaciado entre letras */
-margin-bottom: 5px; /* Espaciado con el subtítulo */
-text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); /* Sombra ligera */
+    display: block; /* Se asegura que sea un bloque separado */
+    font-size: 1.5em; /* Tamaño más compacto */
+    font-weight: 600; /* Negrita moderada */
+    color: #363535; /* Negro elegante */
+    text-transform: uppercase; /* Convierte a mayúsculas */
+    letter-spacing: 1px; /* Espaciado entre letras más sutil */
+    margin-bottom: 10px; /* Espaciado con el subtítulo */
+    text-align: center; /* Centra el texto */
+    text-shadow: 1px 1px 2px rgba(102, 99, 99, 0.2); /* Sombra ligera para profundidad */
+    padding-bottom: 5px; /* Espaciado inferior */
 }
-
 .menu-label {
-font-size: 1.2em; /* Más pequeño que el nombre */
+font-size: 1.4em; /* Más pequeño que el nombre */
 font-weight: 500; /* Peso medio para diferenciación */
 color: #555; /* Color más tenue */
 letter-spacing: 0.8px; /* Espaciado elegante */
@@ -233,3 +293,48 @@ border-top: 2px solid #007bff; /* Línea decorativa */
     padding: 0;
     list-style: none;
 }
+#submitOrder {
+    padding: 10px 20px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    position: fixed; /* Fija el botón en la pantalla */
+    bottom: 20px;   /* Distancia desde el fondo */
+    left: 20px;     /* Distancia desde la izquierda */
+    z-index: 1000;  /* Asegura que se muestre sobre otros elementos */
+  }
+  
+  #submitOrder:hover {
+    background-color: #218838;
+  }
+
+  .category-bubble {
+    display: block; /* Asegura que sea un bloque separado */
+    margin: 10px auto; /* Centra horizontalmente */
+    text-align: center; /* Centra el texto dentro de la burbuja */
+    background-color: rgba(124, 124, 124, 0.2); /* Fondo grisáceo */
+    color: #242323; /* Color del texto */
+    padding: 10px 15px; /* Espaciado interno */
+    border-radius: 20px; /* Bordes redondeados */
+    font-size: 1.2em; /* Tamaño de fuente */
+    font-weight: bold; /* Negrita */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Sombra */
+    width: fit-content; /* Ajusta el ancho al contenido */
+  }
+
+  #menu > div {
+    display: block; /* Asegura que los elementos no se alineen en fila */
+    margin: 20px 0; /* Espaciado vertical entre categorías */
+  }
+
+  .icon-store {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    fill: currentColor;
+  }
+
+
+  
