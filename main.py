@@ -54,9 +54,26 @@ def agregar_pedido():
         #         {"codigo": 302, "cantidad": 1}
         #   ]
         # }
-        productos_recibidos = data.get("productos", [])
-        productos_validos = []
-        total_calculado = 0.0
+
+# Obtener el ID del usuario
+    id_usuario = data.get("userID")
+    if not id_usuario:
+        return jsonify({"error": "ID de usuario no proporcionado"}), 400
+
+        # Verificar el estado del pedido más reciente
+    pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+    enlace_pago = pedido_activo.enlace
+    print(enlace_pago)
+
+    if not pedido_activo:
+        return jsonify({"error": "No se encontró un pedido activo para este usuario"}), 404
+
+    if pedido_activo.Estado in ["confirmando-pago", "pagado", "procesado"]:
+        return jsonify({"redirect_url": enlace_pago, "message": "Pedido enviado correctamente."}), 200
+        
+    productos_recibidos = data.get("productos", [])
+    productos_validos = []
+    total_calculado = 0.0
         
         # Validar cada producto y recalcular el precio usando la base de datos
     for item in productos_recibidos:
@@ -162,7 +179,7 @@ def quiniela(token=None):
     # Lógica para redirigir o renderizar según el estado
     if estado == "enlace":
         return render_template('quiniela.html', usuario=usuario)
-    elif estado == "enlace2":
+    elif estado == "confirmando-pago":
         pedido_id = last_pedido.redisID  # Asegúrate de que PedidoID esté disponible en last_pedido
         return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
     else:
@@ -325,7 +342,7 @@ def agregar_pedido_confirmacion():
         gestor_pedidos.introudcir_dato_redisID(pedidoID.PedidoID, pedido_id)
         gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://57fd-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://6d6d-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})

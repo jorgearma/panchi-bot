@@ -9,14 +9,14 @@
             font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #1b46d4;
+            background-color: #007bff;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         .header {
         width: 100%;
-        background: #1b46d4;
+        background: #007bff;
         padding: 10px;
         display: flex;
         justify-content: center;
@@ -58,7 +58,7 @@
         .user-icon {
         font-size: 20px;
         margin-right: 8px;
-        color: #1b46d4;
+        color: #007bff;
         }
 
         .user-name {
@@ -226,7 +226,7 @@
 
     <div class="buttons">
         <button id="confirmarPedido" class="confirmar">Confirmar</button>
-        <button class="cancelar">Volver</button>
+        <button class="cancelar" onclick="window.history.back()">Volver</button>
     </div>
 
     <script>
@@ -265,7 +265,7 @@
         
             // Enviar el pedido al servidor
             try {
-                const response = await fetch('https://57fd-62-116-223-170.ngrok-free.app/api/agregar_pedido', {
+                const response = await fetch('https://6d6d-62-116-223-170.ngrok-free.app/api/agregar_pedido', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(order)

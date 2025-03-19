@@ -22,19 +22,27 @@
       <svg class="icon-delivery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
         <path d="M4 4h16v2H4V4zm0 6h16v2H4v-2zm0 6h16v2H4v-2z"/>
       </svg>
-      <span>&nbsp;Precio del delivery: <strong style="color: rgb(36, 35, 35); font-size: 1.1em; font-family: 'Arial Black', sans-serif;">3,50€</strong></span>
+      <span>&nbsp;Precio del delivery: <strong style="color: rgb(248, 246, 246); font-size: 1.1em; font-family: 'Arial Black', sans-serif;">GRATIS</strong></span>
+ 
     </div>
+    <div class="user-detail">
+      <!-- Icon for home -->
+      <svg class="icon-home" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+        <path d="M3 10L12 3L21 10V20H15V14H9V20H3V10Z" stroke="#fafbfc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>&nbsp;&nbsp;&nbsp;<strong style="color: #fafbfc; font-size: 1.2em; font-family: 'Arial Black', sans-serif;">Panchi Bot</strong></span>
+    </div>
+    
   </div>
 
   <h1 class="menu-title">
-    <span class="restaurant-name">Panchi bot</span>
     <span class="menu-label">Productos</span>
     <hr class="title-divider">
   </h1>
 
   <form id="orderForm">
-    <div id="menu"></div>
-    <button type="button" id="submitOrder">Enviar</button>
+    <div id="menu"></div>               
+    <button type="button" id="submitOrder">Pagar</button>
   </form>
   <div id="notification-popup"></div>
   
@@ -47,36 +55,59 @@
 
       // Función que construye el menú dinámicamente usando menuData
     function buildMenu() {
+      // Contenedor para los botones de navegación por categoría
+      const navContainer = document.createElement('div');
+      navContainer.id = 'category-nav';
+      // Puedes agregar estilos o ubicar este contenedor donde prefieras
+      menuDiv.parentNode.insertBefore(navContainer, menuDiv);
+
+      // Primero, crear un botón por cada categoría
       Object.keys(menuData).forEach(category => {
-        const categoryDiv = document.createElement('div');
-        categoryDiv.innerHTML = `<h2>${category}</h2>`;
-        Object.keys(menuData[category]).forEach(item => {
-          const producto = menuData[category][item];
-          const precio = parseFloat(producto.Precio);
-          const ingredientes = producto.ingredientes;
-          const imagen = producto.Imagen;
-          const productoID = producto.ProductoID; // Asegúrate de que ProductoID esté disponible
-          const itemDiv = document.createElement('div');
-          itemDiv.className = 'menu-item';
-          itemDiv.innerHTML = `
-            <div class="menu-details">
-              <span class="item-name">
-                <strong><span class="item-title">${item}</span> - ${precio.toFixed(2)}€</strong>
-              </span>
-              <span class="menu-ingredients">Ingredientes: ${ingredientes}</span>
-              <div class="quantity-control">
-                <button class="decrease" data-item="${item}" data-product-id="${productoID}" disabled>-</button>
-                <span class="quantity-display" id="quantity-${item}">0</span>
-                <button class="increase" data-item="${item}" data-product-id="${productoID}">+</button>
-              </div>
-            </div>
-            <img src="${imagen}" alt="${item}">
-          `;
-          categoryDiv.appendChild(itemDiv);
+        const btn = document.createElement('button');
+        btn.type = 'button'; // Evita que se envíe el formulario
+        btn.innerText = category;
+        btn.addEventListener('click', () => {
+          const categorySection = document.getElementById(`category-${category}`);
+          if (categorySection) {
+            categorySection.scrollIntoView({ behavior: 'smooth' });
+          }
         });
-        menuDiv.appendChild(categoryDiv);
+        navContainer.appendChild(btn);
       });
-    }
+
+  // Luego, crea las secciones del menú con un id único para cada categoría
+  Object.keys(menuData).forEach(category => {
+    const categoryDiv = document.createElement('div');
+    categoryDiv.id = `category-${category}`; // id para hacer scroll
+    categoryDiv.innerHTML = `<h2 class="category-bubble">${category}</h2>`;
+    Object.keys(menuData[category]).forEach(item => {
+      const producto = menuData[category][item];
+      const precio = parseFloat(producto.Precio);
+      const ingredientes = producto.ingredientes;
+      const imagen = producto.Imagen;
+      const productoID = producto.ProductoID;
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'menu-item';
+      itemDiv.innerHTML = `
+        <div class="menu-details">
+          <span class="item-name">
+            <strong><span class="item-title">${item}</span> - ${precio.toFixed(2)}€</strong>
+          </span>
+          <span class="menu-ingredients">Ingredientes: ${ingredientes}</span>
+          <div class="quantity-control">
+            <button class="decrease" data-item="${item}" data-product-id="${productoID}" disabled>-</button>
+            <span class="quantity-display" id="quantity-${item}">0</span>
+            <button class="increase" data-item="${item}" data-product-id="${productoID}">+</button>
+          </div>
+        </div>
+        <img src="${imagen}" alt="${item}">
+      `;
+      categoryDiv.appendChild(itemDiv);
+    });
+    menuDiv.appendChild(categoryDiv);
+  });
+}
+
 
       // Función para calcular el total del pedido
       const calculateTotal = () => {
@@ -188,7 +219,7 @@ const order = {
 
   // Enviar el pedido al servidor
   try {
-    const response = await fetch('https://57fd-62-116-223-170.ngrok-free.app/api/confirmacion', {
+    const response = await fetch('https://6d6d-62-116-223-170.ngrok-free.app/api/confirmacion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
