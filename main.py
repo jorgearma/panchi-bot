@@ -1,12 +1,9 @@
 import Monei
 from Monei import ApiException
-from flask import Flask, request, jsonify, render_template, redirect , session, jsonify
-from pprint import pprint
+from flask import Flask, request, jsonify, render_template, redirect , jsonify
 from controllers.registro_de_usuarios.registro import manejar_registro
 from controllers.mensajes_registrados import manejar_mensajes_registrados
 from data.usuarios import  GestorUsuariosBD, Usuario_web , ProductoManager
-from data.carrito import carrito_instancia
-from data.estado_usuarios import estado_usuarios
 from utils.text_utils import limpiar_texto
 from database import conectar_bd1 , db_session
 from flask_cors import CORS 
@@ -23,26 +20,14 @@ gestor_productos = ProductoManager()
 
 # Instanciar el cliente de Monei con tu API key
 monei = Monei.MoneiClient(api_key='pk_test_d0b6b6a4723919770f88997d1dbe584b')
+cache = redis.Redis(host='localhost', port=6379, db=0)
 
 app = Flask(__name__)
+
 app.secret_key = os.environ.get('SECRET_KEY')
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# Endpoint para agregar pedido y crear el pago
-@app.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
-def agregar_pedido():
-    if request.method == 'OPTIONS':
-        # Respuesta al preflight
-        response = app.make_response('')
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        return response, 200
-
-    if request.method == 'POST':
-        data = request.json
-        print("Datos recibidos en agregar pedido:", data)
-        
+#Endpoint para agregar pedido y crear el pago
         # Se espera que el JSON del cliente tenga la siguiente estructura:
         # {
         #   "userId": "123",
@@ -54,73 +39,65 @@ def agregar_pedido():
         #         {"codigo": 302, "cantidad": 1}
         #   ]
         # }
+@app.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
+def agregar_pedido():
+    if request.method == 'OPTIONS':
+        response = app.make_response('')
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        return response, 200
 
-# Obtener el ID del usuario
-    id_usuario = data.get("userID")
-    if not id_usuario:
-        return jsonify({"error": "ID de usuario no proporcionado"}), 400
-
-        # Verificar el estado del pedido más reciente
-    pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-    enlace_pago = pedido_activo.enlace
-    print(enlace_pago)
-
-    if not pedido_activo:
-        return jsonify({"error": "No se encontró un pedido activo para este usuario"}), 404
-
-    if pedido_activo.Estado in ["confirmando-pago", "pagado", "procesado"]:
-        return jsonify({"redirect_url": enlace_pago, "message": "Pedido enviado correctamente."}), 200
-        
-    productos_recibidos = data.get("productos", [])
-    productos_validos = []
-    total_calculado = 0.0
-        
-        # Validar cada producto y recalcular el precio usando la base de datos
-    for item in productos_recibidos:
-        codigo = item.get("codigo")
-        cantidad = item.get("cantidad", 1)  # Asignar 1 como valor predeterminado si cantidad es None
-        
-        # Consulta el producto por código en la base de datos
-        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
-        print("Producto DB:", producto_db)
-        if not producto_db:
-            return jsonify({"error": f"Producto con código {codigo} no encontrado"}), 400
-        
-        precio_db = float(producto_db["Precio"])
-        print("Precio DB:", precio_db)
-        total_calculado += precio_db * cantidad
-        productos_validos.append([codigo, cantidad])
-        print("Productos válidos:", productos_validos)
+    if request.method == 'POST':
+        data = request.json
+        print("Datos recibidos en agregar pedido:", data)
         
         id_usuario = data.get("userID")
+        if not id_usuario:
+            return jsonify({"error": "ID de usuario no proporcionado"}), 400
+
+        pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+        estado1 = pedido_activo.Estado
+        print("estado pedido activo", estado1)
+        if not pedido_activo:
+            return jsonify({"error": "No se encontró un pedido activo para este usuario"}), 404
+
+        # Verificar si el pedido ya está en estado de confirmando-pago o pagado
+        if estado1 == "confirmando-pago":
+            return jsonify({"message": "El pedido ya está en proceso de pago."}), 200
+        
+        productos_recibidos = data.get("productos", [])
+        productos_validos = []
+        total_calculado = 0.0
+        
+        for item in productos_recibidos:
+            codigo = item.get("codigo")
+            cantidad = item.get("cantidad", 1) 
+            
+            producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
+            if not producto_db:
+                return jsonify({"error": f"Producto con código {codigo} no encontrado"}), 400
+            
+            precio_db = float(producto_db["Precio"])
+            total_calculado += precio_db * cantidad
+            productos_validos.append([codigo, cantidad])
+        
         numero_cliente = data.get("numero")
         nombre_cliente = data.get("name")
         direccion_cliente = data.get("direccion")
         
-        print(nombre_cliente, "nombre cliente")
-        print("ID pasado:", id_usuario)
-        print("Nombre de agregar:", nombre_cliente)
-        
-        # Obtener el pedido activo para el usuario y agregar los productos validados
-        pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-        print("Pedido activo:", pedido_activo)
         pedido_activo_id = pedido_activo.PedidoID
-        pedido_activo_id_srt = str(pedido_activo_id)
         gestor_pedidos.agregar_productos_a_pedido(pedido_activo_id, productos_validos)
         
-        print(pedido_activo_id, "ID pedido /api")
-        
-        # Convertir el total calculado a céntimos (por ejemplo, 12.50€ -> 1250)
         amount_in_cents = int(round(total_calculado * 100))
         
-        # Datos de pago. Aquí se utiliza el total recalculado para evitar depender del precio enviado desde el cliente.
         payment_data = {
             'amount': amount_in_cents,
-            'order_id': pedido_activo_id_srt,
+            'order_id': str(pedido_activo_id),
             'currency': 'EUR',
             'description': nombre_cliente,
             'customer': {
-                'email': 'john.doe@monei.com',  # Asegúrate de obtener el email real si está disponible
+                'email': 'john.doe@monei.com',  # Obtener el email real si está disponible
                 'name': nombre_cliente,
                 'phone': numero_cliente
             },
@@ -135,7 +112,6 @@ def agregar_pedido():
         }
         
         try:
-            print("Datos de pago enviados a Monei:", payment_data)
             result = monei.payments.create(payment_data)
             print("Respuesta de pago:", result)
             
@@ -148,21 +124,41 @@ def agregar_pedido():
             if redirect_url:
                 return jsonify({"redirect_url": redirect_url, "message": "Pedido enviado correctamente."}), 200
             else:
-                print("Error: No se encontró la URL de redirección en la respuesta")
                 return jsonify({"error": "No se encontró la URL de redirección en la respuesta"}), 500
         except ApiException as e:
             print("Error al crear el pago:", e)
             return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/cambiar_estado_a_enlace', methods=['POST'])
+def cambiar_estado_a_enlace():
+    data = request.json
+    pedido_id = data.get("pedidoID")
+
+    if not pedido_id:
+        return jsonify({"error": "Pedido ID no proporcionado"}), 400
+
+    # Obtener el pedido desde la base de datos
+    pedido = gestor_pedidos.obtener_pedido(pedido_id)
+    if not pedido:
+        return jsonify({"error": "Pedido no encontrado"}), 404
+
+    # Verificar si el estado actual es "enlace2"
+    if pedido.Estado == "confirmando-pago":
+        return jsonify({"error": "error'"}), 400
+
+    # Actualizar el estado del pedido a 'enlace'
+    gestor_pedidos.actualizar_estado(pedido.PedidoID, "enlace")
+    return jsonify({"message": "Estado actualizado a 'enlace'"}), 200
 
 
-cache = redis.Redis(host='localhost', port=6379, db=0)
 
-@app.route('/menu/<token>', methods=['GET'])
-def quiniela(token=None):
-    numero_cliente = obtener_numero_cliente(numero_cliente_token_global)
-    print(numero_cliente, "cleinte numeor")
+from urllib.parse import unquote
+@app.route('/menu/<numero_cliente>/<token>', methods=['GET'])
+def quiniela(numero_cliente, token=None):
+
+    numero_cliente = unquote(numero_cliente)
+    print("numero_cliente", numero_cliente)
     if not numero_cliente:
         return jsonify({"error": "Enlace no válido o expirado"}), 403
 
@@ -173,13 +169,15 @@ def quiniela(token=None):
     last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(datos_completos["id"])
     estado = last_pedido.Estado
 
+    datos_completos["token"] = token
+
     usuario = Usuario_web(datos_completos)
-    print(usuario, "user")
+    print(datos_completos, "user")
 
     # Lógica para redirigir o renderizar según el estado
     if estado == "enlace":
         return render_template('quiniela.html', usuario=usuario)
-    elif estado == "confirmando-pago":
+    elif estado == "enlace2":
         pedido_id = last_pedido.redisID  # Asegúrate de que PedidoID esté disponible en last_pedido
         return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
     else:
@@ -189,17 +187,17 @@ def quiniela(token=None):
 #esta ruta esta conectada con tiwlio  cuando el usuario envia un mensaje este end point 
 #   fix-bug corregir variable goblam
      
-numero_cliente_token_global = None
+
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    global numero_cliente_token_global
+    
 
     numero_cliente = request.form['From']
     mensaje_cliente1 = request.form['Body'].strip().lower()
     mensaje_cliente = limpiar_texto(mensaje_cliente1)
 
-    numero_cliente_token_global = generar_token_y_guardar_cliente(numero_cliente)
+    
     print("mensaje-cliente", mensaje_cliente)
     if not gestor_usuarios.obtener_usuario(numero_cliente):
         return manejar_registro(numero_cliente, mensaje_cliente)
@@ -238,7 +236,7 @@ def webhoo():
     importe_cents = data.get('object', {}).get('amount', 0)
     importe_euros = importe_cents / 100  # Convertir a euros
     
-    print("Data recibida:", data)
+    
     
     # Condición para determinar si el pedido está pagado
     # Puedes adaptar esta condición según lo que envíe Monei
@@ -307,6 +305,7 @@ def agregar_pedido_confirmacion():
         userID = data.get("userId", "ID no especificado")
         numero = data.get("numero", "Numero no especificado")
         direccion = data.get("direccion", "Dirección no especificada")
+        token = data.get("token", "")
         productos_recibidos = data.get("productos", [])
 
         productos = []
@@ -337,12 +336,15 @@ def agregar_pedido_confirmacion():
         pedido_ID_DB = pedidoID.PedidoID
         # Guardar los datos en Redis
 
-        cache.set(pedido_id, json.dumps({"name": name, "userID":userID, "pedidoID":pedido_ID_DB, "numero": numero,"direccion": direccion, "productos": productos, "total": total}), ex=3600)
+        cache.set(pedido_id, json.dumps({"name": name, "token":token ,"userID":userID, "pedidoID":pedido_ID_DB, "numero": numero,"direccion": direccion, "productos": productos, "total": total}), ex=3600)
         
         gestor_pedidos.introudcir_dato_redisID(pedidoID.PedidoID, pedido_id)
-        gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
+        if pedidoID.Estado != "enlace":
+            print(f"No se puede cambiar el estado. Estado actual: '{pedidoID.Estado}'")
+        else:
+            gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://6d6d-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://59a5-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -366,11 +368,12 @@ def mostrar_confirmacion():
     productos = pedido["productos"]
     numero = pedido["numero"]
     pedidoID = pedido["pedidoID"]
+    token = pedido["token"] 
 
     print("productos, confirmas pago",productos)
     
 
-    return render_template("confirmacion_pago.html", name=name,userID=userID, numero=numero, direccion=direccion, total=total, productos=productos, pedidoID=pedidoID)
+    return render_template("confirmacion_pago.html", name=name,userID=userID,token=token, numero=numero, direccion=direccion, total=total, productos=productos, pedidoID=pedidoID)
     
 if __name__ == "__main__":
     db_conn = conectar_bd1()

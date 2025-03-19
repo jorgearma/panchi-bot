@@ -23,7 +23,7 @@
         <path d="M4 4h16v2H4V4zm0 6h16v2H4v-2zm0 6h16v2H4v-2z"/>
       </svg>
       <span>&nbsp;Precio del delivery: <strong style="color: rgb(248, 246, 246); font-size: 1.1em; font-family: 'Arial Black', sans-serif;">GRATIS</strong></span>
- 
+
     </div>
     <div class="user-detail">
       <!-- Icon for home -->
@@ -47,6 +47,9 @@
   <div id="notification-popup"></div>
   
   <script>
+
+    
+
     document.addEventListener('DOMContentLoaded', () => {
       let menuData = {}; // Variable donde se guardarán los datos dinámicos
       const menuDiv = document.getElementById('menu');
@@ -208,6 +211,7 @@
   // Crear el objeto del pedido
 const order = {
   name: `{{ usuario.nombre }}`,
+  token: `{{ usuario.token }}`,
   userId: `{{ usuario.id }}`,
   numero: `{{ usuario.numero }}`,
   direccion: `{{ usuario.direccion }}`,
@@ -219,7 +223,7 @@ const order = {
 
   // Enviar el pedido al servidor
   try {
-    const response = await fetch('https://6d6d-62-116-223-170.ngrok-free.app/api/confirmacion', {
+    const response = await fetch('https://59a5-62-116-223-170.ngrok-free.app/api/confirmacion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
