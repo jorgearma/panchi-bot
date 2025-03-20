@@ -4,6 +4,7 @@ import re
 from unidecode import unidecode
 from utils.es_pregunta import es_pregunta
 from utils.crear_token import generar_enlace
+from utils.mensajes import enviar_mensaje_whatsapp
 
 menu = {
     "👇 *Restaurantes*👇": {
@@ -33,12 +34,6 @@ def mostrar_menu():
             
     return resultado
 
-# Llamada a la función para mostrar el menú
-
-
-
-
-# aqui proceso el segundo mennsaje tengo que actualizar y mejorarlo para optimizar que la leccion es un retaurante 
 
 def procesar_pedido(pedido, numero_cliente):
     from main import gestor_usuarios
@@ -54,14 +49,11 @@ def procesar_pedido(pedido, numero_cliente):
     restaurante_elegido = None
 
     usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
-    print(usuario_datos ,"usario datos")
     id_usuario = usuario_datos["id"]
 
     pedido = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
     
     id_pedido = pedido.PedidoID
-    print(id_pedido)
-
     
     for categoria, items in menu.items():
         for item, info in items.items():
@@ -80,5 +72,21 @@ def procesar_pedido(pedido, numero_cliente):
         return f" ❕Elegiste *{restaurante_elegido}*❕\n\n▪*Enlace* unico 👇    \n\n{(enlace)}"
     else:
         return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pedido. Por favor elige algo de lo que ofrecemos."
-# Función para mostrar el carrito y calcular el total
 
+
+
+#aqui proceso los posibles problemas que puedan surgir  en al elecion del menu  como malos comandos 
+def procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente):
+    menu_comando_no_reconocido = mostrar_menu()
+    respuesta_camarero = procesar_pedido(mensaje_cliente , numero_cliente )
+    
+    if "no reconocí ningún ítem" in respuesta_camarero:
+        respuesta_openai = "❌Comando no reconosido❌ \n   ▪️Elija un restaurante▪️"  #obtener_respuesta_openai(mensaje_cliente, carrito_cliente)
+        enviar_mensaje_whatsapp(f"{respuesta_openai} {menu_comando_no_reconocido} \nEscribe el *numero* para elegir ", numero_cliente)
+    else:
+        enviar_mensaje_whatsapp(f"{respuesta_camarero}", numero_cliente)
+        if "Has agregado" in respuesta_camarero:
+            
+            print("flujo cortado revisar")
+            
+    return "Mensaje recibido", 200   

@@ -131,7 +131,7 @@ class GestorUsuarios:
         return nombre["nombre"] 
     @staticmethod
     def manejar_usuario(numero_cliente):
-        from data.carrito import carrito_instancia
+        
         from main import gestor_usuarios
         from main import gestor_pedidos
         
