@@ -158,36 +158,6 @@ class GestorPedidos:
         return nuevo_producto.ProductoID
 
 
-    def cargar_productos(self):
-        menu = {
-            "🍔 HAMBURGUESAS": {
-                "clasica": {"precio": 5.00},
-                "ranchera": {"precio": 5.50},
-                "crispy": {"precio": 6.00}
-            },
-            "🌭 PERRITOS": {
-                "clasico": {"precio": 4.00},
-                "picanton": {"precio": 4.00},
-                "texano": {"precio": 4.00},
-                "bbq": {"precio": 4.00}
-            },
-            "🍨 POSTRES": {
-                "flan": {"precio": 4.00},
-                "tarta": {"precio": 5.00},
-                "helado": {"precio": 3.50}
-            },
-            "🥤 BEBIDAS": {
-                "agua": {"precio": 1.50},
-                "vino": {"precio": 4.00},
-                "cerveza": {"precio": 3.00},
-                "refresco": {"precio": 2.50},
-                "café": {"precio": 2.00}
-            }
-        }
-        for categoria, productos in menu.items():
-            for nombre, datos in productos.items():
-                self.agregar_producto(nombre.capitalize(), datos["precio"])
-
 
 
     

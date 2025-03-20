@@ -11,6 +11,12 @@ import json
 import redis
 import os
 from utils.crear_token import   obtener_numero_cliente , generar_token_y_guardar_cliente
+import uuid  # Para generar un identificador único
+from urllib.parse import unquote
+
+import hmac
+import hashlib
+from utils.mensajes import enviar_mensaje_whatsapp
 
 from data.order import GestorPedidos
 
@@ -27,18 +33,157 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY')
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-#Endpoint para agregar pedido y crear el pago
-        # Se espera que el JSON del cliente tenga la siguiente estructura:
-        # {
-        #   "userId": "123",
-        #   "name": "Juan Pérez",
-        #   "numero": "555-1234",
-        #   "direccion": "Calle Falsa 123",
-        #   "productos": [
-        #         {"codigo": 301, "cantidad": 2},
-        #         {"codigo": 302, "cantidad": 1}
-        #   ]
-        # }
+
+ 
+
+
+
+
+# # Esta ruta se encarga de mostrar el menú de la quiniela.
+# # si el estado en la base de datos de pedido es enlace2 se le redirige
+# # a la página de confirmación de pago.
+# # si el estado es enlace se le muestra el menú de la quiniela
+@app.route('/menu/<numero_cliente>/<token>', methods=['GET'])
+def quiniela(numero_cliente, token=None):
+
+    numero_cliente = unquote(numero_cliente)
+    print("numero_cliente", numero_cliente)
+    if not numero_cliente:
+        return jsonify({"error": "Enlace no válido o expirado"}), 403
+
+    datos_completos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
+    if datos_completos is None:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(datos_completos["id"])
+    estado = last_pedido.Estado
+
+    datos_completos["token"] = token
+
+    usuario = Usuario_web(datos_completos)
+    print(datos_completos, "user")
+
+    # Lógica para redirigir o renderizar según el estado
+    if estado == "enlace":
+        return render_template('quiniela.html', usuario=usuario)
+    elif estado == "enlace2":
+        pedido_id = last_pedido.redisID  # Asegúrate de que PedidoID esté disponible en last_pedido
+        return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
+    else:
+        return jsonify({"error": "Estado no reconocido"}), 400
+
+
+
+# # Esta ruta se encarga de recibir la confirmación del pedido y redirigir al usuario a la página de confirmación de pago.
+# # Se espera que el JSON del cliente tenga la siguiente estructura:
+# # {
+# #   "userId": "123",
+# #   "name": "Juan Pérez",
+# #   "numero": "555-1234",
+# #   "direccion": "Calle Falsa 123",       
+# #   "productos": [
+# #         {"codigo": 301, "cantidad": 2},
+# #         {"codigo": 302, "cantidad": 1}
+# #   ]
+# # }
+@app.route('/api/confirmacion', methods=['OPTIONS', 'POST'])
+def agregar_pedido_confirmacion():
+
+    if request.method == 'OPTIONS':
+        response = app.make_response('')
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        return response, 200
+
+    if request.method == 'POST':
+        data = request.json
+        print("Datos recibidos pai confimacion:", data)
+        
+        
+        name = data.get("name", "Nombre no especificado")
+        userID = data.get("userId", "ID no especificado")
+        numero = data.get("numero", "Numero no especificado")
+        direccion = data.get("direccion", "Dirección no especificada")
+        token = data.get("token", "")
+        productos_recibidos = data.get("productos", [])
+
+        productos = []
+        total = 0
+
+        for p in productos_recibidos:
+            nombre_producto = p.get("nombre", "Producto desconocido")
+            cantidad = p.get("cantidad", 1)
+            precio_unitario = p.get("precio_unitario", 0.0)
+            codigo = p.get("Codigo")
+            precio_total = round(precio_unitario * cantidad, 2)
+
+            productos.append({
+                "nombre": nombre_producto,
+                "cantidad": cantidad,
+                "precio": precio_total,
+                "codigo": codigo
+                
+            })
+
+            total += precio_total
+        total = round(total, 2)    
+
+        # Generar un ID único para este pedido
+        pedido_id = str(uuid.uuid4())
+
+
+        pedidoID = gestor_pedidos.obtener_pedido_mas_reciente(userID)
+        pedido_ID_DB = pedidoID.PedidoID
+        # Guardar los datos en Redis
+
+        cache.set(pedido_id, json.dumps({"name": name, "token":token ,"userID":userID, "pedidoID":pedido_ID_DB, "numero": numero,"direccion": direccion, "productos": productos, "total": total}), ex=3600)
+        
+        gestor_pedidos.introudcir_dato_redisID(pedidoID.PedidoID, pedido_id)
+        if pedidoID.Estado != "enlace":
+            print(f"No se puede cambiar el estado. Estado actual: '{pedidoID.Estado}'")
+        else:
+            gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
+
+        confirmacion_url = f"https://bebb-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        
+
+        return jsonify({"redirect_url": confirmacion_url})
+
+
+
+# # Esta ruta se encarga de mostrar la página de confirmación de pago.
+@app.route('/confirmacion_pago')
+def mostrar_confirmacion():
+    pedido_id = request.args.get("pedido_id")
+    if not pedido_id:
+        return jsonify({"error": "Pedido no encontrado"}), 404
+
+    # Recuperar los datos del pedido desde Redis
+    pedido_data = cache.get(pedido_id)
+    if not pedido_data:
+        return jsonify({"error": "Pedido expirado o no encontrado"}), 404
+
+    pedido = json.loads(pedido_data)
+    name = pedido["name"]
+    userID = pedido["userID"]
+    direccion = pedido["direccion"]
+    total = pedido["total"]
+    productos = pedido["productos"]
+    numero = pedido["numero"]
+    pedidoID = pedido["pedidoID"]
+    token = pedido["token"] 
+
+    print("productos, confirmas pago",productos)
+    
+
+    return render_template("confirmacion_pago.html", name=name,userID=userID,token=token, numero=numero, direccion=direccion, total=total, productos=productos, pedidoID=pedidoID)
+
+
+
+#  aqui agregamos los productos al pedido y creamos el pago , devemso mejorar la logica para 
+#  separar responsabilidades y no tener tanto codigo en la misma funcion
+#  tambien comprobamos los precios en la base de datos  
 @app.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
 def agregar_pedido():
     if request.method == 'OPTIONS':
@@ -130,6 +275,20 @@ def agregar_pedido():
             return jsonify({"error": str(e)}), 500
 
 
+
+
+
+
+
+
+
+########## utils ##########
+
+# # Esta ruta se encarga de cambiar el estado del pedido a "enlace"
+# # y redirigir al usuario a la página de confirmación de pago.
+# # es un util extender para reutilizar el mismo endpoint
+
+
 @app.route('/api/cambiar_estado_a_enlace', methods=['POST'])
 def cambiar_estado_a_enlace():
     data = request.json
@@ -153,41 +312,12 @@ def cambiar_estado_a_enlace():
 
 
 
-from urllib.parse import unquote
-@app.route('/menu/<numero_cliente>/<token>', methods=['GET'])
-def quiniela(numero_cliente, token=None):
-
-    numero_cliente = unquote(numero_cliente)
-    print("numero_cliente", numero_cliente)
-    if not numero_cliente:
-        return jsonify({"error": "Enlace no válido o expirado"}), 403
-
-    datos_completos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
-    if datos_completos is None:
-        return jsonify({"error": "Usuario no encontrado"}), 404
-
-    last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(datos_completos["id"])
-    estado = last_pedido.Estado
-
-    datos_completos["token"] = token
-
-    usuario = Usuario_web(datos_completos)
-    print(datos_completos, "user")
-
-    # Lógica para redirigir o renderizar según el estado
-    if estado == "enlace":
-        return render_template('quiniela.html', usuario=usuario)
-    elif estado == "enlace2":
-        pedido_id = last_pedido.redisID  # Asegúrate de que PedidoID esté disponible en last_pedido
-        return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
-    else:
-        return jsonify({"error": "Estado no reconocido"}), 400
 
 
-#esta ruta esta conectada con tiwlio  cuando el usuario envia un mensaje este end point 
-#   fix-bug corregir variable goblam
-     
+########### webhook ###########
 
+
+# # Esta ruta se encarga de recibir los mensajes de WhatsApp y procesarlos.   
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -205,20 +335,14 @@ def webhook():
         return manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
 
 
-
-
-
-
-import hmac
-import hashlib
-from utils.mensajes import enviar_mensaje_whatsapp
-
 WEBHOOK_SECRET = b'tu_clave_secreta'
 
 def verify_signature(request_data, received_signature):
     computed_signature = hmac.new(WEBHOOK_SECRET, request_data, hashlib.sha256).hexdigest()
     return hmac.compare_digest(computed_signature, received_signature)
 
+# # Esta ruta se encarga de recibir los
+# # webhooks de Monei y procesar la información del pago.
 
 @app.route('/webhoo/monei', methods=['POST'])
 def webhoo():
@@ -242,14 +366,14 @@ def webhoo():
     # Puedes adaptar esta condición según lo que envíe Monei
     if data.get('object', {}).get('status') == 'SUCCEEDED' or data.get('type') == 'charge.succeeded':
         gestor_pedidos.actualizar_estado(order_id, "pagado")
-        mensaje = f"❕*Pedido registrado*❕\n      ------------------  \n▪️Nombre: *{nombre_usuario}* ▪️importe: *{importe_euros}*€\n▪️ID pedido: *#{order_id}*\n▪️Tiempo estimado: *30m*\n▪️Direccion: 👇🏼 \n\n{costumer_adress}"
+        mensaje = f"❕*Pedido registrado*❕\n      ------------------  \n▪️Nombre: *{nombre_usuario}* ▪️importe: *{importe_euros}*€\n▪️ID pedido: *#{order_id}*\n▪️Tiempo estimado: *15m*\n▪️Direccion: 👇🏼 \n\n{costumer_adress}"
         enviar_mensaje_whatsapp(mensaje, customer_phone )
 
         print("El pedido está pagado")
     
     return jsonify({'message': 'Webhook recibido correctamente'}), 200
 
-
+# # Esta ruta se encarga de obtener los productos de la base de datos
 
 @app.route('/api/productos', methods=['GET'])
 def obtener_productos():
@@ -281,100 +405,6 @@ def obtener_productos():
 
 
 
-
-
-#este el el end  point que se encarga de recibir la confirmacion del pago para pasrlo a la pagina de commfirmacion 
-
-import uuid  # Para generar un identificador único
-
-@app.route('/api/confirmacion', methods=['OPTIONS', 'POST'])
-def agregar_pedido_confirmacion():
-    if request.method == 'OPTIONS':
-        response = app.make_response('')
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        return response, 200
-
-    if request.method == 'POST':
-        data = request.json
-        print("Datos recibidos pai confimacion:", data)
-        
-        
-        name = data.get("name", "Nombre no especificado")
-        userID = data.get("userId", "ID no especificado")
-        numero = data.get("numero", "Numero no especificado")
-        direccion = data.get("direccion", "Dirección no especificada")
-        token = data.get("token", "")
-        productos_recibidos = data.get("productos", [])
-
-        productos = []
-        total = 0
-
-        for p in productos_recibidos:
-            nombre_producto = p.get("nombre", "Producto desconocido")
-            cantidad = p.get("cantidad", 1)
-            precio_unitario = p.get("precio_unitario", 0.0)
-            codigo = p.get("Codigo")
-            precio_total = precio_unitario * cantidad
-
-            productos.append({
-                "nombre": nombre_producto,
-                "cantidad": cantidad,
-                "precio": precio_total,
-                "codigo": codigo
-                
-            })
-
-            total += precio_total
-
-        # Generar un ID único para este pedido
-        pedido_id = str(uuid.uuid4())
-
-
-        pedidoID = gestor_pedidos.obtener_pedido_mas_reciente(userID)
-        pedido_ID_DB = pedidoID.PedidoID
-        # Guardar los datos en Redis
-
-        cache.set(pedido_id, json.dumps({"name": name, "token":token ,"userID":userID, "pedidoID":pedido_ID_DB, "numero": numero,"direccion": direccion, "productos": productos, "total": total}), ex=3600)
-        
-        gestor_pedidos.introudcir_dato_redisID(pedidoID.PedidoID, pedido_id)
-        if pedidoID.Estado != "enlace":
-            print(f"No se puede cambiar el estado. Estado actual: '{pedidoID.Estado}'")
-        else:
-            gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
-
-        confirmacion_url = f"https://59a5-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
-        
-
-        return jsonify({"redirect_url": confirmacion_url})
-
-@app.route('/confirmacion_pago')
-def mostrar_confirmacion():
-    pedido_id = request.args.get("pedido_id")
-    if not pedido_id:
-        return jsonify({"error": "Pedido no encontrado"}), 404
-
-    # Recuperar los datos del pedido desde Redis
-    pedido_data = cache.get(pedido_id)
-    if not pedido_data:
-        return jsonify({"error": "Pedido expirado o no encontrado"}), 404
-
-    pedido = json.loads(pedido_data)
-    name = pedido["name"]
-    userID = pedido["userID"]
-    direccion = pedido["direccion"]
-    total = pedido["total"]
-    productos = pedido["productos"]
-    numero = pedido["numero"]
-    pedidoID = pedido["pedidoID"]
-    token = pedido["token"] 
-
-    print("productos, confirmas pago",productos)
-    
-
-    return render_template("confirmacion_pago.html", name=name,userID=userID,token=token, numero=numero, direccion=direccion, total=total, productos=productos, pedidoID=pedidoID)
-    
 if __name__ == "__main__":
     db_conn = conectar_bd1()
     if db_conn:

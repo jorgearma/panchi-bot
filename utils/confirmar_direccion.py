@@ -1,11 +1,6 @@
 from data.estado_usuarios import estado_usuarios , obtener_estado_usuario, actualizar_estado_usuario
-  
 from menu import mostrar_menu   
-from data.carrito import  carrito_instancia
 from utils.mensajes import enviar_mensaje_whatsapp
-
-
-
 
 
 def manejar_respuesta_positiva(numero_cliente):
