@@ -3,181 +3,377 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menú de Pedidos</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <title>Pedido</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #ebeaea;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+   
+
+       
+
+        .user-card {
+        background-color: #007bff;
+        color: white;
+        padding: 20px;
+        margin: 10px 2%;
+        width: 95%;
+        max-width: 600px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start; /* Alinea todo el contenido a la izquierda */
+        gap: 3px; /* Espacio entre elementos */
+        border-radius: 20px;
+        box-shadow: 0 10px 10px rgba(0, 0, 0, 0.3), 0 15px 20px rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative; /* Permite posicionar elementos dentro de la tarjeta */
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* Alinea los elementos a la izquierda */
+        margin-bottom: 0px;
+    }
+
+    .user-name {
+        font-size: 1.5em;
+        font-weight: bold;
+        font-family: 'Roboto', 'Arial', sans-serif;
+        color: #fdfdfd;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        text-align: left;
+        line-height: 1.2; /* Espaciado entre líneas */
+        margin: 0; /* Elimina márgenes adicionales */
+    }
+
+    .user-address {
+        font-size: 16px;
+        color: #fffbfb;
+        margin: 0; /* Elimina márgenes adicionales */
+    }
+
+    .icon-address {
+        width: 24px;
+        height: 24px;
+        margin-right: 0px; /* Espacio entre el ícono y el texto */
+    }
+    .icon-home {
+        width: 24px;
+        height: 24px;
+        margin-right: 0px; /* Espacio entre el ícono y el texto */
+    }
+    .icon-delivery {
+        width: 24px;
+        height: 24px;
+        margin-right: 0px; /* Espacio entre el ícono y el texto */
+    }
+
+    .icon-address path {
+        fill: #ffffff; /* Cambia el color del ícono */
+    }
+
+        .comanda-container {
+            width: 95%;
+            
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .comanda {
+            width: 100%;
+        
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            border-left: 5px solid #333;
+            position: relative;
+        }
+        .comanda-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        .comanda-header::after {
+            content: "";
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #333;
+        }
+        .comanda h3 {
+            margin: 5px 0;
+            font-size: 20px;
+            text-transform: uppercase;
+        }
+        .comanda .pedido-id {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            color: #333;
+        }
+        .comanda ul {
+            list-style: none;
+            padding: 0;
+        }
+        .comanda li {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+            background: #fafafa;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 5px;
+            padding: 10px 15px;
+        }
+        .comanda li span:first-child {
+            flex: 2;
+            text-align: left;
+        }
+        .comanda li span:last-child {
+            flex: 1;
+            text-align: right;
+            font-weight: bold;
+        }
+        .total {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 15px;
+            text-align: right;
+        }
+        .buttons {
+        margin-top: 20px;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+    }
+    button {
+        padding: 15px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        flex: 1;
+        margin: 5px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+    }
+    .confirmar {
+        background: linear-gradient(90deg, #28a745, #218838);
+        color: white;
+    }
+    .confirmar:hover {
+        background: linear-gradient(90deg, #218838, #1e7e34);
+    }
+    .cancelar {
+        background: linear-gradient(90deg, #dc3545, #c82333);
+        color: white;
+    }
+    .cancelar:hover {
+        background: linear-gradient(90deg, #c82333, #bd2130);
+    }
+
+    .pedido-status {
+    display: flex;
+    justify-content: space-between;
+    width: 95%;
+    max-width: 600px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom:0px;
+}
+
+.pedido-pagado {
+    color: black;
+    font-weight: bold;
+}
+
+.pedido-preparacion {
+    color: black;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
+.loading-dots::after {
+    content: "";
+    display: inline-block;
+    width: 10px;
+    text-align: left;
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0% { content: ""; }
+    25% { content: "."; }
+    50% { content: ".."; }
+    75% { content: "..."; }
+    100% { content: ""; }
+}
+
+    </style>
 </head>
-
 <body>
-    <div id="user-info">
-        <h2>{{ usuario.nombre }}</h2>
-        <div class="user-detail">
-            <span>📍 {{ usuario.direccion }}</span>
-        </div>
-        <div class="user-detail">
-            <span>💰 Precio del delivery: <strong>3,50€</strong></span>
+    <body>
+        
+            <div class="user-card">
+              <div class="user-info">
+                
+                  
+                  <span class="user-name">{{ name }} &nbsp;&nbsp;  </span>
+                  <p class="estado">pedido en preparación<span class="loading-dots">.</span></p>
+                
+              </div>
+              <div class="user-info">
+                <svg class="icon-address" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+                  </svg>
+                  <span class="user-address">&nbsp;&nbsp;&nbsp;{{ direccion }}</span>
+                
+              </div>
+
+              <div class="user-info">
+                <!-- Icon for delivery price -->
+                <svg class="icon-delivery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 16C3.34 16 2 17.34 2 19C2 20.66 3.34 22 5 22C6.66 22 8 20.66 8 19C8 17.34 6.66 16 5 16ZM5 20C4.45 20 4 19.55 4 19C4 18.45 4.45 18 5 18C5.55 18 6 18.45 6 19C6 19.55 5.55 20 5 20ZM19 16C17.34 16 16 17.34 16 19C16 20.66 17.34 22 19 22C20.66 22 22 20.66 22 19C22 17.34 20.66 16 19 16ZM19 20C18.45 20 18 19.55 18 19C18 18.45 18.45 18 19 18C19.55 18 20 18.45 20 19C20 19.55 19.55 20 19 20ZM13 4H10V6H13V8H8.5L6.5 12H10.5L9.5 14H7V16H10C10.55 16 11 15.55 11 15L12.5 12H15.5L17.5 16H20V14H18.5L16.5 10H13V4Z" fill="#ffffff"/>
+                </svg>
+                <span>&nbsp;&nbsp;&nbsp;Precio del delivery: <strong style="color: rgb(248, 246, 246); font-size: 1.1em; font-family: 'Arial Black', sans-serif;">GRATIS</strong></span>
+            </div>
+
+              <div class="user-info">
+                <!-- Icon for home -->
+                <svg class="icon-home" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 10L12 3L21 10V20H15V14H9V20H3V10Z" stroke="#fafbfc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>&nbsp;&nbsp;&nbsp;<strong style="color: #fafbfc; font-size: 1.2em; font-family: 'Arial Black', sans-serif;">Panchi Bot</strong></span>
+              </div>
+            </div>
+          
+    </body>
+    <div class="pedido-status">
+       <h2>PAGADO</h2>
+    
+    </div>
+    <div class="comanda-container">
+        <div class="comanda">
+            <div class="comanda-header">
+                <h3>Pedido</h3>
+                <span class="pedido-id">ID: {{pedidoID}}</span>
+            </div>
+            <ul id="productos">
+                {% for producto in productos %}
+                <li data-codigo="{{ producto.codigo }}">
+                    <span>{{ producto.nombre }}<br>  x{{ producto.cantidad }}</span>
+                    <span>{{ producto.precio }}€</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <p class="total">Total: {{ total }}€</p>
         </div>
     </div>
 
-    <h1 class="menu-title">
-        <span class="restaurant-name">Urban Kitchen</span>
-        <span class="menu-label">Menú</span>
-        <hr class="title-divider">
-    </h1>
 
-    <form id="orderForm">
-        <div id="menu"></div>
-        <button type="button" id="submitOrder">Enviar</button>
-    </form>
-
-    <!-- Modal para confirmar el pedido -->
-    <div id="orderModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Confirmar Pedido</h2>
-            <div id="orderDetails"></div>
-            <button id="confirmOrder">Confirmar</button>
-        </div>
-    </div>
 
     <script>
-        const menu = {
-            "🍔 HAMBURGUESAS": {
-                "clasica": {"precio": 5.00, "ingredientes": "Carne, Queso, Lechuga, Tomate"},
-                "ranchera": {"precio": 5.50, "ingredientes": "Carne, Queso, Bacon, Salsa BBQ"},
-                "crispy": {"precio": 6.00, "ingredientes": "Pollo, Queso, Lechuga, Tomate"}
-            },
-            "🌭 PERRITOS": {
-                "clasico": {"precio": 4.00, "ingredientes": "Salchicha, Pan, Mostaza, Ketchup"},
-                "picanton": {"precio": 4.00, "ingredientes": "Salchicha, Pan, Jalapeños, Salsa Picante"}
-            },
-            "🍨 POSTRES": {
-                "flan": {"precio": 4.00, "ingredientes": "Leche, Azúcar, Huevos"},
-                "tarta": {"precio": 5.00, "ingredientes": "Harina, Azúcar, Huevos, Frutas"}
-            },
-            "🥤 BEBIDAS": {
-                "agua": {"precio": 1.50, "ingredientes": "Agua"},
-                "café": {"precio": 2.00, "ingredientes": "Café"}
-            }
-        };
+        async function handleBack() {
+        if (window.history.length > 1) {
+            // Si hay historial, volver atrás
+            window.history.back();
+        } else {
+            // Si no hay historial, cambiar el estado en el servidor
+            try {
+                const pedidoID = "{{ pedidoID }}"; // Asegúrate de que `pedidoID` esté disponible en el contexto
+                const response = await fetch(`/api/cambiar_estado_a_enlace`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pedidoID })
+                });
 
-        const menuDiv = document.getElementById('menu');
-        const quantities = {};
-
-        // Crear elementos del menú
-        Object.keys(menu).forEach(category => {
-            const categoryDiv = document.createElement('div');
-            categoryDiv.innerHTML = `<h2>${category}</h2>`;
-            Object.keys(menu[category]).forEach(item => {
-                const { precio, ingredientes } = menu[category][item];
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'menu-item';
-                itemDiv.innerHTML = `
-                    <div class="menu-details">
-                        <strong>${item} - ${precio.toFixed(2)}€</strong>
-                        <span>Ingredientes: ${ingredientes}</span>
-                        <div class="quantity-control">
-                            <button class="decrease" data-item="${item}" disabled>-</button>
-                            <span class="quantity-display" id="quantity-${item}">0</span>
-                            <button class="increase" data-item="${item}">+</button>
-                        </div>
-                    </div>
-                `;
-                categoryDiv.appendChild(itemDiv);
-            });
-            menuDiv.appendChild(categoryDiv);
-        });
-
-        // Control de cantidad
-        document.addEventListener('click', (event) => {
-            if (event.target.classList.contains('increase') || event.target.classList.contains('decrease')) {
-                event.preventDefault();
-                const item = event.target.dataset.item;
-                if (!quantities[item]) quantities[item] = 0;
-                if (event.target.classList.contains('increase')) {
-                    quantities[item]++;
-                } else if (event.target.classList.contains('decrease')) {
-                    quantities[item] = Math.max(0, quantities[item] - 1);
+                if (response.ok) {
+                    // Redirigir a la página de quiniela
+                    window.location.href = `/menu/{{ numero }}/{{ token }}`;
+                } else {
+                    alert('Error al cambiar el estado. Inténtalo de nuevo.');
                 }
-                document.getElementById(`quantity-${item}`).innerText = quantities[item];
-                document.querySelector(`button.decrease[data-item="${item}"]`).disabled = quantities[item] === 0;
+            } catch (error) {
+                console.error('Error al cambiar el estado:', error);
+                alert('No se pudo conectar con el servidor.');
             }
-        });
+        }
+    }
 
-        // Mostrar el modal de confirmación
-        document.getElementById('submitOrder').addEventListener('click', () => {
-            const total = Object.entries(quantities)
-                .filter(([_, quantity]) => quantity > 0)
-                .reduce((sum, [item, quantity]) => {
-                    const category = Object.keys(menu).find(cat => menu[cat][item]);
-                    return sum + (menu[category][item].precio * quantity);
-                }, 0).toFixed(2);
-
-            const selectedItems = Object.entries(quantities)
-                .filter(([_, quantity]) => quantity > 0)
-                .map(([item, quantity]) => {
-                    const category = Object.keys(menu).find(cat => menu[cat][item]);
-                    const { precio } = menu[category][item];
-                    return `<li>${item} - ${quantity} x ${precio.toFixed(2)}€</li>`;
-                }).join('');
-
-            if (selectedItems.length === 0) {
+        document.getElementById('confirmarPedido').addEventListener('click', async () => {
+            // Obtener los datos del pedido desde el DOM
+            const productos = Array.from(document.querySelectorAll('#productos li')).map(li => {
+                const codigo = li.getAttribute('data-codigo'); // Obtener el código del producto
+                const texto = li.querySelector('span:first-child').textContent.trim(); // Obtener el texto del nombre y cantidad
+                const precio = li.querySelector('span:last-child').textContent.replace('€', '').trim(); // Obtener el precio
+        
+                // Extraer nombre y cantidad del texto
+                const [nombre, cantidad] = texto.split('x').map(s => s.trim());
+        
+                return {
+                    codigo, // Código del producto
+                    nombre,
+                    cantidad: parseInt(cantidad), // Convertir cantidad a número
+                    precio: parseFloat(precio), // Convertir precio a número
+                };
+            });
+        
+            if (productos.length === 0) {
                 alert('Por favor, selecciona al menos un producto.');
                 return;
             }
-
-            document.getElementById('orderDetails').innerHTML = `
-                <p><strong>Nombre:</strong> {{ usuario.nombre }}</p>
-                <p><strong>Dirección:</strong> {{ usuario.direccion }}</p>
-                <p><strong>Total:</strong> ${total}€</p>
-                <ul>${selectedItems}</ul>
-            `;
-
-            document.getElementById('orderModal').style.display = 'flex';
-        });
-
-        // Cerrar el modal
-        document.querySelector('.close').addEventListener('click', () => {
-            document.getElementById('orderModal').style.display = 'none';
-        });
-
-        // Confirmar y enviar el pedido
-        document.getElementById('confirmOrder').addEventListener('click', async () => {
-            const selectedItems = Object.entries(quantities)
-                .filter(([_, quantity]) => quantity > 0)
-                .map(([item, quantity]) => {
-                    const category = Object.keys(menu).find(cat => menu[cat][item]);
-                    const { precio } = menu[category][item];
-                    return [item, precio];
-                });
-
+        
+            // Crear el objeto del pedido
             const order = {
-                name: `{{ usuario.nombre }}`,
-                userId: `{{ usuario.id }}`,
-                numero: `{{ usuario.numero }}`,
-                direccion: `{{ usuario.direccion }}`,
-                productos: selectedItems
+                name: `{{ name }}`,
+                direccion: `{{ direccion }}`,
+                userID: `{{ userID }}`,
+                numero: `{{ numero }}`,
+                productos,
+                total: parseFloat(`{{ total }}`)
             };
-
+        
+            // Enviar el pedido al servidor
             try {
-                const response = await fetch('/api/agregar_pedido', {
+                const response = await fetch('https://a63c-62-116-223-170.ngrok-free.app/api/agregar_pedido', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(order)
                 });
-
                 const result = await response.json();
-                document.getElementById('submitOrder').disabled = true; // Bloquear el botón
-
                 if (result.redirect_url) {
-                    setTimeout(() => window.location.href = result.redirect_url, 2000);
+                    window.location.href = result.redirect_url;
                 } else {
-                    alert('Pedido enviado correctamente.');
+                    alert(result.message || 'Pedido enviado correctamente.');
                 }
             } catch (err) {
-                alert('No se pudo conectar con el servidor.');
+                console.error('Error de conexión:', err);
+                alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
             }
         });
-    </script>
+        </script>
 </body>
 </html>

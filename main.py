@@ -145,7 +145,7 @@ def agregar_pedido_confirmacion():
         else:
             gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://bebb-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://fb34-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -234,6 +234,7 @@ def agregar_pedido():
         pedido_activo_id = pedido_activo.PedidoID
         gestor_pedidos.agregar_productos_a_pedido(pedido_activo_id, productos_validos)
         
+        
         amount_in_cents = int(round(total_calculado * 100))
         
         payment_data = {
@@ -241,11 +242,13 @@ def agregar_pedido():
             'order_id': str(pedido_activo_id),
             'currency': 'EUR',
             'description': nombre_cliente,
+            'completeUrl': "https://www.google.com",
             'customer': {
                 'email': 'john.doe@monei.com',  # Obtener el email real si está disponible
                 'name': nombre_cliente,
                 'phone': numero_cliente
             },
+            
             'billingDetails': {
                 'address': {
                     'line1': direccion_cliente,

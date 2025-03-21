@@ -1,5 +1,3 @@
-# menu.py
-
 import re
 from unidecode import unidecode
 from utils.es_pregunta import es_pregunta
@@ -7,11 +5,10 @@ from utils.crear_token import generar_enlace
 from utils.mensajes import enviar_mensaje_whatsapp
 
 menu = {
-    "👇 *Restaurantes*👇": {
-        "italiano": {"codigo": 1},
-        "mexicano": {"codigo": 2},
-        "japonés": {"codigo": 3},
-       
+    "👇*Obciones*👇": {
+        "tienda 🏪": {"codigo": 1, "mensaje": "Tienda online"},
+        "Ayuda  🆘": {"codigo": 2, "mensaje": "para comunicarse un servicio al cliente, por favor llama al +45 49 99 48 76."},
+        "Salir  🚪🚶🏻": {"codigo": 3, "mensaje": "Has elegido *Salir*. Si necesitas algo más, solo envíanos un mensaje."},
     }
 }
 
@@ -27,66 +24,52 @@ def mostrar_menu():
     for categoria, items in menu.items():
         resultado += f"{categoria.capitalize()}\n\n"
         for item, detalles in items.items():
-            # Obtener el código desde el diccionario de detalles
             codigo = detalles.get("codigo", "N/A")
-            
             resultado += f" ▪️ *{codigo}* : {item.capitalize()}\n"
-            
     return resultado
 
-
+# Procesar el pedido y devolver una respuesta específica
 def procesar_pedido(pedido, numero_cliente):
     from main import gestor_usuarios
     from main import gestor_pedidos
 
-    pregunta = es_pregunta(pedido)
+    if es_pregunta(pedido):
+        return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pregunta."
 
-    if pregunta:
-        return "Lo siento, no reconocí ningún ítem de nuestro menú en"
-    
     pedido_limpio = limpiar_texto(pedido)
-    items_agregados = []
-    restaurante_elegido = None
-
     usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
     id_usuario = usuario_datos["id"]
+    pedido_actual = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+    id_pedido = pedido_actual.PedidoID
 
-    pedido = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-    
-    id_pedido = pedido.PedidoID
-    
     for categoria, items in menu.items():
         for item, info in items.items():
-            item_limpio = limpiar_texto(item)
+            item_limpio = limpiar_texto(item)   
             codigo_producto = str(info["codigo"])
             
-            # Verifica si el nombre o el código están en el pedido
             if item_limpio in pedido_limpio or codigo_producto in pedido_limpio:
-                items_agregados.append(f"{item}")
-                restaurante_elegido = item.capitalize()
-                enlace = generar_enlace(numero_cliente , restaurante_elegido)
-    
-    if items_agregados:
-        gestor_pedidos.actualizar_estado(id_pedido, "enlace")
-        gestor_pedidos.guardar_enlace(id_pedido,enlace)
-        return f" ❕Elegiste *{restaurante_elegido}*❕\n\n▪*Enlace* unico 👇    \n\n{(enlace)}"
-    else:
-        return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pedido. Por favor elige algo de lo que ofrecemos."
+                mensaje_respuesta = info["mensaje"]
+                
+                # Generar un enlace solo si es una opción que lo requiere
+                if mensaje_respuesta  in "Tienda online":
+                    enlace = generar_enlace(numero_cliente, item)
+                    gestor_pedidos.actualizar_estado(id_pedido, "enlace")
+                    gestor_pedidos.guardar_enlace(id_pedido, enlace)
+                    return f"❕ {mensaje_respuesta} ❕\n\n🔗 *Enlace único*: {enlace}"
+                
+                return mensaje_respuesta
 
+    return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pedido. Por favor elige una opción válida."
 
-
-#aqui proceso los posibles problemas que puedan surgir  en al elecion del menu  como malos comandos 
+# Manejar el flujo de mensajes
 def procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente):
     menu_comando_no_reconocido = mostrar_menu()
-    respuesta_camarero = procesar_pedido(mensaje_cliente , numero_cliente )
-    
+    respuesta_camarero = procesar_pedido(mensaje_cliente, numero_cliente)
+
     if "no reconocí ningún ítem" in respuesta_camarero:
-        respuesta_openai = "❌Comando no reconosido❌ \n   ▪️Elija un restaurante▪️"  #obtener_respuesta_openai(mensaje_cliente, carrito_cliente)
-        enviar_mensaje_whatsapp(f"{respuesta_openai} {menu_comando_no_reconocido} \nEscribe el *numero* para elegir ", numero_cliente)
+        respuesta_openai = "❌Comando no reconocido \n▪️ Por favor, elige una *opción*"
+        enviar_mensaje_whatsapp(f"{respuesta_openai} {menu_comando_no_reconocido}\nEscribe el *Numero* correspondiente para elegir.", numero_cliente)
     else:
         enviar_mensaje_whatsapp(f"{respuesta_camarero}", numero_cliente)
-        if "Has agregado" in respuesta_camarero:
-            
-            print("flujo cortado revisar")
-            
-    return "Mensaje recibido", 200   
+    
+    return "Mensaje recibido", 200
