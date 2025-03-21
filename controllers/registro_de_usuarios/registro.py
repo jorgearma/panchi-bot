@@ -59,8 +59,8 @@ class Mensajeria:
     @staticmethod
     def enviar_bienvenida(numero_cliente):
         enviar_mensaje_whatsapp(
-            "💻 *Registro en el Sistema* 💻\n       ✨ *Urban Kitchen* ✨\n\n"
-            "¡Hola!👋 No estás registrado en nuestro sistema. "
+            "*Registro en el Sistema*💻\n\n"
+            "¡Hola!👋 Aun no estás registrado en nuestro sistema. "
             "¿Te gustaría continuar con tu registro? 📝\n\n"
             "▪️Escribe: *Si*",
             numero_cliente
@@ -76,7 +76,7 @@ class Mensajeria:
     @staticmethod
     def solicitar_nombre(numero_cliente):
         enviar_mensaje_whatsapp(
-            "📍 *Registro de Usuario* 📍\n\n🫵 Escribe tu *Nombre* 🫵\n           para continuar",
+            "▪️ *Registro de Usuario* 👤\n\nEscribe tu 🫵 *Nombre* \nPara continuar",
             numero_cliente
         )
 
