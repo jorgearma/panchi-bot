@@ -1,5 +1,5 @@
 from utils.mensajes import enviar_mensaje_whatsapp
-from data.usuarios import  manejar_usuario
+from data.usuarios import  manejar_usuario , GestorUsuarios
 from data.pedidos_activos import pedidos_activos
 from menu import procesar_mensaje_como_pedido
 import random
@@ -41,9 +41,10 @@ class ManejadorMensajesRegistrados:
             return "mensaje enviado" , 200
         
 
-        #esta es la primera interaccion del usuario aqui se crea el pedido y se le envia 
-        # el mensaje de las obciones que hay 
-        respuesta_usuario = manejar_usuario(numero_cliente)
+        # esta es la primera interaccion del usuario aqui se crea el pedido y se le envia 
+        # el mensaje de las obciones que hay  la logica esta en el archivo menu.py
+
+        respuesta_usuario = GestorUsuarios.manejar_usuario(numero_cliente)
         if respuesta_usuario:
             return respuesta_usuario
 
