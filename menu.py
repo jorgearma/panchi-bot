@@ -18,7 +18,7 @@ def limpiar_texto(texto):
     texto_limpio = re.sub(r'[^\w\s]', '', texto_limpio)
     return texto_limpio.lower()
 
-# Función para mostrar el menú de restaurantes
+# Función para mostrar el menú de obciones
 def mostrar_menu():
     resultado = "\n\n"
     for categoria, items in menu.items():
@@ -30,11 +30,29 @@ def mostrar_menu():
 
 # Procesar el pedido y devolver una respuesta específica
 def procesar_pedido(pedido, numero_cliente):
+    """
+    Procesa un pedido realizado por un cliente y genera una respuesta adecuada.
+    Este método analiza el mensaje del cliente para determinar si contiene un 
+    ítem del menú o un código de producto válido. Si el mensaje es una pregunta 
+    o no contiene un ítem reconocido, se devuelve un mensaje de error o respuesta 
+    predeterminada. En caso de que el ítem requiera un enlace, se genera y guarda 
+    un enlace único asociado al pedido.
+    Args:
+        pedido (str): El mensaje enviado por el cliente, que puede contener 
+                      texto relacionado con una obcion del menú el codigo numerico.
+        numero_cliente (str): El número de teléfono o identificador único del cliente.
+    Returns:
+        str: Una respuesta adecuada al pedido del cliente. Puede ser un mensaje 
+             relacionado con el ítem del menú, un enlace único, o un mensaje de 
+             error si no se reconoce la obcion.
+    """
     from main import gestor_usuarios
     from main import gestor_pedidos
+    # # aqui en un futuro se puede agregar la logica de comprobar si el usuario
+    # # hizo una pregunta o no, si la hace responder a la pregunta adecuadamente
 
-    if es_pregunta(pedido):
-        return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pregunta."
+    if es_pregunta(pedido): #pedido es el emnsaje del cliente 
+        return "Lo siento, no reconocí tu pregunta." # de momento solo reponde esto
 
     pedido_limpio = limpiar_texto(pedido)
     usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)

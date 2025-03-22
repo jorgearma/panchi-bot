@@ -145,7 +145,7 @@ def agregar_pedido_confirmacion():
         else:
             gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://fb34-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://82f7-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -179,6 +179,34 @@ def mostrar_confirmacion():
 
     return render_template("confirmacion_pago.html", name=name,userID=userID,token=token, numero=numero, direccion=direccion, total=total, productos=productos, pedidoID=pedidoID)
 
+# # Esta ruta se encarga de mostrar la página de confirmación de pago.
+@app.route('/pago_confirmado')
+def mostrar_confirmacion_depago():
+    pedido_id = request.args.get("pedido_id")
+    if not pedido_id:
+        return jsonify({"error": "Pedido no encontrado"}), 404
+
+    # Recuperar los datos del pedido desde Redis
+    pedido_data = cache.get(pedido_id)
+    if not pedido_data:
+        return jsonify({"error": "Pedido expirado o no encontrado"}), 404
+
+    pedido = json.loads(pedido_data)
+    name = pedido["name"]
+    userID = pedido["userID"]
+    direccion = pedido["direccion"]
+    total = pedido["total"]
+    productos = pedido["productos"]
+    numero = pedido["numero"]
+    pedidoID = pedido["pedidoID"]
+    token = pedido["token"] 
+
+    print("productos, confirmas pago",productos)
+    
+
+    return render_template("ver_comandas.html", name=name,userID=userID,token=token, numero=numero, direccion=direccion, total=total, productos=productos, pedidoID=pedidoID)
+
+
 
 
 #  aqui agregamos los productos al pedido y creamos el pago , devemso mejorar la logica para 
@@ -203,6 +231,7 @@ def agregar_pedido():
 
         pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
         estado1 = pedido_activo.Estado
+        
         print("estado pedido activo", estado1)
         if not pedido_activo:
             return jsonify({"error": "No se encontró un pedido activo para este usuario"}), 404
@@ -233,7 +262,7 @@ def agregar_pedido():
         
         pedido_activo_id = pedido_activo.PedidoID
         gestor_pedidos.agregar_productos_a_pedido(pedido_activo_id, productos_validos)
-        
+        redisID = pedido_activo.redisID
         
         amount_in_cents = int(round(total_calculado * 100))
         
@@ -242,7 +271,7 @@ def agregar_pedido():
             'order_id': str(pedido_activo_id),
             'currency': 'EUR',
             'description': nombre_cliente,
-            'completeUrl': "https://www.google.com",
+            'completeUrl': f"https://82f7-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
             'customer': {
                 'email': 'john.doe@monei.com',  # Obtener el email real si está disponible
                 'name': nombre_cliente,
