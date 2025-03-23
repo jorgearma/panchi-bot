@@ -29,12 +29,11 @@ def mostrar_menu():
     return resultado
 
 # Procesar el pedido y devolver una respuesta específica
-def procesar_pedido(pedido, numero_cliente):
+def procesar_pedido(pedido, numero_cliente,id_usuario):
     """
     Procesa un pedido realizado por un cliente y genera una respuesta adecuada.
     Este método analiza el mensaje del cliente para determinar si contiene un 
-    ítem del menú o un código de producto válido. Si el mensaje es una pregunta 
-    o no contiene un ítem reconocido, se devuelve un mensaje de error o respuesta 
+    ítem delas opciones o un códi bciongo valida. , se devuelve un mensaje de error o respuesta 
     predeterminada. En caso de que el ítem requiera un enlace, se genera y guarda 
     un enlace único asociado al pedido.
     Args:
@@ -46,18 +45,28 @@ def procesar_pedido(pedido, numero_cliente):
              relacionado con el ítem del menú, un enlace único, o un mensaje de 
              error si no se reconoce la obcion.
     """
-    from main import gestor_usuarios
     from main import gestor_pedidos
+
     # # aqui en un futuro se puede agregar la logica de comprobar si el usuario
     # # hizo una pregunta o no, si la hace responder a la pregunta adecuadamente
-
     if es_pregunta(pedido): #pedido es el emnsaje del cliente 
         return "Lo siento, no reconocí tu pregunta." # de momento solo reponde esto
+    
+    id_usuario = id_usuario
+    pedido_actual = None
+
+    for intento in range(3):
+        try:
+            pedido_actual = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+            break  # Si se ejecuta correctamente, salir del bucle
+        except Exception as e:
+            if intento < 2:  # Intentar nuevamente si no es el último intento
+                continue
+            else:
+                # Manejar el error después de 3 intentos fallidos
+                return f"Error al obtener el pedido más reciente: {str(e)}"
 
     pedido_limpio = limpiar_texto(pedido)
-    usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
-    id_usuario = usuario_datos["id"]
-    pedido_actual = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
     id_pedido = pedido_actual.PedidoID
 
     for categoria, items in menu.items():
@@ -69,24 +78,24 @@ def procesar_pedido(pedido, numero_cliente):
                 mensaje_respuesta = info["mensaje"]
                 
                 # Generar un enlace solo si es una opción que lo requiere
-                if mensaje_respuesta  in "Tienda online":
+                if mensaje_respuesta  == "Tienda online":
                     enlace = generar_enlace(numero_cliente, item)
                     gestor_pedidos.actualizar_estado(id_pedido, "enlace")
                     gestor_pedidos.guardar_enlace(id_pedido, enlace)
                     return f"❕ {mensaje_respuesta} ❕\n\n🔗 *Enlace único*: {enlace}"
                 
                 return mensaje_respuesta
-
-    return "Lo siento, no reconocí ningún ítem de nuestro menú en tu pedido. Por favor elige una opción válida."
+    menu_comando_no_reconocido = mostrar_menu()
+    return f"❌Comando no reconocido \n▪️ Por favor, elige una *opción*  {menu_comando_no_reconocido}\nEscribe el *Numero* correspondiente para elegir."
 
 # Manejar el flujo de mensajes
-def procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente):
-    menu_comando_no_reconocido = mostrar_menu()
-    respuesta_camarero = procesar_pedido(mensaje_cliente, numero_cliente)
+def procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente,id_usuario):
+    
+    respuesta_camarero = procesar_pedido(mensaje_cliente, numero_cliente,id_usuario)
 
-    if "no reconocí ningún ítem" in respuesta_camarero:
-        respuesta_openai = "❌Comando no reconocido \n▪️ Por favor, elige una *opción*"
-        enviar_mensaje_whatsapp(f"{respuesta_openai} {menu_comando_no_reconocido}\nEscribe el *Numero* correspondiente para elegir.", numero_cliente)
+   
+    if "Error al obtener el pedido más reciente" in respuesta_camarero:
+        enviar_mensaje_whatsapp("error interno intente nuevamente", numero_cliente)
     else:
         enviar_mensaje_whatsapp(f"{respuesta_camarero}", numero_cliente)
     

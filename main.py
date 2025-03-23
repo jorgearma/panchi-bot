@@ -2,8 +2,10 @@ import Monei
 from Monei import ApiException
 from flask import Flask, request, jsonify, render_template, redirect , jsonify
 from controllers.registro_de_usuarios.registro import manejar_registro
-from controllers.mensajes_registrados import manejar_mensajes_registrados
-from data.usuarios import  GestorUsuariosBD, Usuario_web , ProductoManager
+from controllers.mensajes_registrados import   ManejadorMensajesRegistrados
+from managers.gestor_productos import ProductoManager
+from models import Usuario_web
+from managers.gestor_usuarios import GestorUsuariosBD
 from utils.text_utils import limpiar_texto
 from database import conectar_bd1 , db_session
 from flask_cors import CORS 
@@ -145,7 +147,7 @@ def agregar_pedido_confirmacion():
         else:
             gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://82f7-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://4b19-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -271,7 +273,7 @@ def agregar_pedido():
             'order_id': str(pedido_activo_id),
             'currency': 'EUR',
             'description': nombre_cliente,
-            'completeUrl': f"https://82f7-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
+            'completeUrl': f"https://4b19-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
             'customer': {
                 'email': 'john.doe@monei.com',  # Obtener el email real si está disponible
                 'name': nombre_cliente,
@@ -359,12 +361,12 @@ def webhook():
     mensaje_cliente1 = request.form['Body'].strip().lower()
     mensaje_cliente = limpiar_texto(mensaje_cliente1)
 
-    
+    prueba = "prueba"
     print("mensaje-cliente", mensaje_cliente)
     if not gestor_usuarios.obtener_usuario(numero_cliente):
         return manejar_registro(numero_cliente, mensaje_cliente)
     else:
-        return manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
+        return ManejadorMensajesRegistrados.manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
 
 
 WEBHOOK_SECRET = b'tu_clave_secreta'

@@ -1,8 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, DECIMAL, ForeignKey 
-from sqlalchemy.orm import sessionmaker, declarative_base , relationship 
-from datetime import datetime
 from decimal import Decimal
-
 from models import Pedido , PedidoDetalle , Producto
 
 
