@@ -5,7 +5,9 @@ from twilio.rest import Client
 # Cargar las variables de entorno desde el archivo .env
 load_dotenv()
 # Cargar las variables de entorno desde el archivo .env
-
+TWILIO_ACCOUNT_SID="***REMOVED***"
+TWILIO_AUTH_TOKEN="***REMOVED***"
+TWILIO_PHONE_NUMBER="whatsapp:+14155238886" 
 
 
 
