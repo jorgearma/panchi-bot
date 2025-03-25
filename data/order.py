@@ -1,6 +1,7 @@
 from decimal import Decimal
 from models import Pedido , PedidoDetalle , Producto
-
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+from sqlalchemy.exc import SQLAlchemyError , OperationalError
 
 class GestorPedidos:
     
@@ -8,23 +9,18 @@ class GestorPedidos:
         self.session = session
 
 
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type((SQLAlchemyError, OperationalError)))
     def iniciar_pedido(self, id, direccion, telefono):
-        nuevo_pedido = Pedido(ClienteID=id, DireccionEntrega=direccion, TelefonoEntrega=telefono)
-        self.session.add(nuevo_pedido)
-        self.session.commit()
-        return nuevo_pedido.PedidoID
-    
-    def actualizar_pedido(self, cliente_id):
-        # Busca el pedido pendiente más reciente para el cliente
-        pedido1 = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='pendiente').first()
-        print(pedido1)
-        
-        if pedido1:
-            pedido1.Estado = 'Abandonado'
+        try:
+            nuevo_pedido = Pedido(ClienteID=id, DireccionEntrega=direccion, TelefonoEntrega=telefono)
+            self.session.add(nuevo_pedido)
             self.session.commit()
-            print(f"El pedido {pedido1.PedidoID} se actualizó a 'Abandonado'.")
-        else:
-            print("No se encontró un pedido pendiente para actualizar.")
+            return nuevo_pedido.PedidoID
+        except (SQLAlchemyError, OperationalError) as error:
+            self.session.rollback()  # Revertir cambios en caso de error
+            print(f"Error al iniciar el pedido: {error}")
+            raise
+    
 
 
     def guardar_enlace(self, pedido_id, enlace):
@@ -43,37 +39,20 @@ class GestorPedidos:
 
 
     
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
     def hay_pedido_pendiente(self, cliente_id):
         """
         Verifica si existe un pedido pendiente para el cliente indicado.
-        Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'pendiente' indica que aún no se ha procesado.
+        Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'Pendiente' indica que aún no se ha procesado.
         """
-        pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='Pendiente').first()
-        return pedido is not None
+        try:
+            pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='Pendiente').first()
+            return pedido is not None
+        except SQLAlchemyError as error:
+            print(f"Error al verificar pedido pendiente para el cliente {cliente_id}: {error}")
+            raise
     
-    def hay_pedido_enlace(self, cliente_id):
-        """
-        Verifica si existe un pedido pendiente para el cliente indicado.
-        Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'pendiente' indica que aún no se ha procesado.
-        """
-        pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='enlace').first()
-        return pedido is not None
-    
-    def hay_pedido_enlace2(self, cliente_id):
-        """
-        Verifica si existe un pedido pendiente para el cliente indicado.
-        Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'pendiente' indica que aún no se ha procesado.
-        """
-        pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='enlace2').first()
-        return pedido is not None
-    
-    def hay_pedido_confirmando_pago(self, cliente_id):
-        """
-        Verifica si existe un pedido pendiente para el cliente indicado.
-        Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'pendiente' indica que aún no se ha procesado.
-        """
-        pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='confirmando-pago').first()
-        return pedido is not None
+
     
     def obtener_pedido_mas_reciente(self, id_usuario):
         pedido = (
@@ -82,8 +61,9 @@ class GestorPedidos:
             .order_by(Pedido.FechaCreacion.desc())
             .first()
         )
-        return pedido
-
+        if pedido:
+            return pedido
+        return None  # O manejar el caso donde no se encuentra un pedido
 
     
     def agregar_productos_a_pedido(self, pedido_id, productos):
@@ -117,14 +97,21 @@ class GestorPedidos:
 
         return False  # No se agregaron productos válidos
 
-    
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
     def actualizar_estado(self, pedido_id, nuevo_estado):
-        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-        if pedido:
-            pedido.Estado = nuevo_estado
-            self.session.commit()
-            return True
-        return False
+        try:
+            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if pedido:
+                pedido.Estado = nuevo_estado
+                self.session.commit()
+                return True
+            else:
+                print(f"Pedido con ID {pedido_id} no encontrado.")
+                return False
+        except SQLAlchemyError as error:
+            self.session.rollback()
+            print(f"Error al actualizar el estado del pedido {pedido_id}: {error}")
+            raise 
     
     def introudcir_dato_redisID(self, pedido_id, id_redis):
         pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
@@ -137,8 +124,7 @@ class GestorPedidos:
     def obtener_pedido(self, pedido_id):
         return self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
 
-    def listar_pedidos(self):
-        return self.session.query(Pedido).all()
+
 
     def agregar_producto(self, nombre, precio):
         nuevo_producto = Producto(Nombre=nombre, Precio=precio)

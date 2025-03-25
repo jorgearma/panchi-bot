@@ -12,7 +12,7 @@ def generar_token_temporal(numero_cliente):
 # Generar enlace único  mejoras codificar el numero del cliente
 def generar_enlace(numero_cliente , restaurante_elegido):
     token = generar_token_temporal(numero_cliente)
-    return f"https://4b19-62-116-223-170.ngrok-free.app/menu/{numero_cliente}/{token}"
+    return f"https://9fc0-62-116-223-170.ngrok-free.app/menu/{numero_cliente}/{token}"
 
 def generar_token_y_guardar_cliente(numero_cliente):
     """

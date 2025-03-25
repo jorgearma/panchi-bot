@@ -147,7 +147,7 @@ def agregar_pedido_confirmacion():
         else:
             gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://4b19-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://9fc0-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -273,7 +273,7 @@ def agregar_pedido():
             'order_id': str(pedido_activo_id),
             'currency': 'EUR',
             'description': nombre_cliente,
-            'completeUrl': f"https://4b19-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
+            'completeUrl': f"https://9fc0-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
             'customer': {
                 'email': 'john.doe@monei.com',  # Obtener el email real si está disponible
                 'name': nombre_cliente,
@@ -349,26 +349,72 @@ def cambiar_estado_a_enlace():
 
 
 ########### webhook ###########
+import logging
+from flask import request, jsonify
+from sqlalchemy.exc import SQLAlchemyError
+from tenacity import RetryError
 
-
-# # Esta ruta se encarga de recibir los mensajes de WhatsApp y procesarlos.   
+logger = logging.getLogger(__name__)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    
+    # Validar entrada
+    if 'From' not in request.form or 'Body' not in request.form:
+        logger.warning("Solicitud inválida: falta 'From' o 'Body'")
+        return jsonify({"error": "Solicitud inválida"}), 400
 
     numero_cliente = request.form['From']
     mensaje_cliente1 = request.form['Body'].strip().lower()
     mensaje_cliente = limpiar_texto(mensaje_cliente1)
 
-    prueba = "prueba"
-    print("mensaje-cliente", mensaje_cliente)
-    if not gestor_usuarios.obtener_usuario(numero_cliente):
-        return manejar_registro(numero_cliente, mensaje_cliente)
-    else:
-        return ManejadorMensajesRegistrados.manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
+    logger.info(f"Mensaje recibido de {numero_cliente}: {mensaje_cliente}")
 
+    try:
+        # Verificar si el usuario existe
+        usuario = gestor_usuarios.verificar_usuario(numero_cliente)
 
+    except RetryError as re:
+        logger.error("Error de conexión tras varios intentos: %s", re)
+        enviar_mensaje_whatsapp(
+            "Lo sentimos, se presentó un error en el sistema. Por favor, intente más tarde.",
+            numero_cliente
+        )
+        return jsonify({"error": "Error en la base de datos"}), 500
+
+    except SQLAlchemyError as e:
+        logger.error("Error al verificar el usuario: %s", e)
+        enviar_mensaje_whatsapp(
+            "Lo sentimos, se presentó un error en el sistema. Por favor, intente más tarde.",
+            numero_cliente
+        )
+        return jsonify({"error": "Error en la base de datos"}), 500
+
+    except Exception as e:
+        logger.exception("Error inesperado:")
+        enviar_mensaje_whatsapp(
+            "Lo sentimos, se presentó un error inesperado. Por favor, intente más tarde.",
+            numero_cliente
+        )
+        return jsonify({"error": "Error inesperado"}), 500
+
+    # Procesamiento normal
+    try:
+        if not usuario:
+            return manejar_registro(numero_cliente, mensaje_cliente)
+        else:
+            return ManejadorMensajesRegistrados.manejar_mensajes_registrados(
+                numero_cliente, mensaje_cliente
+            )
+    except Exception as e:
+        logger.exception("Error procesando el mensaje del usuario:")
+        enviar_mensaje_whatsapp(
+            "Se presentó un problema al procesar su mensaje. Intente nuevamente.",
+            numero_cliente
+        )
+        return jsonify({"error": "Error procesando el mensaje"}), 500
+    
+
+    
 WEBHOOK_SECRET = b'tu_clave_secreta'
 
 def verify_signature(request_data, received_signature):

@@ -29,7 +29,7 @@ def mostrar_menu():
     return resultado
 
 # Procesar el pedido y devolver una respuesta específica
-def procesar_pedido(pedido, numero_cliente,id_usuario):
+def procesar_pedido(pedido, numero_cliente,id_pedido_actual):
     """
     Procesa un pedido realizado por un cliente y genera una respuesta adecuada.
     Este método analiza el mensaje del cliente para determinar si contiene un 
@@ -52,23 +52,8 @@ def procesar_pedido(pedido, numero_cliente,id_usuario):
     if es_pregunta(pedido): #pedido es el emnsaje del cliente 
         return "Lo siento, no reconocí tu pregunta." # de momento solo reponde esto
     
-    id_usuario = id_usuario
-    pedido_actual = None
-
-    for intento in range(3):
-        try:
-            pedido_actual = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-            break  # Si se ejecuta correctamente, salir del bucle
-        except Exception as e:
-            if intento < 2:  # Intentar nuevamente si no es el último intento
-                continue
-            else:
-                # Manejar el error después de 3 intentos fallidos
-                return f"Error al obtener el pedido más reciente: {str(e)}"
-
     pedido_limpio = limpiar_texto(pedido)
-    id_pedido = pedido_actual.PedidoID
-
+   
     for categoria, items in menu.items():
         for item, info in items.items():
             item_limpio = limpiar_texto(item)   
@@ -79,14 +64,25 @@ def procesar_pedido(pedido, numero_cliente,id_usuario):
                 
                 # Generar un enlace solo si es una opción que lo requiere
                 if mensaje_respuesta  == "Tienda online":
-                    enlace = generar_enlace(numero_cliente, item)
-                    gestor_pedidos.actualizar_estado(id_pedido, "enlace")
-                    gestor_pedidos.guardar_enlace(id_pedido, enlace)
-                    return f"❕ {mensaje_respuesta} ❕\n\n🔗 *Enlace único*: {enlace}"
-                
-                return mensaje_respuesta
-    menu_comando_no_reconocido = mostrar_menu()
-    return f"❌Comando no reconocido \n▪️ Por favor, elige una *opción*  {menu_comando_no_reconocido}\nEscribe el *Numero* correspondiente para elegir."
+                    try:
+                        enlace = generar_enlace(numero_cliente, item)
+                        
+                        # Intentamos ambas acciones
+                        actualizado = gestor_pedidos.actualizar_estado(id_pedido_actual, "enlace")
+                        guardado = gestor_pedidos.guardar_enlace(id_pedido_actual, enlace)
+
+                        if actualizado and guardado:
+                            return f"❕ {mensaje_respuesta} ❕\n\n🔗 *Enlace único*: {enlace}"
+                        else:
+                            gestor_pedidos.actualizar_estado(id_pedido_actual, "Pendiente")
+                            return "❌ Ocurrió un error al procesar el pedido. Intente nuevamente."
+
+                    except Exception as e:
+                        # Opcional: loguear el error
+                        return "❌ Error inesperado. Intente nuevamente."
+                return mensaje_respuesta    
+        menu_comando_no_reconocido = mostrar_menu()
+        return f"❌Comando no reconocido \n▪️ Por favor, elige una *opción*  {menu_comando_no_reconocido}\nEscribe el *Numero* correspondiente para elegir."
 
 # Manejar el flujo de mensajes
 def procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente,id_usuario):
