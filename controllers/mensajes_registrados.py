@@ -1,68 +1,93 @@
 from utils.mensajes import enviar_mensaje_whatsapp
-from menu import mostrar_menu, procesar_pedido
-from controllers.pago import PedidoHandler
-from openai_api import obtener_respuesta_openai
-from data.usuarios import obtener_usuario_bd, manejar_usuario
-from data.carrito import carrito_instancia, manejar_consulta_carrito, mostrar_carrito, mostrar_carrito_sin_mensaje
-from data.estado_usuarios import estado_usuarios
-from data.pedidos import enviar_comanda_a_cocina, verificar_pedido_activo , pedido
-from data.pedidos_activos import pedidos_activos
-from controllers.pedido_Y_respuestas import procesar_mensaje_como_pedido
+from managers.gestor_usuarios import GestorUsuarios
+from menu import procesar_mensaje_como_pedido
+from sqlalchemy.exc import SQLAlchemyError
+from tenacity import RetryError
 
-import random
+
+# # esta clase maneja el flujo de mensajes 
+# # y la logica de los registrados
 
 class ManejadorMensajesRegistrados:
     
-
-    def __init__(self , carrito):
-        self.carrito = carrito
-        self.pedidos_activos = pedidos_activos
-
-    def manejar_mensajes_registrados(self, numero_cliente, mensaje_cliente):
+    @staticmethod    
+    def manejar_mensajes_registrados( numero_cliente, mensaje_cliente):
         from main import gestor_pedidos
         from main import gestor_usuarios
 
-        usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
-        print(usuario_datos ,"usario datos 2 ")
-        id_usuario = usuario_datos["id"]
+        
 
+        try:
+            usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
+            if not usuario_datos:  # No se encontraron datos para el usuario.
+                print("Error: No se encontraron datos para el usuario.")
+                enviar_mensaje_whatsapp(
+                    "Lo sentimos, no pudimos encontrar su información. Por favor, intente más tarde.",
+                    numero_cliente
+                )
+                return "Error: Usuario no encontrado.", 404
+            id_usuario = usuario_datos["id"]
+        except (SQLAlchemyError, RetryError) as e:
+            # Aquí se captura la excepción después de 3 intentos fallidos.
+            print(f"Error al obtener el usuario tras varios intentos: {e}")
+            enviar_mensaje_whatsapp(
+                "Lo sentimos, se presentó un error en el sistema. Por favor, intente más tarde.",
+                numero_cliente
+            )
+            return "Error en la base de datos. Intente más tarde.", 500
+
+        try:
+            pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+            if not pedido_activo:  # No se encontraron datos para el usuario.
+                print("Error: No se pedido.")
+                enviar_mensaje_whatsapp(
+                    "Lo sentimos, no pudimos encontrar su información. Por favor, intente más tarde.",
+                    numero_cliente
+                )
+                return "Error: Usuario no encontrado.", 404
+            estado_del_pedido =  pedido_activo.Estado
+            print(f"Estado del pedido: {estado_del_pedido}")
+        except (SQLAlchemyError, RetryError) as e:
+            # Aquí se captura la excepción después de 3 intentos fallidos.
+            print(f"Error al obtener el pedido tras varios intentos: {e}")
+            enviar_mensaje_whatsapp(
+                "Lo sentimos, se presentó un error en el sistema. Por favor, intente más tarde.",
+                numero_cliente
+            )
+            return "Error en la base de datos. Intente más tarde.", 500
         
-        #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante 
-        if gestor_pedidos.hay_pedido_pendiente(id_usuario):
-            print("hola guapo")
-            return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente)
+
+        id_pedido_activo = pedido_activo.PedidoID
+        #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante  estado "pendiente"
+        if estado_del_pedido == "Pendiente":
+            return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente,id_pedido_activo)
         
-        #desarrollar logica de  cuando el usuario este en el enlace
-        if gestor_pedidos.hay_pedido_enlace(id_usuario) or gestor_pedidos.hay_pedido_enlace2(id_usuario):
-            peido_receinte = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-            enlace = peido_receinte.enlace
+        #desarrollar logica cuando el estado del pedido es "enlace" o enlace2
+        if estado_del_pedido == "enlace" or estado_del_pedido == "enlace2":
+            enlace = pedido_activo.enlace
             mensaje = f"Puede continuar con su pedido en el *enlace* proporcionado \n\n▪*Enlace* unico 👇 \n\n🔗{(enlace)}"
             enviar_mensaje_whatsapp(mensaje, numero_cliente)
-            return "mensaje eniado" , 200
+            return  " mensaje enviado",200
         
         #desarrollar logica de cuando el usuario este la pagina de pago
-        if gestor_pedidos.hay_pedido_confirmando_pago(id_usuario):
-            peido_receinte = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-            enlace_pago = peido_receinte.enlace
+        if estado_del_pedido == "confirmando-pago":
+            enlace_pago = pedido_activo.enlace
             enviar_mensaje_whatsapp(f"🔗 {enlace_pago}\n ✅ Pago seguro  con *MONEI*" , numero_cliente)
-            return "mensaje enviado" , 200
+            return  " mensaje enviado",200
         
-        #esta es la primera interaccion del usuario aqui se crea el pedido y se le envia el mensaje de las obciones
-        respuesta_usuario = manejar_usuario(numero_cliente)
+
+        # esta es la primera interaccion del usuario aqui se crea el pedido y se le envia 
+        # el mensaje de las obciones que hay  la logica esta en el archivo menu.py
+
+        respuesta_usuario = GestorUsuarios.manejar_usuario(numero_cliente , usuario_datos)
         if respuesta_usuario:
             return respuesta_usuario
 
-        # Consultar el carrito
-        if manejar_consulta_carrito(mensaje_cliente, numero_cliente, self.carrito):
-            print(carrito_instancia.carrito)
-            return "Mensaje enviado", 200
+       
 
         
 
-def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
-    
-    manejador = ManejadorMensajesRegistrados(carrito_instancia)
-    return manejador.manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
+
 
 
 

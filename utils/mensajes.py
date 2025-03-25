@@ -4,11 +4,12 @@ from twilio.rest import Client
 
 # Cargar las variables de entorno desde el archivo .env
 load_dotenv()
+# Cargar las variables de entorno desde el archivo .env
+TWILIO_ACCOUNT_SID="***REMOVED***"
+TWILIO_AUTH_TOKEN="***REMOVED***"
+TWILIO_PHONE_NUMBER="whatsapp:+14155238886" 
 
-# Obtener las claves de las variables de entorno
-TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
-TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
-TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
+
 
 # Inicializar el cliente de Twilio
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)

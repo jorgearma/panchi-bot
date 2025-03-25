@@ -72,3 +72,27 @@ class Empleado(Base):
     Direccion = Column(String(255), nullable=True)
     Puesto = Column(String(100), nullable=False)  # Ej: Repartidor, Cajero, Administrador
     Salario = Column(DECIMAL(10, 2), nullable=False, default=0.00)
+
+
+class Usuario_web:
+    def __init__(self, datos):
+        """
+        Inicializa una instancia de Usuario usando un diccionario con los datos.
+        Se esperan las claves 'nombre', 'numero' y 'direccion'.
+        """
+        self.id = datos.get("id", "")
+        self.nombre = datos.get("nombre", "")
+        self.numero = datos.get("numero", "")
+        self.direccion = datos.get("direccion", "")
+        self.token = datos.get("token", "")
+
+    def __repr__(self):
+        return f"<Usuario: {self.nombre}>"
+
+    def to_dict(self):
+        """Devuelve un diccionario con los datos del usuario."""
+        return {
+            "nombre": self.nombre,
+            "numero": self.numero,
+            "direccion": self.direccion
+        }    
