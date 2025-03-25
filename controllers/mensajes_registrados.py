@@ -2,8 +2,7 @@ from utils.mensajes import enviar_mensaje_whatsapp
 from managers.gestor_usuarios import GestorUsuarios
 from menu import procesar_mensaje_como_pedido
 from sqlalchemy.exc import SQLAlchemyError
-
-
+from tenacity import RetryError
 
 
 # # esta clase maneja el flujo de mensajes 
@@ -20,7 +19,7 @@ class ManejadorMensajesRegistrados:
 
         try:
             usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
-            if not usuario_datos:  # Verifica si el resultado es None o vacío
+            if not usuario_datos:  # No se encontraron datos para el usuario.
                 print("Error: No se encontraron datos para el usuario.")
                 enviar_mensaje_whatsapp(
                     "Lo sentimos, no pudimos encontrar su información. Por favor, intente más tarde.",
@@ -28,29 +27,51 @@ class ManejadorMensajesRegistrados:
                 )
                 return "Error: Usuario no encontrado.", 404
             id_usuario = usuario_datos["id"]
-        except SQLAlchemyError as e:
-            print(f"Error al obtener el usuario: {e}")
-            
+        except (SQLAlchemyError, RetryError) as e:
+            # Aquí se captura la excepción después de 3 intentos fallidos.
+            print(f"Error al obtener el usuario tras varios intentos: {e}")
+            enviar_mensaje_whatsapp(
+                "Lo sentimos, se presentó un error en el sistema. Por favor, intente más tarde.",
+                numero_cliente
+            )
             return "Error en la base de datos. Intente más tarde.", 500
 
-
+        try:
+            pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+            if not pedido_activo:  # No se encontraron datos para el usuario.
+                print("Error: No se pedido.")
+                enviar_mensaje_whatsapp(
+                    "Lo sentimos, no pudimos encontrar su información. Por favor, intente más tarde.",
+                    numero_cliente
+                )
+                return "Error: Usuario no encontrado.", 404
+            estado_del_pedido =  pedido_activo.Estado
+            print(f"Estado del pedido: {estado_del_pedido}")
+        except (SQLAlchemyError, RetryError) as e:
+            # Aquí se captura la excepción después de 3 intentos fallidos.
+            print(f"Error al obtener el pedido tras varios intentos: {e}")
+            enviar_mensaje_whatsapp(
+                "Lo sentimos, se presentó un error en el sistema. Por favor, intente más tarde.",
+                numero_cliente
+            )
+            return "Error en la base de datos. Intente más tarde.", 500
         
+
+        id_pedido_activo = pedido_activo.PedidoID
         #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante  estado "pendiente"
-        if gestor_pedidos.hay_pedido_pendiente(id_usuario):
-            return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente,id_usuario)
+        if estado_del_pedido == "Pendiente":
+            return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente,id_pedido_activo)
         
         #desarrollar logica cuando el estado del pedido es "enlace" o enlace2
-        if gestor_pedidos.hay_pedido_enlace(id_usuario) or gestor_pedidos.hay_pedido_enlace2(id_usuario):
-            peido_receinte = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-            enlace = peido_receinte.enlace
+        if estado_del_pedido == "enlace" or estado_del_pedido == "enlace2":
+            enlace = pedido_activo.enlace
             mensaje = f"Puede continuar con su pedido en el *enlace* proporcionado \n\n▪*Enlace* unico 👇 \n\n🔗{(enlace)}"
             enviar_mensaje_whatsapp(mensaje, numero_cliente)
             return  " mensaje enviado",200
         
         #desarrollar logica de cuando el usuario este la pagina de pago
-        if gestor_pedidos.hay_pedido_confirmando_pago(id_usuario):
-            peido_receinte = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-            enlace_pago = peido_receinte.enlace
+        if estado_del_pedido == "confirmando-pago":
+            enlace_pago = pedido_activo.enlace
             enviar_mensaje_whatsapp(f"🔗 {enlace_pago}\n ✅ Pago seguro  con *MONEI*" , numero_cliente)
             return  " mensaje enviado",200
         
