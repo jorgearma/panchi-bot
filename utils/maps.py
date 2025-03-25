@@ -14,7 +14,7 @@ import requests
 import os
 
 def validar_direccion(direccion):
-    api_key = os.getenv("api_key")  # Reemplaza con tu clave de API de Google Maps
+    api_key = "AIzaSyAwDIKTLh1gO4Z9jp_zf-B4bZUIgzEQxN4"  # Reemplaza con tu clave de API de Google Maps
     direccion = re.sub(r"\bpaseo\s+de\s+la\s+estacion\b|\bpaseo\s+la\s+estacion\b", "paseo estación", direccion, flags=re.IGNORECASE)
     print("Dirección después de reemplazo de 'paseo de la estación' =", direccion)
     direccion_para_verificar = re.sub(r"\bportal\b", "", direccion, flags=re.IGNORECASE)
@@ -22,7 +22,7 @@ def validar_direccion(direccion):
 
     print("Dirección limpia =", direccion_para_verificar)
     url = f'https://maps.googleapis.com/maps/api/geocode/json?address={direccion_codificada},+16400+Taranc%C3%B3n,+Cuenca,+Espa%C3%B1a/&key={api_key}'
-    print("url ",url)
+   
     response = requests.get(url)
     if response.status_code == 200:
         datos = response.json()
@@ -50,3 +50,5 @@ def validar_direccion(direccion):
 
 
 import re 
+
+
