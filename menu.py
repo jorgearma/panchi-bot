@@ -3,7 +3,8 @@ from unidecode import unidecode
 from utils.es_pregunta import es_pregunta
 from utils.crear_token import generar_enlace
 from utils.mensajes import enviar_mensaje_whatsapp
-
+from modelos.validator_twilio import PedidoInput
+from pydantic import ValidationError
 menu = {
     "👇*Obciones*👇": {
         "tienda 🏪": {"codigo": 1, "mensaje": "Tienda online"},
@@ -28,71 +29,55 @@ def mostrar_menu():
             resultado += f" ▪️ *{codigo}* : {item.capitalize()}\n"
     return resultado
 
-# Procesar el pedido y devolver una respuesta específica
-def procesar_pedido(pedido, numero_cliente,id_pedido_actual):
+
+
+from pydantic import ValidationError
+
+def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
     """
     Procesa un pedido realizado por un cliente y genera una respuesta adecuada.
-    Este método analiza el mensaje del cliente para determinar si contiene un 
-    ítem delas opciones o un códi bciongo valida. , se devuelve un mensaje de error o respuesta 
-    predeterminada. En caso de que el ítem requiera un enlace, se genera y guarda 
-    un enlace único asociado al pedido.
-    Args:
-        pedido (str): El mensaje enviado por el cliente, que puede contener 
-                      texto relacionado con una obcion del menú el codigo numerico.
-        numero_cliente (str): El número de teléfono o identificador único del cliente.
-    Returns:
-        str: Una respuesta adecuada al pedido del cliente. Puede ser un mensaje 
-             relacionado con el ítem del menú, un enlace único, o un mensaje de 
-             error si no se reconoce la obcion.
     """
+    try:
+        # Validar los datos de entrada con Pydantic
+        datos = PedidoInput(pedido=pedido, numero_cliente=numero_cliente, id_pedido_actual=id_pedido_actual)
+        print(f"Datos validados: {datos}")
+            
+    except ValidationError as e:
+        # Retornar errores de validación como respuesta
+        return f"❌ Error en los datos de entrada:\n{e}"
+
+    # Si los datos son válidos, continuar con el procesamiento
     from main import gestor_pedidos
 
-    # # aqui en un futuro se puede agregar la logica de comprobar si el usuario
-    # # hizo una pregunta o no, si la hace responder a la pregunta adecuadamente
-    if es_pregunta(pedido): #pedido es el emnsaje del cliente 
-        return "Lo siento, no reconocí tu pregunta." # de momento solo reponde esto
-    
-    pedido_limpio = limpiar_texto(pedido)
-   
+    if es_pregunta(datos.pedido):
+        return "Lo siento, no reconocí tu pregunta."
+
+    pedido_limpio = limpiar_texto(datos.pedido)
+
     for categoria, items in menu.items():
         for item, info in items.items():
-            item_limpio = limpiar_texto(item)   
+            item_limpio = limpiar_texto(item)
             codigo_producto = str(info["codigo"])
-            
+
             if item_limpio in pedido_limpio or codigo_producto in pedido_limpio:
                 mensaje_respuesta = info["mensaje"]
-                
-                # Generar un enlace solo si es una opción que lo requiere
-                if mensaje_respuesta  == "Tienda online":
+
+                if mensaje_respuesta == "Tienda online":
                     try:
-                        enlace = generar_enlace(numero_cliente, item)
-                        
-                        # Intentamos ambas acciones
-                        actualizado = gestor_pedidos.actualizar_estado(id_pedido_actual, "enlace")
-                        guardado = gestor_pedidos.guardar_enlace(id_pedido_actual, enlace)
+                        enlace = generar_enlace( item , usuario_datos)
+                        actualizado = gestor_pedidos.actualizar_estado(datos.id_pedido_actual, "enlace")
+                        guardado = gestor_pedidos.guardar_enlace(datos.id_pedido_actual, enlace)
 
                         if actualizado and guardado:
                             return f"❕ {mensaje_respuesta} ❕\n\n🔗 *Enlace único*: {enlace}"
                         else:
-                            gestor_pedidos.actualizar_estado(id_pedido_actual, "Pendiente")
-                            return "❌ Ocurrió un error al procesar el pedido. Intente nuevamente."
+                            gestor_pedidos.actualizar_estado(datos.id_pedido_actual, "Pendiente")
+                            return "❌ Ocurrió un error al procesar la opción. Intente nuevamente."
 
                     except Exception as e:
-                        # Opcional: loguear el error
+                        print(f"Error al generar el enlace: {e}")
                         return "❌ Error inesperado. Intente nuevamente."
-                return mensaje_respuesta    
-        menu_comando_no_reconocido = mostrar_menu()
-        return f"❌Comando no reconocido \n▪️ Por favor, elige una *opción*  {menu_comando_no_reconocido}\nEscribe el *Numero* correspondiente para elegir."
+                return mensaje_respuesta
 
-# Manejar el flujo de mensajes
-def procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente,id_usuario):
-    
-    respuesta_camarero = procesar_pedido(mensaje_cliente, numero_cliente,id_usuario)
-
-   
-    if "Error al obtener el pedido más reciente" in respuesta_camarero:
-        enviar_mensaje_whatsapp("error interno intente nuevamente", numero_cliente)
-    else:
-        enviar_mensaje_whatsapp(f"{respuesta_camarero}", numero_cliente)
-    
-    return "Mensaje recibido", 200
+    menu_comando_no_reconocido = mostrar_menu()
+    return f"❌Comando no reconocido \n▪️ Por favor, elige una *opción*  {menu_comando_no_reconocido}\nEscribe el *Número* correspondiente para elegir."
