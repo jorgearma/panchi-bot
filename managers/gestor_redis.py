@@ -6,13 +6,20 @@ logger = logging.getLogger(__name__)
 class RedisManager:
     def __init__(self, host='localhost', port=6379, db=0):
         try:
-            self.client = redis.Redis(host=host, port=port, db=db)
-            # Verificar conexión
+            self.client = redis.Redis(
+                host=host,
+                port=port,
+                db=db,
+                socket_timeout=3,            # ⏱ Tiempo máx esperando respuesta
+                socket_connect_timeout=3,    # ⏱ Tiempo máx conectando
+                retry_on_timeout=True        # 🔁 Intenta de nuevo si hay timeout
+            )
             self.client.ping()
-            logger.info("Conexión exitosa a Redis")
+            logger.info("✅ Conexión exitosa a Redis")
         except redis.RedisError as e:
-            logger.error("Error al conectar a Redis: %s", e)
+            logger.error("❌ Error al conectar a Redis: %s", e)
             raise Exception("Error al conectar a Redis") from e
+        
     def get(self, key):
         try:
             return self.client.get(key)

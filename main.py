@@ -26,6 +26,7 @@ from data.order import GestorPedidos
 import sentry_sdk
 from sentry_sdk import capture_exception 
 from werkzeug.exceptions import HTTPException
+from modelos.validator_usuario import UsuarioDatos
 
 from managers.gestor_redis import redismanager
 
@@ -62,33 +63,70 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 # # a la página de confirmación de pago.
 # # si el estado es enlace se le muestra el menú de la quiniela
 @app.route('/menu/<token>', methods=['GET'])
-def quiniela(token):
-    datos_completos_redis = redismanager.get(token)
-    datos_completos = json.loads(datos_completos_redis)
+def quiniela(token=None):
     print("token", token)
+    try:
+        try:    
+            datos_completos_redis = redismanager.get(token)
 
-    print("datos completos desde quinela", datos_completos)
-    if datos_completos is None:
-        return jsonify({"error": "Usuario no encontrado"}), 404
-    id_user = datos_completos.get("id")
-    last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(id_user)
-    estado = last_pedido.Estado
+            if not datos_completos_redis:
+                return render_template("error.html", mensaje="El enlace ha expirado."), 403
 
-    datos_completos["token"] = token
+            
+        except redis.exceptions.ResponseError as e:
+            print(f"Error al obtener datos de Redis: {e}")
+            return jsonify({"error": "Error al obtener los datos de Redis"}), 400
+        try:
+            datos_str = unquote(datos_completos_redis)
+            datos_completos_json = json.loads(datos_str)
+        except Exception as e:
+            return jsonify({"error": "Error al cargar los datos desde Redis"}), 400
+        
+        print("datos completos desde redis", datos_completos_json)
+        
+        try:
+            datos_completos_validados = UsuarioDatos(**datos_completos_json)
+        except ValidationError as e:
+            print(f"Error de validación en datos_completos: {e}")
+            return "Datos de usuario inválidos.", 400
 
-    usuario = Usuario_web(datos_completos)
-    print(datos_completos, "user")
+        datos_completos = {
+            "id": datos_completos_validados.id,
+            "direccion": datos_completos_validados.direccion,
+            "nombre": datos_completos_validados.nombre,
+            "numero": datos_completos_validados.numero
+        }
+            
+        print("datos completos desde quinela", datos_completos)
 
-    # Lógica para redirigir o renderizar según el estado
-    if estado == "enlace":
-        return render_template('quiniela.html', usuario=usuario)
-    elif estado == "enlace2":
-        pedido_id = last_pedido.redisID 
-        return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
-    else:
-        return jsonify({"error": "Estado no reconocido"}), 400
+    # poner aqu  un try 
+        id_user = datos_completos.get("id")
+        try:
+            last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(id_user)
+        except (SQLAlchemyError, RetryError) as e:
+            # Aquí se captura la excepción después de 3 intentos fallidos.
+            print(f"Error al obtener el pedido tras varios intentos: {e}")
+            return jsonify({"error": "Error en la base de datos. Intente más tarde."}), 500    
+        
+        estado = last_pedido.Estado
 
+        datos_completos["token"] = token
 
+        usuario = Usuario_web(datos_completos)
+        print(datos_completos, "user")
+
+        # Lógica para redirigir o renderizar según el estado
+        if estado == "enlace":
+            return render_template('quiniela.html', usuario=usuario)
+        elif estado == "enlace2":
+            pedido_id = last_pedido.redisID 
+            return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
+        else:
+            return jsonify({"error": "Estado no reconocido"}), 400
+
+    except Exception as e:
+            print(f"Error inesperado: {e}")
+            return jsonify({"error": "Ocurrió un error inesperado"}), 500
 
 # # Esta ruta se encarga de recibir la confirmación del pedido y redirigir al usuario a la página de confirmación de pago.
 # # Se espera que el JSON del cliente tenga la siguiente estructura:
@@ -161,7 +199,7 @@ def agregar_pedido_confirmacion():
         else:
             gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://e981-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://f3fd-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -287,7 +325,7 @@ def agregar_pedido():
             'order_id': str(pedido_activo_id),
             'currency': 'EUR',
             'description': nombre_cliente,
-            'completeUrl': f"https://e981-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
+            'completeUrl': f"https://f3fd-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
             'customer': {
                 'email': 'john.doe@monei.com',  # Obtener el email real si está disponible
                 'name': nombre_cliente,
