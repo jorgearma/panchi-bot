@@ -53,17 +53,22 @@ class GestorPedidos:
             raise
     
 
-    
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
     def obtener_pedido_mas_reciente(self, id_usuario):
-        pedido = (
-            self.session.query(Pedido)
-            .filter(Pedido.ClienteID == id_usuario)
-            .order_by(Pedido.FechaCreacion.desc())
-            .first()
-        )
-        if pedido:
-            return pedido
-        return None  # O manejar el caso donde no se encuentra un pedido
+        """
+        Devuelve el pedido más reciente (activo) del usuario.
+        """
+        try:
+            pedido = (
+                self.session.query(Pedido)
+                .filter(Pedido.ClienteID == id_usuario)
+                .order_by(Pedido.FechaCreacion.desc())
+                .first()
+            )
+            return pedido  # Devuelve None si no hay pedidos
+        except SQLAlchemyError as error:
+            print(f"Error al obtener el pedido activo del usuario {id_usuario}: {error}")
+            raise  # O manejar el caso donde no se encuentra un pedido
 
     
     def agregar_productos_a_pedido(self, pedido_id, productos):
@@ -122,8 +127,14 @@ class GestorPedidos:
         return False
 
     def obtener_pedido(self, pedido_id):
-        return self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-
+        try:
+            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido:
+                print(f"No se encontró un pedido con el ID {pedido_id}.")
+            return pedido
+        except SQLAlchemyError as error:
+            print(f"Error al recuperar el pedido con ID {pedido_id}: {error}")
+            raise
 
 
     def agregar_producto(self, nombre, precio):

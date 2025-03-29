@@ -23,6 +23,8 @@ class Pedido(Base):
     TelefonoEntrega = Column(String(50), nullable=False)
     enlace = Column(String(255), nullable=True)
     redisID = Column(String(255), nullable=True)
+    estadopago = Column(String(255), nullable=True)
+    estadoauxiliar = Column(String(255), nullable=True)
 
     cliente = relationship("Usuario", back_populates="pedidos")  
     detalles = relationship("PedidoDetalle", back_populates="pedido", cascade="all, delete-orphan")  # ✅ Relación agregada

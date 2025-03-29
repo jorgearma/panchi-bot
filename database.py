@@ -1,4 +1,5 @@
 import pyodbc
+import urllib.parse
 
 class DatabaseConnection:
     def __init__(self, driver, server, database, uid, pwd):
@@ -52,12 +53,21 @@ Base = declarative_base()
 DATABASE_URL = "mssql+pyodbc://sa:Jorgejorge1@localhost:1433/pruebabot?driver=ODBC+Driver+17+for+SQL+Server"
 
 # Crear el motor de la base de datos
-engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+# Codificar la URL correctamente
+params = urllib.parse.quote_plus("DRIVER=ODBC Driver 17 for SQL Server;SERVER=localhost,1433;DATABASE=pruebabot;UID=sa;PWD=Jorgejorge1")
 
-# 📌 Crear un `SessionLocal` reutilizable en toda la aplicación
+# Crear el motor con timeouts y pooling
+engine = create_engine(
+    f"mssql+pyodbc:///?odbc_connect={params}",
+    echo=False,
+    pool_pre_ping=True,       # Verifica que la conexión esté viva
+    pool_timeout=5,           # ⏱ Tiempo máximo para obtener una conexión del pool
+    connect_args={"timeout": 5}  # ⏱ Tiempo máximo al conectar con la DB
+)
+
+# Base y sesión
+Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-
-# 📌 Crear una única sesión que se usará en toda la aplicación
 db_session = SessionLocal()
 
 # 📌 Función para inicializar la base de datos (crear tablas)
