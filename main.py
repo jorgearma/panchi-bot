@@ -12,15 +12,23 @@ from flask_cors import CORS
 import json
 import redis
 import os
-from utils.crear_token import   obtener_numero_cliente , generar_token_y_guardar_cliente
 import uuid  # Para generar un identificador único
 from urllib.parse import unquote
+from modelos.validator_twilio import WebhookRequest
+from pydantic import ValidationError
 
 import hmac
 import hashlib
 from utils.mensajes import enviar_mensaje_whatsapp
 
 from data.order import GestorPedidos
+
+import sentry_sdk
+from sentry_sdk import capture_exception 
+from werkzeug.exceptions import HTTPException
+from modelos.validator_usuario import UsuarioDatos
+
+from managers.gestor_redis import redismanager
 
 gestor_pedidos = GestorPedidos(db_session)
 gestor_usuarios = GestorUsuariosBD()
@@ -30,7 +38,16 @@ gestor_productos = ProductoManager()
 monei = Monei.MoneiClient(api_key='pk_test_d0b6b6a4723919770f88997d1dbe584b')
 cache = redis.Redis(host='localhost', port=6379, db=0)
 
+
+sentry_sdk.init(
+    dsn="https://1d28c716e34691862059ab2ee7cbb20b@o4509045878620160.ingest.de.sentry.io/4509045889892432",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+)
 app = Flask(__name__)
+
+
 
 app.secret_key = os.environ.get('SECRET_KEY')
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -45,36 +62,71 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 # # si el estado en la base de datos de pedido es enlace2 se le redirige
 # # a la página de confirmación de pago.
 # # si el estado es enlace se le muestra el menú de la quiniela
-@app.route('/menu/<numero_cliente>/<token>', methods=['GET'])
-def quiniela(numero_cliente, token=None):
+@app.route('/menu/<token>', methods=['GET'])
+def quiniela(token=None):
+    print("token", token)
+    try:
+        try:    
+            datos_completos_redis = redismanager.get(token)
 
-    numero_cliente = unquote(numero_cliente)
-    print("numero_cliente", numero_cliente)
-    if not numero_cliente:
-        return jsonify({"error": "Enlace no válido o expirado"}), 403
+            if not datos_completos_redis:
+                return render_template("error.html", mensaje="El enlace ha expirado."), 403
 
-    datos_completos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
-    if datos_completos is None:
-        return jsonify({"error": "Usuario no encontrado"}), 404
+            
+        except redis.exceptions.ResponseError as e:
+            print(f"Error al obtener datos de Redis: {e}")
+            return jsonify({"error": "Error al obtener los datos de Redis"}), 400
+        try:
+            datos_str = unquote(datos_completos_redis)
+            datos_completos_json = json.loads(datos_str)
+        except Exception as e:
+            return jsonify({"error": "Error al cargar los datos desde Redis"}), 400
+        
+        print("datos completos desde redis", datos_completos_json)
+        
+        try:
+            datos_completos_validados = UsuarioDatos(**datos_completos_json)
+        except ValidationError as e:
+            print(f"Error de validación en datos_completos: {e}")
+            return "Datos de usuario inválidos.", 400
 
-    last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(datos_completos["id"])
-    estado = last_pedido.Estado
+        datos_completos = {
+            "id": datos_completos_validados.id,
+            "direccion": datos_completos_validados.direccion,
+            "nombre": datos_completos_validados.nombre,
+            "numero": datos_completos_validados.numero
+        }
+            
+        print("datos completos desde quinela", datos_completos)
 
-    datos_completos["token"] = token
+    # poner aqu  un try 
+        id_user = datos_completos.get("id")
+        try:
+            last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(id_user)
+        except (SQLAlchemyError, RetryError) as e:
+            # Aquí se captura la excepción después de 3 intentos fallidos.
+            print(f"Error al obtener el pedido tras varios intentos: {e}")
+            return jsonify({"error": "Error en la base de datos. Intente más tarde."}), 500    
+        
+        estado = last_pedido.Estado
 
-    usuario = Usuario_web(datos_completos)
-    print(datos_completos, "user")
+        datos_completos["token"] = token
 
-    # Lógica para redirigir o renderizar según el estado
-    if estado == "enlace":
-        return render_template('quiniela.html', usuario=usuario)
-    elif estado == "enlace2":
-        pedido_id = last_pedido.redisID  # Asegúrate de que PedidoID esté disponible en last_pedido
-        return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
-    else:
-        return jsonify({"error": "Estado no reconocido"}), 400
+        usuario = Usuario_web(datos_completos)
+        print(datos_completos, "user")
 
+        # Lógica para redirigir o renderizar según el estado
+        if estado == "enlace":
+            return render_template('quiniela.html', usuario=usuario)
+        elif estado == "enlace2":
+            pedido_id = last_pedido.redisID 
+            return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
+        else:
+            return jsonify({"error": "Estado no reconocido"}), 400
 
+    except Exception as e:
+            print(f"Error inesperado: {e}")
+            return jsonify({"error": "Ocurrió un error inesperado"}), 500
 
 # # Esta ruta se encarga de recibir la confirmación del pedido y redirigir al usuario a la página de confirmación de pago.
 # # Se espera que el JSON del cliente tenga la siguiente estructura:
@@ -147,7 +199,7 @@ def agregar_pedido_confirmacion():
         else:
             gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://9fc0-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://f3fd-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -273,7 +325,7 @@ def agregar_pedido():
             'order_id': str(pedido_activo_id),
             'currency': 'EUR',
             'description': nombre_cliente,
-            'completeUrl': f"https://9fc0-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
+            'completeUrl': f"https://f3fd-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
             'customer': {
                 'email': 'john.doe@monei.com',  # Obtener el email real si está disponible
                 'name': nombre_cliente,
@@ -354,21 +406,32 @@ from flask import request, jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
 
+from managers.gestor_redis import redismanager
+
 logger = logging.getLogger(__name__)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     # Validar entrada
-    if 'From' not in request.form or 'Body' not in request.form:
-        logger.warning("Solicitud inválida: falta 'From' o 'Body'")
-        return jsonify({"error": "Solicitud inválida"}), 400
+    try:
+        # Convertimos request.form a un diccionario para Pydantic
+        data = WebhookRequest(**request.form.to_dict())
+    except ValidationError as e:
+        logger.error("Datos de entrada inválidos: %s", e)
+        return jsonify({"error": "Datos de entrada inválidos", "detail": e.errors()}), 400
 
-    numero_cliente = request.form['From']
-    mensaje_cliente1 = request.form['Body'].strip().lower()
-    mensaje_cliente = limpiar_texto(mensaje_cliente1)
+    numero_cliente = data.From
+    mensaje_cliente = limpiar_texto(data.Body.lower())
 
     logger.info(f"Mensaje recibido de {numero_cliente}: {mensaje_cliente}")
+    print(f"Men+saje recibido de {numero_cliente}: {mensaje_cliente}")
 
+    # 🔒 Primero, verificar si el usuario ya está bloqueado
+    bloqueo = redismanager.esta_bloqueado(numero_cliente)
+    if bloqueo:
+        return "Número bloqueado", 403
+
+    redismanager.bloquear_usuario(numero_cliente, duracion=20)  # Bloquear por 60 segundos
     try:
         # Verificar si el usuario existe
         usuario = gestor_usuarios.verificar_usuario(numero_cliente)
@@ -402,9 +465,9 @@ def webhook():
         if not usuario:
             return manejar_registro(numero_cliente, mensaje_cliente)
         else:
-            return ManejadorMensajesRegistrados.manejar_mensajes_registrados(
-                numero_cliente, mensaje_cliente
-            )
+            return ManejadorMensajesRegistrados.manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
+            
+             
     except Exception as e:
         logger.exception("Error procesando el mensaje del usuario:")
         enviar_mensaje_whatsapp(
@@ -413,7 +476,6 @@ def webhook():
         )
         return jsonify({"error": "Error procesando el mensaje"}), 500
     
-
     
 WEBHOOK_SECRET = b'tu_clave_secreta'
 
@@ -446,7 +508,7 @@ def webhoo():
     # Puedes adaptar esta condición según lo que envíe Monei
     if data.get('object', {}).get('status') == 'SUCCEEDED' or data.get('type') == 'charge.succeeded':
         gestor_pedidos.actualizar_estado(order_id, "pagado")
-        mensaje = f"❕*Pedido registrado*❕\n      ------------------  \n▪️Nombre: *{nombre_usuario}* ▪️importe: *{importe_euros}*€\n▪️ID pedido: *#{order_id}*\n▪️Tiempo estimado: *15m*\n▪️Direccion: 👇🏼 \n\n{costumer_adress}"
+        mensaje = f"❕*Pedido registrado*❕\n      ------------------  \n▪️Nombre: *{nombre_usuario}*\n▪️importe: *{importe_euros}*€\n▪️ID pedido: *#{order_id}*\n▪️Tiempo estimado: *15m*\n▪️Direccion: 👇🏼 \n\n{costumer_adress}"
         enviar_mensaje_whatsapp(mensaje, customer_phone )
 
         print("El pedido está pagado")
@@ -482,6 +544,21 @@ def obtener_productos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@app.errorhandler(Exception)
+def manejar_errores_globales(e):
+    capture_exception(e)  # Enviamos el error a Sentry
+
+    if isinstance(e, HTTPException):
+        return jsonify({
+            "error": e.name,
+            "detail": e.description
+        }), e.code
+
+    return jsonify({
+        "error": "Error interno del servidor",
+        "detail": "Se ha producido un error inesperado. Ya lo estamos revisando."
+    }), 500
 
 
 

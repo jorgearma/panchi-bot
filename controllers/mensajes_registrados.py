@@ -1,6 +1,6 @@
 from utils.mensajes import enviar_mensaje_whatsapp
 from managers.gestor_usuarios import GestorUsuarios
-from menu import procesar_mensaje_como_pedido
+from menu import procesar_pedido
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
 
@@ -14,8 +14,6 @@ class ManejadorMensajesRegistrados:
     def manejar_mensajes_registrados( numero_cliente, mensaje_cliente):
         from main import gestor_pedidos
         from main import gestor_usuarios
-
-        
 
         try:
             usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
@@ -56,11 +54,16 @@ class ManejadorMensajesRegistrados:
             )
             return "Error en la base de datos. Intente más tarde.", 500
         
-
         id_pedido_activo = pedido_activo.PedidoID
         #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante  estado "pendiente"
         if estado_del_pedido == "Pendiente":
-            return procesar_mensaje_como_pedido(mensaje_cliente, numero_cliente,id_pedido_activo)
+            mensaje = procesar_pedido(mensaje_cliente, numero_cliente, id_pedido_activo , usuario_datos)
+            print(f"Mensaje procesado: {usuario_datos}")
+            enviar_mensaje_whatsapp(mensaje, numero_cliente)
+            return " mensaje enviado",200
+           
+            
+            
         
         #desarrollar logica cuando el estado del pedido es "enlace" o enlace2
         if estado_del_pedido == "enlace" or estado_del_pedido == "enlace2":
