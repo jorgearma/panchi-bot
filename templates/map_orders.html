@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa de Pedidos Activos</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link 
+      rel="stylesheet" 
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script 
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            background-color: #111;
+            color: #fff;
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h2 {
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <h2 style="text-align:center;">📍 Pedidos Activos en Tiempo Real</h2>
+    <div id="map" style="height: 90vh;"></div>
+
+    <script>
+        const map = L.map('map').setView([40.0167, -3.0000], 15);
+
+        // Modo oscuro con CartoDB Dark Matter
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap & CartoDB',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        let marcadores = [];
+
+        // Datos de prueba (5 pedidos)
+        const pedidosPrueba = [
+            { id: 1, cliente: "Carlos", lat: 40.0102, lon: -3.0164, hora: "19:45" },
+            { id: 2, cliente: "Ana", lat: 40.0111, lon: -3.0177, hora: "19:46" },
+            { id: 3, cliente: "Luis", lat: 40.0150, lon: -3.0050, hora: "19:47" },
+            { id: 4, cliente: "Marta", lat: 40.0200, lon: -3.0100, hora: "19:48" },
+            { id: 5, cliente: "Julia", lat: 40.0135, lon: -3.0120, hora: "19:49" },
+        ];
+
+        function actualizarMapa() {
+            // Limpia los pines anteriores
+            marcadores.forEach(m => map.removeLayer(m));
+            marcadores = [];
+
+            pedidosPrueba.forEach(pedido => {
+                const marcador = L.marker([pedido.lat, pedido.lon])
+                    .addTo(map)
+                    .bindPopup(`<b>${pedido.cliente}</b><br>Pedido: #${pedido.id}<br>Hora: ${pedido.hora}`);
+                marcadores.push(marcador);
+            });
+        }
+
+        actualizarMapa();
+        setInterval(actualizarMapa, 10000);
+    </script>
+</body>
+</html>
