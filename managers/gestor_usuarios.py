@@ -58,13 +58,7 @@ class GestorUsuariosBD:
     
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
     def verificar_usuario(self, numero_cliente):
-        """Verifica si existe un usuario con el número de cliente dado.
 
-        Retorna:
-        - El objeto usuario (o algún identificador) si se encuentra.
-        - None si el usuario no está registrado.
-        - Lanza una excepción (por ejemplo, RetryError) si tras los reintentos la conexión falla.
-        """
         try:
             usuario = self.session.query(Usuario).filter_by(numero_cliente=numero_cliente).scalar()
             # Si no se encontró usuario, se retorna None
@@ -122,6 +116,7 @@ class GestorUsuarios:
         
         try:
             gestor_pedidos.iniciar_pedido(id_usuario, direccion_usuario, nombre_usuario)
+            
         except (SQLAlchemyError, OperationalError) as error:
             # Captura los errores después de que el decorador haya agotado los intentos
             print(f"Error al iniciar el pedido para el usuario {id_usuario}: {error}")
