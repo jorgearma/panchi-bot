@@ -96,19 +96,16 @@ class ValidacionDireccion:
         validar, direccion_resultante = validar_direccion(direccion)
         if validar:
             Mensajeria.confirmar_direccion(numero_cliente, direccion_resultante)
-            return True
+            # Retornamos la dirección validada en lugar de True
+            return direccion_resultante
         else:
             Mensajeria.direccion_invalida(numero_cliente)
-            return False
+            return None
 
-#cambair esto con estados  gestionados desde la base de datos
 class RegistroUsuario:
-
     """Clase principal para gestionar el registro del usuario usando Redis."""
     def __init__(self, numero_cliente, redismanager):
-        
         self.numero_cliente = numero_cliente
-        # Se utiliza la clase EstadoUsuario que interactúa con Redis.
         self.estado_usuario = EstadoUsuario(numero_cliente, redismanager)
 
     def manejar_registro(self, mensaje_cliente):
@@ -135,15 +132,29 @@ class RegistroUsuario:
             return "Solicitud de dirección enviada", 200
 
         elif estado_actual == "esperando_direccion":
-            if ValidacionDireccion.validar_y_confirmar_direccion(self.numero_cliente, mensaje_cliente):
-                self.estado_usuario.actualizar_estado("confirmando_direccion", {"direccion": mensaje_cliente})
+            # Aquí se obtiene la dirección validada
+            direccion_validada = ValidacionDireccion.validar_y_confirmar_direccion(self.numero_cliente, mensaje_cliente)
+            if direccion_validada:
+                # Se actualiza el estado en Redis guardando la dirección validada
+                self.estado_usuario.actualizar_estado("confirmando_direccion", {"direccion": direccion_validada})
                 return "Solicitud de confirmación de dirección enviada", 200
+            else:
+                return "Dirección inválida", 400
 
         elif estado_actual == "confirmando_direccion":
-            return confirmar_direccion(self.numero_cliente, mensaje_cliente)
-
+            data_redis = self.estado_usuario.obtener_estado()
+            print("data redis", data_redis)  
+            respuesta = confirmar_direccion(self.numero_cliente, mensaje_cliente, data_redis)
+            if respuesta == 1:
+                self.estado_usuario.actualizar_estado("esperando_direccion")
+                enviar_mensaje_whatsapp(
+                    "😊 *¡Vale!* Vamos a intentarlo de nuevo.\nPor favor, *ingresa una dirección* \n\n👇 *Ejemplos:* 👇 \n\n•Calle Los Labradores 3, 1B\n•avenida pablo iglecias 79, 1b", 
+                    self.numero_cliente
+                )
+                return "paso atras", 200
+            
+            return respuesta
 
 def manejar_registro(numero_cliente, mensaje_cliente, redismanager):
-    # Se crea una instancia de RegistroUsuario pasando el redismanager.
     registro_usuario = RegistroUsuario(numero_cliente, redismanager)
     return registro_usuario.manejar_registro(mensaje_cliente)
