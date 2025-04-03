@@ -88,6 +88,22 @@ class Mensajeria:
             numero_cliente
         )
 
+import spacy
+
+# Cargar el modelo de idioma español de spaCy
+nlp = spacy.load("es_core_news_sm")
+
+class ValidacionNombre:
+    """Clase para manejar la validación de nombres."""
+    @staticmethod
+    def es_nombre_valido(nombre):
+        # Procesar el texto con spaCy
+        doc = nlp(nombre)
+        # Buscar entidades nombradas de tipo PERSON
+        for ent in doc.ents:
+            if ent.label_ == "PER":  # Etiqueta de persona en spaCy
+                return True
+        return False
 
 class ValidacionDireccion:
     """Clase para manejar la validación de direcciones."""
@@ -127,9 +143,17 @@ class RegistroUsuario:
                 return "Registro cancelado", 200
 
         elif estado_actual == "esperando_nombre":
-            self.estado_usuario.actualizar_estado("esperando_direccion", {"nombre": mensaje_cliente})
-            Mensajeria.solicitar_direccion(self.numero_cliente)
-            return "Solicitud de dirección enviada", 200
+            if ValidacionNombre.es_nombre_valido(mensaje_cliente):
+                self.estado_usuario.actualizar_estado("esperando_direccion", {"nombre": mensaje_cliente})
+                Mensajeria.solicitar_direccion(self.numero_cliente)
+                return "Solicitud de dirección enviada", 200
+            else:
+                enviar_mensaje_whatsapp(
+                    "⛔ *El nombre ingresado no es válido* ⛔\n\nPor favor, escribe tu *Nombre Completo* 📝.\n"
+                    "Ejemplo: _Juan Pérez_ o _María López_",
+                    self.numero_cliente
+                )
+                return "Nombre inválido", 400
 
         elif estado_actual == "esperando_direccion":
             # Aquí se obtiene la dirección validada
