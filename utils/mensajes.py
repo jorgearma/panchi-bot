@@ -8,7 +8,7 @@ from managers.gestor_redis import redismanager
 load_dotenv()
 # Cargar las variables de entorno desde el archivo .env
 TWILIO_ACCOUNT_SID="AC466e9c8a23d79ebeac1b743ffbc8cb3b"
-TWILIO_AUTH_TOKEN="19cebdb43397f32d2933011c5b386f04"
+TWILIO_AUTH_TOKEN="d16043193e138c3efc56a30251aebb90"
 TWILIO_PHONE_NUMBER="whatsapp:+14155238886" 
 
 
