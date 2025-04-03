@@ -1,7 +1,7 @@
 import Monei
 from Monei import ApiException
 from flask import Flask, request, jsonify, render_template, redirect , jsonify
-from controllers.registro_de_usuarios.registro import manejar_registro
+from controllers.no_resgistrados import manejar_registro
 from controllers.mensajes_registrados import   ManejadorMensajesRegistrados
 from managers.gestor_productos import ProductoManager
 from models import Usuario_web
@@ -16,6 +16,8 @@ import uuid  # Para generar un identificador único
 from urllib.parse import unquote
 from modelos.validator_twilio import WebhookRequest
 from pydantic import ValidationError
+
+
 
 import hmac
 import hashlib
@@ -99,7 +101,7 @@ def quiniela(token=None):
             
         print("datos completos desde quinela", datos_completos)
 
-    # poner aqu  un try 
+    
         id_user = datos_completos.get("id")
         try:
             last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(id_user)
@@ -199,7 +201,7 @@ def agregar_pedido_confirmacion():
         else:
             gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://f3fd-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"https://e7c3-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -325,7 +327,7 @@ def agregar_pedido():
             'order_id': str(pedido_activo_id),
             'currency': 'EUR',
             'description': nombre_cliente,
-            'completeUrl': f"https://f3fd-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
+            'completeUrl': f"https://e7c3-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
             'customer': {
                 'email': 'john.doe@monei.com',  # Obtener el email real si está disponible
                 'name': nombre_cliente,
@@ -463,7 +465,7 @@ def webhook():
     # Procesamiento normal
     try:
         if not usuario:
-            return manejar_registro(numero_cliente, mensaje_cliente)
+            return manejar_registro(numero_cliente, mensaje_cliente, redismanager)
         else:
             return ManejadorMensajesRegistrados.manejar_mensajes_registrados(numero_cliente, mensaje_cliente)
             
