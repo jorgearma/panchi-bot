@@ -35,7 +35,7 @@ def webhook():
         data = WebhookRequest(**request.form.to_dict())
     except ValidationError as e:
         logger.error("Datos de entrada inválidos: %s", e)
-        return jsonify({"error": "Datos de entrada inválidos", "detail": e.errors()}), 400
+        return jsonify({"error": "Datos de entrada inválidos"}), 400
 
     numero_cliente = data.From
     mensaje_cliente = limpiar_texto(data.Body.lower())
