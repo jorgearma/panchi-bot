@@ -1,9 +1,12 @@
 import os
+import logging
 import secrets
 from managers.gestor_redis import redismanager
 import json
 from schemas.usuario import UsuarioDatos
 from pydantic import ValidationError
+
+logger = logging.getLogger(__name__)
 
 # Generar token y almacenarlo en Redis
 def generar_token_temporal(usuario_datos):
@@ -11,7 +14,7 @@ def generar_token_temporal(usuario_datos):
         try:
             usuario_validado = UsuarioDatos(**usuario_datos)
         except ValidationError as e:
-            print(f"Error de validación en usuario_datos: {e}")
+            logger.error("Error de validación en usuario_datos: %s", e)
             return "Datos de usuario inválidos.", 400
 
         datos_usuario = {
@@ -20,7 +23,7 @@ def generar_token_temporal(usuario_datos):
         "direccion": usuario_validado.direccion,
         "nombre": usuario_validado.nombre
     }
-        print("datos desdeq qu sube a toke " ,datos_usuario)
+        logger.debug("token payload: user_id=%s", datos_usuario["id"])
         token = secrets.token_urlsafe(7)
         redismanager.set(token, json.dumps(datos_usuario), ex=86400)  # Expira en 24 horas
         return token

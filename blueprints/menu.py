@@ -1,5 +1,8 @@
 import json
+import logging
 from flask import Blueprint, request, jsonify, render_template, redirect
+
+logger = logging.getLogger(__name__)
 from urllib.parse import unquote
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
@@ -16,14 +19,14 @@ blueprint_menu = Blueprint('menu', __name__)
 
 @blueprint_menu.route('/menu/<token>', methods=['GET'])
 def quiniela(token=None):
-    print("token", token)
+    logger.debug("token recibido: %s", token)
     try:
         try:
             datos_completos_redis = redismanager.get(token)
             if not datos_completos_redis:
                 return render_template("error.html", mensaje="El enlace ha expirado."), 403
         except redis.exceptions.ResponseError as e:
-            print(f"Error al obtener datos de Redis: {e}")
+            logger.error("Error al obtener datos de Redis: %s", e)
             return jsonify({"error": "Error al obtener los datos de Redis"}), 400
 
         try:
@@ -32,27 +35,27 @@ def quiniela(token=None):
         except Exception as e:
             return jsonify({"error": "Error al cargar los datos desde Redis"}), 400
 
-        print("datos completos desde redis", datos_completos_json)
+        logger.debug("Datos completos desde Redis: user_id=%s", datos_completos_json.get("id"))
 
         try:
             datos_completos_validados = UsuarioDatos(**datos_completos_json)
         except ValidationError as e:
-            print(f"Error de validación en datos_completos: {e}")
+            logger.error("Error de validación en datos_completos: %s", e)
             return "Datos de usuario inválidos.", 400
 
         datos_completos_validados.token = token
 
-        print("datos completos desde quinela", datos_completos_validados)
+        logger.debug("Datos validados del usuario: user_id=%s", datos_completos_validados.id)
 
         id_user = datos_completos_validados.id
         try:
             last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(id_user)
         except (SQLAlchemyError, RetryError) as e:
-            print(f"Error al obtener el pedido tras varios intentos: {e}")
+            logger.error("Error al obtener el pedido tras varios intentos: %s", e)
             return jsonify({"error": "Error en la base de datos. Intente más tarde."}), 500
 
         estado = last_pedido.Estado
-        print(datos_completos_validados, "user")
+        logger.debug("Estado del pedido: %s, user_id=%s", estado, id_user)
 
         if estado == EstadoPedido.ENLACE:
             return render_template('quiniela.html', usuario=datos_completos_validados)
@@ -63,7 +66,7 @@ def quiniela(token=None):
             return jsonify({"error": "Estado no reconocido"}), 400
 
     except Exception as e:
-        print(f"Error inesperado: {e}")
+        logger.exception("Error inesperado en quiniela:")
         return jsonify({"error": "Ocurrió un error inesperado"}), 500
 
 
