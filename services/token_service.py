@@ -2,11 +2,8 @@ import os
 import secrets
 from managers.gestor_redis import redismanager
 import json
-from modelos.validator_usuario import UsuarioDatos
+from schemas.usuario import UsuarioDatos
 from pydantic import ValidationError
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # Generar token y almacenarlo en Redis
 def generar_token_temporal(usuario_datos):
