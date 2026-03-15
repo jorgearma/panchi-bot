@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constantes configurables
-API_KEY =  "***REMOVED***"
+API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
 BASE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
 LOCALITY = "Tarancón"
 REGION = "Cuenca"
