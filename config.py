@@ -23,6 +23,15 @@ GOOGLE_MAPS_API_KEY: str | None = os.environ.get("GOOGLE_MAPS_API_KEY")
 # Public URL (ngrok or production)
 PUBLIC_URL: str | None = os.environ.get("PUBLIC_URL")
 
+# CORS — allowed origin for /api/* (defaults to * if not set)
+ALLOWED_ORIGIN: str | None = os.environ.get("ALLOWED_ORIGIN")
+
+# Internal API token (used to protect state-change endpoints called from the frontend)
+INTERNAL_API_TOKEN: str | None = os.environ.get("INTERNAL_API_TOKEN")
+
+# Sentry
+SENTRY_DSN: str | None = os.environ.get("SENTRY_DSN")
+
 # SQL Server
 SQL_SERVER: str = os.environ.get("SQL_SERVER", "localhost,1433")
 SQL_DATABASE: str = os.environ.get("SQL_DATABASE", "pruebabot")

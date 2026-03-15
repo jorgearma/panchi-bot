@@ -70,7 +70,7 @@ def iniciar_pago(
         "description": nombre_cliente,
         "completeUrl": f"{public_url}/pago_confirmado?pedido_id={redis_id}",
         "customer": {
-            "email": "john.doe@monei.com",
+            "email": f"whatsapp_{numero_cliente.replace('+', '').replace('whatsapp:', '')}@noreply.panchibot.internal",
             "name": nombre_cliente,
             "phone": numero_cliente,
         },
