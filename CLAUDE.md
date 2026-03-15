@@ -18,10 +18,12 @@ The Flask dev server starts on port 5000. For WhatsApp webhooks to work, a tunne
 ## Running Tests
 
 ```bash
-pytest                                        # all tests
-pytest tests/test_api_pedido.py               # single file
+pytest                                                              # all tests
+pytest tests/test_api_pedido.py                                    # single file
 pytest tests/test_states.py::TestEstadoPedidoEnum::test_valores_string  # single test
 ```
+
+`tests/conftest.py` provides shared `app` and `client` fixtures (Flask test client) for integration tests.
 
 ## Architecture
 
@@ -42,7 +44,7 @@ states      →  (enums + pure functions — no internal imports)
 
 ### App Structure
 
-`main.py` calls `load_dotenv()` first, then creates the Flask app and registers three blueprints. All singleton instances live in `services.py` — never instantiated elsewhere.
+`main.py` exposes `create_app(config: dict = None) -> Flask`. It calls `load_dotenv()` first, then builds the Flask app inside the factory. All singleton instances live in `services/__init__.py` — never instantiated elsewhere.
 
 ```
 blueprints/webhook.py   POST /webhook (Twilio), POST /webhook/monei (Monei)
@@ -50,11 +52,23 @@ blueprints/menu.py      GET /menu/<token>, /confirmacion_pago, /pago_confirmado
 blueprints/api.py       POST /api/confirmacion, /api/agregar_pedido, /api/productos, etc.
 ```
 
+### Singleton Initialization
+
+All three external-client singletons are **lazy** — they initialize on first call, not at import time. This makes the test suite importable without live credentials.
+
+| Singleton | Location | Accessor |
+|---|---|---|
+| Twilio `Client` | `services/twilio_service.py` | `_get_client()` (module-private) |
+| spaCy `es_core_news_sm` | `controllers/registro.py` | `_get_nlp()` (module-private) |
+| `Monei.MoneiClient` | `services/__init__.py` | `get_monei()` (exported) |
+
+DB managers and Redis are still eagerly initialized in `services/__init__.py` because they have no credentials risk in tests.
+
 ### Message Flow
 
 1. WhatsApp message → `POST /webhook`
 2. `schemas/twilio.py::WebhookRequest` validates `From` + `Body`
-3. Redis rate-limit check (20-second TTL cooldown per user)
+3. Redis rate-limit check (20-second TTL per user — unlock is automatic via TTL, no explicit call)
 4. **Unregistered users** → `controllers/registro.py` — multi-step registration state machine
 5. **Registered users** → `controllers/mensajes_registrados.py::ManejadorMensajesRegistrados`
 
@@ -63,16 +77,15 @@ blueprints/api.py       POST /api/confirmacion, /api/agregar_pedido, /api/produc
 States stored in Redis during registration:
 `saludo_inicial` → `esperando_confirmacion` → `esperando_nombre` → `esperando_direccion` → `confirmando_direccion` → registered in DB
 
-Name validation uses spaCy (`es_core_news_sm`). Address validation uses `calles_tarancon.json`.
+Name validation uses spaCy (`es_core_news_sm`, loaded lazily). Address validation uses `calles_tarancon.json`.
 
 ### Order Flow
 
 1. User sends "1" → `controllers/pedido.py::procesar_pedido` → token generated, pending order created in DB, link sent
-2. Token payload (user id, name, address, phone) stored in Redis; validated by `schemas/usuario.py::UsuarioDatos` on retrieval
-3. User selects products on `quiniela.html` → `POST /api/confirmacion` → `controllers/pedido.py::confirmar_carrito` stores cart in Redis, transitions order to `enlace2`
+2. Token payload validated by `schemas/usuario.py::UsuarioDatos` (includes `token` field) on retrieval
+3. User selects products → `POST /api/confirmacion` → `controllers/pedido.py::confirmar_carrito` stores cart in Redis, transitions to `enlace2`
 4. `POST /api/agregar_pedido` → `controllers/pago.py::iniciar_pago` re-validates prices against DB, creates Monei payment, transitions to `confirmando-pago`
-5. Monei calls `POST /webhook/monei` → order set to `pagado`, WhatsApp confirmation sent
-   - Legacy route `/webhoo/monei` (typo) still active — remove once Monei panel is updated
+5. Monei calls `POST /webhook/monei` → HMAC signature verified → order set to `pagado`, WhatsApp confirmation sent
 
 Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → `pagado`
 
@@ -80,13 +93,13 @@ Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → 
 
 | Path | Role |
 |------|------|
-| `main.py` | Flask app creation, blueprint registration, Sentry init. Calls `load_dotenv()` first. |
-| `services.py` | Singleton instances: `gestor_pedidos`, `gestor_usuarios`, `gestor_productos`, `monei`, `cache` |
+| `main.py` | `create_app()` factory — Flask setup, Sentry, blueprints, logging config |
+| `services/__init__.py` | Singletons: `gestor_pedidos`, `gestor_usuarios`, `gestor_productos`, `cache`, `get_monei()` |
 | `states.py` | `EstadoPedido` + `EstadoRegistro` str-enums, transition maps, `transicion_valida_*` pure functions |
 | `config.py` | All env var constants — reads `os.environ` (populated by `main.py` before any import) |
 | `database.py` | SQLAlchemy engine + session factory |
 | `models.py` | ORM models: `Usuario`, `Producto`, `Pedido`, `PedidoDetalle`, `Empleado` |
-| `schemas/twilio.py` | Pydantic validators for Twilio webhook data (`WebhookRequest`, `PedidoInput`) |
+| `schemas/twilio.py` | Pydantic V2 validators for Twilio webhook data (`WebhookRequest`, `PedidoInput`) |
 | `schemas/usuario.py` | `UsuarioDatos` — Pydantic model for user data in Redis tokens (includes `token` field) |
 | `managers/gestor_redis.py` | `RedisManager` infrastructure adapter + `redismanager` singleton |
 | `managers/estado_usuario.py` | `EstadoUsuario` — registration state read/write, enforces `transicion_valida_registro` |
@@ -97,20 +110,22 @@ Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → 
 | `controllers/mensajes_registrados.py` | `ManejadorMensajesRegistrados` — dispatches registered user messages |
 | `controllers/pedido.py` | `procesar_pedido`, `confirmar_carrito` — order initiation and cart confirmation |
 | `controllers/pago.py` | `iniciar_pago` — DB price re-validation, Monei payment creation |
-| `services/twilio_service.py` | `enviar_mensaje_whatsapp` — Twilio send functions |
+| `services/twilio_service.py` | `enviar_mensaje_whatsapp` — Twilio send functions (lazy client) |
 | `services/token_service.py` | Token generation + Redis storage |
 | `services/maps_service.py` | Google Maps address validation |
 | `utils/menu_opciones.py` | `menu` dict, `mostrar_menu()`, `limpiar_texto()` — pure, no I/O |
-| `cocina/comandas.py` | Kitchen-side comanda logic (stub) |
 
 ### State Machine Conventions
 
-All valid transitions are declared in `states.py` — never hardcode them elsewhere. `GestorPedidos.actualizar_estado` and `EstadoUsuario.actualizar_estado` call the pure validators and block invalid moves with `log.error`. Both enums inherit from `str` so they serialize to JSON and compare equal to raw strings from Redis/DB without conversion.
+All valid transitions are declared in `states.py` — never hardcode them elsewhere. `GestorPedidos.actualizar_estado` and `EstadoUsuario.actualizar_estado` call the pure validators and block invalid moves with `logger.error`. Both enums inherit from `str` so they serialize to JSON and compare equal to raw strings from Redis/DB without conversion.
+
+### Security — Monei Webhook
+
+`blueprints/webhook.py::webhook_monei` verifies the `MONEI-SIGNATURE` header with `hmac.compare_digest` before processing any payload. Returns 401 if the signature is missing or invalid. `MONEI_WEBHOOK_SECRET` must be set in the environment.
 
 ### Known Technical Debt
 
-- `utils/confirmar_direccion.py` imports from `services/` — violates the utils purity rule. Should be promoted to `controllers/`.
-- Legacy route `/webhoo/monei` (typo) in `blueprints/webhook.py` — remove once Monei panel is updated.
+- Legacy route `/webhoo/monei` (typo) in `blueprints/webhook.py` — remove once Monei dashboard points to `/webhook/monei`.
 
 ### External Services
 
@@ -118,12 +133,12 @@ All valid transitions are declared in `states.py` — never hardcode them elsewh
 - **Redis** — ephemeral user state, tokens, cart data, rate limiting
 - **Twilio** — WhatsApp send/receive
 - **Monei** — payment processing
-- **Sentry** — error monitoring (DSN in `main.py`)
+- **Sentry** — error monitoring (skipped when `app.config["TESTING"]` is True)
 - **Google Maps API** — address validation
 
 ## Environment Variables
 
-The app reads from `.env` (loaded once by `main.py`). All constants are also available via `config.py`:
+The app reads from `.env` (loaded once by `main.py`). All constants also available via `config.py`:
 
 ```
 SECRET_KEY
