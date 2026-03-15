@@ -94,7 +94,12 @@ def webhook_monei():
         return jsonify({"error": "Invalid signature"}), 401
 
     data = request.get_json()
-    order_id = data.get('object', {}).get('orderId')
+    order_id_raw = data.get('object', {}).get('orderId')
+    try:
+        order_id = int(order_id_raw)
+    except (TypeError, ValueError):
+        logger.error("webhook_monei: orderId inválido: %s", order_id_raw)
+        return jsonify({"error": "orderId inválido"}), 400
     nombre_usuario = data.get('object', {}).get('description')
     customer_phone = data.get('object', {}).get('customer', {}).get('phone')
     costumer_adress = data.get('object', {}).get('billingDetails', {}).get('address', {}).get("line1")

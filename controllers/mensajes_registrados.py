@@ -21,7 +21,7 @@ class ManejadorMensajesRegistrados:
         nombre_usuario = usuario_datos["nombre"]
 
         try:
-            gestor_pedidos.iniciar_pedido(id_usuario, direccion_usuario, nombre_usuario)
+            gestor_pedidos.iniciar_pedido(id_usuario, direccion_usuario, numero_cliente)
         except (SQLAlchemyError, OperationalError) as error:
             print(f"Error al iniciar el pedido para el usuario {id_usuario}: {error}")
             return "Error al procesar el pedido. Inténtalo más tarde.", 500
