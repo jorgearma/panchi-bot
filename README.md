@@ -1,58 +1,180 @@
-# README - Order Management API with Flask
+# Panchi-Bot
 
-## Description
+Bot de WhatsApp para gestión de pedidos de un restaurante en Tarancón (España). Los clientes interactúan por WhatsApp, seleccionan productos desde un menú web y pagan con Monei.
 
-This project is an API based on Flask that allows for the management of orders through WhatsApp using the Twilio API. The application receives customer messages via Twilio, registers the user in the database if they are not already registered, and takes their order. It also uses Redis for generating and validating unique links and connects to a database for user and order management.
+## Stack
 
-![](pictures/resized.jpeg) , ![](pictures/2.resized.jpeg) ,![alt text](pictures/5.resized.jpeg) ,![alt text](pictures/3.resized.jpeg)  
-## Code Flow
+| Capa | Tecnología |
+|------|-----------|
+| Mensajería | Twilio (WhatsApp) |
+| Web | Flask + Jinja2 |
+| Pagos | Monei |
+| BD | SQL Server (pyodbc + SQLAlchemy) |
+| Estado efímero | Redis |
+| Validación de direcciones | Google Maps API + Shapely |
+| Monitorización | Sentry |
 
-### 1. Receiving Messages from WhatsApp
+## Requisitos previos
 
-The `/webhook` endpoint receives customer messages through a `POST` request via the Twilio API. It extracts the customer's number (`From`) and the message content (`Body`). The message is then cleaned using the `clean_text` function.
+- Python 3.12+
+- SQL Server accesible
+- Redis en local o remoto
+- Cuenta de Twilio con número WhatsApp habilitado
+- Cuenta de Monei
+- ngrok (o similar) para exponer el servidor en desarrollo
 
-1. If the user is not registered in the database (`verify_user_db`), the `handle_registration` function is called to proceed with their registration.
-2. If the user is already registered, the `handle_registered_messages` function is executed to interpret and respond to their message.
+## Instalación
 
-### 2. User Registration and Validation
+```bash
+git clone <repo>
+cd panchi-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python -m spacy download es_core_news_sm
+cp .env.example .env  # editar con los valores reales
+```
 
-When a new user sends a message, the system:
+## Variables de entorno
 
-- Registers the user in the database using `save_user_db`.
-- Assigns a status in `user_status` to track their progress in the conversation.
+Copia `.env.example` a `.env` y rellena todos los campos:
 
-When an existing user interacts, the flow continues depending on the registered status, allowing for personalized responses.
+```env
+# Flask
+SECRET_KEY=
 
-### 3. Order Management
+# SQL Server
+SQL_SERVER=localhost,1433
+SQL_DATABASE=
+SQL_UID=
+SQL_PWD=
 
-The `/api/add_order` endpoint receives orders in JSON format. The system:
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
 
-- Iterates over the WhatsApp numbers in the request and their respective products.
-- Adds these products to the cart via `cart_instance.add_products`.
-- Returns a confirmation in JSON format.
+# Twilio
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
 
-### 4. Generating Unique Links
+# Monei
+MONEI_API_KEY=
+MONEI_WEBHOOK_SECRET=
 
-When a user requests the menu, a unique token is generated using `generate_link`. This token is stored in Redis along with the customer's number.
+# Google Maps
+GOOGLE_MAPS_API_KEY=
 
-- If the user accesses `/menu/<token>`, the token is verified in Redis.
-- If valid, the user data is retrieved from the database, and the `quiniela.html` template is rendered with the user's information.
+# URL pública del servidor (ngrok en desarrollo)
+PUBLIC_URL=https://xxxx.ngrok.io
 
-### 5. Viewing Orders
+# Sentry (opcional)
+SENTRY_DSN=
 
-The `/orders` endpoint queries the database to retrieve the list of registered orders.
+# CORS: dominio del frontend en producción (vacío = permite *)
+# ALLOWED_ORIGIN=https://tudominio.com
 
-- An SQL query is executed to extract the data ordered by date.
-- The results are processed and formatted into a readable JSON.
-- The `view_orders.html` template is rendered with the list of orders.
+# Token para el endpoint interno de cambio de estado
+# Generar con: python3 -c "import secrets; print(secrets.token_hex(32))"
+INTERNAL_API_TOKEN=
+```
 
-## Notes
+## Arrancar en desarrollo
 
-- If you need to change the allowed origins for CORS, modify them in `CORS(app, resources={...})`.
-- The database must be properly configured to avoid errors when retrieving users or orders.
+```bash
+source venv/bin/activate
+python main.py
+```
 
-## Authors
+El servidor arranca en `http://0.0.0.0:5000`. Los webhooks de Twilio y Monei necesitan una URL pública — usa ngrok:
 
-Developed by Jorge Armando Escobar.
+```bash
+ngrok http 5000
+# Copia la URL HTTPS a PUBLIC_URL en .env
+```
 
+Configura la URL del webhook en el panel de Twilio: `POST https://<ngrok>/webhook`
 
+## Tests
+
+```bash
+pytest                                      # todos
+pytest tests/test_webhook.py               # un fichero
+pytest -v --tb=short                       # verbose
+```
+
+Los tests requieren Redis en local. La suite completa corre en ~3 segundos con 110 tests.
+
+## Flujo de un pedido
+
+```
+Cliente WhatsApp
+    │
+    ▼
+POST /webhook  ──► verificación firma Twilio
+    │
+    ├── usuario no registrado ──► máquina de estados en Redis
+    │                             (saludo → nombre → dirección → confirmación)
+    │
+    └── usuario registrado ──► estado del pedido activo
+            │
+            ├── PENDIENTE ──► procesar_pedido → genera token → POST BD → enlace enviado
+            │
+            ├── ENLACE / ENLACE2 ──► reenvía enlace existente
+            │
+            └── CONFIRMANDO_PAGO / PAGADO ──► mensaje de estado
+
+GET /menu/<token>  ──► valida token Redis → renderiza menú web
+
+POST /api/confirmacion  ──► confirmar_carrito → guarda carrito en Redis → ENLACE2
+
+POST /api/agregar_pedido  ──► iniciar_pago → valida precios en BD → crea pago Monei
+                                           → CONFIRMANDO_PAGO → devuelve URL de pago
+
+POST /webhook/monei  ──► verifica HMAC → actualiza pedido a PAGADO → notifica cliente
+```
+
+## Arquitectura
+
+Ver [`CLAUDE.md`](CLAUDE.md) para la descripción completa de capas, reglas de importación, singletons y convenciones.
+
+Estructura de carpetas:
+
+```
+blueprints/     rutas HTTP (webhook, menu, api)
+controllers/    lógica de negocio
+managers/       acceso a BD y Redis
+services/       adaptadores externos (Twilio, Monei, Maps, tokens)
+schemas/        modelos Pydantic de entrada
+models.py       ORM SQLAlchemy
+states.py       enums + máquina de estados
+utils/          funciones puras (texto, menú)
+config.py       todas las variables de entorno
+tests/          suite de tests (110 tests)
+```
+
+## Endpoints
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/webhook` | Recibe mensajes WhatsApp de Twilio |
+| POST | `/webhook/monei` | Recibe notificaciones de pago de Monei |
+| GET | `/menu/<token>` | Menú web para el cliente |
+| GET | `/confirmacion_pago` | Resumen del carrito antes de pagar |
+| GET | `/pago_confirmado` | Confirmación tras el pago |
+| POST | `/api/confirmacion` | Confirma carrito desde el frontend |
+| POST | `/api/agregar_pedido` | Inicia pago en Monei |
+| GET | `/api/productos` | Devuelve el catálogo de productos |
+| POST | `/api/cambiar_estado_a_enlace` | Vuelve al menú (requiere `X-Internal-Token`) |
+
+## Seguridad
+
+- Webhooks de Twilio verificados con `X-Twilio-Signature` (desactivado con `TESTING=True`)
+- Webhooks de Monei verificados con HMAC-SHA256
+- Endpoint `/api/cambiar_estado_a_enlace` protegido con `X-Internal-Token`
+- CORS configurable por `ALLOWED_ORIGIN`
+
+## Autores
+
+Desarrollado por Jorge Armando Escobar.

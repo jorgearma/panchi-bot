@@ -1,10 +1,11 @@
 import logging
 import hmac
 import hashlib
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
 from pydantic import ValidationError
+from twilio.request_validator import RequestValidator
 
 import config
 from controllers.registro import manejar_registro
@@ -22,11 +23,19 @@ logger = logging.getLogger(__name__)
 
 @blueprint_webhook.route('/webhook', methods=['POST'])
 def webhook():
+    if not current_app.config.get("TESTING"):
+        validator = RequestValidator(config.TWILIO_AUTH_TOKEN)
+        signature = request.headers.get("X-Twilio-Signature", "")
+        url = config.PUBLIC_URL + "/webhook"
+        if not validator.validate(url, request.form, signature):
+            logger.warning("Twilio webhook signature inválida")
+            return jsonify({"error": "Firma inválida"}), 403
+
     try:
         data = WebhookRequest(**request.form.to_dict())
     except ValidationError as e:
         logger.error("Datos de entrada inválidos: %s", e)
-        return jsonify({"error": "Datos de entrada inválidos", "detail": e.errors()}), 400
+        return jsonify({"error": "Datos de entrada inválidos"}), 400
 
     numero_cliente = data.From
     mensaje_cliente = limpiar_texto(data.Body.lower())

@@ -1,11 +1,17 @@
 """
-Unit tests for controllers.pedido.confirmar_carrito and controllers.pago.iniciar_pago.
-No Flask test client — all dependencies are injected as mocks.
+Tests for:
+  - controllers.pedido.confirmar_carrito (unit, no Flask client)
+  - controllers.pago.iniciar_pago        (unit, no Flask client)
+  - POST /api/cambiar_estado_a_enlace    (integration, Flask client)
 """
 import json
 import pytest
 from unittest.mock import MagicMock, patch
 from states import EstadoPedido
+
+import config as app_config
+
+INTERNAL_TOKEN = "test-internal-token"
 
 
 # ---------------------------------------------------------------------------
@@ -348,3 +354,72 @@ class TestIniciarPago:
 
         assert success is False
         assert "redirección" in msg.lower()
+
+
+# ---------------------------------------------------------------------------
+# POST /api/cambiar_estado_a_enlace
+# ---------------------------------------------------------------------------
+
+class TestCambiarEstadoAEnlace:
+
+    def _post(self, client, pedido_id=1, token=INTERNAL_TOKEN):
+        headers = {"X-Internal-Token": token} if token else {}
+        return client.post(
+            "/api/cambiar_estado_a_enlace",
+            json={"pedidoID": pedido_id},
+            headers=headers,
+        )
+
+    def test_sin_token_retorna_401(self, client):
+        with patch("blueprints.api.config") as mock_cfg:
+            mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
+            resp = self._post(client, token=None)
+        assert resp.status_code == 401
+
+    def test_token_incorrecto_retorna_401(self, client):
+        with patch("blueprints.api.config") as mock_cfg:
+            mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
+            resp = self._post(client, token="token-equivocado")
+        assert resp.status_code == 401
+
+    def test_sin_pedido_id_retorna_400(self, client):
+        with patch("blueprints.api.config") as mock_cfg:
+            mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
+            resp = client.post(
+                "/api/cambiar_estado_a_enlace",
+                json={},
+                headers={"X-Internal-Token": INTERNAL_TOKEN},
+            )
+        assert resp.status_code == 400
+
+    def test_pedido_no_encontrado_retorna_404(self, client):
+        with patch("blueprints.api.config") as mock_cfg:
+            mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
+            with patch("blueprints.api.gestor_pedidos") as mock_gp:
+                mock_gp.obtener_pedido.return_value = None
+                resp = self._post(client, pedido_id=999)
+        assert resp.status_code == 404
+
+    def test_pedido_en_confirmando_pago_retorna_400(self, client):
+        pedido = MagicMock()
+        pedido.Estado = EstadoPedido.CONFIRMANDO_PAGO
+        pedido.PedidoID = 5
+        with patch("blueprints.api.config") as mock_cfg:
+            mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
+            with patch("blueprints.api.gestor_pedidos") as mock_gp:
+                mock_gp.obtener_pedido.return_value = pedido
+                resp = self._post(client, pedido_id=5)
+        assert resp.status_code == 400
+
+    def test_pedido_en_enlace2_actualiza_a_enlace(self, client):
+        pedido = MagicMock()
+        pedido.Estado = EstadoPedido.ENLACE2
+        pedido.PedidoID = 7
+        with patch("blueprints.api.config") as mock_cfg:
+            mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
+            with patch("blueprints.api.gestor_pedidos") as mock_gp:
+                mock_gp.obtener_pedido.return_value = pedido
+                mock_gp.actualizar_estado.return_value = True
+                resp = self._post(client, pedido_id=7)
+        assert resp.status_code == 200
+        mock_gp.actualizar_estado.assert_called_once_with(7, EstadoPedido.ENLACE)
