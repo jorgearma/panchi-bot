@@ -6,8 +6,7 @@ from tenacity import RetryError
 from pydantic import ValidationError
 import redis
 
-from modelos.usuario_web import UsuarioWeb
-from modelos.validator_usuario import UsuarioDatos
+from schemas.usuario import UsuarioDatos
 from managers.gestor_redis import redismanager
 from services import gestor_pedidos, cache
 from states import EstadoPedido
@@ -41,16 +40,11 @@ def quiniela(token=None):
             print(f"Error de validación en datos_completos: {e}")
             return "Datos de usuario inválidos.", 400
 
-        datos_completos = {
-            "id": datos_completos_validados.id,
-            "direccion": datos_completos_validados.direccion,
-            "nombre": datos_completos_validados.nombre,
-            "numero": datos_completos_validados.numero
-        }
+        datos_completos_validados.token = token
 
-        print("datos completos desde quinela", datos_completos)
+        print("datos completos desde quinela", datos_completos_validados)
 
-        id_user = datos_completos.get("id")
+        id_user = datos_completos_validados.id
         try:
             last_pedido = gestor_pedidos.obtener_pedido_mas_reciente(id_user)
         except (SQLAlchemyError, RetryError) as e:
@@ -58,12 +52,10 @@ def quiniela(token=None):
             return jsonify({"error": "Error en la base de datos. Intente más tarde."}), 500
 
         estado = last_pedido.Estado
-        datos_completos["token"] = token
-        usuario = UsuarioWeb(datos_completos)
-        print(datos_completos, "user")
+        print(datos_completos_validados, "user")
 
         if estado == EstadoPedido.ENLACE:
-            return render_template('quiniela.html', usuario=usuario)
+            return render_template('quiniela.html', usuario=datos_completos_validados)
         elif estado == EstadoPedido.ENLACE2:
             pedido_id = last_pedido.redisID
             return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')

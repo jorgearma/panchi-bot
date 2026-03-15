@@ -3,10 +3,7 @@ import os
 import re
 import requests
 import urllib.parse
-from dotenv import load_dotenv
 import logging
-
-load_dotenv()
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)

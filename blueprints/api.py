@@ -1,11 +1,11 @@
-import json
 import os
 import uuid
 from flask import Blueprint, request, jsonify, make_response
-from Monei import ApiException
 
 from services import gestor_pedidos, gestor_productos, monei, cache
 from states import EstadoPedido
+from controllers.pedido import confirmar_carrito
+from controllers.pago import iniciar_pago
 
 blueprint_api = Blueprint('api', __name__)
 
@@ -22,51 +22,24 @@ def agregar_pedido_confirmacion():
     data = request.json
     print("Datos recibidos pai confimacion:", data)
 
-    name = data.get("name", "Nombre no especificado")
-    userID = data.get("userId", "ID no especificado")
-    numero = data.get("numero", "Numero no especificado")
-    direccion = data.get("direccion", "Dirección no especificada")
-    token = data.get("token", "")
-    productos_recibidos = data.get("productos", [])
+    pedido_id_redis = str(uuid.uuid4())
+    success, result = confirmar_carrito(
+        pedido_id_redis=pedido_id_redis,
+        name=data.get("name", "Nombre no especificado"),
+        token=data.get("token", ""),
+        user_id=data.get("userId", "ID no especificado"),
+        numero=data.get("numero", "Numero no especificado"),
+        direccion=data.get("direccion", "Dirección no especificada"),
+        productos_recibidos=data.get("productos", []),
+        cache=cache,
+        gestor_pedidos=gestor_pedidos,
+        public_url=os.environ.get("PUBLIC_URL", ""),
+    )
 
-    productos = []
-    total = 0
+    if not success:
+        return jsonify({"error": result}), 404
 
-    for p in productos_recibidos:
-        nombre_producto = p.get("nombre", "Producto desconocido")
-        cantidad = p.get("cantidad", 1)
-        precio_unitario = p.get("precio_unitario", 0.0)
-        codigo = p.get("Codigo")
-        precio_total = round(precio_unitario * cantidad, 2)
-
-        productos.append({
-            "nombre": nombre_producto,
-            "cantidad": cantidad,
-            "precio": precio_total,
-            "codigo": codigo
-        })
-        total += precio_total
-
-    total = round(total, 2)
-    pedido_id = str(uuid.uuid4())
-
-    pedidoID = gestor_pedidos.obtener_pedido_mas_reciente(userID)
-    pedido_ID_DB = pedidoID.PedidoID
-
-    cache.set(pedido_id, json.dumps({
-        "name": name, "token": token, "userID": userID,
-        "pedidoID": pedido_ID_DB, "numero": numero,
-        "direccion": direccion, "productos": productos, "total": total
-    }), ex=3600)
-
-    gestor_pedidos.guardar_redis_id(pedidoID.PedidoID, pedido_id)
-    if pedidoID.Estado != EstadoPedido.ENLACE:
-        print(f"No se puede cambiar el estado. Estado actual: '{pedidoID.Estado}'")
-    else:
-        gestor_pedidos.actualizar_estado(pedidoID.PedidoID, EstadoPedido.ENLACE2)
-
-    confirmacion_url = f"{os.environ.get('PUBLIC_URL')}/confirmacion_pago?pedido_id={pedido_id}"
-    return jsonify({"redirect_url": confirmacion_url})
+    return jsonify({"redirect_url": result})
 
 
 @blueprint_api.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
@@ -85,81 +58,28 @@ def agregar_pedido():
     if not id_usuario:
         return jsonify({"error": "ID de usuario no proporcionado"}), 400
 
-    pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
+    success, result = iniciar_pago(
+        user_id=id_usuario,
+        productos_recibidos=data.get("productos", []),
+        nombre_cliente=data.get("name"),
+        numero_cliente=data.get("numero"),
+        direccion_cliente=data.get("direccion"),
+        cache=cache,
+        gestor_pedidos=gestor_pedidos,
+        gestor_productos=gestor_productos,
+        monei=monei,
+        public_url=os.environ.get("PUBLIC_URL", ""),
+    )
 
-    if not pedido_activo:
-        return jsonify({"error": "No se encontró un pedido activo para este usuario"}), 404
+    if not success:
+        if "no encontrado" in result.lower():
+            return jsonify({"error": result}), 404
+        return jsonify({"error": result}), 400 if "Producto" in result else 500
 
-    estado1 = pedido_activo.Estado
-    print("estado pedido activo", estado1)
+    if result == "El pedido ya está en proceso de pago.":
+        return jsonify({"message": result}), 200
 
-    if estado1 == EstadoPedido.CONFIRMANDO_PAGO:
-        return jsonify({"message": "El pedido ya está en proceso de pago."}), 200
-
-    productos_recibidos = data.get("productos", [])
-    productos_validos = []
-    total_calculado = 0.0
-
-    for item in productos_recibidos:
-        codigo = item.get("codigo")
-        cantidad = item.get("cantidad", 1)
-
-        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
-        if not producto_db:
-            return jsonify({"error": f"Producto con código {codigo} no encontrado"}), 400
-
-        precio_db = float(producto_db["Precio"])
-        total_calculado += precio_db * cantidad
-        productos_validos.append([codigo, cantidad])
-
-    numero_cliente = data.get("numero")
-    nombre_cliente = data.get("name")
-    direccion_cliente = data.get("direccion")
-
-    pedido_activo_id = pedido_activo.PedidoID
-    gestor_pedidos.agregar_productos_a_pedido(pedido_activo_id, productos_validos)
-    redisID = pedido_activo.redisID
-
-    amount_in_cents = int(round(total_calculado * 100))
-
-    payment_data = {
-        'amount': amount_in_cents,
-        'order_id': str(pedido_activo_id),
-        'currency': 'EUR',
-        'description': nombre_cliente,
-        'completeUrl': f"{os.environ.get('PUBLIC_URL')}/pago_confirmado?pedido_id={redisID}",
-        'customer': {
-            'email': 'john.doe@monei.com',
-            'name': nombre_cliente,
-            'phone': numero_cliente
-        },
-        'billingDetails': {
-            'address': {
-                'line1': direccion_cliente,
-                'city': 'tarancon',
-                'postalCode': '16400',
-                'country': 'ES'
-            }
-        }
-    }
-
-    try:
-        result = monei.payments.create(payment_data)
-        print("Respuesta de pago:", result)
-
-        redirect_url = result.get('next_action', {}).get('redirect_url')
-        print("URL de redirección obtenida:", redirect_url)
-
-        gestor_pedidos.actualizar_estado(pedido_activo_id, EstadoPedido.CONFIRMANDO_PAGO)
-        gestor_pedidos.guardar_enlace(pedido_activo_id, redirect_url)
-
-        if redirect_url:
-            return jsonify({"redirect_url": redirect_url, "message": "Pedido enviado correctamente."}), 200
-        else:
-            return jsonify({"error": "No se encontró la URL de redirección en la respuesta"}), 500
-    except ApiException as e:
-        print("Error al crear el pago:", e)
-        return jsonify({"error": str(e)}), 500
+    return jsonify({"redirect_url": result, "message": "Pedido enviado correctamente."}), 200
 
 
 @blueprint_api.route('/api/cambiar_estado_a_enlace', methods=['POST'])
