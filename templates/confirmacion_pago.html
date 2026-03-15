@@ -31,7 +31,7 @@
             data-unit="{{ (producto.precio / producto.cantidad) | round(2) }}">
           <div class="order-item-left">
             <span class="order-item-name">{{ producto.nombre }}</span>
-            <span class="order-item-qty">x{{ producto.cantidad }}</span>
+            <span class="order-item-qty">× {{ producto.cantidad }} ud</span>
           </div>
           <span class="order-item-price">{{ producto.precio }} €</span>
           <button class="remove-btn" onclick="quitarUnidad(this)" title="Quitar una unidad">×</button>
@@ -64,13 +64,13 @@
       const priceEl = li.querySelector('.order-item-price');
       const unit    = parseFloat(li.dataset.unit);
 
-      let qty = parseInt(qtyEl.textContent.replace('x', ''), 10);
+      let qty = parseInt(qtyEl.textContent.replace(/\D/g, ''), 10);
 
       if (qty <= 1) {
         li.remove();
       } else {
         qty--;
-        qtyEl.textContent  = 'x' + qty;
+        qtyEl.textContent   = '× ' + qty + ' ud';
         priceEl.textContent = (unit * qty).toFixed(2) + ' €';
       }
 
@@ -88,6 +88,15 @@
 
     // --- Volver al menú (siempre resetea el estado antes de navegar) ---
     async function handleBack() {
+      // Sync sessionStorage with the current DOM state (user may have removed/reduced items)
+      const updatedQty = {};
+      document.querySelectorAll('#productos li').forEach(li => {
+        const nombre = li.querySelector('.order-item-name').textContent.trim();
+        const qty    = parseInt(li.querySelector('.order-item-qty').textContent.replace(/\D/g, ''), 10);
+        if (qty > 0) updatedQty[nombre] = qty;
+      });
+      sessionStorage.setItem('cart_{{ token }}', JSON.stringify(updatedQty));
+
       try {
         await fetch('/api/volver_al_menu', {
           method:  'POST',
@@ -112,7 +121,7 @@
       const productos = Array.from(items).map(li => ({
         codigo:   li.getAttribute('data-codigo'),
         nombre:   li.querySelector('.order-item-name').textContent.trim(),
-        cantidad: parseInt(li.querySelector('.order-item-qty').textContent.replace('x', ''), 10),
+        cantidad: parseInt(li.querySelector('.order-item-qty').textContent.replace(/\D/g, ''), 10),
         precio:   parseFloat(li.querySelector('.order-item-price').textContent.replace('€', '').trim()),
       }));
 
@@ -138,6 +147,7 @@
         });
         const result = await response.json();
         if (result.redirect_url) {
+          sessionStorage.removeItem('cart_{{ token }}');
           window.location.href = result.redirect_url;
         } else {
           alert(result.message || 'Pedido enviado correctamente.');

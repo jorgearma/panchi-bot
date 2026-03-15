@@ -16,32 +16,262 @@
     <span class="header-badge">Envío gratis</span>
   </header>
 
+  <!-- Search bar -->
+  <div id="search-bar">
+    <div class="search-input-wrap">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search-input"
+             placeholder="Buscar producto…"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="search-clear" id="search-clear" type="button" onclick="clearSearch()">✕</button>
+    </div>
+  </div>
+
   <div id="category-nav"></div>
 
   <div id="menu"></div>
 
+  <!-- No-results state -->
+  <div id="search-empty">
+    <div class="search-empty-icon">🔍</div>
+    <p>Sin resultados para <strong id="search-query-text"></strong></p>
+  </div>
+
+  <!-- Cart bar (fixed bottom) -->
   <div id="cart-bar">
-    <div class="cart-bar-info">
-      <span class="cart-count" id="cart-count">0 productos</span>
-      <span class="cart-total" id="cart-total">0,00 €</span>
-    </div>
+    <button class="cart-bar-left" type="button" onclick="openCartSheet()">
+      <svg class="cart-bar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 01-8 0"/>
+      </svg>
+      <div class="cart-bar-info">
+        <span class="cart-count" id="cart-count">0 productos</span>
+        <span class="cart-total" id="cart-total">0,00 €</span>
+      </div>
+      <span class="cart-view-pill">
+        ver
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"/>
+        </svg>
+      </span>
+    </button>
     <button class="cart-bar-btn" type="button" id="submitOrder">Continuar →</button>
   </div>
 
+  <!-- Cart sheet overlay -->
+  <div class="cart-sheet-overlay" id="cart-sheet-overlay" onclick="closeCartSheet()"></div>
+
+  <!-- Cart sheet panel -->
+  <div class="cart-sheet" id="cart-sheet">
+    <div class="cart-sheet-handle"></div>
+    <div class="cart-sheet-header">
+      <span class="cart-sheet-title">🛍 Tu carrito</span>
+      <button class="cart-sheet-close" type="button" onclick="closeCartSheet()">✕</button>
+    </div>
+    <div class="cart-sheet-list" id="cart-sheet-list"></div>
+    <div class="cart-sheet-footer">
+      <div class="cart-sheet-total">
+        <span>Total</span>
+        <span class="cart-sheet-total-amount" id="cart-sheet-total-val">0,00 €</span>
+      </div>
+      <button class="cart-sheet-confirm" type="button"
+              onclick="closeCartSheet(); submitPedido()">
+        Confirmar pedido →
+      </button>
+    </div>
+  </div>
+
   <script>
+    // Module-level state
+    let menuData   = {};
+    let quantities = {};
+
+    const CART_KEY = 'cart_{{ usuario.token }}';
+
+    // --- Search ---
+
+    function filterMenu(query) {
+      const q = query.trim().toLowerCase();
+
+      if (!q) {
+        document.querySelectorAll('.menu-item').forEach(el => el.style.display = '');
+        document.querySelectorAll('.category-section').forEach(el => el.style.display = '');
+        document.querySelectorAll('#category-nav button').forEach(el => el.style.display = '');
+        document.getElementById('search-empty').classList.remove('visible');
+        return;
+      }
+
+      let totalMatches = 0;
+
+      document.querySelectorAll('.category-section').forEach(section => {
+        const category = section.id.replace('category-', '');
+        let sectionMatches = 0;
+
+        section.querySelectorAll('.menu-item').forEach(itemEl => {
+          const matches = itemEl.dataset.name.toLowerCase().includes(q);
+          itemEl.style.display = matches ? '' : 'none';
+          if (matches) sectionMatches++;
+        });
+
+        section.style.display = sectionMatches > 0 ? '' : 'none';
+        totalMatches += sectionMatches;
+
+        const navBtn = document.querySelector(
+          `#category-nav button[data-category="${category}"]`
+        );
+        if (navBtn) navBtn.style.display = sectionMatches > 0 ? '' : 'none';
+      });
+
+      const emptyEl = document.getElementById('search-empty');
+      if (totalMatches === 0) {
+        document.getElementById('search-query-text').textContent = `"${query.trim()}"`;
+        emptyEl.classList.add('visible');
+      } else {
+        emptyEl.classList.remove('visible');
+      }
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      document.getElementById('search-clear').classList.remove('visible');
+      filterMenu('');
+      input.focus();
+    }
+
+    // --- Cart sheet ---
+
+    function openCartSheet() {
+      const list = document.getElementById('cart-sheet-list');
+      list.innerHTML = '';
+
+      let total    = 0;
+      let hasItems = false;
+
+      Object.entries(quantities)
+        .filter(([_, q]) => q > 0)
+        .forEach(([item, qty]) => {
+          const cat = Object.keys(menuData).find(c => menuData[c][item]);
+          if (!cat) return;
+          const subtotal = parseFloat(menuData[cat][item].Precio) * qty;
+          total   += subtotal;
+          hasItems = true;
+
+          const row = document.createElement('div');
+          row.className = 'cart-sheet-item';
+          row.innerHTML = `
+            <span class="cart-sheet-item-name">${item}</span>
+            <span class="cart-sheet-item-qty">× ${qty} ud</span>
+            <span class="cart-sheet-item-price">${subtotal.toFixed(2).replace('.', ',')} €</span>
+          `;
+          list.appendChild(row);
+        });
+
+      if (!hasItems) return;
+
+      document.getElementById('cart-sheet-total-val').textContent =
+        total.toFixed(2).replace('.', ',') + ' €';
+
+      document.getElementById('cart-sheet-overlay').classList.add('open');
+      document.getElementById('cart-sheet').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCartSheet() {
+      document.getElementById('cart-sheet-overlay').classList.remove('open');
+      document.getElementById('cart-sheet').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeCartSheet();
+    });
+
+    // --- Order submission ---
+
+    async function submitPedido() {
+      const selectedItems = Object.entries(quantities)
+        .filter(([_, q]) => q > 0)
+        .map(([item, q]) => {
+          const cat = Object.keys(menuData).find(c => menuData[c][item]);
+          if (!cat) return null;
+          const { Codigo, Precio, ingredientes } = menuData[cat][item];
+          return {
+            Codigo,
+            nombre:          item,
+            precio_unitario: parseFloat(Precio),
+            precio_total:    parseFloat(Precio) * q,
+            ingredientes,
+            cantidad:        q
+          };
+        })
+        .filter(i => i !== null);
+
+      if (selectedItems.length === 0) {
+        alert('Por favor, selecciona al menos un producto.');
+        return;
+      }
+
+      const order = {
+        name:      `{{ usuario.nombre }}`,
+        token:     `{{ usuario.token }}`,
+        userId:    `{{ usuario.id }}`,
+        numero:    `{{ usuario.numero }}`,
+        direccion: `{{ usuario.direccion }}`,
+        productos: selectedItems
+      };
+
+      try {
+        const response = await fetch('{{ public_url }}/api/confirmacion', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(order)
+        });
+        const result = await response.json();
+        if (result.redirect_url) {
+          window.location.href = result.redirect_url;
+        } else {
+          alert(result.message || 'Pedido enviado correctamente.');
+        }
+      } catch (err) {
+        console.error('Error de conexión:', err);
+        alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+      }
+    }
+
+    // --- Menu build & cart bar ---
+
     document.addEventListener('DOMContentLoaded', () => {
-      let menuData = {};
-      const menuDiv    = document.getElementById('menu');
-      const navDiv     = document.getElementById('category-nav');
-      const cartBar    = document.getElementById('cart-bar');
-      const quantities = {};
+      const menuDiv     = document.getElementById('menu');
+      const navDiv      = document.getElementById('category-nav');
+      const cartBar     = document.getElementById('cart-bar');
+      const searchInput = document.getElementById('search-input');
+      const searchClear = document.getElementById('search-clear');
+
+      // Search input listener
+      searchInput.addEventListener('input', () => {
+        const q = searchInput.value;
+        searchClear.classList.toggle('visible', q.length > 0);
+        filterMenu(q);
+      });
 
       function buildMenu() {
         Object.keys(menuData).forEach((category, index) => {
-          // Category nav button
+          // Nav chip — data-category for targeted show/hide during search
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.innerText = category;
+          btn.dataset.category = category;
           if (index === 0) btn.classList.add('active');
           btn.addEventListener('click', () => {
             document.querySelectorAll('#category-nav button')
@@ -67,6 +297,7 @@
 
             const itemDiv = document.createElement('div');
             itemDiv.className = 'menu-item';
+            itemDiv.dataset.name = item;   // used by filterMenu
             itemDiv.innerHTML = `
               <img src="${imagen}" alt="${item}" onerror="this.style.display='none'">
               <div class="menu-details">
@@ -106,11 +337,29 @@
         document.getElementById('cart-total').textContent =
           total.toFixed(2).replace('.', ',') + ' €';
 
-        if (total > 0) {
-          cartBar.classList.add('visible');
-        } else {
-          cartBar.classList.remove('visible');
-        }
+        cartBar.classList.toggle('visible', total > 0);
+        sessionStorage.setItem(CART_KEY, JSON.stringify(quantities));
+      }
+
+      function restoreCart() {
+        const saved = sessionStorage.getItem(CART_KEY);
+        if (!saved) return;
+        let savedQty;
+        try { savedQty = JSON.parse(saved); } catch { return; }
+
+        Object.entries(savedQty).forEach(([item, qty]) => {
+          if (qty <= 0) return;
+          const cat = Object.keys(menuData).find(c => menuData[c][item]);
+          if (!cat) return;                          // producto ya no existe
+
+          quantities[item] = qty;
+          const display = document.getElementById(`quantity-${item}`);
+          if (display) display.innerText = qty;
+          const dec = document.querySelector(`button.decrease[data-item="${item}"]`);
+          if (dec) dec.disabled = false;
+        });
+
+        updateCartBar();
       }
 
       fetch('/api/productos')
@@ -118,7 +367,7 @@
         .then(data => {
           menuData = data;
           buildMenu();
-          updateCartBar();
+          restoreCart();
 
           document.addEventListener('click', (event) => {
             const target = event.target;
@@ -141,55 +390,7 @@
             updateCartBar();
           });
 
-          document.getElementById('submitOrder').addEventListener('click', async () => {
-            const selectedItems = Object.entries(quantities)
-              .filter(([_, q]) => q > 0)
-              .map(([item, q]) => {
-                const cat = Object.keys(menuData).find(c => menuData[c][item]);
-                if (!cat) return null;
-                const { Codigo, Precio, ingredientes } = menuData[cat][item];
-                return {
-                  Codigo,
-                  nombre:          item,
-                  precio_unitario: parseFloat(Precio),
-                  precio_total:    parseFloat(Precio) * q,
-                  ingredientes,
-                  cantidad:        q
-                };
-              })
-              .filter(i => i !== null);
-
-            if (selectedItems.length === 0) {
-              alert('Por favor, selecciona al menos un producto.');
-              return;
-            }
-
-            const order = {
-              name:      `{{ usuario.nombre }}`,
-              token:     `{{ usuario.token }}`,
-              userId:    `{{ usuario.id }}`,
-              numero:    `{{ usuario.numero }}`,
-              direccion: `{{ usuario.direccion }}`,
-              productos: selectedItems
-            };
-
-            try {
-              const response = await fetch('{{ public_url }}/api/confirmacion', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify(order)
-              });
-              const result = await response.json();
-              if (result.redirect_url) {
-                window.location.href = result.redirect_url;
-              } else {
-                alert(result.message || 'Pedido enviado correctamente.');
-              }
-            } catch (err) {
-              console.error('Error de conexión:', err);
-              alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
-            }
-          });
+          document.getElementById('submitOrder').addEventListener('click', submitPedido);
         })
         .catch(err => console.error('Error al obtener el menú:', err));
     });
