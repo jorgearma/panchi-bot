@@ -20,4 +20,4 @@ def get_monei():
     return _monei
 
 
-cache = redismanager.client
+cache = redismanager

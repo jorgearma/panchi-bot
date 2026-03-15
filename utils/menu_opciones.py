@@ -1,6 +1,3 @@
-import re
-from unidecode import unidecode
-
 menu = {
     "👇*Obciones*👇": {
         "tienda 🏪": {"codigo": 1, "mensaje": "Tienda online"},
@@ -8,12 +5,6 @@ menu = {
         "Salir  🚪🚶🏻": {"codigo": 3, "mensaje": "Has elegido *Salir*. Si necesitas algo más, solo envíanos un mensaje."},
     }
 }
-
-
-def limpiar_texto(texto):
-    texto_limpio = unidecode(texto)
-    texto_limpio = re.sub(r'[^\w\s]', '', texto_limpio)
-    return texto_limpio.lower()
 
 
 def mostrar_menu():

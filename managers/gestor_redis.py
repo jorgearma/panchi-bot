@@ -1,6 +1,6 @@
-import os
 import redis
 import logging
+import config
 from tenacity import retry, wait_fixed, stop_after_attempt
 
 logger = logging.getLogger(__name__)
@@ -71,19 +71,19 @@ class RedisManager:
         para que el bloqueo expire automáticamente.
         """
         key = f"bloqueo:{numero}"
-        print(f"Bloqueando usuario {numero} por {duracion} segundos")
+        logger.debug("Bloqueando usuario %s por %s segundos", numero, duracion)
         return self.set(key, "1", ex=duracion)
 
     def desbloquear_usuario(self, numero):
         key = f"bloqueo:{numero}"
-        print(f"Desbloqueando usuario {numero}")
+        logger.debug("Desbloqueando usuario %s", numero)
         return self.delete(key)
 
 
 redismanager = RedisManager(
-    host=os.environ.get('REDIS_HOST', 'localhost'),
-    port=int(os.environ.get('REDIS_PORT', 6379)),
-    db=int(os.environ.get('REDIS_DB', 0)),
+    host=config.REDIS_HOST,
+    port=config.REDIS_PORT,
+    db=config.REDIS_DB,
 )
   
 
