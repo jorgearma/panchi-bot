@@ -4,9 +4,11 @@ from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_t
 from sqlalchemy.exc import SQLAlchemyError , OperationalError
 
 class GestorPedidos:
-    
-    def __init__(self,session):
-        self.session = session
+
+    @property
+    def session(self):
+        from database import get_db
+        return get_db()
 
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type((SQLAlchemyError, OperationalError)))
@@ -62,6 +64,7 @@ class GestorPedidos:
             pedido = (
                 self.session.query(Pedido)
                 .filter(Pedido.ClienteID == id_usuario)
+                .filter(Pedido.Estado != "pagado")
                 .order_by(Pedido.FechaCreacion.desc())
                 .first()
             )
