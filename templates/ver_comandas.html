@@ -353,7 +353,7 @@
         
             // Enviar el pedido al servidor
             try {
-                const response = await fetch('https://8ff4-2a02-aa7-4108-696d-fd01-c5aa-a531-e77.ngrok-free.app/api/agregar_pedido', {
+                const response = await fetch('{{ public_url }}/api/agregar_pedido', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(order)
