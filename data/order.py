@@ -2,6 +2,7 @@ from decimal import Decimal
 from models import Pedido , PedidoDetalle , Producto
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from sqlalchemy.exc import SQLAlchemyError , OperationalError
+from states import EstadoPedido
 
 class GestorPedidos:
 
@@ -48,7 +49,7 @@ class GestorPedidos:
         Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'Pendiente' indica que aún no se ha procesado.
         """
         try:
-            pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='Pendiente').first()
+            pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado=EstadoPedido.PENDIENTE).first()
             return pedido is not None
         except SQLAlchemyError as error:
             print(f"Error al verificar pedido pendiente para el cliente {cliente_id}: {error}")
@@ -64,7 +65,7 @@ class GestorPedidos:
             pedido = (
                 self.session.query(Pedido)
                 .filter(Pedido.ClienteID == id_usuario)
-                .filter(Pedido.Estado != "pagado")
+                .filter(Pedido.Estado != EstadoPedido.PAGADO)
                 .order_by(Pedido.FechaCreacion.desc())
                 .first()
             )

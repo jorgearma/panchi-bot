@@ -3,6 +3,7 @@ from utils.mensajes import enviar_mensaje_whatsapp
 from utils.maps import validar_direccion
 from utils.confirmar_direccion import confirmar_direccion
 from managers.gestor_redis import EstadoUsuario
+from states import EstadoRegistro
 
 
 
@@ -102,23 +103,23 @@ class RegistroUsuario:
         # Se obtiene el estado actual del usuario desde Redis.
         estado_actual = self.estado_usuario.obtener_estado()["estado"]
 
-        if estado_actual == "saludo_inicial":
+        if estado_actual == EstadoRegistro.SALUDO_INICIAL:
             Mensajeria.enviar_bienvenida(self.numero_cliente)
-            self.estado_usuario.actualizar_estado("esperando_confirmacion")
+            self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_CONFIRMACION)
             return "Mensaje de bienvenida enviado", 200
 
-        elif estado_actual == "esperando_confirmacion":
+        elif estado_actual == EstadoRegistro.ESPERANDO_CONFIRMACION:
             if mensaje_cliente.lower() in {"sí", "si", "quiero", "adelante"}:
                 Mensajeria.solicitar_nombre(self.numero_cliente)
-                self.estado_usuario.actualizar_estado("esperando_nombre")
+                self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_NOMBRE)
                 return "Solicitud de nombre enviada", 200
             else:
                 Mensajeria.confirmar_cancelacion(self.numero_cliente)
                 return "Registro cancelado", 200
 
-        elif estado_actual == "esperando_nombre":
+        elif estado_actual == EstadoRegistro.ESPERANDO_NOMBRE:
             if ValidacionNombre.es_nombre_valido(mensaje_cliente):
-                self.estado_usuario.actualizar_estado("esperando_direccion", {"nombre": mensaje_cliente})
+                self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_DIRECCION, {"nombre": mensaje_cliente})
                 Mensajeria.solicitar_direccion(self.numero_cliente)
                 return "Solicitud de dirección enviada", 200
             else:
@@ -129,22 +130,22 @@ class RegistroUsuario:
                 )
                 return "Nombre inválido", 400
 
-        elif estado_actual == "esperando_direccion":
+        elif estado_actual == EstadoRegistro.ESPERANDO_DIRECCION:
             # Aquí se obtiene la dirección validada
             direccion_validada = ValidacionDireccion.validar_y_confirmar_direccion(self.numero_cliente, mensaje_cliente)
             if direccion_validada:
                 # Se actualiza el estado en Redis guardando la dirección validada
-                self.estado_usuario.actualizar_estado("confirmando_direccion", {"direccion": direccion_validada})
+                self.estado_usuario.actualizar_estado(EstadoRegistro.CONFIRMANDO_DIRECCION, {"direccion": direccion_validada})
                 return "Solicitud de confirmación de dirección enviada", 200
             else:
                 return "Dirección inválida", 400
 
-        elif estado_actual == "confirmando_direccion":
+        elif estado_actual == EstadoRegistro.CONFIRMANDO_DIRECCION:
             data_redis = self.estado_usuario.obtener_estado()
-            print("data redis", data_redis)  
+            print("data redis", data_redis)
             respuesta = confirmar_direccion(self.numero_cliente, mensaje_cliente, data_redis)
             if respuesta == 1:
-                self.estado_usuario.actualizar_estado("esperando_direccion")
+                self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_DIRECCION)
                 enviar_mensaje_whatsapp(
                     "😊 *¡Vale!* Vamos a intentarlo de nuevo.\nPor favor, *ingresa una dirección* \n\n👇 *Ejemplos:* 👇 \n\n•Calle Los Labradores 3, 1B\n•avenida pablo iglecias 79, 1b", 
                     self.numero_cliente
