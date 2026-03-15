@@ -1,16 +1,14 @@
 
-import os
 import re
 import requests
 import urllib.parse
 import logging
+import config
 
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constantes configurables
-API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
+API_KEY = config.GOOGLE_MAPS_API_KEY
 BASE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
 LOCALITY = "Tarancón"
 REGION = "Cuenca"

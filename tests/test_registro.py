@@ -32,10 +32,10 @@ def manejar(mensaje, estado_inicial=EstadoRegistro.SALUDO_INICIAL):
     from controllers.registro import manejar_registro
     rm = make_redis_manager(estado_inicial)
     with patch("controllers.registro.enviar_mensaje_whatsapp"):
-        with patch("controllers.registro.Mensajeria.enviar_bienvenida"):
-            with patch("controllers.registro.Mensajeria.solicitar_nombre"):
-                with patch("controllers.registro.Mensajeria.solicitar_direccion"):
-                    with patch("controllers.registro.Mensajeria.confirmar_cancelacion"):
+        with patch("controllers.registro._enviar_bienvenida"):
+            with patch("controllers.registro._solicitar_nombre"):
+                with patch("controllers.registro._solicitar_direccion"):
+                    with patch("controllers.registro._enviar_cancelacion_registro"):
                         return manejar_registro(NUMERO, mensaje, rm), rm
 
 
@@ -49,7 +49,7 @@ class TestSaludoInicial:
         from managers.estado_usuario import EstadoUsuario
         rm = make_redis_manager(EstadoRegistro.SALUDO_INICIAL)
 
-        with patch("controllers.registro.Mensajeria.enviar_bienvenida") as mock_bienvenida:
+        with patch("controllers.registro._enviar_bienvenida") as mock_bienvenida:
             with patch("controllers.registro.enviar_mensaje_whatsapp"):
                 resultado = manejar_registro(NUMERO, "hola", rm)
 
@@ -59,7 +59,7 @@ class TestSaludoInicial:
     def test_transiciona_a_esperando_confirmacion(self):
         import json
         rm = make_redis_manager(EstadoRegistro.SALUDO_INICIAL)
-        with patch("controllers.registro.Mensajeria.enviar_bienvenida"):
+        with patch("controllers.registro._enviar_bienvenida"):
             with patch("controllers.registro.enviar_mensaje_whatsapp"):
                 from controllers.registro import manejar_registro
                 manejar_registro(NUMERO, "hola", rm)
@@ -78,7 +78,7 @@ class TestEsperandoConfirmacion:
         from controllers.registro import manejar_registro
         import json
         rm = make_redis_manager(EstadoRegistro.ESPERANDO_CONFIRMACION)
-        with patch("controllers.registro.Mensajeria.solicitar_nombre"):
+        with patch("controllers.registro._solicitar_nombre"):
             with patch("controllers.registro.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, respuesta, rm)
         assert result[1] == 200
@@ -88,7 +88,7 @@ class TestEsperandoConfirmacion:
     def test_respuesta_negativa_cancela_sin_avanzar(self):
         from controllers.registro import manejar_registro
         rm = make_redis_manager(EstadoRegistro.ESPERANDO_CONFIRMACION)
-        with patch("controllers.registro.Mensajeria.confirmar_cancelacion"):
+        with patch("controllers.registro._enviar_cancelacion_registro"):
             with patch("controllers.registro.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "no", rm)
         assert result[1] == 200
@@ -104,8 +104,8 @@ class TestEsperandoNombre:
         from controllers.registro import manejar_registro
         import json
         rm = make_redis_manager(EstadoRegistro.ESPERANDO_NOMBRE)
-        with patch("controllers.registro.ValidacionNombre.es_nombre_valido", return_value=True):
-            with patch("controllers.registro.Mensajeria.solicitar_direccion"):
+        with patch("controllers.registro._es_nombre_valido", return_value=True):
+            with patch("controllers.registro._solicitar_direccion"):
                 with patch("controllers.registro.enviar_mensaje_whatsapp"):
                     result = manejar_registro(NUMERO, "Juan Pérez", rm)
         assert result[1] == 200
@@ -116,7 +116,7 @@ class TestEsperandoNombre:
     def test_nombre_invalido_no_avanza(self):
         from controllers.registro import manejar_registro
         rm = make_redis_manager(EstadoRegistro.ESPERANDO_NOMBRE)
-        with patch("controllers.registro.ValidacionNombre.es_nombre_valido", return_value=False):
+        with patch("controllers.registro._es_nombre_valido", return_value=False):
             with patch("controllers.registro.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "123abc", rm)
         assert result[1] == 400
@@ -132,7 +132,7 @@ class TestEsperandoDireccion:
         from controllers.registro import manejar_registro
         import json
         rm = make_redis_manager(EstadoRegistro.ESPERANDO_DIRECCION)
-        with patch("controllers.registro.ValidacionDireccion.validar_y_confirmar_direccion",
+        with patch("controllers.registro._validar_y_confirmar_direccion",
                    return_value="Calle Mayor 1"):
             with patch("controllers.registro.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "Calle Mayor 1", rm)
@@ -144,7 +144,7 @@ class TestEsperandoDireccion:
     def test_direccion_invalida_no_avanza(self):
         from controllers.registro import manejar_registro
         rm = make_redis_manager(EstadoRegistro.ESPERANDO_DIRECCION)
-        with patch("controllers.registro.ValidacionDireccion.validar_y_confirmar_direccion",
+        with patch("controllers.registro._validar_y_confirmar_direccion",
                    return_value=None):
             with patch("controllers.registro.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "xyz", rm)
@@ -172,7 +172,7 @@ class TestConfirmandoDireccion:
         from controllers.registro import manejar_registro
         import json
         rm = make_redis_manager(EstadoRegistro.CONFIRMANDO_DIRECCION)
-        with patch("controllers.registro.confirmar_direccion", return_value=1):
+        with patch("controllers.registro.confirmar_direccion", return_value=False):
             with patch("controllers.registro.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "no", rm)
         assert result[1] == 200

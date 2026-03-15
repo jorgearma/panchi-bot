@@ -1,5 +1,8 @@
+import logging
 from sqlalchemy.exc import SQLAlchemyError
 from models import Producto
+
+logger = logging.getLogger(__name__)
 
 
 class ProductoManager:
@@ -27,10 +30,9 @@ class ProductoManager:
             
             return lista_productos
         except SQLAlchemyError as e:
-            print("Error al obtener los productos:", e)
+            logger.error("Error al obtener los productos: %s", e)
             return None
-        
-        
+
     def obtener_producto_por_codigo(self, codigo):
         """Recupera un producto de la base de datos según su código."""
         try:
@@ -41,12 +43,12 @@ class ProductoManager:
                     "Precio": producto.Precio,
                     "Categoria": producto.Categoria,
                     "Ingredientes": producto.Ingredientes,
-                    "Imagen": producto.ImagenURL,  # Ruta de la imagen en el servidor
+                    "Imagen": producto.ImagenURL,
                     "Codigo": producto.ProductoID
                 }
             else:
                 return None
         except SQLAlchemyError as e:
-            print("Error al obtener el producto por código:", e)
+            logger.error("Error al obtener el producto por código: %s", e)
             return None    
         

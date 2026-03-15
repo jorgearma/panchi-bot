@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-import os
 import logging
+import config as app_config
 import sentry_sdk
 from sentry_sdk import capture_exception
 from flask import Flask, jsonify
@@ -25,7 +25,7 @@ def create_app(config: dict = None) -> Flask:
         )
 
     app = Flask(__name__)
-    app.secret_key = os.environ.get('SECRET_KEY')
+    app.secret_key = app_config.SECRET_KEY
     app.teardown_appcontext(close_db)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 

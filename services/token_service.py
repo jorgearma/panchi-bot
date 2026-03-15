@@ -1,8 +1,8 @@
-import os
 import logging
 import secrets
-from managers.gestor_redis import redismanager
 import json
+import config
+from managers.gestor_redis import redismanager
 from schemas.usuario import UsuarioDatos
 from pydantic import ValidationError
 
@@ -15,7 +15,7 @@ def generar_token_temporal(usuario_datos):
             usuario_validado = UsuarioDatos(**usuario_datos)
         except ValidationError as e:
             logger.error("Error de validación en usuario_datos: %s", e)
-            return "Datos de usuario inválidos.", 400
+            raise ValueError(f"Datos de usuario inválidos: {e}") from e
 
         datos_usuario = {
         "id": usuario_validado.id,
@@ -31,5 +31,5 @@ def generar_token_temporal(usuario_datos):
 # Generar enlace único  mejoras codificar el numero del cliente
 def generar_enlace( restaurante_elegido , usuario_datos):
     token = generar_token_temporal(usuario_datos)
-    return f"{os.environ.get('PUBLIC_URL')}/menu/{token}"
+    return f"{config.PUBLIC_URL}/menu/{token}"
 

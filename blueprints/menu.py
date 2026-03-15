@@ -54,6 +54,9 @@ def quiniela(token=None):
             logger.error("Error al obtener el pedido tras varios intentos: %s", e)
             return jsonify({"error": "Error en la base de datos. Intente más tarde."}), 500
 
+        if last_pedido is None:
+            return render_template("error.html", mensaje="No tienes ningún pedido activo."), 404
+
         estado = last_pedido.Estado
         logger.debug("Estado del pedido: %s, user_id=%s", estado, id_user)
 
