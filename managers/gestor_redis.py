@@ -3,6 +3,7 @@ import redis
 import logging
 from tenacity import retry, wait_fixed, stop_after_attempt
 import json
+from states import EstadoRegistro
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,7 @@ class EstadoUsuario:
             except json.JSONDecodeError as e:
                 raise Exception("Error al decodificar el estado del usuario") from e
         # Si no hay estado, se retorna un estado por defecto.
-        return {"estado": "saludo_inicial"}
+        return {"estado": EstadoRegistro.SALUDO_INICIAL}
 
     @retry(wait=wait_fixed(2), stop=stop_after_attempt(3))
     def actualizar_estado(self, nuevo_estado, datos_adicionales=None):

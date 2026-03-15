@@ -10,6 +10,7 @@ from models import Usuario_web
 from modelos.validator_usuario import UsuarioDatos
 from managers.gestor_redis import redismanager
 from services import gestor_pedidos, cache
+from states import EstadoPedido
 
 blueprint_menu = Blueprint('menu', __name__)
 
@@ -61,9 +62,9 @@ def quiniela(token=None):
         usuario = Usuario_web(datos_completos)
         print(datos_completos, "user")
 
-        if estado == "enlace":
+        if estado == EstadoPedido.ENLACE:
             return render_template('quiniela.html', usuario=usuario)
-        elif estado == "enlace2":
+        elif estado == EstadoPedido.ENLACE2:
             pedido_id = last_pedido.redisID
             return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
         else:
