@@ -1,7 +1,7 @@
-import os
 import uuid
 import logging
-from flask import Blueprint, request, jsonify, make_response
+import config
+from flask import Blueprint, request, jsonify
 
 logger = logging.getLogger(__name__)
 
@@ -13,15 +13,8 @@ from controllers.pago import iniciar_pago
 blueprint_api = Blueprint('api', __name__)
 
 
-@blueprint_api.route('/api/confirmacion', methods=['OPTIONS', 'POST'])
+@blueprint_api.route('/api/confirmacion', methods=['POST'])
 def agregar_pedido_confirmacion():
-    if request.method == 'OPTIONS':
-        response = make_response('')
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        return response, 200
-
     data = request.json
     logger.debug("Datos recibidos en confirmacion: %s", data)
 
@@ -36,7 +29,7 @@ def agregar_pedido_confirmacion():
         productos_recibidos=data.get("productos", []),
         cache=cache,
         gestor_pedidos=gestor_pedidos,
-        public_url=os.environ.get("PUBLIC_URL", ""),
+        public_url=config.PUBLIC_URL or "",
     )
 
     if not success:
@@ -45,15 +38,8 @@ def agregar_pedido_confirmacion():
     return jsonify({"redirect_url": result})
 
 
-@blueprint_api.route('/api/agregar_pedido', methods=['OPTIONS', 'POST'])
+@blueprint_api.route('/api/agregar_pedido', methods=['POST'])
 def agregar_pedido():
-    if request.method == 'OPTIONS':
-        response = make_response('')
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        return response, 200
-
     data = request.json
     logger.debug("Datos recibidos en agregar pedido: %s", data)
 
@@ -71,13 +57,11 @@ def agregar_pedido():
         gestor_pedidos=gestor_pedidos,
         gestor_productos=gestor_productos,
         monei=get_monei(),
-        public_url=os.environ.get("PUBLIC_URL", ""),
+        public_url=config.PUBLIC_URL or "",
     )
 
     if not success:
-        if "no encontrado" in result.lower():
-            return jsonify({"error": result}), 404
-        return jsonify({"error": result}), 400 if "Producto" in result else 500
+        return jsonify({"error": result}), 400
 
     if result == "El pedido ya está en proceso de pago.":
         return jsonify({"message": result}), 200

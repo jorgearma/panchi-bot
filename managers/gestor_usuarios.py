@@ -1,6 +1,9 @@
+import logging
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from models import Usuario
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+
+logger = logging.getLogger(__name__)
 
 class GestorUsuarios:
 
@@ -22,19 +25,19 @@ class GestorUsuarios:
                 }
             return None
         except SQLAlchemyError as e:
-            print("Error al obtener el usuario:", e)
+            logger.error("Error al obtener el usuario: %s", e)
             return None
 
     def guardar_usuario(self, numero_cliente, nombre, direccion):
         """Guarda un nuevo usuario en la base de datos."""
         try:
-            nuevo_usuario = Usuario(numero_cliente=numero_cliente, nombre=nombre, direccion=direccion)  # Crear una instancia del modelo
+            nuevo_usuario = Usuario(numero_cliente=numero_cliente, nombre=nombre, direccion=direccion)
             self.session.add(nuevo_usuario)
             self.session.commit()
-            print(f"Usuario {nombre} guardado en la base de datos.")
+            logger.info("Usuario %s guardado en la base de datos.", nombre)
         except SQLAlchemyError as e:
             self.session.rollback()
-            print("Error al guardar el usuario en la base de datos:", e)
+            logger.error("Error al guardar el usuario en la base de datos: %s", e)
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
     def obtener_usuario_completo(self, numero_cliente):
@@ -57,11 +60,9 @@ class GestorUsuarios:
             # Si no se encontró usuario, se retorna None
             return usuario  
         except OperationalError as op_err:
-            # Error de conexión (o similar)
-            print("Error de conexión al verificar el usuario:", op_err)
-            # Se relanza la excepción para que el decorador realice los reintentos
+            logger.error("Error de conexión al verificar el usuario: %s", op_err)
             raise
         except SQLAlchemyError as e:
-            print("Error al verificar el usuario:", e)
+            logger.error("Error al verificar el usuario: %s", e)
             raise
         

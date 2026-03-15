@@ -3,9 +3,11 @@ import logging
 
 from pydantic import ValidationError
 from utils.es_pregunta import es_pregunta
+from services import gestor_pedidos
 from services.token_service import generar_enlace
 from services.twilio_service import enviar_mensaje_whatsapp
-from utils.menu_opciones import menu, limpiar_texto, mostrar_menu
+from utils.menu_opciones import menu, mostrar_menu
+from utils.text_utils import limpiar_texto
 from schemas.twilio import PedidoInput
 from states import EstadoPedido
 
@@ -19,14 +21,11 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
     try:
         # Validar los datos de entrada con Pydantic
         datos = PedidoInput(pedido=pedido, numero_cliente=numero_cliente, id_pedido_actual=id_pedido_actual)
-        print(f"Datos validados: {datos}")
+        logger.debug("Datos validados: pedido=%s, cliente=%s", datos.pedido, datos.numero_cliente)
 
     except ValidationError as e:
         # Retornar errores de validación como respuesta
         return f"❌ Error en los datos de entrada:\n{e}"
-
-    # Si los datos son válidos, continuar con el procesamiento
-    from services import gestor_pedidos
 
     if es_pregunta(datos.pedido):
         return "Lo siento, no reconocí tu pregunta."
@@ -54,7 +53,7 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
                             return "❌ Ocurrió un error al procesar la opción. Intente nuevamente."
 
                     except Exception as e:
-                        print(f"Error al generar el enlace: {e}")
+                        logger.error("Error al generar el enlace: %s", e)
                         return "❌ Error inesperado. Intente nuevamente."
                 return mensaje_respuesta
 

@@ -1,8 +1,8 @@
-import os
 import logging
 import secrets
-from managers.gestor_redis import redismanager
 import json
+import config
+from managers.gestor_redis import redismanager
 from schemas.usuario import UsuarioDatos
 from pydantic import ValidationError
 
@@ -31,5 +31,5 @@ def generar_token_temporal(usuario_datos):
 # Generar enlace único  mejoras codificar el numero del cliente
 def generar_enlace( restaurante_elegido , usuario_datos):
     token = generar_token_temporal(usuario_datos)
-    return f"{os.environ.get('PUBLIC_URL')}/menu/{token}"
+    return f"{config.PUBLIC_URL}/menu/{token}"
 
