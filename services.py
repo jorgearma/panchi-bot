@@ -14,4 +14,8 @@ gestor_usuarios = GestorUsuariosBD()
 gestor_productos = ProductoManager()
 
 monei = Monei.MoneiClient(api_key=os.environ.get('MONEI_API_KEY'))
-cache = redis.Redis(host='localhost', port=6379, db=0)
+cache = redis.Redis(
+    host=os.environ.get('REDIS_HOST', 'localhost'),
+    port=int(os.environ.get('REDIS_PORT', 6379)),
+    db=int(os.environ.get('REDIS_DB', 0)),
+)

@@ -1,14 +1,8 @@
-import pyodbc
 from menu import mostrar_menu
 from utils.mensajes import enviar_mensaje_whatsapp
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.exc import SQLAlchemyError
-from models import Usuario 
-
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
+from models import Usuario
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
-from sqlalchemy.exc import SQLAlchemyError , OperationalError
-Base = declarative_base()
 
 class GestorUsuariosBD:
 

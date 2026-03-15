@@ -85,11 +85,12 @@ def agregar_pedido():
         return jsonify({"error": "ID de usuario no proporcionado"}), 400
 
     pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-    estado1 = pedido_activo.Estado
 
-    print("estado pedido activo", estado1)
     if not pedido_activo:
         return jsonify({"error": "No se encontró un pedido activo para este usuario"}), 404
+
+    estado1 = pedido_activo.Estado
+    print("estado pedido activo", estado1)
 
     if estado1 == "confirmando-pago":
         return jsonify({"message": "El pedido ya está en proceso de pago."}), 200
