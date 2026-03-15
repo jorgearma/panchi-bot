@@ -8,32 +8,6 @@ from managers.gestor_redis import EstadoUsuario
 
 
 
-MENSAJES = {
-    "bienvenida": (
-        "💻 *Registro en el Sistema* 💻\n       ✨ *Urban Kitchen* ✨\n\n"
-        "¡Hola!👋 No estás registrado en nuestro sistema. "
-        "¿Te gustaría continuar con tu registro? 📝\n\n"
-        "▪️Escribe: *Si*\n\nSolo necesito tu *Nombre* y *Dirección* para la _entrega_ 🛵"
-    ),
-    "cancelacion": (
-        "No se ha realizado el registro. Si deseas continuar más tarde, solo avísanos. 😊"
-    ),
-    "solicitar_nombre": (
-        "📍 *Registro de Usuario* 📍\n\n🫵 Escribe tu *Nombre* 🫵\n           para continuar"
-    ),
-    "solicitar_direccion": (
-        "📍 *Registro de Dirección* 📍\n\nGracias. Ahora, por favor envía tu *Dirección Completa* 🏠.\n\n"
-        "👇 *Ejemplos:* 👇 \n\n🔹_Calle Labradores, 3, 1B_\n🔹_Avenida Pablo Iglesias, 79, 1B_\n\n"
-    ),
-    "direccion_invalida": (
-        "⛔ *La dirección no es válida* ⛔\n\nPor favor, revisa los *detalles* 📝.\n"
-        "¡Gracias por tu ayuda! 😊 \n\n 👇 *Ejemplos:* 👇 \n\n"
-        "•_Calle Los Labradores 3, 1B_\n•_Avenida Pablo Iglesias 79, 1B_"
-    ),
-}
-
-
-
 
 
 class Mensajeria:

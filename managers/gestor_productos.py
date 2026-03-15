@@ -1,10 +1,5 @@
-import pyodbc
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from models import Producto
-
-
-Base = declarative_base()
 
 
 class ProductoManager:

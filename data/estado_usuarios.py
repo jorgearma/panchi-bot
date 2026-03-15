@@ -1,3 +1,7 @@
+# LEGACY — solo usado por controllers/registro_de_usuarios/registro.py (también legacy).
+# El estado real de usuarios se gestiona en Redis via managers/gestor_redis.py.
+# Candidato a eliminación en Fase 4.
+
 estado_usuarios = {}
 
 def obtener_estado_usuario(numero_cliente):

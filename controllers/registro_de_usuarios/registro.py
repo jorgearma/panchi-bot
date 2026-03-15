@@ -1,3 +1,7 @@
+# LEGACY — no importado por ningún blueprint activo.
+# La lógica activa está en controllers/no_resgistrados.py (usa Redis, no dict en memoria).
+# Candidato a eliminación en Fase 4 tras validar que no hay dependencias externas.
+
 # /services/registro_usuario.py
 from utils.mensajes import enviar_mensaje_whatsapp
 from utils.maps import validar_direccion

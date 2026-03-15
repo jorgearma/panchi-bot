@@ -1,6 +1,4 @@
 import logging
-import hmac
-import hashlib
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
@@ -16,13 +14,6 @@ from services import gestor_usuarios, gestor_pedidos
 
 blueprint_webhook = Blueprint('webhook', __name__)
 logger = logging.getLogger(__name__)
-
-WEBHOOK_SECRET = b'tu_clave_secreta'
-
-
-def verify_signature(request_data, received_signature):
-    computed_signature = hmac.new(WEBHOOK_SECRET, request_data, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(computed_signature, received_signature)
 
 
 @blueprint_webhook.route('/webhook', methods=['POST'])

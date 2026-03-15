@@ -1,10 +1,11 @@
 import re
 from unidecode import unidecode
+from pydantic import ValidationError
 from utils.es_pregunta import es_pregunta
 from utils.crear_token import generar_enlace
 from utils.mensajes import enviar_mensaje_whatsapp
 from modelos.validator_twilio import PedidoInput
-from pydantic import ValidationError
+
 menu = {
     "👇*Obciones*👇": {
         "tienda 🏪": {"codigo": 1, "mensaje": "Tienda online"},
@@ -30,8 +31,6 @@ def mostrar_menu():
     return resultado
 
 
-
-from pydantic import ValidationError
 
 def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
     """
