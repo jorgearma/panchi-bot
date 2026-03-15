@@ -47,7 +47,7 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
         return f"❌ Error en los datos de entrada:\n{e}"
 
     # Si los datos son válidos, continuar con el procesamiento
-    from main import gestor_pedidos
+    from services import gestor_pedidos
 
     if es_pregunta(datos.pedido):
         return "Lo siento, no reconocí tu pregunta."

@@ -4,8 +4,7 @@ from utils.mensajes import enviar_mensaje_whatsapp
 
 
 def manejar_respuesta_positiva(numero_cliente , data_redis):
-    from main import gestor_usuarios
-    from main import gestor_pedidos
+    from services import gestor_usuarios, gestor_pedidos
     
     
     estado = data_redis  
