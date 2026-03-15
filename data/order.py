@@ -62,6 +62,7 @@ class GestorPedidos:
             pedido = (
                 self.session.query(Pedido)
                 .filter(Pedido.ClienteID == id_usuario)
+                .filter(Pedido.Estado != "pagado")
                 .order_by(Pedido.FechaCreacion.desc())
                 .first()
             )

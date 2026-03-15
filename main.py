@@ -488,7 +488,8 @@ def verify_signature(request_data, received_signature):
 # # Esta ruta se encarga de recibir los
 # # webhooks de Monei y procesar la información del pago.
 
-@app.route('/webhoo/monei', methods=['POST'])
+@app.route('/webhoo/monei', methods=['POST'])  # ruta legacy — eliminar cuando Monei apunte a /webhook/monei
+@app.route('/webhook/monei', methods=['POST'])
 def webhoo():
     # Obtener el cuerpo de la petición
     request_data = request.get_data()

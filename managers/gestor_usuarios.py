@@ -2,7 +2,6 @@ import pyodbc
 from database import   db_session
 from menu import mostrar_menu
 from utils.mensajes import enviar_mensaje_whatsapp
-from data.estado_usuarios import estado_usuarios
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
@@ -107,12 +106,7 @@ class GestorUsuarios:
         nombre_usuario = usuario_datos["nombre"]
         
 
-        # 2. Verificamos si es un usuario recién registrado
-        if estado_usuarios.get(numero_cliente, {}).get("recien_registrado"):
-            del estado_usuarios[numero_cliente]["recien_registrado"]
-            return "Usuario registrado, esperando siguiente mensaje.", 200
-
-        # 3. Si no tiene un pedido pendiente, lo iniciamos y enviamos el menú
+        # Si no tiene un pedido pendiente, lo iniciamos y enviamos el menú
         
         try:
             gestor_pedidos.iniciar_pedido(id_usuario, direccion_usuario, nombre_usuario)
