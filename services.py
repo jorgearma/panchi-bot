@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from data.order import GestorPedidos
+from managers.gestor_pedidos import GestorPedidos
 from managers.gestor_usuarios import GestorUsuariosBD
 from managers.gestor_productos import ProductoManager
 from managers.gestor_redis import redismanager
