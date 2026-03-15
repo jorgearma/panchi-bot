@@ -9,6 +9,7 @@ from tenacity import RetryError
 from pydantic import ValidationError
 import redis
 
+import config
 from schemas.usuario import UsuarioDatos
 from managers.gestor_redis import redismanager
 from services import gestor_pedidos, cache
@@ -61,7 +62,7 @@ def quiniela(token=None):
         logger.debug("Estado del pedido: %s, user_id=%s", estado, id_user)
 
         if estado == EstadoPedido.ENLACE:
-            return render_template('quiniela.html', usuario=datos_completos_validados)
+            return render_template('quiniela.html', usuario=datos_completos_validados, public_url=config.PUBLIC_URL or "")
         elif estado == EstadoPedido.ENLACE2:
             pedido_id = last_pedido.redisID
             return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
@@ -94,6 +95,7 @@ def mostrar_confirmacion():
         total=pedido["total"],
         productos=pedido["productos"],
         pedidoID=pedido["pedidoID"],
+        public_url=config.PUBLIC_URL or "",
     )
 
 
@@ -118,4 +120,5 @@ def mostrar_confirmacion_depago():
         total=pedido["total"],
         productos=pedido["productos"],
         pedidoID=pedido["pedidoID"],
+        public_url=config.PUBLIC_URL or "",
     )
