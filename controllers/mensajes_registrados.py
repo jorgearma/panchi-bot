@@ -1,7 +1,7 @@
 from utils.mensajes import enviar_mensaje_whatsapp
-from managers.gestor_usuarios import GestorUsuarios
+from utils.menu_opciones import mostrar_menu
 from controllers.pedido import procesar_pedido
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from tenacity import RetryError
 from states import EstadoPedido
 
@@ -10,7 +10,29 @@ from states import EstadoPedido
 # # y la logica de los registrados
 
 class ManejadorMensajesRegistrados:
-    
+
+    @staticmethod
+    def _iniciar_pedido_y_enviar_menu(numero_cliente, usuario_datos):
+        """Inicia un nuevo pedido en BD y envía el menú al usuario por WhatsApp."""
+        from services import gestor_pedidos
+
+        id_usuario = usuario_datos["id"]
+        direccion_usuario = usuario_datos["direccion"]
+        nombre_usuario = usuario_datos["nombre"]
+
+        try:
+            gestor_pedidos.iniciar_pedido(id_usuario, direccion_usuario, nombre_usuario)
+        except (SQLAlchemyError, OperationalError) as error:
+            print(f"Error al iniciar el pedido para el usuario {id_usuario}: {error}")
+            return "Error al procesar el pedido. Inténtalo más tarde.", 500
+
+        menu_texto = mostrar_menu()
+        enviar_mensaje_whatsapp(
+            f"¡Hola *{nombre_usuario}*! 🙂 {menu_texto} \nescribe el *numero* para elegir ",
+            numero_cliente
+        )
+        return "Mensaje enviado", 200
+
     @staticmethod
     def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
         from services import gestor_pedidos, gestor_usuarios
@@ -46,7 +68,7 @@ class ManejadorMensajesRegistrados:
 
         if not pedido_activo:
             print(f"Usuario {numero_cliente} sin pedido activo — iniciando nuevo pedido.")
-            return GestorUsuarios.manejar_usuario(numero_cliente, usuario_datos)
+            return ManejadorMensajesRegistrados._iniciar_pedido_y_enviar_menu(numero_cliente, usuario_datos)
 
         estado_del_pedido = pedido_activo.Estado
         print(f"Estado del pedido: {estado_del_pedido}")
