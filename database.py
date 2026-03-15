@@ -75,7 +75,22 @@ engine = create_engine(
 # Base y sesión
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-db_session = SessionLocal()
+
+
+def get_db():
+    """Devuelve la sesión asociada al request actual (via Flask g)."""
+    from flask import g
+    if 'db' not in g:
+        g.db = SessionLocal()
+    return g.db
+
+
+def close_db(e=None):
+    """Cierra la sesión al final del request. Registrar con app.teardown_appcontext."""
+    from flask import g
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 # 📌 Función para inicializar la base de datos (crear tablas)
 def conectar_bd1():
@@ -94,5 +109,3 @@ def conectar_bd1():
     except Exception as e:
         print(f"❌ Error al inicializar la base de datos: {e}")
 
-# Ejecutar la inicialización al importar el módulo
-conectar_bd1()

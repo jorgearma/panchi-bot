@@ -1,5 +1,4 @@
 import pyodbc
-from database import   db_session
 from menu import mostrar_menu
 from utils.mensajes import enviar_mensaje_whatsapp
 from sqlalchemy import create_engine, Column, Integer, String
@@ -12,8 +11,11 @@ from sqlalchemy.exc import SQLAlchemyError , OperationalError
 Base = declarative_base()
 
 class GestorUsuariosBD:
-    def __init__(self):
-        self.session = db_session
+
+    @property
+    def session(self):
+        from database import get_db
+        return get_db()
        
 
     def obtener_usuario(self, numero_cliente):

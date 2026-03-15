@@ -1,6 +1,5 @@
 import pyodbc
-from database import   db_session
-from sqlalchemy.orm import  declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from models import Producto
 
@@ -9,8 +8,11 @@ Base = declarative_base()
 
 
 class ProductoManager:
-    def __init__(self):
-        self.session = db_session
+
+    @property
+    def session(self):
+        from database import get_db
+        return get_db()
     
     def obtener_productos(self):
         """Recupera todos los productos de la base de datos."""
