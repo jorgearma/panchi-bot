@@ -43,7 +43,5 @@ def manejar_errores_globales(e):
 
 
 if __name__ == "__main__":
-    db_conn = conectar_bd1()
-    if db_conn:
-        db_conn.close()
+    conectar_bd1()
     app.run(debug=True, host='0.0.0.0', port=5000)
