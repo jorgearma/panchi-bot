@@ -8,7 +8,7 @@ from controllers.registro import manejar_registro
 from controllers.mensajes_registrados import ManejadorMensajesRegistrados
 from utils.text_utils import limpiar_texto
 from utils.mensajes import enviar_mensaje_whatsapp
-from modelos.validator_twilio import WebhookRequest
+from schemas.twilio import WebhookRequest
 from managers.gestor_redis import redismanager
 from services import gestor_usuarios, gestor_pedidos
 from states import EstadoPedido

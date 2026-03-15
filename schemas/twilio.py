@@ -18,7 +18,7 @@ class WebhookRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("El mensaje no puede estar vacío")
         return v.strip()
-    
+
 
 from pydantic import BaseModel, Field
 
