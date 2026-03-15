@@ -2,7 +2,7 @@
 from utils.mensajes import enviar_mensaje_whatsapp
 from utils.maps import validar_direccion
 from utils.confirmar_direccion import confirmar_direccion
-from managers.gestor_redis import EstadoUsuario
+from managers.estado_usuario import EstadoUsuario
 from states import EstadoRegistro
 
 

@@ -1,6 +1,6 @@
 from utils.mensajes import enviar_mensaje_whatsapp
 from managers.gestor_usuarios import GestorUsuarios
-from menu import procesar_pedido
+from controllers.pedido import procesar_pedido
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
 from states import EstadoPedido
