@@ -8,6 +8,9 @@ class EstadoRegistro(str, Enum):
     ESPERANDO_DIRECCION = "esperando_direccion"
     CONFIRMANDO_DIRECCION = "confirmando_direccion"
 
+    def __str__(self):
+        return self.value
+
 
 class EstadoPedido(str, Enum):
     PENDIENTE = "Pendiente"
@@ -15,6 +18,9 @@ class EstadoPedido(str, Enum):
     ENLACE2 = "enlace2"
     CONFIRMANDO_PAGO = "confirmando-pago"
     PAGADO = "pagado"
+
+    def __str__(self):
+        return self.value
 
 
 # Transiciones válidas del flujo de registro.
