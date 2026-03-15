@@ -1,8 +1,12 @@
+import os
 import secrets
 from managers.gestor_redis import redismanager
 import json
 from modelos.validator_usuario import UsuarioDatos
 from pydantic import ValidationError
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Generar token y almacenarlo en Redis
 def generar_token_temporal(usuario_datos):
@@ -27,5 +31,5 @@ def generar_token_temporal(usuario_datos):
 # Generar enlace único  mejoras codificar el numero del cliente
 def generar_enlace( restaurante_elegido , usuario_datos):
     token = generar_token_temporal(usuario_datos)
-    return f"https://e7c3-62-116-223-170.ngrok-free.app/menu/{token}"
+    return f"{os.environ.get('PUBLIC_URL')}/menu/{token}"
 

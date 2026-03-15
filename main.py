@@ -37,7 +37,7 @@ gestor_usuarios = GestorUsuariosBD()
 gestor_productos = ProductoManager()
 
 # Instanciar el cliente de Monei con tu API key
-monei = Monei.MoneiClient(api_key='pk_test_d0b6b6a4723919770f88997d1dbe584b')
+monei = Monei.MoneiClient(api_key=os.environ.get('MONEI_API_KEY'))
 cache = redis.Redis(host='localhost', port=6379, db=0)
 
 
@@ -201,7 +201,7 @@ def agregar_pedido_confirmacion():
         else:
             gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
 
-        confirmacion_url = f"https://e7c3-62-116-223-170.ngrok-free.app/confirmacion_pago?pedido_id={pedido_id}" 
+        confirmacion_url = f"{os.environ.get('PUBLIC_URL')}/confirmacion_pago?pedido_id={pedido_id}"
         
 
         return jsonify({"redirect_url": confirmacion_url})
@@ -327,7 +327,7 @@ def agregar_pedido():
             'order_id': str(pedido_activo_id),
             'currency': 'EUR',
             'description': nombre_cliente,
-            'completeUrl': f"https://e7c3-62-116-223-170.ngrok-free.app/pago_confirmado?pedido_id={redisID}",
+            'completeUrl': f"{os.environ.get('PUBLIC_URL')}/pago_confirmado?pedido_id={redisID}",
             'customer': {
                 'email': 'john.doe@monei.com',  # Obtener el email real si está disponible
                 'name': nombre_cliente,
