@@ -1,7 +1,11 @@
+import logging
 from decimal import Decimal
 from models import Pedido , PedidoDetalle , Producto
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from sqlalchemy.exc import SQLAlchemyError , OperationalError
+from states import EstadoPedido, transicion_valida_pedido
+
+logger = logging.getLogger(__name__)
 
 class GestorPedidos:
 
@@ -48,7 +52,7 @@ class GestorPedidos:
         Se asume que el modelo Pedido tiene un atributo 'Estado' donde 'Pendiente' indica que aún no se ha procesado.
         """
         try:
-            pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado='Pendiente').first()
+            pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado=EstadoPedido.PENDIENTE).first()
             return pedido is not None
         except SQLAlchemyError as error:
             print(f"Error al verificar pedido pendiente para el cliente {cliente_id}: {error}")
@@ -64,7 +68,7 @@ class GestorPedidos:
             pedido = (
                 self.session.query(Pedido)
                 .filter(Pedido.ClienteID == id_usuario)
-                .filter(Pedido.Estado != "pagado")
+                .filter(Pedido.Estado != EstadoPedido.PAGADO)
                 .order_by(Pedido.FechaCreacion.desc())
                 .first()
             )
@@ -109,17 +113,22 @@ class GestorPedidos:
     def actualizar_estado(self, pedido_id, nuevo_estado):
         try:
             pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-            if pedido:
-                pedido.Estado = nuevo_estado
-                self.session.commit()
-                return True
-            else:
+            if not pedido:
                 print(f"Pedido con ID {pedido_id} no encontrado.")
                 return False
+            if not transicion_valida_pedido(pedido.Estado, nuevo_estado):
+                logger.error(
+                    "Transición de pedido inválida: %s → %s (pedido %s)",
+                    pedido.Estado, nuevo_estado, pedido_id,
+                )
+                return False
+            pedido.Estado = nuevo_estado
+            self.session.commit()
+            return True
         except SQLAlchemyError as error:
             self.session.rollback()
             print(f"Error al actualizar el estado del pedido {pedido_id}: {error}")
-            raise 
+            raise
     
     def introudcir_dato_redisID(self, pedido_id, id_redis):
         pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()

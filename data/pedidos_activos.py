@@ -1,1 +1,0 @@
-pedidos_activos = {}

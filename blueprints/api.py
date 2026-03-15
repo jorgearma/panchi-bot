@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify, make_response
 from Monei import ApiException
 
 from services import gestor_pedidos, gestor_productos, monei, cache
+from states import EstadoPedido
 
 blueprint_api = Blueprint('api', __name__)
 
@@ -59,10 +60,10 @@ def agregar_pedido_confirmacion():
     }), ex=3600)
 
     gestor_pedidos.introudcir_dato_redisID(pedidoID.PedidoID, pedido_id)
-    if pedidoID.Estado != "enlace":
+    if pedidoID.Estado != EstadoPedido.ENLACE:
         print(f"No se puede cambiar el estado. Estado actual: '{pedidoID.Estado}'")
     else:
-        gestor_pedidos.actualizar_estado(pedidoID.PedidoID, "enlace2")
+        gestor_pedidos.actualizar_estado(pedidoID.PedidoID, EstadoPedido.ENLACE2)
 
     confirmacion_url = f"{os.environ.get('PUBLIC_URL')}/confirmacion_pago?pedido_id={pedido_id}"
     return jsonify({"redirect_url": confirmacion_url})
@@ -85,13 +86,14 @@ def agregar_pedido():
         return jsonify({"error": "ID de usuario no proporcionado"}), 400
 
     pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-    estado1 = pedido_activo.Estado
 
-    print("estado pedido activo", estado1)
     if not pedido_activo:
         return jsonify({"error": "No se encontró un pedido activo para este usuario"}), 404
 
-    if estado1 == "confirmando-pago":
+    estado1 = pedido_activo.Estado
+    print("estado pedido activo", estado1)
+
+    if estado1 == EstadoPedido.CONFIRMANDO_PAGO:
         return jsonify({"message": "El pedido ya está en proceso de pago."}), 200
 
     productos_recibidos = data.get("productos", [])
@@ -148,7 +150,7 @@ def agregar_pedido():
         redirect_url = result.get('next_action', {}).get('redirect_url')
         print("URL de redirección obtenida:", redirect_url)
 
-        gestor_pedidos.actualizar_estado(pedido_activo_id, "confirmando-pago")
+        gestor_pedidos.actualizar_estado(pedido_activo_id, EstadoPedido.CONFIRMANDO_PAGO)
         gestor_pedidos.guardar_enlace(pedido_activo_id, redirect_url)
 
         if redirect_url:
@@ -172,10 +174,10 @@ def cambiar_estado_a_enlace():
     if not pedido:
         return jsonify({"error": "Pedido no encontrado"}), 404
 
-    if pedido.Estado == "confirmando-pago":
+    if pedido.Estado == EstadoPedido.CONFIRMANDO_PAGO:
         return jsonify({"error": "error'"}), 400
 
-    gestor_pedidos.actualizar_estado(pedido.PedidoID, "enlace")
+    gestor_pedidos.actualizar_estado(pedido.PedidoID, EstadoPedido.ENLACE)
     return jsonify({"message": "Estado actualizado a 'enlace'"}), 200
 
 

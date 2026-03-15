@@ -3,6 +3,7 @@ from managers.gestor_usuarios import GestorUsuarios
 from menu import procesar_pedido
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
+from states import EstadoPedido
 
 
 # # esta clase maneja el flujo de mensajes 
@@ -51,35 +52,27 @@ class ManejadorMensajesRegistrados:
         print(f"Estado del pedido: {estado_del_pedido}")
         id_pedido_activo = pedido_activo.PedidoID
         #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante  estado "pendiente"
-        if estado_del_pedido == "Pendiente":
+        if estado_del_pedido == EstadoPedido.PENDIENTE:
             mensaje = procesar_pedido(mensaje_cliente, numero_cliente, id_pedido_activo , usuario_datos)
             print(f"Mensaje procesado: {usuario_datos}")
             enviar_mensaje_whatsapp(mensaje, numero_cliente)
             return " mensaje enviado",200
-           
-            
-            
-        
+
+
+
+
         #desarrollar logica cuando el estado del pedido es "enlace" o enlace2
-        if estado_del_pedido == "enlace" or estado_del_pedido == "enlace2":
+        if estado_del_pedido == EstadoPedido.ENLACE or estado_del_pedido == EstadoPedido.ENLACE2:
             enlace = pedido_activo.enlace
             mensaje = f"Puede continuar con su pedido en el *enlace* proporcionado \n\n▪*Enlace* unico 👇 \n\n🔗{(enlace)}"
             enviar_mensaje_whatsapp(mensaje, numero_cliente)
             return  " mensaje enviado",200
-        
+
         #desarrollar logica de cuando el usuario este la pagina de pago
-        if estado_del_pedido == "confirmando-pago":
+        if estado_del_pedido == EstadoPedido.CONFIRMANDO_PAGO:
             enlace_pago = pedido_activo.enlace
             enviar_mensaje_whatsapp(f"🔗 {enlace_pago}\n ✅ Pago seguro  con *MONEI*" , numero_cliente)
             return  " mensaje enviado",200
-        
-
-        # esta es la primera interaccion del usuario aqui se crea el pedido y se le envia 
-        # el mensaje de las obciones que hay  la logica esta en el archivo menu.py
-
-        respuesta_usuario = GestorUsuarios.manejar_usuario(numero_cliente , usuario_datos)
-        if respuesta_usuario:
-            return respuesta_usuario
 
        
 
