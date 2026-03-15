@@ -33,6 +33,13 @@ def iniciar_pago(
     if pedido_activo.Estado == EstadoPedido.CONFIRMANDO_PAGO:
         return True, "El pedido ya está en proceso de pago."
 
+    if pedido_activo.Estado != EstadoPedido.ENLACE2:
+        logger.error(
+            "iniciar_pago: pedido %s en estado inesperado '%s'",
+            pedido_activo.PedidoID, pedido_activo.Estado
+        )
+        return False, "El pedido no está listo para procesar el pago"
+
     productos_validos = []
     total_calculado = 0.0
 

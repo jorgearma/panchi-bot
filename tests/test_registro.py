@@ -172,7 +172,7 @@ class TestConfirmandoDireccion:
         from controllers.registro import manejar_registro
         import json
         rm = make_redis_manager(EstadoRegistro.CONFIRMANDO_DIRECCION)
-        with patch("controllers.registro.confirmar_direccion", return_value=1):
+        with patch("controllers.registro.confirmar_direccion", return_value=False):
             with patch("controllers.registro.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "no", rm)
         assert result[1] == 200

@@ -30,10 +30,10 @@ def confirmar_direccion(numero_cliente, mensaje_cliente, data_redis):
         _enviar_mensaje_registro(numero_cliente, estado["nombre"], menu_despues_registro)
         usuario_info = gestor_usuarios.obtener_usuario_completo(numero_cliente)
         if usuario_info:
-            gestor_pedidos.iniciar_pedido(usuario_info["id"], estado["direccion"], estado["nombre"])
+            gestor_pedidos.iniciar_pedido(usuario_info["id"], estado["direccion"], numero_cliente)
         return "Usuario registrado", 200
     else:
-        return 1
+        return False
 
 
 class Mensajeria:
@@ -175,7 +175,7 @@ class RegistroUsuario:
             data_redis = self.estado_usuario.obtener_estado()
             logger.debug("data redis: %s", data_redis)
             respuesta = confirmar_direccion(self.numero_cliente, mensaje_cliente, data_redis)
-            if respuesta == 1:
+            if respuesta is False:
                 self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_DIRECCION)
                 enviar_mensaje_whatsapp(
                     "😊 *¡Vale!* Vamos a intentarlo de nuevo.\nPor favor, *ingresa una dirección* \n\n👇 *Ejemplos:* 👇 \n\n•Calle Los Labradores 3, 1B\n•avenida pablo iglecias 79, 1b", 
