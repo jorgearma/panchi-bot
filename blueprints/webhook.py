@@ -88,7 +88,7 @@ def webhook_monei():
         return jsonify({"error": "Invalid signature"}), 401
 
     received_signature = request.headers.get("MONEI-SIGNATURE", "")
-    computed = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    computed = hmac.HMAC(secret.encode(), raw_body, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(computed, received_signature):
         logger.warning("Monei webhook signature mismatch")
         return jsonify({"error": "Invalid signature"}), 401
