@@ -6,7 +6,7 @@ from tenacity import RetryError
 from pydantic import ValidationError
 import redis
 
-from models import Usuario_web
+from modelos.usuario_web import UsuarioWeb
 from modelos.validator_usuario import UsuarioDatos
 from managers.gestor_redis import redismanager
 from services import gestor_pedidos, cache
@@ -59,7 +59,7 @@ def quiniela(token=None):
 
         estado = last_pedido.Estado
         datos_completos["token"] = token
-        usuario = Usuario_web(datos_completos)
+        usuario = UsuarioWeb(datos_completos)
         print(datos_completos, "user")
 
         if estado == EstadoPedido.ENLACE:
