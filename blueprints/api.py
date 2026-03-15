@@ -18,6 +18,10 @@ def agregar_pedido_confirmacion():
     data = request.json
     logger.debug("Datos recibidos en confirmacion: %s", data)
 
+    token = data.get("token", "")
+    if not token or not cache.get(token):
+        return jsonify({"error": "Sesión inválida o expirada"}), 401
+
     pedido_id_redis = str(uuid.uuid4())
     success, result = confirmar_carrito(
         pedido_id_redis=pedido_id_redis,
@@ -42,6 +46,10 @@ def agregar_pedido_confirmacion():
 def agregar_pedido():
     data = request.json
     logger.debug("Datos recibidos en agregar pedido: %s", data)
+
+    token = data.get("token", "")
+    if not token or not cache.get(token):
+        return jsonify({"error": "Sesión inválida o expirada"}), 401
 
     id_usuario = data.get("userID")
     if not id_usuario:
