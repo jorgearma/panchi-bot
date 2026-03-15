@@ -24,7 +24,7 @@ class GestorPedidos:
             return nuevo_pedido.PedidoID
         except (SQLAlchemyError, OperationalError) as error:
             self.session.rollback()  # Revertir cambios en caso de error
-            print(f"Error al iniciar el pedido: {error}")
+            logger.error("Error al iniciar el pedido: %s", error)
             raise
     
 
@@ -36,10 +36,10 @@ class GestorPedidos:
             # Actualiza el campo Enlace del pedido
             pedido.enlace = enlace
             self.session.commit()
-            print(f"El enlace ha sido guardado en el pedido {pedido_id}.")
+            logger.info("Enlace guardado en pedido %s", pedido_id)
             return True
         else:
-            print("No se encontró un pedido con el ID proporcionado.")
+            logger.warning("No se encontró un pedido con el ID proporcionado.")
             return False
             
 
@@ -55,7 +55,7 @@ class GestorPedidos:
             pedido = self.session.query(Pedido).filter_by(ClienteID=cliente_id, Estado=EstadoPedido.PENDIENTE).first()
             return pedido is not None
         except SQLAlchemyError as error:
-            print(f"Error al verificar pedido pendiente para el cliente {cliente_id}: {error}")
+            logger.error("Error al verificar pedido pendiente para el cliente %s: %s", cliente_id, error)
             raise
     
 
@@ -74,7 +74,7 @@ class GestorPedidos:
             )
             return pedido  # Devuelve None si no hay pedidos
         except SQLAlchemyError as error:
-            print(f"Error al obtener el pedido activo del usuario {id_usuario}: {error}")
+            logger.error("Error al obtener el pedido activo del usuario %s: %s", id_usuario, error)
             raise  # O manejar el caso donde no se encuentra un pedido
 
     
@@ -114,7 +114,7 @@ class GestorPedidos:
         try:
             pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
             if not pedido:
-                print(f"Pedido con ID {pedido_id} no encontrado.")
+                logger.warning("Pedido con ID %s no encontrado.", pedido_id)
                 return False
             if not transicion_valida_pedido(pedido.Estado, nuevo_estado):
                 logger.error(
@@ -127,7 +127,7 @@ class GestorPedidos:
             return True
         except SQLAlchemyError as error:
             self.session.rollback()
-            print(f"Error al actualizar el estado del pedido {pedido_id}: {error}")
+            logger.error("Error al actualizar el estado del pedido %s: %s", pedido_id, error)
             raise
     
     def guardar_redis_id(self, pedido_id, id_redis):
@@ -142,10 +142,10 @@ class GestorPedidos:
         try:
             pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
             if not pedido:
-                print(f"No se encontró un pedido con el ID {pedido_id}.")
+                logger.warning("No se encontró un pedido con el ID %s.", pedido_id)
             return pedido
         except SQLAlchemyError as error:
-            print(f"Error al recuperar el pedido con ID {pedido_id}: {error}")
+            logger.error("Error al recuperar el pedido con ID %s: %s", pedido_id, error)
             raise
 
 
