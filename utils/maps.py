@@ -61,16 +61,21 @@ def validar_coordenadas(coordenadas):
 TIPOS_VALIDOS = {"street_address", "premise", "subpremise"}
 
 def validar_direccion(direccion):
-    """
-    Valida si una dirección existe, es válida y está en el pueblo especificado.
-    """
     direccion_limpia = limpiar_direccion(direccion)
     url = construir_url(direccion_limpia)
+
+    print("DEBUG direccion original:", repr(direccion))
+    print("DEBUG direccion limpia:", repr(direccion_limpia))
+    print("DEBUG url:", url)
 
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
         datos = response.json()
+
+        print("DEBUG status API:", datos.get("status"))
+        print("DEBUG response text:", response.text)
+        print("DEBUG results:", datos.get("results"))
 
         if datos.get('status') != 'OK' or not datos.get('results'):
             logger.warning("Dirección no válida o no encontrada: %s", datos.get('status'))
@@ -78,27 +83,33 @@ def validar_direccion(direccion):
 
         resultado = datos['results'][0]
         direccion_formateada = resultado['formatted_address']
-        coordenadas = resultado['geometry']['location']  # Obtiene latitud y longitud
+        coordenadas = resultado['geometry']['location']
+        tipos = resultado.get("types", [])
 
-        # Validar si las coordenadas están dentro de Tarancón
+        print("DEBUG direccion formateada:", direccion_formateada)
+        print("DEBUG coordenadas:", coordenadas)
+        print("DEBUG types:", tipos)
+        print("DEBUG TIPOS_VALIDOS:", TIPOS_VALIDOS)
+
         if not validar_coordenadas(coordenadas):
+            print("DEBUG rechazada por coordenadas")
             logger.warning("Dirección fuera de los límites de Tarancón: %s", direccion_formateada)
             return False, direccion_formateada
 
-        # Validar si la dirección es demasiado general
         if direccion_formateada in VALID_GENERAL_ADDRESSES:
+            print("DEBUG rechazada por dirección general")
             logger.warning("Dirección demasiado general: %s", direccion_formateada)
             return False, None
 
-        # Validar si la dirección es específica
-        if not any(tipo in resultado.get("types", []) for tipo in TIPOS_VALIDOS):
-            logger.warning("La dirección no parece ser específica: %s", resultado.get("types"))
+        if not any(tipo in tipos for tipo in TIPOS_VALIDOS):
+            print("DEBUG rechazada por tipos")
+            logger.warning("La dirección no parece ser específica: %s", tipos)
             return False, direccion_formateada
 
+        print("DEBUG dirección aceptada")
         logger.info("Dirección válida: %s", direccion_formateada)
         return True, direccion_formateada
 
     except requests.exceptions.RequestException as e:
         logger.error("Error al conectar con la API de Google Maps: %s", e)
         return False, None
-

@@ -1,4 +1,4 @@
-from menu import mostrar_menu
+from utils.menu_opciones import mostrar_menu
 from utils.mensajes import enviar_mensaje_whatsapp
 
 
