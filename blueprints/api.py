@@ -71,6 +71,10 @@ def agregar_pedido():
 
 @blueprint_api.route('/api/cambiar_estado_a_enlace', methods=['POST'])
 def cambiar_estado_a_enlace():
+    token = request.headers.get("X-Internal-Token", "")
+    if not config.INTERNAL_API_TOKEN or token != config.INTERNAL_API_TOKEN:
+        return jsonify({"error": "No autorizado"}), 401
+
     data = request.json
     pedido_id = data.get("pedidoID")
 

@@ -20,14 +20,14 @@ def create_app(config: dict = None) -> Flask:
 
     if not (config or {}).get("TESTING"):
         sentry_sdk.init(
-            dsn="https://1d28c716e34691862059ab2ee7cbb20b@o4509045878620160.ingest.de.sentry.io/4509045889892432",
-            send_default_pii=True,
+            dsn=app_config.SENTRY_DSN,
+            send_default_pii=False,
         )
 
     app = Flask(__name__)
     app.secret_key = app_config.SECRET_KEY
     app.teardown_appcontext(close_db)
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, resources={r"/api/*": {"origins": app_config.ALLOWED_ORIGIN or "*"}})
 
     if config:
         app.config.update(config)
