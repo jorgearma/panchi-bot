@@ -101,13 +101,18 @@ class GestorPedidos:
                 detalles.append(detalle)
                 total_agregado += subtotal
 
-        if detalles:
-            self.session.add_all(detalles)  # Agregar todos los productos a la base de datos
-            pedido.Total += total_agregado  # Actualizar el total del pedido
-            self.session.commit()  # Guardar todos los cambios en la base de datos
-            return True
+        if not detalles:
+            return False
 
-        return False  # No se agregaron productos válidos
+        try:
+            self.session.add_all(detalles)
+            pedido.Total += total_agregado
+            self.session.commit()
+            return True
+        except (SQLAlchemyError, OperationalError) as error:
+            self.session.rollback()
+            logger.error("Error al agregar productos al pedido %s: %s", pedido_id, error)
+            raise
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
     def actualizar_estado(self, pedido_id, nuevo_estado):
