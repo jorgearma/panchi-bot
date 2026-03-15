@@ -1,5 +1,5 @@
 from utils.menu_opciones import mostrar_menu
-from utils.mensajes import enviar_mensaje_whatsapp
+from services.twilio_service import enviar_mensaje_whatsapp
 
 
 

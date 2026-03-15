@@ -3,8 +3,8 @@ import logging
 
 from pydantic import ValidationError
 from utils.es_pregunta import es_pregunta
-from utils.crear_token import generar_enlace
-from utils.mensajes import enviar_mensaje_whatsapp
+from services.token_service import generar_enlace
+from services.twilio_service import enviar_mensaje_whatsapp
 from utils.menu_opciones import menu, limpiar_texto, mostrar_menu
 from schemas.twilio import PedidoInput
 from states import EstadoPedido
