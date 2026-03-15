@@ -125,7 +125,12 @@ All valid transitions are declared in `states.py` — never hardcode them elsewh
 
 ### Known Technical Debt
 
+See `REFACTOR_PLAN.md` for the full phase-by-phase refactor plan (security fixes → data bugs → tech debt → test coverage). The active branch is `refactorizar-estructura`.
+
+Key items not to overlook:
 - Legacy route `/webhoo/monei` (typo) in `blueprints/webhook.py` — remove once Monei dashboard points to `/webhook/monei`.
+- `cocina/` directory is intentionally empty (placeholder for future kitchen-display features).
+- `scripts/generar_calles.py` regenerates `calles_tarancon.json` from source data — run manually when the street list needs updating.
 
 ### External Services
 
