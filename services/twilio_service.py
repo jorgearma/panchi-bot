@@ -1,12 +1,8 @@
-import os
 import logging
+import config
 from twilio.rest import Client
 
 logger = logging.getLogger(__name__)
-
-TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
-TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
-TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER')
 
 
 _client = None
@@ -15,15 +11,14 @@ _client = None
 def _get_client():
     global _client
     if _client is None:
-        _client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        _client = Client(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN)
     return _client
 
 
 def enviar_mensaje_whatsapp(mensaje, destinatario):
-
     _get_client().messages.create(
         body=mensaje,
-        from_=TWILIO_PHONE_NUMBER,
+        from_=config.TWILIO_WHATSAPP_NUMBER,
         to=destinatario
     )
 

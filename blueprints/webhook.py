@@ -31,7 +31,7 @@ def webhook():
     numero_cliente = data.From
     mensaje_cliente = limpiar_texto(data.Body.lower())
 
-    logger.info(f"Mensaje recibido de {numero_cliente}: {mensaje_cliente}")
+    logger.info("Mensaje recibido de %s: %s", numero_cliente, mensaje_cliente)
 
     bloqueo = redismanager.esta_bloqueado(numero_cliente)
     if bloqueo:

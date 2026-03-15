@@ -1,12 +1,9 @@
-import unicodedata
+import re
+from unidecode import unidecode
 
 
 def limpiar_texto(texto):
-    # Convierte a minúsculas y elimina espacios en los extremos
-    texto = texto.strip().lower()
-    # Elimina acentos y tildes
-    texto = ''.join(
-        c for c in unicodedata.normalize('NFD', texto)
-        if unicodedata.category(c) != 'Mn'
-    )
-    return texto
+    """Normaliza texto: transliteración unicode, elimina puntuación y pasa a minúsculas."""
+    texto_limpio = unidecode(texto)
+    texto_limpio = re.sub(r'[^\w\s]', '', texto_limpio)
+    return texto_limpio.lower()
