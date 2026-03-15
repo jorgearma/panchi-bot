@@ -29,12 +29,31 @@ TRANSICIONES_REGISTRO: dict = {
 }
 
 # Transiciones válidas del flujo de pedido/pago.
-# ENLACE → PENDIENTE es un rollback de error interno (menu.py), no un flujo de usuario.
-# PAGADO es estado terminal.
+# Las transiciones de retroceso (*) son navegación UI (botón "atrás"), no flujo de usuario normal.
+# TODO (deuda UX): PAGADO → ENLACE no debería ser posible; el pedido ya fue cobrado.
+#   Mientras ver_comandas.html siga llamando a /api/cambiar_estado_a_enlace hay que permitirlo.
 TRANSICIONES_PEDIDO: dict = {
     EstadoPedido.PENDIENTE: [EstadoPedido.ENLACE],
-    EstadoPedido.ENLACE: [EstadoPedido.ENLACE2, EstadoPedido.PENDIENTE],
-    EstadoPedido.ENLACE2: [EstadoPedido.CONFIRMANDO_PAGO],
+    EstadoPedido.ENLACE: [EstadoPedido.ENLACE2, EstadoPedido.PENDIENTE],  # PENDIENTE = rollback por error interno
+    EstadoPedido.ENLACE2: [EstadoPedido.CONFIRMANDO_PAGO, EstadoPedido.ENLACE],  # * ENLACE = botón atrás
     EstadoPedido.CONFIRMANDO_PAGO: [EstadoPedido.PAGADO],
-    EstadoPedido.PAGADO: [],
+    EstadoPedido.PAGADO: [EstadoPedido.ENLACE],  # * botón atrás desde ver_comandas.html (deuda UX)
 }
+
+
+def transicion_valida_pedido(estado_actual: str, nuevo_estado: str) -> bool:
+    """Devuelve True si estado_actual → nuevo_estado está en TRANSICIONES_PEDIDO."""
+    try:
+        origen = EstadoPedido(estado_actual)
+    except ValueError:
+        return False
+    return nuevo_estado in TRANSICIONES_PEDIDO.get(origen, [])
+
+
+def transicion_valida_registro(estado_actual: str, nuevo_estado: str) -> bool:
+    """Devuelve True si estado_actual → nuevo_estado está en TRANSICIONES_REGISTRO."""
+    try:
+        origen = EstadoRegistro(estado_actual)
+    except ValueError:
+        return False
+    return nuevo_estado in TRANSICIONES_REGISTRO.get(origen, [])

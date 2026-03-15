@@ -1,8 +1,11 @@
+import logging
 from decimal import Decimal
 from models import Pedido , PedidoDetalle , Producto
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from sqlalchemy.exc import SQLAlchemyError , OperationalError
-from states import EstadoPedido
+from states import EstadoPedido, transicion_valida_pedido
+
+logger = logging.getLogger(__name__)
 
 class GestorPedidos:
 
@@ -110,17 +113,22 @@ class GestorPedidos:
     def actualizar_estado(self, pedido_id, nuevo_estado):
         try:
             pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-            if pedido:
-                pedido.Estado = nuevo_estado
-                self.session.commit()
-                return True
-            else:
+            if not pedido:
                 print(f"Pedido con ID {pedido_id} no encontrado.")
                 return False
+            if not transicion_valida_pedido(pedido.Estado, nuevo_estado):
+                logger.error(
+                    "Transición de pedido inválida: %s → %s (pedido %s)",
+                    pedido.Estado, nuevo_estado, pedido_id,
+                )
+                return False
+            pedido.Estado = nuevo_estado
+            self.session.commit()
+            return True
         except SQLAlchemyError as error:
             self.session.rollback()
             print(f"Error al actualizar el estado del pedido {pedido_id}: {error}")
-            raise 
+            raise
     
     def introudcir_dato_redisID(self, pedido_id, id_redis):
         pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()

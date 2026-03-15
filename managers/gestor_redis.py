@@ -3,7 +3,7 @@ import redis
 import logging
 from tenacity import retry, wait_fixed, stop_after_attempt
 import json
-from states import EstadoRegistro
+from states import EstadoRegistro, transicion_valida_registro
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +117,16 @@ class EstadoUsuario:
             estado_actual = self.obtener_estado()
         except Exception as e:
             raise Exception("Error al obtener el estado actual del usuario") from e
+
+        estado_origen = estado_actual["estado"]
+        if not transicion_valida_registro(estado_origen, nuevo_estado):
+            logger.error(
+                "Transición de registro inválida: %s → %s (usuario %s)",
+                estado_origen, nuevo_estado, self.numero_cliente,
+            )
+            raise ValueError(
+                f"Transición de registro inválida: {estado_origen} → {nuevo_estado}"
+            )
 
         estado_actual["estado"] = nuevo_estado
         if datos_adicionales:
