@@ -10,10 +10,9 @@ from tenacity import RetryError
 
 class ManejadorMensajesRegistrados:
     
-    @staticmethod    
-    def manejar_mensajes_registrados( numero_cliente, mensaje_cliente):
-        from main import gestor_pedidos
-        from main import gestor_usuarios
+    @staticmethod
+    def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
+        from services import gestor_pedidos, gestor_usuarios
 
         try:
             usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)

@@ -100,7 +100,7 @@ class GestorUsuarios:
         Raises:
             SQLAlchemyError: Si ocurre un error al interactuar con la base de datos.
         """
-        from main import gestor_pedidos
+        from services import gestor_pedidos
 
 
         id_usuario = usuario_datos["id"]
