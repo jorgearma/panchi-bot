@@ -1,4 +1,4 @@
-from utils.mensajes import enviar_mensaje_whatsapp
+from services.twilio_service import enviar_mensaje_whatsapp
 from utils.menu_opciones import mostrar_menu
 from controllers.pedido import procesar_pedido
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
