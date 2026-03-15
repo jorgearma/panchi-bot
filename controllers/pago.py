@@ -1,0 +1,96 @@
+import logging
+
+from Monei import ApiException
+
+from states import EstadoPedido
+
+logger = logging.getLogger(__name__)
+
+
+def iniciar_pago(
+    user_id,
+    productos_recibidos: list,
+    nombre_cliente: str,
+    numero_cliente: str,
+    direccion_cliente: str,
+    cache,
+    gestor_pedidos,
+    gestor_productos,
+    monei,
+    public_url: str,
+) -> tuple:
+    """
+    Validates cart prices against DB, creates a Monei payment, and transitions
+    the order to CONFIRMANDO_PAGO.
+
+    Returns (success: bool, redirect_url_or_error: str).
+    """
+    pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
+
+    if not pedido_activo:
+        return False, "No se encontró un pedido activo para este usuario"
+
+    if pedido_activo.Estado == EstadoPedido.CONFIRMANDO_PAGO:
+        return True, "El pedido ya está en proceso de pago."
+
+    productos_validos = []
+    total_calculado = 0.0
+
+    for item in productos_recibidos:
+        codigo = item.get("codigo")
+        cantidad = item.get("cantidad", 1)
+
+        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
+        if not producto_db:
+            logger.error("iniciar_pago: product with code %s not found in DB", codigo)
+            return False, f"Producto con código {codigo} no encontrado"
+
+        precio_db = float(producto_db["Precio"])
+        total_calculado += precio_db * cantidad
+        productos_validos.append([codigo, cantidad])
+
+    pedido_activo_id = pedido_activo.PedidoID
+    redis_id = pedido_activo.redisID
+
+    gestor_pedidos.agregar_productos_a_pedido(pedido_activo_id, productos_validos)
+
+    amount_in_cents = int(round(total_calculado * 100))
+
+    payment_data = {
+        "amount": amount_in_cents,
+        "order_id": str(pedido_activo_id),
+        "currency": "EUR",
+        "description": nombre_cliente,
+        "completeUrl": f"{public_url}/pago_confirmado?pedido_id={redis_id}",
+        "customer": {
+            "email": "john.doe@monei.com",
+            "name": nombre_cliente,
+            "phone": numero_cliente,
+        },
+        "billingDetails": {
+            "address": {
+                "line1": direccion_cliente,
+                "city": "tarancon",
+                "postalCode": "16400",
+                "country": "ES",
+            }
+        },
+    }
+
+    try:
+        result = monei.payments.create(payment_data)
+        logger.info("iniciar_pago: Monei response for order %s: %s", pedido_activo_id, result)
+
+        redirect_url = result.get("next_action", {}).get("redirect_url")
+
+        gestor_pedidos.actualizar_estado(pedido_activo_id, EstadoPedido.CONFIRMANDO_PAGO)
+        gestor_pedidos.guardar_enlace(pedido_activo_id, redirect_url)
+
+        if redirect_url:
+            return True, redirect_url
+        else:
+            return False, "No se encontró la URL de redirección en la respuesta"
+
+    except ApiException as exc:
+        logger.error("iniciar_pago: Monei ApiException: %s", exc)
+        return False, str(exc)
