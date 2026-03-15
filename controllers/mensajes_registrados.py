@@ -96,9 +96,15 @@ class ManejadorMensajesRegistrados:
             enviar_mensaje_whatsapp(f"🔗 {enlace_pago}\n ✅ Pago seguro  con *MONEI*" , numero_cliente)
             return  " mensaje enviado",200
 
-       
+        if estado_del_pedido == EstadoPedido.PAGADO:
+            enviar_mensaje_whatsapp("Tu pedido ya está pagado. ¡Gracias!", numero_cliente)
+            return " mensaje enviado", 200
 
-        
+        else:
+            enviar_mensaje_whatsapp("Lo sentimos, no pudimos procesar su mensaje. Por favor, intente más tarde.", numero_cliente)
+            return " mensaje enviado", 200
+
+
 
 
 

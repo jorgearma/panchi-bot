@@ -108,6 +108,14 @@ def confirmar_carrito(
 
     pedido_id_db = pedido_activo.PedidoID
 
+    if pedido_activo.Estado != EstadoPedido.ENLACE:
+        logger.warning(
+            "confirmar_carrito: cannot transition order %s from state '%s' to ENLACE2",
+            pedido_id_db,
+            pedido_activo.Estado,
+        )
+        return False, "El pedido no se encuentra en el estado correcto para confirmar el carrito"
+
     cache.set(
         pedido_id_redis,
         json.dumps({
@@ -125,14 +133,7 @@ def confirmar_carrito(
 
     gestor_pedidos.guardar_redis_id(pedido_id_db, pedido_id_redis)
 
-    if pedido_activo.Estado != EstadoPedido.ENLACE:
-        logger.warning(
-            "confirmar_carrito: cannot transition order %s from state '%s' to ENLACE2",
-            pedido_id_db,
-            pedido_activo.Estado,
-        )
-    else:
-        gestor_pedidos.actualizar_estado(pedido_id_db, EstadoPedido.ENLACE2)
+    gestor_pedidos.actualizar_estado(pedido_id_db, EstadoPedido.ENLACE2)
 
     confirmacion_url = f"{public_url}/confirmacion_pago?pedido_id={pedido_id_redis}"
     return True, confirmacion_url
