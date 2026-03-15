@@ -72,14 +72,6 @@ class ManejadorMensajesRegistrados:
             enlace_pago = pedido_activo.enlace
             enviar_mensaje_whatsapp(f"🔗 {enlace_pago}\n ✅ Pago seguro  con *MONEI*" , numero_cliente)
             return  " mensaje enviado",200
-        
-
-        # esta es la primera interaccion del usuario aqui se crea el pedido y se le envia 
-        # el mensaje de las obciones que hay  la logica esta en el archivo menu.py
-
-        respuesta_usuario = GestorUsuarios.manejar_usuario(numero_cliente , usuario_datos)
-        if respuesta_usuario:
-            return respuesta_usuario
 
        
 

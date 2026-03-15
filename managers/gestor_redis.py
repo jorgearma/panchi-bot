@@ -1,3 +1,4 @@
+import os
 import redis
 import logging
 from tenacity import retry, wait_fixed, stop_after_attempt
@@ -125,7 +126,11 @@ class EstadoUsuario:
             raise Exception("Error al actualizar el estado del usuario en Redis") from e
 
 
-redismanager = RedisManager()
+redismanager = RedisManager(
+    host=os.environ.get('REDIS_HOST', 'localhost'),
+    port=int(os.environ.get('REDIS_PORT', 6379)),
+    db=int(os.environ.get('REDIS_DB', 0)),
+)
   
 
 
