@@ -61,18 +61,17 @@ def validar_direccion(direccion):
     direccion_limpia = limpiar_direccion(direccion)
     url = construir_url(direccion_limpia)
 
-    print("DEBUG direccion original:", repr(direccion))
-    print("DEBUG direccion limpia:", repr(direccion_limpia))
-    print("DEBUG url:", url)
+    logger.debug("Dirección original: %r", direccion)
+    logger.debug("Dirección limpia: %r", direccion_limpia)
+    logger.debug("URL consulta: %s", url)
 
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
         datos = response.json()
 
-        print("DEBUG status API:", datos.get("status"))
-        print("DEBUG response text:", response.text)
-        print("DEBUG results:", datos.get("results"))
+        logger.debug("Status API: %s", datos.get("status"))
+        logger.debug("Results: %s", datos.get("results"))
 
         if datos.get('status') != 'OK' or not datos.get('results'):
             logger.warning("Dirección no válida o no encontrada: %s", datos.get('status'))
@@ -83,27 +82,22 @@ def validar_direccion(direccion):
         coordenadas = resultado['geometry']['location']
         tipos = resultado.get("types", [])
 
-        print("DEBUG direccion formateada:", direccion_formateada)
-        print("DEBUG coordenadas:", coordenadas)
-        print("DEBUG types:", tipos)
-        print("DEBUG TIPOS_VALIDOS:", TIPOS_VALIDOS)
+        logger.debug("Dirección formateada: %s", direccion_formateada)
+        logger.debug("Coordenadas: %s", coordenadas)
+        logger.debug("Types: %s", tipos)
 
         if not validar_coordenadas(coordenadas):
-            print("DEBUG rechazada por coordenadas")
             logger.warning("Dirección fuera de los límites de Tarancón: %s", direccion_formateada)
             return False, direccion_formateada
 
         if direccion_formateada in VALID_GENERAL_ADDRESSES:
-            print("DEBUG rechazada por dirección general")
             logger.warning("Dirección demasiado general: %s", direccion_formateada)
             return False, None
 
         if not any(tipo in tipos for tipo in TIPOS_VALIDOS):
-            print("DEBUG rechazada por tipos")
             logger.warning("La dirección no parece ser específica: %s", tipos)
             return False, direccion_formateada
 
-        print("DEBUG dirección aceptada")
         logger.info("Dirección válida: %s", direccion_formateada)
         return True, direccion_formateada
 

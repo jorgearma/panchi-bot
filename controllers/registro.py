@@ -1,14 +1,39 @@
 # /services/registro_usuario.py
+import logging
 from services.twilio_service import enviar_mensaje_whatsapp
 from services.maps_service import validar_direccion
-from utils.confirmar_direccion import confirmar_direccion
 from managers.estado_usuario import EstadoUsuario
 from states import EstadoRegistro
+from utils.menu_opciones import mostrar_menu
+
+logger = logging.getLogger(__name__)
 
 
 
 
 
+
+
+def _enviar_mensaje_registro(numero_cliente, nombre, menu_despues_registro):
+    mensaje = (f"¡Gracias {nombre}! Ahora estás registrado. {menu_despues_registro} "
+               "\nescribe el *numero* para elegir\n  "
+               )
+    enviar_mensaje_whatsapp(mensaje, numero_cliente)
+
+
+def confirmar_direccion(numero_cliente, mensaje_cliente, data_redis):
+    if mensaje_cliente.lower() == 'si':
+        from services import gestor_usuarios, gestor_pedidos
+        estado = data_redis
+        gestor_usuarios.guardar_usuario(numero_cliente, estado["nombre"], estado["direccion"])
+        menu_despues_registro = mostrar_menu()
+        _enviar_mensaje_registro(numero_cliente, estado["nombre"], menu_despues_registro)
+        usuario_info = gestor_usuarios.obtener_usuario_completo(numero_cliente)
+        if usuario_info:
+            gestor_pedidos.iniciar_pedido(usuario_info["id"], estado["direccion"], estado["nombre"])
+        return "Usuario registrado", 200
+    else:
+        return 1
 
 
 class Mensajeria:
@@ -63,17 +88,23 @@ class Mensajeria:
             numero_cliente
         )
 
-import spacy
+_nlp = None
 
-# Cargar el modelo de idioma español de spaCy
-nlp = spacy.load("es_core_news_sm")
+
+def _get_nlp():
+    global _nlp
+    if _nlp is None:
+        import spacy
+        _nlp = spacy.load("es_core_news_sm")
+    return _nlp
+
 
 class ValidacionNombre:
     """Clase para manejar la validación de nombres."""
     @staticmethod
     def es_nombre_valido(nombre):
         # Procesar el texto con spaCy
-        doc = nlp(nombre)
+        doc = _get_nlp()(nombre)
         # Buscar entidades nombradas de tipo PERSON
         for ent in doc.ents:
             if ent.label_ == "PER":  # Etiqueta de persona en spaCy
@@ -142,7 +173,7 @@ class RegistroUsuario:
 
         elif estado_actual == EstadoRegistro.CONFIRMANDO_DIRECCION:
             data_redis = self.estado_usuario.obtener_estado()
-            print("data redis", data_redis)
+            logger.debug("data redis: %s", data_redis)
             respuesta = confirmar_direccion(self.numero_cliente, mensaje_cliente, data_redis)
             if respuesta == 1:
                 self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_DIRECCION)
