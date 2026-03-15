@@ -1,5 +1,9 @@
+import os
 import pyodbc
 import urllib.parse
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class DatabaseConnection:
     def __init__(self, driver, server, database, uid, pwd):
@@ -33,11 +37,11 @@ class DatabaseConnection:
 # Función global para mantener compatibilidad
 def conectar_bd():
     db = DatabaseConnection(
-        driver="ODBC Driver 17 for SQL Server",
-        server="localhost,1433",
-        database="pruebabot;",
-        uid="sa",
-        pwd="Jorgejorge1"
+        driver="ODBC Driver 18 for SQL Server",
+        server=os.environ.get('SQL_SERVER', 'localhost,1433'),
+        database=os.environ.get('SQL_DATABASE', 'pruebabot'),
+        uid=os.environ.get('SQL_UID', 'sa'),
+        pwd=os.environ.get('SQL_PWD', '')
     )
     return db.connect()
 
@@ -49,12 +53,15 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 # Definir la base para los modelos
 Base = declarative_base()
 
-# URL de conexión a SQL Server (asegúrate de que sea correcta)
-DATABASE_URL = "mssql+pyodbc://sa:Jorgejorge1@localhost:1433/pruebabot?driver=ODBC+Driver+17+for+SQL+Server"
+params = urllib.parse.quote_plus(
+    f"DRIVER=ODBC Driver 18 for SQL Server;"
+    f"SERVER={os.environ.get('SQL_SERVER', 'localhost,1433')};"
+    f"DATABASE={os.environ.get('SQL_DATABASE', 'pruebabot')};"
+    f"UID={os.environ.get('SQL_UID', 'sa')};"
+    f"PWD={os.environ.get('SQL_PWD', '')};"
+    "TrustServerCertificate=yes;"
+)
 
-# Crear el motor de la base de datos
-# Codificar la URL correctamente
-params = urllib.parse.quote_plus("DRIVER=ODBC Driver 17 for SQL Server;SERVER=localhost,1433;DATABASE=pruebabot;UID=sa;PWD=Jorgejorge1")
 
 # Crear el motor con timeouts y pooling
 engine = create_engine(
@@ -68,7 +75,22 @@ engine = create_engine(
 # Base y sesión
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-db_session = SessionLocal()
+
+
+def get_db():
+    """Devuelve la sesión asociada al request actual (via Flask g)."""
+    from flask import g
+    if 'db' not in g:
+        g.db = SessionLocal()
+    return g.db
+
+
+def close_db(e=None):
+    """Cierra la sesión al final del request. Registrar con app.teardown_appcontext."""
+    from flask import g
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 # 📌 Función para inicializar la base de datos (crear tablas)
 def conectar_bd1():
@@ -87,5 +109,3 @@ def conectar_bd1():
     except Exception as e:
         print(f"❌ Error al inicializar la base de datos: {e}")
 
-# Ejecutar la inicialización al importar el módulo
-conectar_bd1()

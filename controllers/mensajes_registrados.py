@@ -10,10 +10,9 @@ from tenacity import RetryError
 
 class ManejadorMensajesRegistrados:
     
-    @staticmethod    
-    def manejar_mensajes_registrados( numero_cliente, mensaje_cliente):
-        from main import gestor_pedidos
-        from main import gestor_usuarios
+    @staticmethod
+    def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
+        from services import gestor_pedidos, gestor_usuarios
 
         try:
             usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
@@ -36,24 +35,20 @@ class ManejadorMensajesRegistrados:
 
         try:
             pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(id_usuario)
-            if not pedido_activo:  # No se encontraron datos para el usuario.
-                print("Error: No se pedido.")
-                enviar_mensaje_whatsapp(
-                    "Lo sentimos, no pudimos encontrar su información. Por favor, intente más tarde.",
-                    numero_cliente
-                )
-                return "Error: Usuario no encontrado.", 404
-            estado_del_pedido =  pedido_activo.Estado
-            print(f"Estado del pedido: {estado_del_pedido}")
         except (SQLAlchemyError, RetryError) as e:
-            # Aquí se captura la excepción después de 3 intentos fallidos.
             print(f"Error al obtener el pedido tras varios intentos: {e}")
             enviar_mensaje_whatsapp(
                 "Lo sentimos, se presentó un error en el sistema. Por favor, intente más tarde.",
                 numero_cliente
             )
             return "Error en la base de datos. Intente más tarde.", 500
-        
+
+        if not pedido_activo:
+            print(f"Usuario {numero_cliente} sin pedido activo — iniciando nuevo pedido.")
+            return GestorUsuarios.manejar_usuario(numero_cliente, usuario_datos)
+
+        estado_del_pedido = pedido_activo.Estado
+        print(f"Estado del pedido: {estado_del_pedido}")
         id_pedido_activo = pedido_activo.PedidoID
         #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante  estado "pendiente"
         if estado_del_pedido == "Pendiente":
