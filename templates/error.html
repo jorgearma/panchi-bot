@@ -1,37 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 40px 20px;
-            background-color: #f5f5f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
-        }
-        .container {
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 { color: #e53e3e; font-size: 1.5rem; margin-bottom: 16px; }
-        p { color: #555; font-size: 1rem; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error — Panchi Bot</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
 </head>
-<body>
-    <div class="container">
-        <h1>❌ Ha ocurrido un error</h1>
-        <p>{{ mensaje }}</p>
-    </div>
+<body class="error-page">
+  <div class="error-card">
+    <h1>Ha ocurrido un error</h1>
+    <p>{{ mensaje }}</p>
+  </div>
 </body>
 </html>

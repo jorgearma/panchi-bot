@@ -100,6 +100,28 @@ def cambiar_estado_a_enlace():
     return jsonify({"message": "Estado actualizado a 'enlace'"}), 200
 
 
+@blueprint_api.route('/api/volver_al_menu', methods=['POST'])
+def volver_al_menu():
+    """Resets an ENLACE2 order back to ENLACE when the user presses back on the confirmation page."""
+    data = request.json
+    token = data.get("token", "")
+    if not token or not cache.get(token):
+        return jsonify({"error": "Sesión inválida o expirada"}), 401
+
+    user_id = data.get("userID")
+    if not user_id:
+        return jsonify({"error": "Usuario no identificado"}), 400
+
+    pedido = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
+    if not pedido:
+        return jsonify({"error": "Pedido no encontrado"}), 404
+
+    if pedido.Estado == EstadoPedido.ENLACE2:
+        gestor_pedidos.actualizar_estado(pedido.PedidoID, EstadoPedido.ENLACE)
+
+    return jsonify({"ok": True})
+
+
 @blueprint_api.route('/api/productos', methods=['GET'])
 def obtener_productos():
     try:
