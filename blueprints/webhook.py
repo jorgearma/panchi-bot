@@ -1,9 +1,12 @@
 import logging
+import hmac
+import hashlib
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
 from pydantic import ValidationError
 
+import config
 from controllers.registro import manejar_registro
 from controllers.mensajes_registrados import ManejadorMensajesRegistrados
 from utils.text_utils import limpiar_texto
@@ -74,11 +77,21 @@ def webhook():
         return jsonify({"error": "Error procesando el mensaje"}), 500
 
 
-@blueprint_webhook.route('/webhoo/monei', methods=['POST'])  # legacy — eliminar cuando Monei apunte a /webhook/monei
+@blueprint_webhook.route('/webhoo/monei', methods=['POST'])  # TODO: remove once Monei dashboard points to /webhook/monei
 @blueprint_webhook.route('/webhook/monei', methods=['POST'])
 def webhook_monei():
-    request_data = request.get_data()
-    print("Request data:", request_data)
+    raw_body = request.get_data()
+
+    secret = config.MONEI_WEBHOOK_SECRET
+    if not secret:
+        logger.warning("MONEI_WEBHOOK_SECRET not configured — rejecting webhook")
+        return jsonify({"error": "Invalid signature"}), 401
+
+    received_signature = request.headers.get("MONEI-SIGNATURE", "")
+    computed = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(computed, received_signature):
+        logger.warning("Monei webhook signature mismatch")
+        return jsonify({"error": "Invalid signature"}), 401
 
     data = request.get_json()
     order_id = data.get('object', {}).get('orderId')
@@ -98,6 +111,6 @@ def webhook_monei():
             f"▪️Direccion: 👇🏼 \n\n{costumer_adress}"
         )
         enviar_mensaje_whatsapp(mensaje, customer_phone)
-        print("El pedido está pagado")
+        logger.info("Pedido %s marcado como pagado", order_id)
 
     return jsonify({'message': 'Webhook recibido correctamente'}), 200

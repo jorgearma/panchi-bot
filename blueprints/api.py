@@ -1,8 +1,11 @@
 import os
 import uuid
+import logging
 from flask import Blueprint, request, jsonify, make_response
 
-from services import gestor_pedidos, gestor_productos, monei, cache
+logger = logging.getLogger(__name__)
+
+from services import gestor_pedidos, gestor_productos, get_monei, cache
 from states import EstadoPedido
 from controllers.pedido import confirmar_carrito
 from controllers.pago import iniciar_pago
@@ -20,7 +23,7 @@ def agregar_pedido_confirmacion():
         return response, 200
 
     data = request.json
-    print("Datos recibidos pai confimacion:", data)
+    logger.debug("Datos recibidos en confirmacion: %s", data)
 
     pedido_id_redis = str(uuid.uuid4())
     success, result = confirmar_carrito(
@@ -52,7 +55,7 @@ def agregar_pedido():
         return response, 200
 
     data = request.json
-    print("Datos recibidos en agregar pedido:", data)
+    logger.debug("Datos recibidos en agregar pedido: %s", data)
 
     id_usuario = data.get("userID")
     if not id_usuario:
@@ -67,7 +70,7 @@ def agregar_pedido():
         cache=cache,
         gestor_pedidos=gestor_pedidos,
         gestor_productos=gestor_productos,
-        monei=monei,
+        monei=get_monei(),
         public_url=os.environ.get("PUBLIC_URL", ""),
     )
 
@@ -105,7 +108,7 @@ def cambiar_estado_a_enlace():
 def obtener_productos():
     try:
         productos = gestor_productos.obtener_productos()
-        print("aqui", productos)
+        logger.debug("Productos obtenidos: %s", productos)
 
         if not productos:
             return jsonify({"error": "No se encontraron productos"}), 404
