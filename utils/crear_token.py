@@ -25,7 +25,7 @@ def generar_token_temporal(usuario_datos):
     }
         print("datos desdeq qu sube a toke " ,datos_usuario)
         token = secrets.token_urlsafe(7)
-        redismanager.set(token, json.dumps(datos_usuario))  # Expira en 24 horas
+        redismanager.set(token, json.dumps(datos_usuario), ex=86400)  # Expira en 24 horas
         return token
 
 # Generar enlace único  mejoras codificar el numero del cliente
