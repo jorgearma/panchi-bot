@@ -44,7 +44,8 @@ Name validation uses spaCy (`es_core_news_sm`). Address validation uses `calles_
 1. User sends "1" (Tienda) → system generates a token, creates a pending order in DB, sends link `/menu/<token>`
 2. User selects products on `quiniela.html` → `POST /api/confirmacion` stores cart in Redis
 3. `POST /api/agregar_pedido` validates prices against DB, creates Monei payment, redirects to payment URL
-4. Monei calls `POST /webhoo/monei` (note: intentional typo in route) → order finalized, WhatsApp confirmation sent
+4. Monei calls `POST /webhook/monei` → order finalized, WhatsApp confirmation sent
+   - Legacy route `/webhoo/monei` (typo) still active for backward compat — remove once Monei panel is updated
 
 Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → `pagado`
 
@@ -80,8 +81,6 @@ TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER
 MONEI_API_KEY, MONEI_WEBHOOK_SECRET
 GOOGLE_MAPS_API_KEY
 PUBLIC_URL          # ngrok or production URL used for menu/payment links
-DB_HOST, DB_NAME, DB_USER, DB_PASSWORD
+SQL_SERVER, SQL_DATABASE, SQL_UID, SQL_PWD
 REDIS_HOST, REDIS_PORT, REDIS_DB
 ```
-
-Some credentials are currently hardcoded in source files during active development — they live in `utils/mensajes.py` (Twilio) and `main.py` (Monei). These should be moved to `.env` before production.

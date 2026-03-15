@@ -7,7 +7,7 @@ from managers.gestor_productos import ProductoManager
 from models import Usuario_web
 from managers.gestor_usuarios import GestorUsuariosBD
 from utils.text_utils import limpiar_texto
-from database import conectar_bd1 , db_session
+from database import conectar_bd1, close_db
 from flask_cors import CORS 
 import json
 import redis
@@ -32,7 +32,7 @@ from modelos.validator_usuario import UsuarioDatos
 
 from managers.gestor_redis import redismanager
 
-gestor_pedidos = GestorPedidos(db_session)
+gestor_pedidos = GestorPedidos()
 gestor_usuarios = GestorUsuariosBD()
 gestor_productos = ProductoManager()
 
@@ -48,10 +48,8 @@ sentry_sdk.init(
     send_default_pii=True,
 )
 app = Flask(__name__)
-
-
-
 app.secret_key = os.environ.get('SECRET_KEY')
+app.teardown_appcontext(close_db)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
