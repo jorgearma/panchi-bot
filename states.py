@@ -29,15 +29,15 @@ TRANSICIONES_REGISTRO: dict = {
 }
 
 # Transiciones válidas del flujo de pedido/pago.
-# Las transiciones de retroceso (*) son navegación UI (botón "atrás"), no flujo de usuario normal.
-# TODO (deuda UX): PAGADO → ENLACE no debería ser posible; el pedido ya fue cobrado.
-#   Mientras ver_comandas.html siga llamando a /api/cambiar_estado_a_enlace hay que permitirlo.
+# ENLACE → PENDIENTE es rollback por error interno (menu.py), no flujo de usuario.
+# ENLACE2 → ENLACE es navegación UI (botón "atrás" en confirmacion_pago.html).
+# PAGADO es estado terminal.
 TRANSICIONES_PEDIDO: dict = {
     EstadoPedido.PENDIENTE: [EstadoPedido.ENLACE],
-    EstadoPedido.ENLACE: [EstadoPedido.ENLACE2, EstadoPedido.PENDIENTE],  # PENDIENTE = rollback por error interno
-    EstadoPedido.ENLACE2: [EstadoPedido.CONFIRMANDO_PAGO, EstadoPedido.ENLACE],  # * ENLACE = botón atrás
+    EstadoPedido.ENLACE: [EstadoPedido.ENLACE2, EstadoPedido.PENDIENTE],
+    EstadoPedido.ENLACE2: [EstadoPedido.CONFIRMANDO_PAGO, EstadoPedido.ENLACE],  # ENLACE = botón atrás
     EstadoPedido.CONFIRMANDO_PAGO: [EstadoPedido.PAGADO],
-    EstadoPedido.PAGADO: [EstadoPedido.ENLACE],  # * botón atrás desde ver_comandas.html (deuda UX)
+    EstadoPedido.PAGADO: [],
 }
 
 
