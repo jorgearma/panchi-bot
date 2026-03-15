@@ -4,12 +4,11 @@ from twilio.rest import Client
 
 from managers.gestor_redis import redismanager
 
-# Cargar las variables de entorno desde el archivo .env
 load_dotenv()
-# Cargar las variables de entorno desde el archivo .env
-TWILIO_ACCOUNT_SID="***REMOVED***"
-TWILIO_AUTH_TOKEN="***REMOVED***"
-TWILIO_PHONE_NUMBER="whatsapp:+14155238886" 
+
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER')
 
 
 
