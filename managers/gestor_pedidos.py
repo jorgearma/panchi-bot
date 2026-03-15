@@ -130,7 +130,7 @@ class GestorPedidos:
             print(f"Error al actualizar el estado del pedido {pedido_id}: {error}")
             raise
     
-    def introudcir_dato_redisID(self, pedido_id, id_redis):
+    def guardar_redis_id(self, pedido_id, id_redis):
         pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
         if pedido:
             pedido.redisID = id_redis
@@ -149,13 +149,4 @@ class GestorPedidos:
             raise
 
 
-    def agregar_producto(self, nombre, precio):
-        nuevo_producto = Producto(Nombre=nombre, Precio=precio)
-        self.session.add(nuevo_producto)
-        self.session.commit()
-        return nuevo_producto.ProductoID
 
-
-
-
-    

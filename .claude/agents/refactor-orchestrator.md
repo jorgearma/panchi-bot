@@ -29,6 +29,8 @@ Rules:
 - always explain the phase being executed
 - after each phase, stop and wait for confirmation
 
+Only execute one refactor phase per iteration.
+Never perform structural changes across multiple modules in a single step.
 Output format:
 
 Step 1 — Architecture report  

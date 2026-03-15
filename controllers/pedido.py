@@ -1,36 +1,10 @@
-import re
-from unidecode import unidecode
 from pydantic import ValidationError
 from utils.es_pregunta import es_pregunta
 from utils.crear_token import generar_enlace
 from utils.mensajes import enviar_mensaje_whatsapp
+from utils.menu_opciones import menu, limpiar_texto, mostrar_menu
 from modelos.validator_twilio import PedidoInput
 from states import EstadoPedido
-
-menu = {
-    "👇*Obciones*👇": {
-        "tienda 🏪": {"codigo": 1, "mensaje": "Tienda online"},
-        "Ayuda  🆘": {"codigo": 2, "mensaje": "para comunicarse un servicio al cliente, por favor llama al +45 49 99 48 76."},
-        "Salir  🚪🚶🏻": {"codigo": 3, "mensaje": "Has elegido *Salir*. Si necesitas algo más, solo envíanos un mensaje."},
-    }
-}
-
-# Función para limpiar el texto
-def limpiar_texto(texto):
-    texto_limpio = unidecode(texto)
-    texto_limpio = re.sub(r'[^\w\s]', '', texto_limpio)
-    return texto_limpio.lower()
-
-# Función para mostrar el menú de obciones
-def mostrar_menu():
-    resultado = "\n\n"
-    for categoria, items in menu.items():
-        resultado += f"{categoria.capitalize()}\n\n"
-        for item, detalles in items.items():
-            codigo = detalles.get("codigo", "N/A")
-            resultado += f" ▪️ *{codigo}* : {item.capitalize()}\n"
-    return resultado
-
 
 
 def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
@@ -41,7 +15,7 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
         # Validar los datos de entrada con Pydantic
         datos = PedidoInput(pedido=pedido, numero_cliente=numero_cliente, id_pedido_actual=id_pedido_actual)
         print(f"Datos validados: {datos}")
-            
+
     except ValidationError as e:
         # Retornar errores de validación como respuesta
         return f"❌ Error en los datos de entrada:\n{e}"
@@ -64,7 +38,7 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
 
                 if mensaje_respuesta == "Tienda online":
                     try:
-                        enlace = generar_enlace( item , usuario_datos)
+                        enlace = generar_enlace(item, usuario_datos)
                         actualizado = gestor_pedidos.actualizar_estado(datos.id_pedido_actual, EstadoPedido.ENLACE)
                         guardado = gestor_pedidos.guardar_enlace(datos.id_pedido_actual, enlace)
 

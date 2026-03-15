@@ -67,8 +67,10 @@ Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → 
 |------|------|
 | `main.py` | Flask app creation, blueprint registration, Sentry init |
 | `services.py` | Singleton instances: `gestor_pedidos`, `gestor_usuarios`, `gestor_productos`, `monei`, `cache` |
+| `states.py` | `EstadoPedido` + `EstadoRegistro` str-enums, `TRANSICIONES_PEDIDO/REGISTRO` maps, `transicion_valida_*` pure functions |
 | `database.py` | SQLAlchemy engine + session factory, table creation |
-| `models.py` | ORM models: `Usuario`, `Producto`, `Pedido`, `PedidoDetalle`, `Empleado`, `Usuario_web` |
+| `models.py` | ORM models: `Usuario`, `Producto`, `Pedido`, `PedidoDetalle`, `Empleado` |
+| `menu.py` | WhatsApp menu dict, `mostrar_menu()`, `procesar_pedido()` — dispatches user text to order flow |
 | `modelos/validator_twilio.py` | Pydantic validators for incoming Twilio webhook data |
 | `modelos/validator_usuario.py` | Pydantic validator for user data stored in Redis tokens |
 | `managers/gestor_redis.py` | All Redis state reads/writes (singleton `redismanager`) |
@@ -79,6 +81,10 @@ Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → 
 | `utils/crear_token.py` | Token generation + Redis storage |
 | `utils/maps.py` | Google Maps address validation |
 | `cocina/comandas.py` | Kitchen-side comanda logic |
+
+### State Machine Conventions
+
+All valid state transitions are declared in `states.py` — never hardcode allowed transitions elsewhere. `GestorPedidos.actualizar_estado` and `EstadoUsuario.actualizar_estado` call the pure validators and block invalid moves with a log error. Both enums inherit from `str` so they serialize to JSON and compare equal to raw strings from Redis/DB without extra conversion.
 
 ### External Services
 

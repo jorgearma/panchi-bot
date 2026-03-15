@@ -59,7 +59,7 @@ def agregar_pedido_confirmacion():
         "direccion": direccion, "productos": productos, "total": total
     }), ex=3600)
 
-    gestor_pedidos.introudcir_dato_redisID(pedidoID.PedidoID, pedido_id)
+    gestor_pedidos.guardar_redis_id(pedidoID.PedidoID, pedido_id)
     if pedidoID.Estado != EstadoPedido.ENLACE:
         print(f"No se puede cambiar el estado. Estado actual: '{pedidoID.Estado}'")
     else:

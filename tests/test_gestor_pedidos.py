@@ -22,7 +22,7 @@ def make_pedido(estado: str) -> MagicMock:
 @pytest.fixture
 def gestor():
     """GestorPedidos con sesión de DB completamente mockeada."""
-    from data.order import GestorPedidos
+    from managers.gestor_pedidos import GestorPedidos
     g = GestorPedidos()
     return g
 
@@ -112,7 +112,7 @@ class TestActualizarEstadoInvalido:
     def test_transicion_invalida_loguea_error(self, gestor, caplog):
         pedido = make_pedido(EstadoPedido.PAGADO)
         with patch.object(type(gestor), "session", new_callable=lambda: property(lambda self: _mock_session(pedido))):
-            with caplog.at_level(logging.ERROR, logger="data.order"):
+            with caplog.at_level(logging.ERROR, logger="managers.gestor_pedidos"):
                 gestor.actualizar_estado(42, EstadoPedido.ENLACE)
         assert "Transición de pedido inválida" in caplog.text
         assert "pagado" in caplog.text

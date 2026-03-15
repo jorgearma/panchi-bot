@@ -4,7 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
 from pydantic import ValidationError
 
-from controllers.no_resgistrados import manejar_registro
+from controllers.registro import manejar_registro
 from controllers.mensajes_registrados import ManejadorMensajesRegistrados
 from utils.text_utils import limpiar_texto
 from utils.mensajes import enviar_mensaje_whatsapp
@@ -34,7 +34,7 @@ def webhook():
     if bloqueo:
         return "Número bloqueado", 403
 
-    redismanager.bloquear_usuario(numero_cliente, duracion=20)
+    redismanager.bloquear_usuario(numero_cliente, duracion=4)
 
     try:
         usuario = gestor_usuarios.verificar_usuario(numero_cliente)
