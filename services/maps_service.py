@@ -55,6 +55,27 @@ def validar_coordenadas(coordenadas):
 
 TIPOS_VALIDOS = {"street_address", "premise", "subpremise"}
 
+def geocodificar_direccion(direccion: str) -> tuple[float, float] | None:
+    """
+    Returns (lat, lng) for the given address, or None if geocoding fails.
+    Uses the same Google Maps Geocoding API as validar_direccion.
+    """
+    direccion_limpia = limpiar_direccion(direccion)
+    url = construir_url(direccion_limpia)
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        datos = response.json()
+        if datos.get("status") != "OK" or not datos.get("results"):
+            logger.warning("geocodificar_direccion: no results for '%s'", direccion)
+            return None
+        location = datos["results"][0]["geometry"]["location"]
+        return location["lat"], location["lng"]
+    except requests.exceptions.RequestException as e:
+        logger.error("geocodificar_direccion: request error for '%s': %s", direccion, e)
+        return None
+
+
 def validar_direccion(direccion):
     direccion_limpia = limpiar_direccion(direccion)
     url = construir_url(direccion_limpia)

@@ -1,5 +1,5 @@
 import json
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean, Text, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -77,6 +77,8 @@ class Pedido(Base):
     estadopago = Column(String(255), nullable=True)
     estadoauxiliar = Column(String(255), nullable=True)
     forma_pago = Column(String(20), nullable=True, default='online')  # online | efectivo | tarjeta
+    lat_entrega = Column(Float, nullable=True)
+    lng_entrega = Column(Float, nullable=True)
 
     cliente = relationship("Usuario", back_populates="pedidos")
     detalles = relationship("PedidoDetalle", back_populates="pedido", cascade="all, delete-orphan")

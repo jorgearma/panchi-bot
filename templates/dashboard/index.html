@@ -362,9 +362,12 @@
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <h2 class="font-semibold text-gray-700 text-sm">Mapa de operación</h2>
-            <span class="text-xs text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">
-              Coordenadas simuladas
-            </span>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"></span>+8 min</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400"></span>3–8</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-500"></span>0–3</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500"></span>tarde</span>
+            </div>
           </div>
           <div id="mapa"></div>
         </div>
@@ -580,23 +583,60 @@
           }).addTo(mapaLeaflet);
         },
 
+        mapaColorPrioridad(fechaCreacion) {
+          if (!fechaCreacion) return '#6b7280';
+          const mins = Math.round((new Date(fechaCreacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
+          if (mins > 8)  return '#22c55e';  // green-500
+          if (mins >= 3) return '#eab308';  // yellow-400
+          if (mins >= 0) return '#f97316';  // orange-500
+          return '#ef4444';                 // red-500
+        },
+
+        mapaMinutosLabel(fechaCreacion) {
+          if (!fechaCreacion) return '?';
+          const mins = Math.round((new Date(fechaCreacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
+          if (mins > 0)  return mins + 'm';
+          if (mins === 0) return '0m';
+          return '+' + Math.abs(mins);
+        },
+
         actualizarMapa() {
           if (!mapaLeaflet) return;
           fetch('/dashboard/mapa').then(r => r.json()).then(data => {
             mapaMarkers.forEach(m => m.remove());
             mapaMarkers = [];
             data.pedidos.forEach(p => {
-              const marker = L.circleMarker([p.lat, p.lng], {
-                radius: 10,
-                fillColor: p.color,
-                color: '#fff',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.85,
-              }).bindPopup(
-                `<b>#${p.pedido_id}</b><br>${p.estado}<br>${p.direccion}<br><b>${p.total.toFixed(2)}€</b>`
-                + (p.simulado ? '<br><small style="color:#999">⚠ coord. simuladas</small>' : '')
-              ).addTo(mapaLeaflet);
+              const color = this.mapaColorPrioridad(p.fecha_creacion);
+              const label = this.mapaMinutosLabel(p.fecha_creacion);
+              const icon = L.divIcon({
+                className: '',
+                html: `<div style="
+                    background:${color};
+                    color:#fff;
+                    border:2px solid #fff;
+                    border-radius:50%;
+                    width:34px;height:34px;
+                    display:flex;flex-direction:column;
+                    align-items:center;justify-content:center;
+                    box-shadow:0 1px 5px rgba(0,0,0,.35);
+                    line-height:1;
+                  ">
+                  <span style="font-size:9px;font-weight:700;opacity:.85">#${p.pedido_id}</span>
+                  <span style="font-size:10px;font-weight:900">${label}</span>
+                </div>`,
+                iconSize: [34, 34],
+                iconAnchor: [17, 17],
+              });
+              const mins = Math.round((new Date(p.fecha_creacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
+              const minsTexto = mins > 0 ? `${mins} min restantes` : mins === 0 ? 'Ahora' : `${Math.abs(mins)} min de retraso`;
+              const marker = L.marker([p.lat, p.lng], { icon })
+                .bindPopup(`
+                  <b>#${p.pedido_id}</b><br>
+                  ${p.direccion}<br>
+                  <b>${p.total.toFixed(2)}€</b><br>
+                  <span style="color:${color};font-weight:700">${minsTexto}</span>
+                `)
+                .addTo(mapaLeaflet);
               mapaMarkers.push(marker);
             });
           }).catch(() => {});
