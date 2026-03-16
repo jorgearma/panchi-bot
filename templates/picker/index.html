@@ -9,14 +9,15 @@
   <style>
     [x-cloak] { display: none !important; }
     .slide-up {
-      animation: slideUp .25s ease-out;
+      animation: slideUp .2s ease-out;
     }
     @keyframes slideUp {
-      from { opacity: 0; transform: translateY(16px); }
+      from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    /* Tap highlight off for buttons */
     button { -webkit-tap-highlight-color: transparent; }
+    /* Increase tap target for small controls without changing visual size */
+    .tap-xl { min-height: 56px; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen" x-data="picker({{ picker_id or 'null' }})" x-init="init()">
@@ -26,7 +27,7 @@
     <div class="flex items-center gap-2">
       <button x-show="vistaActual === 'ticket'"
               @click="volverALista()"
-              class="text-gray-400 active:text-white transition mr-1 text-xl leading-none">‹</button>
+              class="p-2 -ml-2 text-gray-400 active:text-white transition text-2xl leading-none">‹</button>
       <span class="font-bold text-lg">
         <span x-show="vistaActual === 'lista'">🛒 Mis pedidos</span>
         <span x-show="vistaActual === 'ticket'" x-cloak>
@@ -39,9 +40,17 @@
             class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-medium"
             x-text="pedidos.length + ' asignado' + (pedidos.length > 1 ? 's' : '')"></span>
       <button @click="recargar()"
-              class="text-gray-400 active:text-white transition text-xl leading-none">↻</button>
+              class="p-2 -mr-1 text-gray-400 active:text-white transition text-xl leading-none">↻</button>
     </div>
   </header>
+
+  <!-- ======== BANNER OFFLINE ======== -->
+  <div x-show="!isOnline" x-cloak
+       class="bg-amber-500 text-white text-xs text-center py-2 px-4 font-semibold sticky top-[52px] z-20">
+    Sin conexión — los cambios se enviarán al reconectar
+    <span x-show="offlineQueue.length > 0"
+          x-text="'(' + offlineQueue.length + ' pendiente' + (offlineQueue.length > 1 ? 's' : '') + ')'"></span>
+  </div>
 
   <!-- ======== SIN PICKER ID ======== -->
   <div x-show="!pickerId" class="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
@@ -67,7 +76,7 @@
       <h2 class="text-xl font-bold text-gray-700 mb-2">Sin pedidos asignados</h2>
       <p class="text-gray-400 text-sm">No tienes pedidos pendientes ahora mismo.</p>
       <button @click="recargar()"
-              class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium active:bg-blue-700 transition">
+              class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium active:bg-blue-700 transition tap-xl">
         Actualizar
       </button>
     </div>
@@ -98,13 +107,11 @@
               </div>
             </div>
 
-            <!-- Dirección -->
             <div class="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
               <span>📍</span>
               <span x-text="p.direccion_entrega"></span>
             </div>
 
-            <!-- Barra de progreso -->
             <div>
               <div class="flex justify-between text-xs text-gray-400 mb-1">
                 <span x-text="(p.items_total - p.items_pendientes) + ' de ' + p.items_total + ' productos'"></span>
@@ -118,7 +125,6 @@
             </div>
           </div>
 
-          <!-- Pie de tarjeta -->
           <div class="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between">
             <span class="text-xs text-gray-400"
                   x-text="p.iniciado_en ? 'Iniciado ' + formatHora(p.iniciado_en) : 'Recién asignado'"></span>
@@ -130,7 +136,7 @@
   </div>
 
   <!-- ======== VISTA TICKET ======== -->
-  <div x-show="pickerId && vistaActual === 'ticket' && ticketActual" x-cloak class="pb-32">
+  <div x-show="pickerId && vistaActual === 'ticket' && ticketActual" x-cloak class="pb-36">
 
     <!-- Info del pedido -->
     <div class="bg-white border-b border-gray-100 px-4 py-3">
@@ -153,8 +159,12 @@
     <!-- Progreso -->
     <div class="bg-white px-4 py-3 border-b border-gray-100">
       <div class="flex justify-between text-sm text-gray-500 mb-1.5">
-        <span x-text="itemsCompletados + ' de ' + (ticketActual?.items_total || 0) + ' productos recogidos'"></span>
-        <span x-text="ticketActual?.items_pendientes + ' pendientes'"></span>
+        <span x-text="itemsCompletados + ' de ' + (ticketActual?.items_total || 0) + ' recogidos'"></span>
+        <span x-show="ticketActual?.items_pendientes > 0"
+              class="text-amber-600 font-medium"
+              x-text="ticketActual?.items_pendientes + ' pendientes'"></span>
+        <span x-show="ticketActual?.listo_para_finalizar"
+              class="text-green-600 font-semibold">✓ Todo recogido</span>
       </div>
       <div class="w-full bg-gray-100 rounded-full h-3">
         <div class="h-3 rounded-full transition-all"
@@ -163,60 +173,92 @@
       </div>
     </div>
 
-    <!-- Lista de items -->
+    <!-- Lista de items — ordenados por ubicación, pendientes primero -->
     <div class="p-4 space-y-3">
-      <template x-for="item in ticketActual?.items" :key="item.item_id">
+      <template x-for="item in itemsOrdenados" :key="item.item_id">
         <div class="bg-white rounded-2xl border shadow-sm overflow-hidden slide-up"
              :class="{
-               'border-green-200': item.estado === 'encontrado',
-               'border-red-200':   item.estado === 'sin_stock',
-               'border-gray-100':  item.estado === 'pendiente',
+               'border-green-200 bg-green-50/30': item.estado === 'encontrado',
+               'border-red-200 bg-red-50/30':     item.estado === 'sin_stock',
+               'border-gray-100':                 item.estado === 'pendiente',
+               'ring-2 ring-blue-400 ring-offset-1': item.item_id === primerPendiente?.item_id && item.estado === 'pendiente',
              }">
 
-          <!-- Cabecera del item -->
-          <div class="flex items-center gap-3 p-4 pb-3">
-            <!-- Icono de estado -->
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-                 :class="{
-                   'bg-green-100': item.estado === 'encontrado',
-                   'bg-red-100':   item.estado === 'sin_stock',
-                   'bg-gray-100':  item.estado === 'pendiente',
-                 }">
-              <span x-show="item.estado === 'encontrado'">✓</span>
-              <span x-show="item.estado === 'sin_stock'">✗</span>
-              <span x-show="item.estado === 'pendiente'">○</span>
+          <!-- Indicador "siguiente" solo en el primer item pendiente -->
+          <div x-show="item.item_id === primerPendiente?.item_id && item.estado === 'pendiente'"
+               class="bg-blue-600 text-white text-xs px-4 py-1.5 font-semibold tracking-wide">
+            → SIGUIENTE
+          </div>
+
+          <!-- Cuerpo de la card -->
+          <div class="flex gap-3 p-4 pb-3">
+
+            <!-- Imagen del producto -->
+            <div class="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+              <img x-show="item.imagen"
+                   :src="item.imagen"
+                   :alt="item.nombre"
+                   class="w-full h-full object-cover"
+                   loading="lazy" />
+              <div x-show="!item.imagen"
+                   class="w-full h-full flex items-center justify-center text-gray-300 text-2xl">
+                📦
+              </div>
             </div>
 
+            <!-- Info del producto -->
             <div class="flex-1 min-w-0">
-              <div class="font-semibold text-gray-900 truncate" x-text="item.nombre"></div>
-              <div class="flex items-center gap-3 mt-0.5">
-                <span class="text-sm font-medium text-blue-600"
-                      x-text="item.cantidad + ' unidades'"></span>
-                <span x-show="item.ubicacion"
-                      class="text-xs text-gray-400 flex items-center gap-1">
-                  🗂 <span x-text="item.ubicacion"></span>
+              <div class="flex items-start justify-between gap-2">
+                <div class="font-bold text-gray-900 leading-tight text-base" x-text="item.nombre"></div>
+                <!-- Estado badge compacto (solo cuando no es pendiente) -->
+                <div x-show="item.estado === 'encontrado'"
+                     class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-green-600 font-bold">
+                  ✓
+                </div>
+                <div x-show="item.estado === 'sin_stock'"
+                     class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-red-500 font-bold">
+                  ✗
+                </div>
+              </div>
+
+              <!-- Cantidad — info más importante para el picker -->
+              <div class="text-blue-600 font-extrabold text-xl mt-0.5"
+                   x-text="item.cantidad + ' ud.'"></div>
+
+              <!-- Ubicación — badge prominente -->
+              <div x-show="item.ubicacion" class="mt-1.5">
+                <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-sm font-bold px-2.5 py-1 rounded-lg">
+                  📍 <span x-text="item.ubicacion"></span>
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- Botones de acción -->
+          <!-- Botones acción — solo cuando está pendiente -->
           <div x-show="item.estado === 'pendiente'" class="px-4 pb-4 flex gap-2">
+            <!-- Encontrado: botón grande (75%) -->
             <button @click="marcarItem(item, 'encontrado')"
-                    class="flex-1 bg-green-500 active:bg-green-600 text-white rounded-xl py-3 font-semibold text-sm transition-transform active:scale-95">
-              ✓ Encontrado
+                    :disabled="item._guardando"
+                    class="flex-[3] bg-green-500 active:bg-green-600 text-white rounded-xl font-bold text-base transition-transform active:scale-95 disabled:opacity-50 tap-xl">
+              <span x-show="!item._guardando">✓ Encontrado</span>
+              <span x-show="item._guardando" class="flex items-center justify-center gap-2">
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
+              </span>
             </button>
+            <!-- Sin stock: botón pequeño (25%) -->
             <button @click="marcarItem(item, 'sin_stock')"
-                    class="flex-1 bg-red-400 active:bg-red-500 text-white rounded-xl py-3 font-semibold text-sm transition-transform active:scale-95">
-              ✗ Sin stock
+                    :disabled="item._guardando"
+                    class="flex-1 bg-gray-100 active:bg-red-100 text-red-500 border border-gray-200 rounded-xl font-semibold text-sm transition-transform active:scale-95 disabled:opacity-40 tap-xl">
+              ✗
             </button>
           </div>
 
-          <!-- Deshacer -->
-          <div x-show="item.estado !== 'pendiente'" class="px-4 pb-3">
+          <!-- Botón deshacer — cuando ya está marcado -->
+          <div x-show="item.estado !== 'pendiente'" class="px-4 pb-4">
             <button @click="marcarItem(item, 'pendiente')"
-                    class="text-xs text-gray-400 active:text-gray-600 underline transition">
-              Deshacer
+                    :disabled="item._guardando"
+                    class="w-full border border-gray-200 rounded-xl py-3 text-sm text-gray-500 active:bg-gray-50 disabled:opacity-40 transition tap-xl">
+              ↩ Deshacer
             </button>
           </div>
         </div>
@@ -265,13 +307,35 @@
   <script>
     function picker(pickerId) {
       return {
-        pickerId: pickerId,
-        pedidos: [],
-        vistaActual: 'lista',   // 'lista' | 'ticket'
-        ticketActual: null,
-        cargando: false,
-        finalizando: false,
-        toast: { visible: false, msg: '', error: false },
+        pickerId:      pickerId,
+        pedidos:       [],
+        vistaActual:   'lista',   // 'lista' | 'ticket'
+        ticketActual:  null,
+        cargando:      false,
+        finalizando:   false,
+        isOnline:      true,
+        offlineQueue:  [],        // [{ item_id, estado, estadoAnterior }]
+        toast:         { visible: false, msg: '', error: false },
+        _toastTimer:   null,
+
+        // ---- computed ----
+
+        get itemsOrdenados() {
+          if (!this.ticketActual) return [];
+          return [...this.ticketActual.items].sort((a, b) => {
+            // pendientes siempre primero
+            const ap = a.estado === 'pendiente' ? 0 : 1;
+            const bp = b.estado === 'pendiente' ? 0 : 1;
+            if (ap !== bp) return ap - bp;
+            // mismo estado: ordenar por ubicación (sin ubicación al final)
+            return (a.ubicacion || 'ZZZZ').localeCompare(b.ubicacion || 'ZZZZ');
+          });
+        },
+
+        get primerPendiente() {
+          if (!this.ticketActual) return null;
+          return this.itemsOrdenados.find(i => i.estado === 'pendiente') ?? null;
+        },
 
         get itemsCompletados() {
           if (!this.ticketActual) return 0;
@@ -283,82 +347,148 @@
           return Math.round(this.itemsCompletados / this.ticketActual.items_total * 100);
         },
 
+        // ---- lifecycle ----
+
         async init() {
           if (!this.pickerId) return;
+          this.isOnline = navigator.onLine;
+          window.addEventListener('online',  () => {
+            this.isOnline = true;
+            this._flushQueue();
+          });
+          window.addEventListener('offline', () => {
+            this.isOnline = false;
+          });
           await this.recargar();
           setInterval(() => {
             if (this.vistaActual === 'lista') this.recargar();
           }, 60000);
         },
 
+        // ---- data fetching ----
+
         async recargar() {
           if (!this.pickerId) return;
           this.cargando = true;
           try {
             const r = await fetch(`/picker/mis-pedidos?picker_id=${this.pickerId}`);
-            if (r.ok) {
-              const data = await r.json();
-              this.pedidos = data;
-              // Si tenemos un ticket abierto, actualizamos sus datos
-              if (this.ticketActual) {
-                const actualizado = data.find(p => p.picking_id === this.ticketActual.picking_id);
-                if (actualizado) this.ticketActual = actualizado;
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const data = await r.json();
+            // Inicializar flag _guardando en cada item
+            data.forEach(p => p.items.forEach(item => { item._guardando = false; }));
+            this.pedidos = data;
+            // Actualizar ticket abierto solo si no hay requests en vuelo
+            if (this.ticketActual) {
+              const actualizado = data.find(p => p.picking_id === this.ticketActual.picking_id);
+              if (actualizado && !this.ticketActual.items.some(i => i._guardando)) {
+                actualizado.items.forEach(item => { item._guardando = false; });
+                this.ticketActual = actualizado;
               }
             }
+          } catch (e) {
+            this.mostrarToast('Error al cargar pedidos', true);
           } finally {
             this.cargando = false;
           }
         },
 
+        // ---- navegación ----
+
         abrirTicket(pedido) {
           this.ticketActual = pedido;
-          this.vistaActual = 'ticket';
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          this.vistaActual  = 'ticket';
+          window.scrollTo({ top: 0, behavior: 'instant' });
         },
 
         volverALista() {
-          this.vistaActual = 'lista';
+          this.vistaActual  = 'lista';
           this.ticketActual = null;
           this.recargar();
         },
 
+        // ---- picking ----
+
         async marcarItem(item, nuevoEstado) {
-          // Optimistic update
+          if (item._guardando) return;
+
           const estadoAnterior = item.estado;
-          item.estado = nuevoEstado;
+          item.estado     = nuevoEstado;
+          item._guardando = true;
           this._recalcularPendientes();
 
-          const r = await fetch(`/picker/item/${item.item_id}/estado`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ estado: nuevoEstado }),
-          });
+          if (!this.isOnline) {
+            this.offlineQueue.push({ item_id: item.item_id, estado: nuevoEstado, estadoAnterior });
+            item._guardando = false;
+            this.mostrarToast('Sin conexión — se enviará al reconectar');
+            return;
+          }
 
-          if (!r.ok) {
-            // Revertir si falla
+          await this._enviarEstado(item, nuevoEstado, estadoAnterior);
+        },
+
+        async _enviarEstado(item, nuevoEstado, estadoAnterior, intentos = 0) {
+          try {
+            const r = await fetch(`/picker/item/${item.item_id}/estado`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ estado: nuevoEstado }),
+            });
+
+            if (!r.ok) {
+              if (r.status >= 500 && intentos < 2) {
+                await new Promise(res => setTimeout(res, 600 * (intentos + 1)));
+                return this._enviarEstado(item, nuevoEstado, estadoAnterior, intentos + 1);
+              }
+              item.estado = estadoAnterior;
+              this._recalcularPendientes();
+              const data = await r.json().catch(() => ({}));
+              this.mostrarToast(data.error || 'Error al actualizar', true);
+            }
+          } catch (_e) {
+            if (intentos < 2) {
+              await new Promise(res => setTimeout(res, 600 * (intentos + 1)));
+              return this._enviarEstado(item, nuevoEstado, estadoAnterior, intentos + 1);
+            }
             item.estado = estadoAnterior;
             this._recalcularPendientes();
-            const data = await r.json();
-            this.mostrarToast(data.error || 'Error al actualizar', true);
+            this.mostrarToast('Sin conexión — intenta de nuevo', true);
+          } finally {
+            item._guardando = false;
+          }
+        },
+
+        async _flushQueue() {
+          if (!this.offlineQueue.length) return;
+          const cola = [...this.offlineQueue];
+          this.offlineQueue = [];
+
+          for (const job of cola) {
+            const item = this.ticketActual?.items.find(i => i.item_id === job.item_id);
+            if (!item) continue;
+            item.estado = job.estado;
+            this._recalcularPendientes();
+            await this._enviarEstado(item, job.estado, job.estadoAnterior);
+          }
+
+          if (cola.length > 0) {
+            const n = cola.length;
+            this.mostrarToast(`${n} cambio${n > 1 ? 's' : ''} sincronizado${n > 1 ? 's' : ''} ✓`);
           }
         },
 
         _recalcularPendientes() {
           if (!this.ticketActual) return;
           const pendientes = this.ticketActual.items.filter(i => i.estado === 'pendiente').length;
-          this.ticketActual.items_pendientes = pendientes;
+          this.ticketActual.items_pendientes    = pendientes;
           this.ticketActual.listo_para_finalizar = pendientes === 0;
         },
 
         async finalizarPicking() {
           if (!this.ticketActual?.listo_para_finalizar || this.finalizando) return;
           this.finalizando = true;
-
           try {
-            const r = await fetch(`/picker/picking/${this.ticketActual.picking_id}/finalizar`, {
-              method: 'POST',
-            });
-            const data = await r.json();
+            const r    = await fetch(`/picker/picking/${this.ticketActual.picking_id}/finalizar`, { method: 'POST' });
+            const data = await r.json().catch(() => ({}));
 
             if (r.ok) {
               this.mostrarToast('¡Picking completado! Pedido listo para reparto ✓');
@@ -367,14 +497,19 @@
             } else {
               this.mostrarToast(data.error || 'Error al finalizar', true);
             }
+          } catch (_e) {
+            this.mostrarToast('Error inesperado al finalizar', true);
           } finally {
             this.finalizando = false;
           }
         },
 
+        // ---- utilidades ----
+
         mostrarToast(msg, error = false) {
+          clearTimeout(this._toastTimer);
           this.toast = { visible: true, msg, error };
-          setTimeout(() => { this.toast.visible = false; }, 3000);
+          this._toastTimer = setTimeout(() => { this.toast.visible = false; }, 3000);
         },
 
         formatHora(ts) {
