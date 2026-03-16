@@ -177,7 +177,9 @@ class GestorDashboard:
                         f"{p.picking.empleado.Nombre} {p.picking.empleado.Apellido}"
                         if p.picking.empleado else None
                     ),
+                    "asignado_en": _iso(p.picking.created_at),
                     "iniciado_en": _iso(p.picking.iniciado_en),
+                    "completado_en": _iso(p.picking.completado_en),
                 }
 
             reparto_data = None
@@ -189,7 +191,12 @@ class GestorDashboard:
                         f"{p.reparto.repartidor.Nombre} {p.reparto.repartidor.Apellido}"
                         if p.reparto.repartidor else None
                     ),
+                    "repartidor_telefono": (
+                        p.reparto.repartidor.Telefono if p.reparto.repartidor else None
+                    ),
+                    "asignado_en": _iso(p.reparto.created_at),
                     "hora_salida": _iso(p.reparto.hora_salida),
+                    "hora_estimada_entrega": _iso(p.reparto.hora_estimada_entrega),
                 }
 
             umbral_info = _UMBRALES_RETRASO.get(p.Estado)
@@ -206,6 +213,14 @@ class GestorDashboard:
                 "fecha_creacion": _iso(p.FechaCreacion),
                 "minutos_activo": minutos,
                 "minutos_en_estado": minutos_en_estado,
+                "items": [
+                    {
+                        "nombre": d.NombreProducto or (d.producto.Nombre if d.producto else "—"),
+                        "cantidad": d.Cantidad,
+                        "subtotal": float(d.Subtotal) if d.Subtotal else 0.0,
+                    }
+                    for d in p.detalles
+                ],
                 "picking": picking_data,
                 "reparto": reparto_data,
                 "es_alerta": es_alerta,
