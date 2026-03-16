@@ -76,6 +76,7 @@ class Pedido(Base):
     redisID = Column(String(255), nullable=True)
     estadopago = Column(String(255), nullable=True)
     estadoauxiliar = Column(String(255), nullable=True)
+    forma_pago = Column(String(20), nullable=True, default='online')  # online | efectivo | tarjeta
 
     cliente = relationship("Usuario", back_populates="pedidos")
     detalles = relationship("PedidoDetalle", back_populates="pedido", cascade="all, delete-orphan")

@@ -660,6 +660,112 @@ class GestorDashboard:
             })
         return resultado
 
+    # -------------------------------------------------------------------------
+    # Repartidor methods
+    # -------------------------------------------------------------------------
+
+    def repartos_del_repartidor(self, empleado_id: int) -> list:
+        """Returns active and recently delivered orders for a delivery driver."""
+        s = self.session
+        repartos = s.query(Reparto).filter(
+            Reparto.repartidor_id == empleado_id,
+            Reparto.estado.in_([
+                EstadoReparto.ASIGNADO.value,
+                EstadoReparto.EN_CAMINO.value,
+                EstadoReparto.ENTREGADO.value,
+                EstadoReparto.NO_ENTREGADO.value,
+            ]),
+        ).order_by(Reparto.created_at.desc()).all()
+
+        resultado = []
+        for r in repartos:
+            pedido = r.pedido
+            if not pedido:
+                continue
+
+            # Payment info: check Pago table first, then forma_pago field
+            pago_completado = next(
+                (p for p in pedido.pagos if p.estado == 'completado'), None
+            )
+            if pago_completado:
+                info_pago = {
+                    "estado": "pagado_online",
+                    "label": "Pagado online",
+                    "importe": float(pago_completado.importe),
+                    "proveedor": pago_completado.proveedor,
+                }
+            elif getattr(pedido, 'forma_pago', None) == 'efectivo':
+                info_pago = {
+                    "estado": "cobrar_efectivo",
+                    "label": "Cobrar en efectivo",
+                    "importe": float(pedido.Total) if pedido.Total else 0.0,
+                    "proveedor": None,
+                }
+            elif getattr(pedido, 'forma_pago', None) == 'tarjeta':
+                info_pago = {
+                    "estado": "cobrar_tarjeta",
+                    "label": "Cobrar con datáfono",
+                    "importe": float(pedido.Total) if pedido.Total else 0.0,
+                    "proveedor": None,
+                }
+            else:
+                info_pago = {
+                    "estado": "pagado_online",
+                    "label": "Pagado online",
+                    "importe": float(pedido.Total) if pedido.Total else 0.0,
+                    "proveedor": "monei",
+                }
+
+            items = [
+                {
+                    "nombre": d.NombreProducto or (d.producto.Nombre if d.producto else "—"),
+                    "cantidad": d.Cantidad,
+                    "subtotal": float(d.Subtotal) if d.Subtotal else 0.0,
+                }
+                for d in pedido.detalles
+            ]
+
+            resultado.append({
+                "reparto_id": r.id,
+                "pedido_id": pedido.PedidoID,
+                "estado_reparto": r.estado,
+                "estado_pedido": pedido.Estado,
+                "cliente_nombre": pedido.cliente.nombre if pedido.cliente else "—",
+                "cliente_telefono": pedido.TelefonoEntrega,
+                "direccion_entrega": pedido.DireccionEntrega,
+                "total": float(pedido.Total) if pedido.Total else 0.0,
+                "pago": info_pago,
+                "items": items,
+                "hora_salida": r.hora_salida.isoformat() if r.hora_salida else None,
+                "hora_estimada_entrega": r.hora_estimada_entrega.isoformat() if r.hora_estimada_entrega else None,
+                "hora_entrega_real": r.hora_entrega_real.isoformat() if r.hora_entrega_real else None,
+                "motivo_no_entrega": r.motivo_no_entrega,
+                "notas": r.notas,
+            })
+
+        return resultado
+
+    def marcar_no_entregado(self, reparto_id: int, motivo: str) -> tuple:
+        """Marks a delivery as not delivered. Updates reparto only — pedido state stays as-is
+        so the ops team can handle it from the dashboard."""
+        s = self.session
+        try:
+            reparto = s.query(Reparto).filter_by(id=reparto_id).first()
+            if not reparto:
+                return False, "Reparto no encontrado"
+            if reparto.estado not in (EstadoReparto.EN_CAMINO.value, EstadoReparto.ENTREGADO.value):
+                return False, f"Estado actual '{reparto.estado}' no permite marcar como no entregado"
+
+            reparto.estado = EstadoReparto.NO_ENTREGADO.value
+            reparto.motivo_no_entrega = motivo
+
+            s.commit()
+            return True, "Marcado como no entregado"
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error marcando no entregado reparto %s: %s", reparto_id, e)
+            return False, "Error de base de datos"
+
     def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None) -> tuple:
         """Updates a single picking item state."""
         ESTADOS_VALIDOS = {"encontrado", "sin_stock", "sustituido", "pendiente"}
