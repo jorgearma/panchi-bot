@@ -1,3 +1,4 @@
+import json
 import logging
 import hmac
 import hashlib
@@ -118,6 +119,12 @@ def webhook_monei():
 
     if data.get('object', {}).get('status') == 'SUCCEEDED' or data.get('type') == 'charge.succeeded':
         gestor_pedidos.actualizar_estado(order_id, EstadoPedido.PAGADO)
+        gestor_pedidos.registrar_pago(
+            pedido_id=order_id,
+            importe_euros=importe_euros,
+            referencia_externa=data.get('object', {}).get('id'),
+            datos_raw=json.dumps(data),
+        )
         mensaje = (
             f"❕*Pedido registrado*❕\n      ------------------  \n"
             f"▪️Nombre: *{nombre_usuario}*\n▪️importe: *{importe_euros}*€\n"
