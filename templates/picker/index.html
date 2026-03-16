@@ -16,7 +16,6 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     button { -webkit-tap-highlight-color: transparent; }
-    /* Increase tap target for small controls without changing visual size */
     .tap-xl { min-height: 56px; }
   </style>
 </head>
@@ -69,7 +68,6 @@
   <!-- ======== VISTA LISTA ======== -->
   <div x-show="pickerId && !cargando && vistaActual === 'lista'" x-cloak>
 
-    <!-- Sin pedidos -->
     <div x-show="pedidos.length === 0"
          class="flex flex-col items-center justify-center min-h-[65vh] text-center px-6">
       <div class="text-6xl mb-4">✅</div>
@@ -81,7 +79,6 @@
       </button>
     </div>
 
-    <!-- Lista de pedidos -->
     <div x-show="pedidos.length > 0" class="p-4 space-y-3">
       <template x-for="p in pedidos" :key="p.picking_id">
         <div @click="abrirTicket(p)"
@@ -106,12 +103,10 @@
                 </div>
               </div>
             </div>
-
             <div class="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
               <span>📍</span>
               <span x-text="p.direccion_entrega"></span>
             </div>
-
             <div>
               <div class="flex justify-between text-xs text-gray-400 mb-1">
                 <span x-text="(p.items_total - p.items_pendientes) + ' de ' + p.items_total + ' productos'"></span>
@@ -124,7 +119,6 @@
               </div>
             </div>
           </div>
-
           <div class="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between">
             <span class="text-xs text-gray-400"
                   x-text="p.iniciado_en ? 'Iniciado ' + formatHora(p.iniciado_en) : 'Recién asignado'"></span>
@@ -178,22 +172,23 @@
       <template x-for="item in itemsOrdenados" :key="item.item_id">
         <div class="bg-white rounded-2xl border shadow-sm overflow-hidden slide-up"
              :class="{
-               'border-green-200 bg-green-50/30': item.estado === 'encontrado',
-               'border-red-200 bg-red-50/30':     item.estado === 'sin_stock',
-               'border-gray-100':                 item.estado === 'pendiente',
+               'border-green-200 bg-green-50/30':  item.estado === 'encontrado',
+               'border-orange-200 bg-orange-50/30': item.estado === 'sustituido',
+               'border-red-200 bg-red-50/30':       item.estado === 'sin_stock',
+               'border-gray-100':                   item.estado === 'pendiente',
                'ring-2 ring-blue-400 ring-offset-1': item.item_id === primerPendiente?.item_id && item.estado === 'pendiente',
              }">
 
-          <!-- Indicador "siguiente" solo en el primer item pendiente -->
+          <!-- Indicador "siguiente" en el primer pendiente -->
           <div x-show="item.item_id === primerPendiente?.item_id && item.estado === 'pendiente'"
                class="bg-blue-600 text-white text-xs px-4 py-1.5 font-semibold tracking-wide">
             → SIGUIENTE
           </div>
 
-          <!-- Cuerpo de la card -->
+          <!-- Cuerpo -->
           <div class="flex gap-3 p-4 pb-3">
 
-            <!-- Imagen del producto -->
+            <!-- Imagen -->
             <div class="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
               <img x-show="item.imagen"
                    :src="item.imagen"
@@ -206,26 +201,29 @@
               </div>
             </div>
 
-            <!-- Info del producto -->
+            <!-- Info -->
             <div class="flex-1 min-w-0">
               <div class="flex items-start justify-between gap-2">
                 <div class="font-bold text-gray-900 leading-tight text-base" x-text="item.nombre"></div>
-                <!-- Estado badge compacto (solo cuando no es pendiente) -->
                 <div x-show="item.estado === 'encontrado'"
-                     class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-green-600 font-bold">
-                  ✓
-                </div>
+                     class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-green-600 font-bold text-sm">✓</div>
+                <div x-show="item.estado === 'sustituido'"
+                     class="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold text-sm">↔</div>
                 <div x-show="item.estado === 'sin_stock'"
-                     class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-red-500 font-bold">
-                  ✗
-                </div>
+                     class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-red-500 font-bold text-sm">✗</div>
               </div>
 
-              <!-- Cantidad — info más importante para el picker -->
-              <div class="text-blue-600 font-extrabold text-xl mt-0.5"
-                   x-text="item.cantidad + ' ud.'"></div>
+              <!-- Cantidad pedida / encontrada -->
+              <div class="flex items-baseline gap-2 mt-0.5">
+                <span class="text-blue-600 font-extrabold text-xl"
+                      x-text="item.cantidad + ' ud.'"></span>
+                <!-- Cantidad parcial encontrada -->
+                <span x-show="item.estado === 'encontrado' && item.cantidad_encontrada !== null && item.cantidad_encontrada !== item.cantidad"
+                      class="text-xs text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md"
+                      x-text="'encontradas: ' + item.cantidad_encontrada"></span>
+              </div>
 
-              <!-- Ubicación — badge prominente -->
+              <!-- Ubicación -->
               <div x-show="item.ubicacion" class="mt-1.5">
                 <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-sm font-bold px-2.5 py-1 rounded-lg">
                   📍 <span x-text="item.ubicacion"></span>
@@ -234,10 +232,10 @@
             </div>
           </div>
 
-          <!-- Botones acción — solo cuando está pendiente -->
+          <!-- Botones de acción — solo cuando pendiente -->
           <div x-show="item.estado === 'pendiente'" class="px-4 pb-4 flex gap-2">
-            <!-- Encontrado: botón grande (75%) -->
-            <button @click="marcarItem(item, 'encontrado')"
+            <!-- Encontrado: 75% -->
+            <button @click="item.cantidad > 1 ? abrirModalCantidad(item) : marcarItem(item, 'encontrado', { cantidad_encontrada: 1 })"
                     :disabled="item._guardando"
                     class="flex-[3] bg-green-500 active:bg-green-600 text-white rounded-xl font-bold text-base transition-transform active:scale-95 disabled:opacity-50 tap-xl">
               <span x-show="!item._guardando">✓ Encontrado</span>
@@ -245,17 +243,17 @@
                 <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
               </span>
             </button>
-            <!-- Sin stock: botón pequeño (25%) -->
-            <button @click="marcarItem(item, 'sin_stock')"
+            <!-- Sin stock: 25% — ahora abre modal -->
+            <button @click="abrirModalSinStock(item)"
                     :disabled="item._guardando"
                     class="flex-1 bg-gray-100 active:bg-red-100 text-red-500 border border-gray-200 rounded-xl font-semibold text-sm transition-transform active:scale-95 disabled:opacity-40 tap-xl">
               ✗
             </button>
           </div>
 
-          <!-- Botón deshacer — cuando ya está marcado -->
+          <!-- Deshacer — botón real -->
           <div x-show="item.estado !== 'pendiente'" class="px-4 pb-4">
-            <button @click="marcarItem(item, 'pendiente')"
+            <button @click="marcarItem(item, 'pendiente', {})"
                     :disabled="item._guardando"
                     class="w-full border border-gray-200 rounded-xl py-3 text-sm text-gray-500 active:bg-gray-50 disabled:opacity-40 transition tap-xl">
               ↩ Deshacer
@@ -266,7 +264,7 @@
     </div>
   </div>
 
-  <!-- ======== BOTÓN FINALIZAR (fijo abajo) ======== -->
+  <!-- ======== BOTÓN FINALIZAR ======== -->
   <div x-show="vistaActual === 'ticket' && ticketActual" x-cloak
        class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-20">
 
@@ -303,31 +301,261 @@
     </div>
   </div>
 
+  <!-- ======================================================= -->
+  <!-- MODAL — CANTIDAD (bottom sheet, solo cuando cantidad >1) -->
+  <!-- ======================================================= -->
+
+  <!-- Backdrop -->
+  <div x-show="modalCantidad.visible" x-cloak
+       @click="cancelarModalCantidad()"
+       class="fixed inset-0 bg-black/40 z-40"></div>
+
+  <!-- Sheet -->
+  <div x-show="modalCantidad.visible" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-y-full opacity-0"
+       x-transition:enter-end="translate-y-0 opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="translate-y-0 opacity-100"
+       x-transition:leave-end="translate-y-full opacity-0"
+       class="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl">
+
+    <!-- Handle -->
+    <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-5"></div>
+
+    <!-- Título -->
+    <div class="px-5 pb-4 border-b border-gray-100">
+      <div class="font-bold text-gray-900 text-lg" x-text="modalCantidad.item?.nombre"></div>
+      <div class="text-sm text-gray-500 mt-0.5"
+           x-text="'Pedido: ' + (modalCantidad.item?.cantidad || 0) + ' unidades'"></div>
+    </div>
+
+    <!-- Confirmar todas de un toque -->
+    <div class="px-5 pt-5 pb-4">
+      <button @click="confirmarTodasCantidad()"
+              class="w-full bg-green-500 active:bg-green-600 text-white rounded-2xl py-5 font-bold text-lg tap-xl">
+        ✓ Todas (<span x-text="modalCantidad.item?.cantidad"></span> ud.)
+      </button>
+    </div>
+
+    <!-- Divisor -->
+    <div class="flex items-center px-5 pb-5 gap-3">
+      <div class="flex-1 h-px bg-gray-200"></div>
+      <span class="text-xs text-gray-400 font-medium">o ajustar si faltan</span>
+      <div class="flex-1 h-px bg-gray-200"></div>
+    </div>
+
+    <!-- Stepper -->
+    <div class="px-5 pb-4">
+      <div class="flex items-center justify-center gap-6">
+        <button @click="ajustarCantidad(-1)"
+                :disabled="modalCantidad.cantidad <= 0"
+                class="w-16 h-16 bg-gray-100 rounded-2xl text-3xl font-bold text-gray-600 active:bg-gray-200 disabled:opacity-30 flex items-center justify-center tap-xl">
+          −
+        </button>
+        <span class="text-5xl font-extrabold text-gray-900 w-20 text-center tabular-nums"
+              x-text="modalCantidad.cantidad"></span>
+        <button @click="ajustarCantidad(1)"
+                :disabled="modalCantidad.cantidad >= (modalCantidad.item?.cantidad || 0)"
+                class="w-16 h-16 bg-gray-100 rounded-2xl text-3xl font-bold text-gray-600 active:bg-gray-200 disabled:opacity-30 flex items-center justify-center tap-xl">
+          +
+        </button>
+      </div>
+      <div class="text-center text-sm mt-3">
+        <span x-show="modalCantidad.cantidad > 0 && modalCantidad.cantidad < (modalCantidad.item?.cantidad || 0)"
+              class="text-amber-600 font-medium"
+              x-text="'Parcial: ' + modalCantidad.cantidad + ' de ' + (modalCantidad.item?.cantidad || 0)"></span>
+        <span x-show="modalCantidad.cantidad === 0"
+              class="text-red-500 font-medium">0 encontradas — usa el botón ✗ mejor</span>
+        <span x-show="modalCantidad.cantidad === (modalCantidad.item?.cantidad || 0)"
+              class="text-green-600 font-medium">Completo ✓</span>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="px-5 pb-8 flex gap-3">
+      <button @click="cancelarModalCantidad()"
+              class="flex-1 border border-gray-200 rounded-xl py-4 text-gray-600 font-semibold text-sm active:bg-gray-50 tap-xl">
+        Cancelar
+      </button>
+      <button @click="confirmarCantidad()"
+              :disabled="modalCantidad.cantidad === 0"
+              class="flex-[2] bg-green-500 active:bg-green-600 text-white rounded-xl py-4 font-bold text-sm disabled:opacity-40 tap-xl">
+        ✓ Confirmar (<span x-text="modalCantidad.cantidad"></span> ud.)
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL — SIN STOCK (bottom sheet)                        -->
+  <!-- ======================================================= -->
+
+  <!-- Backdrop -->
+  <div x-show="modalSinStock.visible" x-cloak
+       @click="cancelarModalSinStock()"
+       class="fixed inset-0 bg-black/40 z-40"></div>
+
+  <!-- Sheet -->
+  <div x-show="modalSinStock.visible" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-y-full opacity-0"
+       x-transition:enter-end="translate-y-0 opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="translate-y-0 opacity-100"
+       x-transition:leave-end="translate-y-full opacity-0"
+       class="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[88vh] overflow-y-auto">
+
+    <!-- Handle -->
+    <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-5"></div>
+
+    <!-- Título -->
+    <div class="px-5 pb-4 border-b border-gray-100">
+      <div class="font-bold text-gray-900 text-lg" x-text="modalSinStock.item?.nombre"></div>
+      <div class="text-sm text-gray-500 mt-0.5"
+           x-text="(modalSinStock.item?.cantidad || 0) + ' unidades pedidas'"></div>
+    </div>
+
+    <!-- Motivo -->
+    <div class="px-5 py-4 border-b border-gray-100">
+      <div class="text-sm font-semibold text-gray-600 mb-3">¿Motivo?</div>
+      <div class="grid grid-cols-3 gap-2">
+        <button @click="modalSinStock.motivo = 'sin_stock'"
+                :class="modalSinStock.motivo === 'sin_stock'
+                  ? 'bg-red-100 border-red-300 text-red-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600'"
+                class="border rounded-xl py-3 px-2 text-xs font-semibold text-center transition-colors tap-xl">
+          📦<br>Sin stock
+        </button>
+        <button @click="modalSinStock.motivo = 'dañado'"
+                :class="modalSinStock.motivo === 'dañado'
+                  ? 'bg-red-100 border-red-300 text-red-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600'"
+                class="border rounded-xl py-3 px-2 text-xs font-semibold text-center transition-colors tap-xl">
+          🚫<br>Dañado
+        </button>
+        <button @click="modalSinStock.motivo = 'no_encuentro'"
+                :class="modalSinStock.motivo === 'no_encuentro'
+                  ? 'bg-red-100 border-red-300 text-red-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600'"
+                class="border rounded-xl py-3 px-2 text-xs font-semibold text-center transition-colors tap-xl">
+          🔍<br>No lo encuentro
+        </button>
+      </div>
+    </div>
+
+    <!-- Sustitución -->
+    <div class="px-5 py-4 border-b border-gray-100">
+      <div class="text-sm font-semibold text-gray-600 mb-3">
+        Sustituto <span class="font-normal text-gray-400">(opcional)</span>
+      </div>
+
+      <!-- Sustituto seleccionado -->
+      <div x-show="modalSinStock.sustituto" class="mb-3">
+        <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+          <div>
+            <div class="font-semibold text-green-800 text-sm" x-text="modalSinStock.sustituto?.nombre"></div>
+            <div class="text-xs text-green-600 mt-0.5"
+                 x-text="modalSinStock.sustituto?.precio?.toFixed(2) + '€'"></div>
+          </div>
+          <button @click="limpiarSustituto()"
+                  class="w-8 h-8 flex items-center justify-center text-green-600 active:text-green-800 text-lg">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Búsqueda -->
+      <div x-show="!modalSinStock.sustituto">
+        <div class="relative">
+          <input type="text"
+                 x-model="modalSinStock.query"
+                 @input.debounce.300ms="buscarSustitutos($event.target.value)"
+                 placeholder="Buscar producto sustituto..."
+                 autocomplete="off"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-400 pr-10" />
+          <div x-show="modalSinStock.buscando"
+               class="absolute right-3 top-3.5 w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+
+        <!-- Resultados -->
+        <div x-show="modalSinStock.resultados.length > 0"
+             class="mt-2 border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-50">
+          <template x-for="prod in modalSinStock.resultados" :key="prod.id">
+            <button @click="seleccionarSustituto(prod)"
+                    class="w-full flex items-center justify-between px-4 py-3 text-left active:bg-gray-100">
+              <div>
+                <div class="text-sm font-medium text-gray-800" x-text="prod.nombre"></div>
+                <div class="text-xs text-gray-400 mt-0.5" x-text="'Stock: ' + prod.stock"></div>
+              </div>
+              <span class="text-sm text-gray-600 font-semibold ml-3 flex-shrink-0"
+                    x-text="prod.precio.toFixed(2) + '€'"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Sin resultados -->
+        <div x-show="modalSinStock.query.length >= 2 && !modalSinStock.buscando && modalSinStock.resultados.length === 0"
+             class="mt-2 text-center text-xs text-gray-400 py-3">
+          Sin resultados para "<span x-text="modalSinStock.query"></span>"
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="px-5 py-4 pb-8 flex gap-3">
+      <button @click="cancelarModalSinStock()"
+              class="flex-1 border border-gray-200 rounded-xl py-4 text-gray-600 font-semibold text-sm active:bg-gray-50 tap-xl">
+        Cancelar
+      </button>
+      <button @click="confirmarSinStock()"
+              class="flex-[2] rounded-xl py-4 font-bold text-sm text-white active:scale-95 transition-transform tap-xl"
+              :class="modalSinStock.sustituto ? 'bg-orange-500 active:bg-orange-600' : 'bg-red-500 active:bg-red-600'">
+        <span x-show="!modalSinStock.sustituto">✗ Confirmar sin stock</span>
+        <span x-show="modalSinStock.sustituto">↔ Confirmar sustitución</span>
+      </button>
+    </div>
+  </div>
+
   <!-- ======== JAVASCRIPT ======== -->
   <script>
     function picker(pickerId) {
       return {
-        pickerId:      pickerId,
-        pedidos:       [],
-        vistaActual:   'lista',   // 'lista' | 'ticket'
-        ticketActual:  null,
-        cargando:      false,
-        finalizando:   false,
-        isOnline:      true,
-        offlineQueue:  [],        // [{ item_id, estado, estadoAnterior }]
-        toast:         { visible: false, msg: '', error: false },
-        _toastTimer:   null,
+        pickerId:     pickerId,
+        pedidos:      [],
+        vistaActual:  'lista',
+        ticketActual: null,
+        cargando:     false,
+        finalizando:  false,
+        isOnline:     true,
+        offlineQueue: [],
+        toast:        { visible: false, msg: '', error: false },
+        _toastTimer:  null,
+        _searchTimer: null,
 
-        // ---- computed ----
+        // ---- Modales ----
+        modalCantidad: {
+          visible:  false,
+          item:     null,
+          cantidad: 1,
+        },
+        modalSinStock: {
+          visible:    false,
+          item:       null,
+          motivo:     'sin_stock',   // sin_stock | dañado | no_encuentro
+          sustituto:  null,          // { id, nombre, precio }
+          query:      '',
+          resultados: [],
+          buscando:   false,
+        },
+
+        // ---- Computed ----
 
         get itemsOrdenados() {
           if (!this.ticketActual) return [];
           return [...this.ticketActual.items].sort((a, b) => {
-            // pendientes siempre primero
             const ap = a.estado === 'pendiente' ? 0 : 1;
             const bp = b.estado === 'pendiente' ? 0 : 1;
             if (ap !== bp) return ap - bp;
-            // mismo estado: ordenar por ubicación (sin ubicación al final)
             return (a.ubicacion || 'ZZZZ').localeCompare(b.ubicacion || 'ZZZZ');
           });
         },
@@ -347,25 +575,20 @@
           return Math.round(this.itemsCompletados / this.ticketActual.items_total * 100);
         },
 
-        // ---- lifecycle ----
+        // ---- Lifecycle ----
 
         async init() {
           if (!this.pickerId) return;
           this.isOnline = navigator.onLine;
-          window.addEventListener('online',  () => {
-            this.isOnline = true;
-            this._flushQueue();
-          });
-          window.addEventListener('offline', () => {
-            this.isOnline = false;
-          });
+          window.addEventListener('online',  () => { this.isOnline = true;  this._flushQueue(); });
+          window.addEventListener('offline', () => { this.isOnline = false; });
           await this.recargar();
           setInterval(() => {
             if (this.vistaActual === 'lista') this.recargar();
           }, 60000);
         },
 
-        // ---- data fetching ----
+        // ---- Data ----
 
         async recargar() {
           if (!this.pickerId) return;
@@ -374,10 +597,8 @@
             const r = await fetch(`/picker/mis-pedidos?picker_id=${this.pickerId}`);
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             const data = await r.json();
-            // Inicializar flag _guardando en cada item
             data.forEach(p => p.items.forEach(item => { item._guardando = false; }));
             this.pedidos = data;
-            // Actualizar ticket abierto solo si no hay requests en vuelo
             if (this.ticketActual) {
               const actualizado = data.find(p => p.picking_id === this.ticketActual.picking_id);
               if (actualizado && !this.ticketActual.items.some(i => i._guardando)) {
@@ -385,14 +606,14 @@
                 this.ticketActual = actualizado;
               }
             }
-          } catch (e) {
+          } catch (_e) {
             this.mostrarToast('Error al cargar pedidos', true);
           } finally {
             this.cargando = false;
           }
         },
 
-        // ---- navegación ----
+        // ---- Navegación ----
 
         abrirTicket(pedido) {
           this.ticketActual = pedido;
@@ -406,40 +627,47 @@
           this.recargar();
         },
 
-        // ---- picking ----
+        // ---- Picking core ----
 
-        async marcarItem(item, nuevoEstado) {
+        async marcarItem(item, nuevoEstado, extra = {}) {
           if (item._guardando) return;
 
           const estadoAnterior = item.estado;
           item.estado     = nuevoEstado;
           item._guardando = true;
+
+          // Reflejar cantidad_encontrada en el objeto local para mostrarla inmediatamente
+          if (extra.cantidad_encontrada !== undefined) {
+            item.cantidad_encontrada = extra.cantidad_encontrada;
+          }
+
           this._recalcularPendientes();
 
           if (!this.isOnline) {
-            this.offlineQueue.push({ item_id: item.item_id, estado: nuevoEstado, estadoAnterior });
+            this.offlineQueue.push({ item_id: item.item_id, estado: nuevoEstado, estadoAnterior, extra });
             item._guardando = false;
             this.mostrarToast('Sin conexión — se enviará al reconectar');
             return;
           }
 
-          await this._enviarEstado(item, nuevoEstado, estadoAnterior);
+          await this._enviarEstado(item, nuevoEstado, estadoAnterior, extra);
         },
 
-        async _enviarEstado(item, nuevoEstado, estadoAnterior, intentos = 0) {
+        async _enviarEstado(item, nuevoEstado, estadoAnterior, extra = {}, intentos = 0) {
           try {
             const r = await fetch(`/picker/item/${item.item_id}/estado`, {
               method:  'POST',
               headers: { 'Content-Type': 'application/json' },
-              body:    JSON.stringify({ estado: nuevoEstado }),
+              body:    JSON.stringify({ estado: nuevoEstado, ...extra }),
             });
 
             if (!r.ok) {
               if (r.status >= 500 && intentos < 2) {
                 await new Promise(res => setTimeout(res, 600 * (intentos + 1)));
-                return this._enviarEstado(item, nuevoEstado, estadoAnterior, intentos + 1);
+                return this._enviarEstado(item, nuevoEstado, estadoAnterior, extra, intentos + 1);
               }
               item.estado = estadoAnterior;
+              item.cantidad_encontrada = null;
               this._recalcularPendientes();
               const data = await r.json().catch(() => ({}));
               this.mostrarToast(data.error || 'Error al actualizar', true);
@@ -447,9 +675,10 @@
           } catch (_e) {
             if (intentos < 2) {
               await new Promise(res => setTimeout(res, 600 * (intentos + 1)));
-              return this._enviarEstado(item, nuevoEstado, estadoAnterior, intentos + 1);
+              return this._enviarEstado(item, nuevoEstado, estadoAnterior, extra, intentos + 1);
             }
             item.estado = estadoAnterior;
+            item.cantidad_encontrada = null;
             this._recalcularPendientes();
             this.mostrarToast('Sin conexión — intenta de nuevo', true);
           } finally {
@@ -466,8 +695,11 @@
             const item = this.ticketActual?.items.find(i => i.item_id === job.item_id);
             if (!item) continue;
             item.estado = job.estado;
+            if (job.extra?.cantidad_encontrada !== undefined) {
+              item.cantidad_encontrada = job.extra.cantidad_encontrada;
+            }
             this._recalcularPendientes();
-            await this._enviarEstado(item, job.estado, job.estadoAnterior);
+            await this._enviarEstado(item, job.estado, job.estadoAnterior, job.extra || {});
           }
 
           if (cola.length > 0) {
@@ -479,7 +711,7 @@
         _recalcularPendientes() {
           if (!this.ticketActual) return;
           const pendientes = this.ticketActual.items.filter(i => i.estado === 'pendiente').length;
-          this.ticketActual.items_pendientes    = pendientes;
+          this.ticketActual.items_pendientes     = pendientes;
           this.ticketActual.listo_para_finalizar = pendientes === 0;
         },
 
@@ -489,7 +721,6 @@
           try {
             const r    = await fetch(`/picker/picking/${this.ticketActual.picking_id}/finalizar`, { method: 'POST' });
             const data = await r.json().catch(() => ({}));
-
             if (r.ok) {
               this.mostrarToast('¡Picking completado! Pedido listo para reparto ✓');
               await this.recargar();
@@ -504,7 +735,103 @@
           }
         },
 
-        // ---- utilidades ----
+        // ---- Modal cantidad ----
+
+        abrirModalCantidad(item) {
+          this.modalCantidad = { visible: true, item, cantidad: item.cantidad };
+        },
+
+        cancelarModalCantidad() {
+          this.modalCantidad = { visible: false, item: null, cantidad: 1 };
+        },
+
+        ajustarCantidad(delta) {
+          const max = this.modalCantidad.item?.cantidad || 0;
+          this.modalCantidad.cantidad = Math.max(0, Math.min(max, this.modalCantidad.cantidad + delta));
+        },
+
+        confirmarTodasCantidad() {
+          this.modalCantidad.cantidad = this.modalCantidad.item?.cantidad || 0;
+          this.confirmarCantidad();
+        },
+
+        confirmarCantidad() {
+          const item = this.modalCantidad.item;
+          const qty  = this.modalCantidad.cantidad;
+          if (!item) return;
+          this.cancelarModalCantidad();
+          if (qty === 0) {
+            // 0 encontradas → abrir flujo sin stock directamente
+            this.abrirModalSinStock(item);
+            return;
+          }
+          this.marcarItem(item, 'encontrado', { cantidad_encontrada: qty });
+        },
+
+        // ---- Modal sin stock ----
+
+        abrirModalSinStock(item) {
+          this.modalSinStock = {
+            visible:    true,
+            item,
+            motivo:     'sin_stock',
+            sustituto:  null,
+            query:      '',
+            resultados: [],
+            buscando:   false,
+          };
+        },
+
+        cancelarModalSinStock() {
+          this.modalSinStock.visible = false;
+        },
+
+        confirmarSinStock() {
+          const item = this.modalSinStock.item;
+          if (!item) return;
+
+          const extra = {
+            cantidad_encontrada:  0,
+            notas:                this.modalSinStock.motivo,
+          };
+
+          let estado = 'sin_stock';
+          if (this.modalSinStock.sustituto) {
+            estado = 'sustituido';
+            extra.producto_sustituto_id = this.modalSinStock.sustituto.id;
+          }
+
+          this.cancelarModalSinStock();
+          this.marcarItem(item, estado, extra);
+        },
+
+        async buscarSustitutos(q) {
+          clearTimeout(this._searchTimer);
+          if (q.length < 2) {
+            this.modalSinStock.resultados = [];
+            return;
+          }
+          this._searchTimer = setTimeout(async () => {
+            this.modalSinStock.buscando = true;
+            try {
+              const r = await fetch(`/picker/buscar-productos?q=${encodeURIComponent(q)}`);
+              if (r.ok) this.modalSinStock.resultados = await r.json();
+            } catch (_) {}
+            finally { this.modalSinStock.buscando = false; }
+          }, 300);
+        },
+
+        seleccionarSustituto(prod) {
+          this.modalSinStock.sustituto  = prod;
+          this.modalSinStock.resultados = [];
+          this.modalSinStock.query      = '';
+        },
+
+        limpiarSustituto() {
+          this.modalSinStock.sustituto = null;
+        },
+
+        // ---- Utilidades ----
 
         mostrarToast(msg, error = false) {
           clearTimeout(this._toastTimer);
