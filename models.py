@@ -255,6 +255,14 @@ class Reparto(Base):
     motivo_no_entrega = Column(String(500), nullable=True)
     prueba_entrega_url = Column(String(500), nullable=True)
     notas = Column(String(500), nullable=True)
+    # Cobro presencial — rellenado por el repartidor al confirmar el pago
+    # SQL: ALTER TABLE repartos ADD metodo_cobro VARCHAR(20), importe_cobrado DECIMAL(10,2),
+    #      cambio_devuelto DECIMAL(10,2), importe_efectivo DECIMAL(10,2), importe_tarjeta DECIMAL(10,2)
+    metodo_cobro    = Column(String(20),       nullable=True)   # efectivo | tarjeta | mixto
+    importe_cobrado = Column(DECIMAL(10, 2),   nullable=True)   # total que cobró el repartidor
+    cambio_devuelto = Column(DECIMAL(10, 2),   nullable=True)   # solo efectivo: cambio devuelto
+    importe_efectivo = Column(DECIMAL(10, 2),  nullable=True)   # solo mixto: parte en efectivo
+    importe_tarjeta  = Column(DECIMAL(10, 2),  nullable=True)   # solo mixto: parte en tarjeta
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
 

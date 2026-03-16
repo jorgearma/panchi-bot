@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Panchi — Cierre de caja</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .slide-up { animation: slideUp .25s ease-out; }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(12px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen"
+      x-data="cierre({{ repartidor_id or 'null' }})"
+      x-init="init()">
+
+  <!-- ======== HEADER ======== -->
+  <header class="bg-gray-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow">
+    <div class="flex items-center gap-2">
+      <a :href="'/repartidor?id=' + repartidorId"
+         class="text-gray-400 active:text-white transition mr-1 text-xl leading-none">‹</a>
+      <span class="font-bold text-lg">💰 Cierre de caja</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span x-show="cargando" class="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" x-cloak></span>
+      <!-- Selector de fecha -->
+      <input type="date"
+             x-model="fechaSeleccionada"
+             @change="cargar()"
+             :max="hoy"
+             class="bg-gray-700 text-white text-xs rounded-lg px-2 py-1.5 border-0 focus:outline-none focus:ring-1 focus:ring-orange-400">
+    </div>
+  </header>
+
+  <!-- ======== CARGANDO ======== -->
+  <div x-show="cargando && !datos"
+       class="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+    <div class="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+    <p class="text-gray-400 text-sm">Calculando cierre...</p>
+  </div>
+
+  <!-- ======== CONTENIDO ======== -->
+  <div x-show="datos && !cargando" x-cloak class="p-4 space-y-4 pb-10 slide-up">
+
+    <!-- ── CIFRA PRINCIPAL: EFECTIVO A ENTREGAR ─────────────── -->
+    <div class="bg-white rounded-2xl border overflow-hidden shadow-sm"
+         :class="datos?.total_efectivo_a_entregar > 0
+           ? 'border-orange-300'
+           : 'border-gray-200'">
+      <div class="px-5 py-5 text-center"
+           :class="datos?.total_efectivo_a_entregar > 0
+             ? 'bg-orange-50'
+             : 'bg-gray-50'">
+        <p class="text-xs font-semibold uppercase tracking-wide mb-1"
+           :class="datos?.total_efectivo_a_entregar > 0 ? 'text-orange-500' : 'text-gray-400'">
+          Efectivo a entregar al local
+        </p>
+        <p class="text-5xl font-black tabular-nums"
+           :class="datos?.total_efectivo_a_entregar > 0 ? 'text-orange-600' : 'text-gray-400'"
+           x-text="(datos?.total_efectivo_a_entregar || 0).toFixed(2) + ' €'"></p>
+        <p x-show="datos?.total_efectivo_a_entregar === 0"
+           class="text-sm text-gray-400 mt-1">Sin cobros en efectivo hoy</p>
+      </div>
+      <div x-show="datos?.total_tarjeta_registrado > 0"
+           class="border-t border-gray-100 px-5 py-3 flex justify-between items-center">
+        <span class="text-sm text-gray-500">Tarjeta datáfono (queda en datáfono)</span>
+        <span class="font-semibold text-gray-700 tabular-nums"
+              x-text="(datos?.total_tarjeta_registrado || 0).toFixed(2) + ' €'"></span>
+      </div>
+    </div>
+
+    <!-- ── RESUMEN POR MÉTODO ────────────────────────────────── -->
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100">
+        <span class="font-semibold text-gray-700 text-sm">
+          Pedidos del turno
+          <span class="text-gray-400 font-normal ml-1"
+                x-text="'(' + (datos?.total_pedidos || 0) + ' entregados)'"></span>
+        </span>
+      </div>
+
+      <!-- Online -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-sm flex-shrink-0">💳</div>
+          <div>
+            <p class="text-sm font-medium text-gray-800">Pagado online</p>
+            <p class="text-xs text-gray-400">Ya cobrado al hacer el pedido</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="font-bold text-gray-700 tabular-nums">0.00 €</p>
+          <p class="text-xs text-gray-400" x-text="(datos?.online?.count || 0) + ' pedidos'"></p>
+        </div>
+      </div>
+
+      <!-- Efectivo -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center text-sm flex-shrink-0">💵</div>
+          <div>
+            <p class="text-sm font-medium text-gray-800">Efectivo</p>
+            <p class="text-xs text-gray-400">Entregar al local</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="font-bold tabular-nums"
+             :class="(datos?.efectivo?.total || 0) > 0 ? 'text-orange-600' : 'text-gray-400'"
+             x-text="(datos?.efectivo?.total || 0).toFixed(2) + ' €'"></p>
+          <p class="text-xs text-gray-400" x-text="(datos?.efectivo?.count || 0) + ' pedidos'"></p>
+        </div>
+      </div>
+
+      <!-- Tarjeta -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center text-sm flex-shrink-0">📟</div>
+          <div>
+            <p class="text-sm font-medium text-gray-800">Tarjeta datáfono</p>
+            <p class="text-xs text-gray-400">Queda en el datáfono</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="font-bold text-blue-600 tabular-nums"
+             x-text="(datos?.tarjeta?.total || 0).toFixed(2) + ' €'"></p>
+          <p class="text-xs text-gray-400" x-text="(datos?.tarjeta?.count || 0) + ' pedidos'"></p>
+        </div>
+      </div>
+
+      <!-- Mixto -->
+      <template x-if="(datos?.mixto?.count || 0) > 0">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-purple-50 rounded-xl flex items-center justify-center text-sm flex-shrink-0">🔀</div>
+            <div>
+              <p class="text-sm font-medium text-gray-800">Pago mixto</p>
+              <p class="text-xs text-gray-400">
+                Efectivo: <span class="font-semibold tabular-nums" x-text="(datos?.mixto?.efectivo || 0).toFixed(2) + ' €'"></span>
+                · Tarjeta: <span class="font-semibold tabular-nums" x-text="(datos?.mixto?.tarjeta || 0).toFixed(2) + ' €'"></span>
+              </p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-gray-400" x-text="(datos?.mixto?.count || 0) + ' pedidos'"></p>
+          </div>
+        </div>
+      </template>
+
+      <!-- Sin registro -->
+      <template x-if="(datos?.sin_registro?.count || 0) > 0">
+        <div class="flex items-center justify-between px-4 py-3 bg-yellow-50">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-yellow-100 rounded-xl flex items-center justify-center text-sm flex-shrink-0">⚠️</div>
+            <div>
+              <p class="text-sm font-medium text-yellow-800">Sin método registrado</p>
+              <p class="text-xs text-yellow-600">Confirma el cobro manualmente</p>
+            </div>
+          </div>
+          <p class="text-xs font-bold text-yellow-700" x-text="(datos?.sin_registro?.count || 0) + ' pedidos'"></p>
+        </div>
+      </template>
+    </div>
+
+    <!-- ── DETALLE DE PEDIDOS ─────────────────────────────────── -->
+    <template x-if="datos?.detalle?.length > 0">
+      <div>
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
+          Detalle de entregas
+        </h3>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-50">
+          <template x-for="r in datos.detalle" :key="r.reparto_id">
+            <div class="flex items-center justify-between px-4 py-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <!-- Icono método -->
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
+                     :class="{
+                       'bg-orange-50': r.metodo_cobro === 'efectivo',
+                       'bg-blue-50':   r.metodo_cobro === 'tarjeta',
+                       'bg-purple-50': r.metodo_cobro === 'mixto',
+                       'bg-green-50':  !r.metodo_cobro,
+                     }">
+                  <span x-show="r.metodo_cobro === 'efectivo'">💵</span>
+                  <span x-show="r.metodo_cobro === 'tarjeta'">📟</span>
+                  <span x-show="r.metodo_cobro === 'mixto'">🔀</span>
+                  <span x-show="!r.metodo_cobro">💳</span>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-gray-800 truncate">
+                    #<span x-text="r.pedido_id"></span>
+                    <span class="text-gray-400 font-normal ml-1" x-text="r.cliente"></span>
+                  </p>
+                  <p class="text-xs text-gray-400" x-text="formatHora(r.hora_entrega)"></p>
+                </div>
+              </div>
+              <div class="text-right flex-shrink-0 ml-3">
+                <p class="font-bold text-gray-800 tabular-nums text-sm"
+                   x-text="r.importe.toFixed(2) + ' €'"></p>
+                <!-- Cambio devuelto solo si efectivo -->
+                <p x-show="r.metodo_cobro === 'efectivo' && r.cambio_devuelto > 0"
+                   class="text-xs text-gray-400 tabular-nums"
+                   x-text="'cambio ' + r.cambio_devuelto.toFixed(2) + ' €'"></p>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- Estado vacío -->
+    <div x-show="!datos?.detalle?.length"
+         class="flex flex-col items-center justify-center py-16 text-center px-6">
+      <div class="text-5xl mb-3">📭</div>
+      <p class="font-bold text-gray-700">Sin entregas este día</p>
+      <p class="text-gray-400 text-sm mt-1">Selecciona otra fecha en la parte superior</p>
+    </div>
+
+  </div>
+
+  <!-- ======== JAVASCRIPT ======== -->
+  <script>
+    function cierre(repartidorId) {
+      return {
+        repartidorId,
+        datos: null,
+        cargando: false,
+        hoy: new Date().toISOString().slice(0, 10),
+        fechaSeleccionada: new Date().toISOString().slice(0, 10),
+
+        async init() {
+          if (!this.repartidorId) return;
+          await this.cargar();
+        },
+
+        async cargar() {
+          this.cargando = true;
+          try {
+            const url = `/repartidor/cierre/datos?repartidor_id=${this.repartidorId}&fecha=${this.fechaSeleccionada}`;
+            const r = await fetch(url);
+            if (r.ok) {
+              this.datos = await r.json();
+            }
+          } finally {
+            this.cargando = false;
+          }
+        },
+
+        formatHora(ts) {
+          if (!ts) return '—';
+          return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        },
+      };
+    }
+  </script>
+</body>
+</html>
