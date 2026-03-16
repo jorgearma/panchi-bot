@@ -23,25 +23,35 @@ _TARANCON_LAT = 40.0041
 _TARANCON_LNG = -2.9980
 
 _COLORES_ESTADO = {
-    EstadoPedido.PAGADO.value: "#10b981",
-    EstadoPedido.EN_PREPARACION.value: "#3b82f6",
-    EstadoPedido.PREPARADO.value: "#6366f1",
-    EstadoPedido.EN_REPARTO.value: "#f97316",
+    EstadoPedido.PAGADO.value:           "#10b981",
+    EstadoPedido.CONTRA_REEMBOLSO.value: "#8b5cf6",
+    EstadoPedido.EN_PREPARACION.value:   "#3b82f6",
+    EstadoPedido.PREPARADO.value:        "#6366f1",
+    EstadoPedido.EN_REPARTO.value:       "#f97316",
 }
 
 # Minutes before an order in a state is flagged as delayed
 _UMBRALES_RETRASO = {
-    EstadoPedido.PAGADO.value: (10, "warning", "pagado sin iniciar picking"),
-    EstadoPedido.EN_PREPARACION.value: (30, "warning", "en preparación"),
-    EstadoPedido.PREPARADO.value: (15, "error", "preparado sin repartidor"),
-    EstadoPedido.EN_REPARTO.value: (60, "error", "en reparto"),
+    EstadoPedido.PAGADO.value:           (10, "warning", "pagado sin iniciar picking"),
+    EstadoPedido.CONTRA_REEMBOLSO.value: (10, "warning", "contra reembolso sin iniciar picking"),
+    EstadoPedido.EN_PREPARACION.value:   (30, "warning", "en preparación"),
+    EstadoPedido.PREPARADO.value:        (15, "error",   "preparado sin repartidor"),
+    EstadoPedido.EN_REPARTO.value:       (60, "error",   "en reparto"),
 }
 
+# Estados que deben aparecer en el panel operativo
 _ESTADOS_OPERATIVOS = [
     EstadoPedido.PAGADO.value,
+    EstadoPedido.CONTRA_REEMBOLSO.value,
     EstadoPedido.EN_PREPARACION.value,
     EstadoPedido.PREPARADO.value,
     EstadoPedido.EN_REPARTO.value,
+]
+
+# Estados que necesitan que se les asigne picking (listos para preparar)
+_ESTADOS_LISTOS_PARA_PICKING = [
+    EstadoPedido.PAGADO.value,
+    EstadoPedido.CONTRA_REEMBOLSO.value,
 ]
 
 
@@ -184,6 +194,7 @@ class GestorDashboard:
                 "cliente_telefono": p.TelefonoEntrega,
                 "direccion_entrega": p.DireccionEntrega,
                 "estado": p.Estado,
+                "forma_pago": p.forma_pago or "online",
                 "total": float(p.Total) if p.Total else 0.0,
                 "fecha_creacion": p.FechaCreacion.isoformat() if p.FechaCreacion else None,
                 "minutos_activo": minutos,
@@ -199,10 +210,10 @@ class GestorDashboard:
         s = self.session
         resultado = []
 
-        # Orders paid but not yet assigned to a picker
+        # Orders ready for picking (pagado online o contra reembolso) sin picker asignado aún
         pickings_existentes_ids = [pk.pedido_id for pk in s.query(PickingPedido.pedido_id).all()]
         pagados_sin_picking = s.query(Pedido).filter(
-            Pedido.Estado == EstadoPedido.PAGADO.value,
+            Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
             ~Pedido.PedidoID.in_(pickings_existentes_ids) if pickings_existentes_ids else True,
         ).all()
 
@@ -472,7 +483,7 @@ class GestorDashboard:
             pedido = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
             if not pedido:
                 return False, "Pedido no encontrado"
-            if pedido.Estado != EstadoPedido.PAGADO.value:
+            if pedido.Estado not in _ESTADOS_LISTOS_PARA_PICKING:
                 return False, f"Estado actual '{pedido.Estado}' no permite asignar picking"
 
             empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id, activo=True).first()

@@ -19,6 +19,7 @@ class EstadoPedido(str, Enum):
     ENLACE2 = "enlace2"
     CONFIRMANDO_PAGO = "confirmando-pago"
     PAGADO = "pagado"
+    CONTRA_REEMBOLSO = "contra_reembolso"   # pago en efectivo a la entrega
     # Flujo operativo (almacén → reparto)
     EN_PREPARACION = "en_preparacion"
     PREPARADO = "preparado"
@@ -80,9 +81,10 @@ TRANSICIONES_REGISTRO: dict = {
 TRANSICIONES_PEDIDO: dict = {
     EstadoPedido.PENDIENTE:         [EstadoPedido.ENLACE, EstadoPedido.CANCELADO],
     EstadoPedido.ENLACE:            [EstadoPedido.ENLACE2, EstadoPedido.PENDIENTE, EstadoPedido.CANCELADO],
-    EstadoPedido.ENLACE2:           [EstadoPedido.CONFIRMANDO_PAGO, EstadoPedido.ENLACE],
+    EstadoPedido.ENLACE2:           [EstadoPedido.CONFIRMANDO_PAGO, EstadoPedido.CONTRA_REEMBOLSO, EstadoPedido.ENLACE],
     EstadoPedido.CONFIRMANDO_PAGO:  [EstadoPedido.PAGADO, EstadoPedido.CANCELADO],
     EstadoPedido.PAGADO:            [EstadoPedido.EN_PREPARACION, EstadoPedido.REEMBOLSADO],
+    EstadoPedido.CONTRA_REEMBOLSO:  [EstadoPedido.EN_PREPARACION, EstadoPedido.CANCELADO],
     EstadoPedido.EN_PREPARACION:    [EstadoPedido.PREPARADO, EstadoPedido.CANCELADO],
     EstadoPedido.PREPARADO:         [EstadoPedido.EN_REPARTO],
     EstadoPedido.EN_REPARTO:        [EstadoPedido.ENTREGADO],
