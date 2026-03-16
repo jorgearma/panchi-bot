@@ -267,7 +267,8 @@
             <select x-model="filtroEstado"
                     class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
               <option value="">Todos los estados</option>
-              <option value="pagado">Pagado</option>
+              <option value="pagado">Pagado online</option>
+              <option value="contra_reembolso">Contra reembolso</option>
               <option value="en_preparacion">En preparación</option>
               <option value="preparado">Preparado</option>
               <option value="en_reparto">En reparto</option>
@@ -286,6 +287,7 @@
                 <th class="text-left px-4 py-3">Pedido</th>
                 <th class="text-left px-4 py-3">Cliente</th>
                 <th class="text-left px-4 py-3">Estado</th>
+                <th class="text-left px-4 py-3">Pago</th>
                 <th class="text-left px-4 py-3">Picking</th>
                 <th class="text-left px-4 py-3">Reparto</th>
                 <th class="text-right px-4 py-3">Tiempo</th>
@@ -308,6 +310,10 @@
                   </td>
                   <td class="px-4 py-3">
                     <span class="badge" :class="badgePedidoClass(p.estado)" x-text="estadoLabel(p.estado)"></span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="badge" :class="p.forma_pago === 'efectivo' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'"
+                          x-text="p.forma_pago === 'efectivo' ? '💵 Efectivo' : '💳 Online'"></span>
                   </td>
                   <td class="px-4 py-3">
                     <template x-if="p.picking">
@@ -712,17 +718,18 @@
 
         estadoLabel(estado) {
           const labels = {
-            'Pendiente': 'Pendiente',
-            'enlace': 'Enlace',
-            'enlace2': 'Confirmación',
-            'confirmando-pago': 'Pago...',
-            'pagado': 'Pagado',
-            'en_preparacion': 'En picking',
-            'preparado': 'Preparado',
-            'en_reparto': 'En reparto',
-            'entregado': 'Entregado',
-            'cancelado': 'Cancelado',
-            'reembolsado': 'Reembolsado',
+            'Pendiente':         'Pendiente',
+            'enlace':            'Enlace',
+            'enlace2':           'Confirmación',
+            'confirmando-pago':  'Pago...',
+            'pagado':            'Pagado',
+            'contra_reembolso':  'Contra reembolso',
+            'en_preparacion':    'En picking',
+            'preparado':         'Preparado',
+            'en_reparto':        'En reparto',
+            'entregado':         'Entregado',
+            'cancelado':         'Cancelado',
+            'reembolsado':       'Reembolsado',
           };
           return labels[estado] || estado;
         },
@@ -733,17 +740,18 @@
 
         badgePedidoClass(estado) {
           const m = {
-            'pagado': 'bg-emerald-100 text-emerald-800',
-            'en_preparacion': 'bg-blue-100 text-blue-800',
-            'preparado': 'bg-indigo-100 text-indigo-800',
-            'en_reparto': 'bg-orange-100 text-orange-800',
-            'entregado': 'bg-green-100 text-green-800',
-            'cancelado': 'bg-red-100 text-red-700',
-            'reembolsado': 'bg-red-100 text-red-700',
+            'pagado':           'bg-emerald-100 text-emerald-800',
+            'contra_reembolso': 'bg-purple-100 text-purple-800',
+            'en_preparacion':   'bg-blue-100 text-blue-800',
+            'preparado':        'bg-indigo-100 text-indigo-800',
+            'en_reparto':       'bg-orange-100 text-orange-800',
+            'entregado':        'bg-green-100 text-green-800',
+            'cancelado':        'bg-red-100 text-red-700',
+            'reembolsado':      'bg-red-100 text-red-700',
             'confirmando-pago': 'bg-yellow-100 text-yellow-800',
-            'enlace': 'bg-gray-100 text-gray-600',
-            'enlace2': 'bg-gray-100 text-gray-600',
-            'Pendiente': 'bg-gray-100 text-gray-600',
+            'enlace':           'bg-gray-100 text-gray-600',
+            'enlace2':          'bg-gray-100 text-gray-600',
+            'Pendiente':        'bg-gray-100 text-gray-600',
           };
           return m[estado] || 'bg-gray-100 text-gray-600';
         },

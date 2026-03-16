@@ -151,6 +151,14 @@ class GestorPedidos:
             logger.error("Error al actualizar el estado del pedido %s: %s", pedido_id, error)
             raise
     
+    def guardar_forma_pago(self, pedido_id, forma_pago: str):
+        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+        if pedido:
+            pedido.forma_pago = forma_pago
+            self.session.commit()
+            return True
+        return False
+
     def guardar_redis_id(self, pedido_id, id_redis):
         pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
         if pedido:
