@@ -50,17 +50,23 @@ def conectar_bd1():
         from models import (
             Usuario, Pedido, PedidoDetalle, Producto, Empleado,
             Categoria, Pago, HistorialEstadoPedido,
+            Rol, PickingPedido, PickingItem, Reparto, Incidencia,
         )
 
         # Orden respeta dependencias de FK
         Base.metadata.create_all(engine, tables=[Usuario.__table__])
         Base.metadata.create_all(engine, tables=[Categoria.__table__])
         Base.metadata.create_all(engine, tables=[Producto.__table__])
+        Base.metadata.create_all(engine, tables=[Rol.__table__])
+        Base.metadata.create_all(engine, tables=[Empleado.__table__])
         Base.metadata.create_all(engine, tables=[Pedido.__table__])
         Base.metadata.create_all(engine, tables=[PedidoDetalle.__table__])
-        Base.metadata.create_all(engine, tables=[Empleado.__table__])
         Base.metadata.create_all(engine, tables=[Pago.__table__])
         Base.metadata.create_all(engine, tables=[HistorialEstadoPedido.__table__])
+        Base.metadata.create_all(engine, tables=[PickingPedido.__table__])
+        Base.metadata.create_all(engine, tables=[PickingItem.__table__])
+        Base.metadata.create_all(engine, tables=[Reparto.__table__])
+        Base.metadata.create_all(engine, tables=[Incidencia.__table__])
 
         print("✅ Base de datos inicializada correctamente.")
     except Exception as e:

@@ -3,7 +3,7 @@ from decimal import Decimal
 from models import Pedido, PedidoDetalle, Producto, HistorialEstadoPedido, Pago
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
-from states import EstadoPedido, transicion_valida_pedido
+from states import EstadoPedido, ESTADOS_TERMINALES_PEDIDO, transicion_valida_pedido
 
 logger = logging.getLogger(__name__)
 
@@ -62,20 +62,22 @@ class GestorPedidos:
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
     def obtener_pedido_mas_reciente(self, id_usuario):
         """
-        Devuelve el pedido más reciente (activo) del usuario.
+        Devuelve el pedido más reciente no terminal del usuario.
+        Excluye estados terminales: entregado, cancelado, reembolsado.
         """
         try:
+            estados_excluidos = [e.value for e in ESTADOS_TERMINALES_PEDIDO]
             pedido = (
                 self.session.query(Pedido)
                 .filter(Pedido.ClienteID == id_usuario)
-                .filter(Pedido.Estado != EstadoPedido.PAGADO)
+                .filter(Pedido.Estado.notin_(estados_excluidos))
                 .order_by(Pedido.FechaCreacion.desc())
                 .first()
             )
-            return pedido  # Devuelve None si no hay pedidos
+            return pedido
         except SQLAlchemyError as error:
             logger.error("Error al obtener el pedido activo del usuario %s: %s", id_usuario, error)
-            raise  # O manejar el caso donde no se encuentra un pedido
+            raise
 
     
     def agregar_productos_a_pedido(self, pedido_id, productos):

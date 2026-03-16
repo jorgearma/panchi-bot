@@ -188,5 +188,7 @@ class TestMapasTransicion:
             for destino in destinos:
                 assert destino in EstadoRegistro, f"Destino inválido {destino} desde {origen}"
 
-    def test_pagado_es_terminal(self):
-        assert TRANSICIONES_PEDIDO[EstadoPedido.PAGADO] == []
+    def test_pagado_tiene_transicion_a_preparacion(self):
+        # PAGADO ya no es terminal: puede avanzar a EN_PREPARACION o REEMBOLSADO
+        assert EstadoPedido.EN_PREPARACION in TRANSICIONES_PEDIDO[EstadoPedido.PAGADO]
+        assert EstadoPedido.REEMBOLSADO in TRANSICIONES_PEDIDO[EstadoPedido.PAGADO]
