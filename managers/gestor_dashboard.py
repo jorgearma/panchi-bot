@@ -1,5 +1,4 @@
 import logging
-import random
 from datetime import datetime
 from decimal import Decimal
 
@@ -430,33 +429,28 @@ class GestorDashboard:
         ]
 
     def mapa(self) -> dict:
-        """Returns map data. Coordinates are simulated until real geocoding is added.
-        TODO: Replace lat/lng generation with Google Maps Geocoding API using DireccionEntrega.
-        """
         pedidos = self.session.query(Pedido).filter(
             Pedido.Estado.in_(_ESTADOS_OPERATIVOS)
         ).all()
 
         puntos = []
         for p in pedidos:
-            # TODO: geocode p.DireccionEntrega via Google Maps
-            lat = _TARANCON_LAT + random.uniform(-0.015, 0.015)
-            lng = _TARANCON_LNG + random.uniform(-0.020, 0.020)
+            if p.lat_entrega is None or p.lng_entrega is None:
+                continue
             puntos.append({
                 "pedido_id": p.PedidoID,
                 "estado": p.Estado,
                 "direccion": p.DireccionEntrega,
-                "lat": round(lat, 6),
-                "lng": round(lng, 6),
-                "color": _COLORES_ESTADO.get(p.Estado, "#6b7280"),
+                "lat": p.lat_entrega,
+                "lng": p.lng_entrega,
+                "fecha_creacion": p.FechaCreacion.isoformat() if p.FechaCreacion else None,
                 "total": float(p.Total) if p.Total else 0.0,
-                "simulado": True,
             })
 
         return {
             "centro": {"lat": _TARANCON_LAT, "lng": _TARANCON_LNG},
             "pedidos": puntos,
-            "repartidores": [],  # TODO: add GPS tracking
+            "repartidores": [],
         }
 
     def empleados_disponibles(self, rol: str = None) -> list:

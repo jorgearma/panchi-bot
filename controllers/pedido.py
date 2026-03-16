@@ -6,6 +6,7 @@ from utils.es_pregunta import es_pregunta
 from services import gestor_pedidos
 from services.token_service import generar_enlace
 from services.twilio_service import enviar_mensaje_whatsapp
+from services.maps_service import geocodificar_direccion
 from utils.menu_opciones import menu, mostrar_menu
 from utils.text_utils import limpiar_texto
 from schemas.twilio import PedidoInput
@@ -131,6 +132,12 @@ def confirmar_carrito(
     )
 
     gestor_pedidos.guardar_redis_id(pedido_id_db, pedido_id_redis)
+
+    coords = geocodificar_direccion(direccion)
+    if coords:
+        gestor_pedidos.guardar_coordenadas(pedido_id_db, coords[0], coords[1])
+    else:
+        logger.warning("confirmar_carrito: no se pudieron geocodificar las coordenadas del pedido %s", pedido_id_db)
 
     gestor_pedidos.actualizar_estado(pedido_id_db, EstadoPedido.ENLACE2)
 

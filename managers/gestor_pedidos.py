@@ -159,6 +159,15 @@ class GestorPedidos:
             return True
         return False
 
+    def guardar_coordenadas(self, pedido_id, lat: float, lng: float) -> bool:
+        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+        if pedido:
+            pedido.lat_entrega = lat
+            pedido.lng_entrega = lng
+            self.session.commit()
+            return True
+        return False
+
     def guardar_redis_id(self, pedido_id, id_redis):
         pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
         if pedido:
