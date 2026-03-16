@@ -3,8 +3,18 @@ import logging
 from flask import Blueprint, jsonify, render_template, request
 
 from services import gestor_dashboard
+from services.twilio_service import enviar_mensaje_whatsapp
 
 logger = logging.getLogger(__name__)
+
+
+def _notificar(telefono: str, mensaje: str) -> None:
+    if not telefono:
+        return
+    try:
+        enviar_mensaje_whatsapp(mensaje, telefono)
+    except Exception as exc:
+        logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
 
 blueprint_picker = Blueprint("picker", __name__)
 
@@ -47,7 +57,8 @@ def actualizar_item(item_id: int):
 
 @blueprint_picker.route("/picker/picking/<int:picking_id>/finalizar", methods=["POST"])
 def finalizar_picking(picking_id: int):
-    ok, msg = gestor_dashboard.completar_picking(picking_id)
+    ok, msg, telefono = gestor_dashboard.completar_picking(picking_id)
     if not ok:
         return jsonify({"error": msg}), 400
+    _notificar(telefono, "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦")
     return jsonify({"ok": True, "mensaje": msg})

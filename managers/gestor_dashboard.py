@@ -10,24 +10,12 @@ from models import (
     Empleado, HistorialEstadoPedido, Incidencia, Pedido, PickingItem,
     PickingPedido, Producto, Reparto, Rol,
 )
-from services.twilio_service import enviar_mensaje_whatsapp
 from states import (
     ESTADOS_TERMINALES_PEDIDO, EstadoPedido, EstadoPicking, EstadoReparto,
     transicion_valida_pedido,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _notificar_cliente(telefono: str, mensaje: str) -> None:
-    """Sends a WhatsApp notification to the customer. Never raises — a Twilio
-    failure should never roll back an already-committed DB operation."""
-    if not telefono:
-        return
-    try:
-        enviar_mensaje_whatsapp(mensaje, telefono)
-    except Exception as exc:
-        logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
 
 
 # Tarancón coordinates (center)
@@ -530,11 +518,12 @@ class GestorDashboard:
             return False, "Error de base de datos"
 
     def completar_picking(self, picking_id: int) -> tuple:
+        """Returns (ok, msg, telefono_cliente). telefono_cliente is None on error."""
         s = self.session
         try:
             picking = s.query(PickingPedido).filter_by(id=picking_id).first()
             if not picking:
-                return False, "Picking no encontrado"
+                return False, "Picking no encontrado", None
 
             picking.estado = EstadoPicking.COMPLETADO.value
             picking.completado_en = datetime.utcnow()
@@ -567,17 +556,12 @@ class GestorDashboard:
                 from managers.gestor_productos import ProductoManager
                 ProductoManager().descontar_stock_picking(items_para_stock)
 
-            if pedido:
-                _notificar_cliente(
-                    pedido.TelefonoEntrega,
-                    "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦",
-                )
-
-            return True, "Picking completado"
+            telefono = pedido.TelefonoEntrega if pedido else None
+            return True, "Picking completado", telefono
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error completando picking %s: %s", picking_id, e)
-            return False, "Error de base de datos"
+            return False, "Error de base de datos", None
 
     def asignar_repartidor(self, pedido_id: int, empleado_id: int) -> tuple:
         s = self.session
@@ -611,11 +595,12 @@ class GestorDashboard:
             return False, "Error de base de datos"
 
     def marcar_salida_reparto(self, reparto_id: int) -> tuple:
+        """Returns (ok, msg, telefono_cliente). telefono_cliente is None on error."""
         s = self.session
         try:
             reparto = s.query(Reparto).filter_by(id=reparto_id).first()
             if not reparto:
-                return False, "Reparto no encontrado"
+                return False, "Reparto no encontrado", None
 
             reparto.estado = EstadoReparto.EN_CAMINO.value
             reparto.hora_salida = datetime.utcnow()
@@ -632,18 +617,12 @@ class GestorDashboard:
                 ))
 
             s.commit()
-
-            if pedido:
-                _notificar_cliente(
-                    pedido.TelefonoEntrega,
-                    "🛵 Tu pedido está en camino. ¡El repartidor ya va hacia tu dirección!",
-                )
-
-            return True, "Repartidor marcado como en camino"
+            telefono = pedido.TelefonoEntrega if pedido else None
+            return True, "Repartidor marcado como en camino", telefono
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error marcando salida reparto %s: %s", reparto_id, e)
-            return False, "Error de base de datos"
+            return False, "Error de base de datos", None
 
     # -------------------------------------------------------------------------
     # Picker methods
@@ -803,18 +782,12 @@ class GestorDashboard:
 
             pedido = reparto.pedido
             s.commit()
-
-            if pedido:
-                _notificar_cliente(
-                    pedido.TelefonoEntrega,
-                    "⚠️ Lo sentimos, no hemos podido entregar tu pedido. Nuestro equipo se pondrá en contacto contigo muy pronto.",
-                )
-
-            return True, "Marcado como no entregado"
+            telefono = pedido.TelefonoEntrega if pedido else None
+            return True, "Marcado como no entregado", telefono
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error marcando no entregado reparto %s: %s", reparto_id, e)
-            return False, "Error de base de datos"
+            return False, "Error de base de datos", None
 
     def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None) -> tuple:
         """Updates a single picking item state."""
@@ -842,11 +815,12 @@ class GestorDashboard:
             return False, "Error de base de datos"
 
     def marcar_entregado(self, reparto_id: int) -> tuple:
+        """Returns (ok, msg, telefono_cliente). telefono_cliente is None on error."""
         s = self.session
         try:
             reparto = s.query(Reparto).filter_by(id=reparto_id).first()
             if not reparto:
-                return False, "Reparto no encontrado"
+                return False, "Reparto no encontrado", None
 
             reparto.estado = EstadoReparto.ENTREGADO.value
             reparto.hora_entrega_real = datetime.utcnow()
@@ -863,15 +837,9 @@ class GestorDashboard:
                 ))
 
             s.commit()
-
-            if pedido:
-                _notificar_cliente(
-                    pedido.TelefonoEntrega,
-                    "🙌 ¡Tu pedido ha sido entregado! Gracias por tu compra. ¡Hasta la próxima!",
-                )
-
-            return True, "Pedido marcado como entregado"
+            telefono = pedido.TelefonoEntrega if pedido else None
+            return True, "Pedido marcado como entregado", telefono
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error marcando entregado reparto %s: %s", reparto_id, e)
-            return False, "Error de base de datos"
+            return False, "Error de base de datos", None
