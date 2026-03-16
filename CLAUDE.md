@@ -50,9 +50,13 @@ states      →  (enums + pure functions — no internal imports)
 `main.py` exposes `create_app(config: dict = None) -> Flask`. It calls `load_dotenv()` first, then builds the Flask app inside the factory. All singleton instances live in `services/__init__.py` — never instantiated elsewhere.
 
 ```
-blueprints/webhook.py   POST /webhook (Twilio), POST /webhook/monei (Monei)
-blueprints/menu.py      GET /menu/<token>, /confirmacion_pago, /pago_confirmado
-blueprints/api.py       POST /api/confirmacion, /api/agregar_pedido, /api/productos, etc.
+blueprints/webhook.py    POST /webhook (Twilio), POST /webhook/monei (Monei)
+blueprints/menu.py       GET /menu/<token>, /confirmacion_pago, /pago_confirmado
+blueprints/api.py        POST /api/confirmacion, /api/agregar_pedido, /api/productos, etc.
+blueprints/dashboard.py  GET/POST /dashboard/* — order management, metrics, picking/reparto assignment
+blueprints/picker.py     GET/POST /picker/* — picker interface (item state updates, finalize picking)
+blueprints/repartidor.py GET/POST /repartidor/* — delivery driver interface (salida, entregar, no-entregar)
+blueprints/productos.py  /productos_admin — product administration
 ```
 
 ### Singleton Initialization
@@ -90,7 +94,9 @@ Name validation uses spaCy (`es_core_news_sm`, loaded lazily). Address validatio
 4. `POST /api/agregar_pedido` → `controllers/pago.py::iniciar_pago` re-validates prices against DB, creates Monei payment, transitions to `confirmando-pago`
 5. Monei calls `POST /webhook/monei` → HMAC signature verified → order set to `pagado`, WhatsApp confirmation sent
 
-Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → `pagado`
+Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` | `contra-reembolso` → `pagado` → `en-preparacion` → `preparado` → `en-reparto` → `entregado`
+
+Terminal states: `entregado`, `reembolsado`. Any non-terminal state can go to `cancelado`.
 
 ### Key Modules
 
@@ -98,10 +104,10 @@ Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → 
 |------|------|
 | `main.py` | `create_app()` factory — Flask setup, Sentry, blueprints, logging config |
 | `services/__init__.py` | Singletons: `gestor_pedidos`, `gestor_usuarios`, `gestor_productos`, `cache`, `get_monei()` |
-| `states.py` | `EstadoPedido` + `EstadoRegistro` str-enums, transition maps, `transicion_valida_*` pure functions |
+| `states.py` | `EstadoPedido`, `EstadoRegistro`, `EstadoPicking`, `EstadoReparto` str-enums, transition maps, `transicion_valida_*` pure functions |
 | `config.py` | All env var constants — reads `os.environ` (populated by `main.py` before any import) |
 | `database.py` | SQLAlchemy engine + session factory |
-| `models.py` | ORM models: `Usuario`, `Producto`, `Pedido`, `PedidoDetalle`, `Empleado` |
+| `models.py` | ORM models: `Usuario`, `Categoria`, `Producto`, `Pedido`, `PedidoDetalle`, `Pago`, `HistorialEstadoPedido`, `Rol`, `Empleado`, `PickingPedido`, `PickingItem`, `Reparto`, `Incidencia` |
 | `schemas/twilio.py` | Pydantic V2 validators for Twilio webhook data (`WebhookRequest`, `PedidoInput`) |
 | `schemas/usuario.py` | `UsuarioDatos` — Pydantic model for user data in Redis tokens (includes `token` field) |
 | `managers/gestor_redis.py` | `RedisManager` infrastructure adapter + `redismanager` singleton |
@@ -122,7 +128,7 @@ Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → 
 
 ### State Machine Conventions
 
-All valid transitions are declared in `states.py` — never hardcode them elsewhere. `GestorPedidos.actualizar_estado` and `EstadoUsuario.actualizar_estado` call the pure validators and block invalid moves with `logger.error`. Both enums inherit from `str` so they serialize to JSON and compare equal to raw strings from Redis/DB without conversion.
+All valid transitions are declared in `states.py` — never hardcode them elsewhere. `GestorPedidos.actualizar_estado` and `EstadoUsuario.actualizar_estado` call the pure validators and block invalid moves with `logger.error`. All four enums (`EstadoPedido`, `EstadoRegistro`, `EstadoPicking`, `EstadoReparto`) inherit from `str` so they serialize to JSON and compare equal to raw strings from Redis/DB without conversion.
 
 ### Security — Monei Webhook
 
@@ -145,13 +151,15 @@ These are well-designed and must not be changed unless a `REFACTOR_PLAN.md` phas
 Active refactor branch: `refactorizar-estructura`. Commit convention: `fix(sec):`, `fix(data):`, `fix(ui):`, `refactor:`, `chore:`, `test:` — one issue per atomic commit.
 
 **Pending bugs (Fase 2):**
-- `blueprints/webhook.py`: cast `order_id` to int before use
-- `services/__init__.py`: `cache = redismanager` (not `.client`)
+- `services/__init__.py`: `cache = redismanager` (not `.client`) — RedisManager is not a redis.Redis client; callers expecting `.get`/`.set` on `cache` directly will fail
 - `token_service.py`: `generar_token_temporal` should raise `ValueError`, not return a tuple
 - `controllers/registro.py`: `confirmar_direccion` should return `False` not `1`
 - Missing `templates/error.html` (referenced but absent → 500 in prod)
 - Guard None in `blueprints/menu.py:57` (depends on error.html)
-- Guard `ENLACE2` state in `controllers/pago.py:33`
+
+**Fixed in recent commits:**
+- ~~`blueprints/webhook.py`: cast `order_id` to int before use~~ ✓
+- ~~Guard `ENLACE2` state in `controllers/pago.py`~~ ✓
 
 **Pending quality (Fase 3):**
 - `config.py` bypassed by most modules — consolidate env var reads
