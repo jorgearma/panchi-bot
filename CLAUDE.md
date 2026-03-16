@@ -113,7 +113,9 @@ Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → 
 | `services/twilio_service.py` | `enviar_mensaje_whatsapp` — Twilio send functions (lazy client) |
 | `services/token_service.py` | Token generation + Redis storage |
 | `services/maps_service.py` | Google Maps address validation |
-| `utils/menu_opciones.py` | `menu` dict, `mostrar_menu()`, `limpiar_texto()` — pure, no I/O |
+| `utils/menu_opciones.py` | `menu` dict, `mostrar_menu()` — pure, no I/O |
+| `utils/text_utils.py` | `limpiar_texto()` — unicode normalization + punctuation removal for text comparison |
+| `utils/es_pregunta.py` | `es_pregunta()` — heuristic to detect if a user message is a question (Spanish) |
 
 ### State Machine Conventions
 
