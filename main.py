@@ -35,10 +35,12 @@ def create_app(config: dict = None) -> Flask:
     from blueprints.webhook import blueprint_webhook
     from blueprints.menu import blueprint_menu
     from blueprints.api import blueprint_api
+    from blueprints.dashboard import blueprint_dashboard
 
     app.register_blueprint(blueprint_webhook)
     app.register_blueprint(blueprint_menu)
     app.register_blueprint(blueprint_api)
+    app.register_blueprint(blueprint_dashboard)
 
     @app.errorhandler(Exception)
     def manejar_errores_globales(e):
