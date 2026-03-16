@@ -10,12 +10,25 @@ from models import (
     Empleado, HistorialEstadoPedido, Incidencia, Pedido, PickingItem,
     PickingPedido, Producto, Reparto, Rol,
 )
+from services.twilio_service import enviar_mensaje_whatsapp
 from states import (
     ESTADOS_TERMINALES_PEDIDO, EstadoPedido, EstadoPicking, EstadoReparto,
     transicion_valida_pedido,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _notificar_cliente(telefono: str, mensaje: str) -> None:
+    """Sends a WhatsApp notification to the customer. Never raises — a Twilio
+    failure should never roll back an already-committed DB operation."""
+    if not telefono:
+        return
+    try:
+        enviar_mensaje_whatsapp(mensaje, telefono)
+    except Exception as exc:
+        logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
+
 
 # Tarancón coordinates (center)
 _TARANCON_LAT = 40.0041
@@ -554,6 +567,12 @@ class GestorDashboard:
                 from managers.gestor_productos import ProductoManager
                 ProductoManager().descontar_stock_picking(items_para_stock)
 
+            if pedido:
+                _notificar_cliente(
+                    pedido.TelefonoEntrega,
+                    "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦",
+                )
+
             return True, "Picking completado"
         except SQLAlchemyError as e:
             s.rollback()
@@ -613,6 +632,13 @@ class GestorDashboard:
                 ))
 
             s.commit()
+
+            if pedido:
+                _notificar_cliente(
+                    pedido.TelefonoEntrega,
+                    "🛵 Tu pedido está en camino. ¡El repartidor ya va hacia tu dirección!",
+                )
+
             return True, "Repartidor marcado como en camino"
         except SQLAlchemyError as e:
             s.rollback()
@@ -775,7 +801,15 @@ class GestorDashboard:
             reparto.estado = EstadoReparto.NO_ENTREGADO.value
             reparto.motivo_no_entrega = motivo
 
+            pedido = reparto.pedido
             s.commit()
+
+            if pedido:
+                _notificar_cliente(
+                    pedido.TelefonoEntrega,
+                    "⚠️ Lo sentimos, no hemos podido entregar tu pedido. Nuestro equipo se pondrá en contacto contigo muy pronto.",
+                )
+
             return True, "Marcado como no entregado"
         except SQLAlchemyError as e:
             s.rollback()
@@ -829,6 +863,13 @@ class GestorDashboard:
                 ))
 
             s.commit()
+
+            if pedido:
+                _notificar_cliente(
+                    pedido.TelefonoEntrega,
+                    "🙌 ¡Tu pedido ha sido entregado! Gracias por tu compra. ¡Hasta la próxima!",
+                )
+
             return True, "Pedido marcado como entregado"
         except SQLAlchemyError as e:
             s.rollback()
