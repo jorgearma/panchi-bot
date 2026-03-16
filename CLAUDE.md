@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Panchi-Bot is a WhatsApp-based food ordering system for a restaurant in Tarancón, Spain. Customers interact via WhatsApp (Twilio), follow a tokenized link to select products from a web menu, and pay via Monei. The bot handles registration, order creation, and payment confirmation.
 
+## Setup
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python -m spacy download es_core_news_sm
+cp .env.example .env  # fill in real values
+```
+
 ## Running the App
 
 ```bash
@@ -148,10 +158,10 @@ These are well-designed and must not be changed unless a `REFACTOR_PLAN.md` phas
 
 ### Known Technical Debt
 
-Active refactor branch: `refactorizar-estructura`. Commit convention: `fix(sec):`, `fix(data):`, `fix(ui):`, `refactor:`, `chore:`, `test:` — one issue per atomic commit.
+Active refactor branch: `refactorizar-estructura`. Full task list with file/line references in `REFACTOR_PLAN.md`. Commit convention: `fix(sec):`, `fix(data):`, `fix(ui):`, `refactor:`, `chore:`, `test:` — one issue per atomic commit.
 
 **Pending bugs (Fase 2):**
-- `services/__init__.py`: `cache = redismanager` (not `.client`) — RedisManager is not a redis.Redis client; callers expecting `.get`/`.set` on `cache` directly will fail
+- `services/__init__.py`: `cache = redismanager.client` (should be `redismanager`) — callers get the raw Redis client instead of the wrapper with retry/logging
 - `token_service.py`: `generar_token_temporal` should raise `ValueError`, not return a tuple
 - `controllers/registro.py`: `confirmar_direccion` should return `False` not `1`
 - Missing `templates/error.html` (referenced but absent → 500 in prod)
