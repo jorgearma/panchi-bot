@@ -538,6 +538,22 @@ class GestorDashboard:
                 ))
 
             s.commit()
+
+            # Descontar stock después del commit del picking
+            items_para_stock = [
+                {
+                    "producto_id": item.pedido_detalle.ProductoID if item.pedido_detalle else None,
+                    "cantidad_pedida": item.pedido_detalle.Cantidad if item.pedido_detalle else 0,
+                    "cantidad_encontrada": item.cantidad_encontrada,
+                    "estado": item.estado,
+                }
+                for item in picking.items
+                if item.pedido_detalle and item.pedido_detalle.ProductoID
+            ]
+            if items_para_stock:
+                from managers.gestor_productos import ProductoManager
+                ProductoManager().descontar_stock_picking(items_para_stock)
+
             return True, "Picking completado"
         except SQLAlchemyError as e:
             s.rollback()
