@@ -38,6 +38,7 @@ def create_app(config: dict = None) -> Flask:
     from blueprints.dashboard import blueprint_dashboard
     from blueprints.picker import blueprint_picker
     from blueprints.repartidor import blueprint_repartidor
+    from blueprints.productos import blueprint_productos
 
     app.register_blueprint(blueprint_webhook)
     app.register_blueprint(blueprint_menu)
@@ -45,6 +46,7 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(blueprint_dashboard)
     app.register_blueprint(blueprint_picker)
     app.register_blueprint(blueprint_repartidor)
+    app.register_blueprint(blueprint_productos)
 
     @app.errorhandler(Exception)
     def manejar_errores_globales(e):
