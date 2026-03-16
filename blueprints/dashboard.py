@@ -5,8 +5,18 @@ from decimal import Decimal
 from flask import Blueprint, jsonify, render_template, request
 
 from services import gestor_dashboard
+from services.twilio_service import enviar_mensaje_whatsapp
 
 logger = logging.getLogger(__name__)
+
+
+def _notificar(telefono: str, mensaje: str) -> None:
+    if not telefono:
+        return
+    try:
+        enviar_mensaje_whatsapp(mensaje, telefono)
+    except Exception as exc:
+        logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
 
 blueprint_dashboard = Blueprint("dashboard", __name__)
 
@@ -142,9 +152,10 @@ def asignar_picker():
 
 @blueprint_dashboard.route("/dashboard/picking/<int:picking_id>/completar", methods=["POST"])
 def completar_picking(picking_id: int):
-    ok, msg = gestor_dashboard.completar_picking(picking_id)
+    ok, msg, telefono = gestor_dashboard.completar_picking(picking_id)
     if not ok:
         return _err(msg)
+    _notificar(telefono, "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦")
     return jsonify({"ok": True, "mensaje": msg})
 
 
@@ -165,15 +176,17 @@ def asignar_repartidor():
 
 @blueprint_dashboard.route("/dashboard/reparto/<int:reparto_id>/salida", methods=["POST"])
 def marcar_salida(reparto_id: int):
-    ok, msg = gestor_dashboard.marcar_salida_reparto(reparto_id)
+    ok, msg, telefono = gestor_dashboard.marcar_salida_reparto(reparto_id)
     if not ok:
         return _err(msg)
+    _notificar(telefono, "🛵 Tu pedido está en camino. ¡El repartidor ya va hacia tu dirección!")
     return jsonify({"ok": True, "mensaje": msg})
 
 
 @blueprint_dashboard.route("/dashboard/reparto/<int:reparto_id>/entregar", methods=["POST"])
 def marcar_entregado(reparto_id: int):
-    ok, msg = gestor_dashboard.marcar_entregado(reparto_id)
+    ok, msg, telefono = gestor_dashboard.marcar_entregado(reparto_id)
     if not ok:
         return _err(msg)
+    _notificar(telefono, "🙌 ¡Tu pedido ha sido entregado! Gracias por tu compra. ¡Hasta la próxima!")
     return jsonify({"ok": True, "mensaje": msg})

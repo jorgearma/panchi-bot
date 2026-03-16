@@ -93,17 +93,36 @@ def webhook_monei():
     raw_body = request.get_data()
 
     secret = config.MONEI_WEBHOOK_SECRET
-    if not secret:
+    if secret:
+        received_header = request.headers.get("MONEI-SIGNATURE", "")
+
+        # Header format: t=<timestamp>,v1=<hex_signature>
+        # Signed payload: "<timestamp>.<raw_body>"
+        parts = dict(item.split("=", 1) for item in received_header.split(",") if "=" in item)
+        timestamp = parts.get("t", "")
+        received_signature = parts.get("v1", "")
+
+        if not timestamp or not received_signature:
+            logger.warning("MONEI-SIGNATURE header malformado: %s", received_header)
+            return jsonify({"error": "Invalid signature"}), 401
+
+        signed_payload = f"{timestamp}.".encode() + raw_body
+        computed = hmac.HMAC(secret.encode(), signed_payload, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(computed, received_signature):
+            logger.warning("Monei webhook signature mismatch")
+            return jsonify({"error": "Invalid signature"}), 401
+    elif not current_app.debug:
         logger.warning("MONEI_WEBHOOK_SECRET not configured — rejecting webhook")
         return jsonify({"error": "Invalid signature"}), 401
-
-    received_signature = request.headers.get("MONEI-SIGNATURE", "")
-    computed = hmac.HMAC(secret.encode(), raw_body, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(computed, received_signature):
-        logger.warning("Monei webhook signature mismatch")
-        return jsonify({"error": "Invalid signature"}), 401
+    else:
+        # TODO: configurar MONEI_WEBHOOK_SECRET en producción
+        logger.warning("MONEI_WEBHOOK_SECRET no configurado — omitiendo verificación (modo debug)")
 
     data = request.get_json()
+    if data.get('type') == 'webhook.test':
+        logger.info("Monei webhook test recibido — OK")
+        return jsonify({"ok": True}), 200
+
     order_id_raw = data.get('object', {}).get('orderId')
     try:
         order_id = int(order_id_raw)
