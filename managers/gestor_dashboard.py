@@ -768,6 +768,7 @@ class GestorDashboard:
                 "total": float(pedido.Total) if pedido.Total else 0.0,
                 "pago": info_pago,
                 "items": items,
+                "fecha_creacion": pedido.FechaCreacion.isoformat() if pedido.FechaCreacion else None,
                 "hora_salida": r.hora_salida.isoformat() if r.hora_salida else None,
                 "hora_estimada_entrega": r.hora_estimada_entrega.isoformat() if r.hora_estimada_entrega else None,
                 "hora_entrega_real": r.hora_entrega_real.isoformat() if r.hora_entrega_real else None,

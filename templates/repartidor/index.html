@@ -92,17 +92,22 @@
               <div @click="abrirPedido(p)"
                    class="bg-white rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform cursor-pointer slide-up">
                 <div class="p-4">
-                  <div class="flex items-start justify-between mb-2">
+
+                  <!-- Fila superior: ID+cliente / bloque de prioridad -->
+                  <div class="flex items-center justify-between mb-3">
                     <div>
-                      <span class="text-2xl font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="text-xl font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
                       <div class="text-gray-500 text-sm mt-0.5" x-text="p.cliente_nombre"></div>
                     </div>
-                    <div class="text-right">
-                      <span class="text-lg font-bold" x-text="p.total.toFixed(2) + '€'"></span>
-                      <div class="mt-1">
-                        <span class="badge-estado" :class="badgeRepartoClass(p.estado_reparto)"
-                              x-text="labelEstado(p.estado_reparto)"></span>
-                      </div>
+
+                    <!-- Bloque de prioridad -->
+                    <div class="flex flex-col items-center rounded-2xl px-4 py-2 min-w-[72px]"
+                         :class="priorityColor(calculateRemainingMinutes(p.fecha_creacion))">
+                      <span class="text-xs font-medium opacity-70 mb-0.5">
+                        Entrega <span x-text="formatPromisedTime(p.fecha_creacion)"></span>
+                      </span>
+                      <span class="text-3xl font-black leading-none tracking-tight"
+                            x-text="formatRemaining(calculateRemainingMinutes(p.fecha_creacion))"></span>
                     </div>
                   </div>
 
@@ -471,6 +476,7 @@
         cargando: false,
         procesando: false,
         historialAbierto: false,
+        now: new Date(),
         motivoSeleccionado: '',
         motivoLibre: '',
         motivosRapidos: [
@@ -482,9 +488,12 @@
         toast: { visible: false, msg: '', error: false },
 
         get pedidosActivos() {
-          return this.pedidos.filter(p =>
-            ['asignado', 'en_camino'].includes(p.estado_reparto)
-          );
+          return this.pedidos
+            .filter(p => ['asignado', 'en_camino'].includes(p.estado_reparto))
+            .sort((a, b) =>
+              this.calculateRemainingMinutes(a.fecha_creacion) -
+              this.calculateRemainingMinutes(b.fecha_creacion)
+            );
         },
 
         get pedidosHistorial() {
@@ -503,6 +512,7 @@
           setInterval(() => {
             if (this.vista === 'lista') this.recargar();
           }, 15000);
+          setInterval(() => { this.now = new Date(); }, 30000);
         },
 
         async recargar() {
@@ -622,6 +632,31 @@
           } finally {
             this.procesando = false;
           }
+        },
+
+        calculateRemainingMinutes(fechaCreacion) {
+          if (!fechaCreacion) return 99;
+          const promised = new Date(new Date(fechaCreacion).getTime() + 20 * 60 * 1000);
+          return Math.round((promised - this.now) / 60000);
+        },
+
+        priorityColor(minutes) {
+          if (minutes > 8)  return 'bg-green-100 text-green-700';
+          if (minutes >= 3) return 'bg-yellow-100 text-yellow-800';
+          if (minutes >= 0) return 'bg-orange-100 text-orange-700';
+          return 'bg-red-100 text-red-700';
+        },
+
+        formatRemaining(minutes) {
+          if (minutes > 0) return minutes + ' min';
+          if (minutes === 0) return '0 min';
+          return '+' + Math.abs(minutes);
+        },
+
+        formatPromisedTime(fechaCreacion) {
+          if (!fechaCreacion) return '--:--';
+          const t = new Date(new Date(fechaCreacion).getTime() + 20 * 60 * 1000);
+          return t.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         },
 
         mostrarToast(msg, error = false) {
