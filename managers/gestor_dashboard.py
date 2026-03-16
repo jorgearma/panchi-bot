@@ -17,6 +17,14 @@ from states import (
 logger = logging.getLogger(__name__)
 
 
+def _iso(dt) -> str | None:
+    """Serializes a UTC datetime to ISO 8601 with 'Z' suffix.
+    Without 'Z', browsers interpret the string as local time instead of UTC,
+    causing a 1-hour (or 2-hour in summer) offset in all time calculations.
+    """
+    return dt.isoformat() + 'Z' if dt else None
+
+
 # Tarancón coordinates (center)
 _TARANCON_LAT = 40.0041
 _TARANCON_LNG = -2.9980
@@ -169,7 +177,7 @@ class GestorDashboard:
                         f"{p.picking.empleado.Nombre} {p.picking.empleado.Apellido}"
                         if p.picking.empleado else None
                     ),
-                    "iniciado_en": p.picking.iniciado_en.isoformat() if p.picking.iniciado_en else None,
+                    "iniciado_en": _iso(p.picking.iniciado_en),
                 }
 
             reparto_data = None
@@ -181,7 +189,7 @@ class GestorDashboard:
                         f"{p.reparto.repartidor.Nombre} {p.reparto.repartidor.Apellido}"
                         if p.reparto.repartidor else None
                     ),
-                    "hora_salida": p.reparto.hora_salida.isoformat() if p.reparto.hora_salida else None,
+                    "hora_salida": _iso(p.reparto.hora_salida),
                 }
 
             umbral_info = _UMBRALES_RETRASO.get(p.Estado)
@@ -195,7 +203,7 @@ class GestorDashboard:
                 "estado": p.Estado,
                 "forma_pago": p.forma_pago or "online",
                 "total": float(p.Total) if p.Total else 0.0,
-                "fecha_creacion": p.FechaCreacion.isoformat() if p.FechaCreacion else None,
+                "fecha_creacion": _iso(p.FechaCreacion),
                 "minutos_activo": minutos,
                 "minutos_en_estado": minutos_en_estado,
                 "picking": picking_data,
@@ -238,7 +246,7 @@ class GestorDashboard:
                 "items_total": len(items),
                 "items_pendientes": len(items),
                 "items_completados": 0,
-                "fecha_creacion": p.FechaCreacion.isoformat() if p.FechaCreacion else None,
+                "fecha_creacion": _iso(p.FechaCreacion),
             })
 
         # Active pickings
@@ -291,8 +299,8 @@ class GestorDashboard:
                 "items_total": len(items_data),
                 "items_pendientes": pendientes,
                 "items_completados": completados,
-                "iniciado_en": pk.iniciado_en.isoformat() if pk.iniciado_en else None,
-                "fecha_creacion": pk.created_at.isoformat() if pk.created_at else None,
+                "iniciado_en": _iso(pk.iniciado_en),
+                "fecha_creacion": _iso(pk.created_at),
             })
 
         return resultado
@@ -328,9 +336,9 @@ class GestorDashboard:
                     "pedido_id": r.pedido_id,
                     "estado_reparto": r.estado,
                     "direccion": r.pedido.DireccionEntrega if r.pedido else "—",
-                    "hora_salida": r.hora_salida.isoformat() if r.hora_salida else None,
+                    "hora_salida": _iso(r.hora_salida),
                     "hora_estimada_entrega": (
-                        r.hora_estimada_entrega.isoformat() if r.hora_estimada_entrega else None
+                        _iso(r.hora_estimada_entrega)
                     ),
                     "total": float(r.pedido.Total) if r.pedido and r.pedido.Total else 0.0,
                 }
@@ -354,7 +362,7 @@ class GestorDashboard:
                     "pedido_id": p.PedidoID,
                     "direccion": p.DireccionEntrega,
                     "total": float(p.Total) if p.Total else 0.0,
-                    "fecha_creacion": p.FechaCreacion.isoformat() if p.FechaCreacion else None,
+                    "fecha_creacion": _iso(p.FechaCreacion),
                 }
                 for p in preparados_sin_reparto
             ],
@@ -378,7 +386,7 @@ class GestorDashboard:
                             "pedido_id": p.PedidoID,
                             "mensaje": f"Pedido #{p.PedidoID} lleva {int(minutos)}min {desc}",
                             "minutos": int(minutos),
-                            "creada_en": ahora.isoformat(),
+                            "creada_en": _iso(ahora),
                         })
 
         # Prepared orders with no delivery driver
@@ -392,7 +400,7 @@ class GestorDashboard:
                 "nivel": "error",
                 "pedido_id": p.PedidoID,
                 "mensaje": f"Pedido #{p.PedidoID} preparado pero sin repartidor asignado",
-                "creada_en": ahora.isoformat(),
+                "creada_en": _iso(ahora),
             })
 
         # Low stock
@@ -402,7 +410,7 @@ class GestorDashboard:
                 "nivel": "info" if prod.Stock > 0 else "warning",
                 "producto_id": prod.ProductoID,
                 "mensaje": f"'{prod.Nombre}' — Stock: {prod.Stock} unidades",
-                "creada_en": ahora.isoformat(),
+                "creada_en": _iso(ahora),
             })
 
         nivel_orden = {"error": 0, "warning": 1, "info": 2}
@@ -419,7 +427,7 @@ class GestorDashboard:
         return [
             {
                 "id": e.id,
-                "timestamp": e.cambiado_en.isoformat() if e.cambiado_en else None,
+                "timestamp": _iso(e.cambiado_en),
                 "pedido_id": e.pedido_id,
                 "estado_anterior": e.estado_anterior,
                 "estado_nuevo": e.estado_nuevo,
@@ -443,7 +451,7 @@ class GestorDashboard:
                 "direccion": p.DireccionEntrega,
                 "lat": p.lat_entrega,
                 "lng": p.lng_entrega,
-                "fecha_creacion": p.FechaCreacion.isoformat() if p.FechaCreacion else None,
+                "fecha_creacion": _iso(p.FechaCreacion),
                 "total": float(p.Total) if p.Total else 0.0,
             })
 
@@ -678,7 +686,7 @@ class GestorDashboard:
                 "direccion_entrega": pk.pedido.DireccionEntrega if pk.pedido else "—",
                 "cliente_nombre": pk.pedido.cliente.nombre if pk.pedido and pk.pedido.cliente else "—",
                 "total": float(pk.pedido.Total) if pk.pedido and pk.pedido.Total else 0.0,
-                "iniciado_en": pk.iniciado_en.isoformat() if pk.iniciado_en else None,
+                "iniciado_en": _iso(pk.iniciado_en),
                 "items": items_data,
                 "items_total": len(items_data),
                 "items_pendientes": pendientes,
@@ -762,10 +770,10 @@ class GestorDashboard:
                 "total": float(pedido.Total) if pedido.Total else 0.0,
                 "pago": info_pago,
                 "items": items,
-                "fecha_creacion": pedido.FechaCreacion.isoformat() if pedido.FechaCreacion else None,
-                "hora_salida": r.hora_salida.isoformat() if r.hora_salida else None,
-                "hora_estimada_entrega": r.hora_estimada_entrega.isoformat() if r.hora_estimada_entrega else None,
-                "hora_entrega_real": r.hora_entrega_real.isoformat() if r.hora_entrega_real else None,
+                "fecha_creacion": _iso(pedido.FechaCreacion),
+                "hora_salida": _iso(r.hora_salida),
+                "hora_estimada_entrega": _iso(r.hora_estimada_entrega),
+                "hora_entrega_real": _iso(r.hora_entrega_real),
                 "motivo_no_entrega": r.motivo_no_entrega,
                 "notas": r.notas,
             })
