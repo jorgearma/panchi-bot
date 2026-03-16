@@ -296,8 +296,9 @@
             </thead>
             <tbody>
               <template x-for="p in pedidosFiltrados" :key="p.pedido_id">
-                <tr class="border-b border-gray-100 hover:bg-gray-50 transition"
-                    :class="p.es_alerta ? 'bg-red-50 hover:bg-red-100' : ''">
+                <tr class="border-b border-gray-100 hover:bg-blue-50 transition cursor-pointer select-none"
+                    :class="p.es_alerta ? 'bg-red-50 hover:bg-red-100' : ''"
+                    @click="abrirPanel(p)">
                   <td class="px-4 py-3">
                     <div class="flex items-center gap-1.5">
                       <span x-show="p.es_alerta" class="text-red-500 text-base leading-none">⚠</span>
@@ -344,6 +345,7 @@
                   </td>
                   <td class="px-4 py-3 text-right">
                     <span class="font-semibold text-gray-900" x-text="p.total.toFixed(2) + '€'"></span>
+                    <span class="text-gray-300 ml-2">›</span>
                   </td>
                 </tr>
               </template>
@@ -478,6 +480,287 @@
     </div>
   </div>
 
+  <!-- ======== PANEL PEDIDO ======== -->
+  <div x-show="panel.visible" x-cloak
+       class="fixed inset-0 z-40 flex justify-end"
+       @keydown.escape.window="cerrarPanel()">
+
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/30 backdrop-blur-[1px]" @click="cerrarPanel()"></div>
+
+    <!-- Drawer -->
+    <div class="relative w-96 bg-white shadow-2xl flex flex-col h-full overflow-y-auto"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="translate-x-full opacity-0"
+         x-transition:enter-end="translate-x-0 opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="translate-x-0 opacity-100"
+         x-transition:leave-end="translate-x-full opacity-0">
+
+      <!-- CABECERA -->
+      <div class="px-5 py-4 border-b border-gray-100 flex items-start justify-between sticky top-0 bg-white z-10">
+        <div>
+          <div class="flex items-center gap-2.5 mb-1.5">
+            <span class="text-2xl font-black text-gray-900">#<span x-text="panel.pedido?.pedido_id"></span></span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full"
+                  :class="panelPrioridadClases(panelMinutos(panel.pedido))"
+                  x-show="panel.pedido?.fecha_creacion"
+                  x-text="panelMinutosTexto(panelMinutos(panel.pedido))"></span>
+          </div>
+          <span class="badge" :class="badgePedidoClass(panel.pedido?.estado)"
+                x-text="estadoLabel(panel.pedido?.estado)"></span>
+        </div>
+        <button @click="cerrarPanel()"
+                class="text-gray-400 hover:text-gray-600 text-2xl leading-none transition mt-0.5">×</button>
+      </div>
+
+      <!-- DATOS CLIENTE -->
+      <div class="px-5 py-4 border-b border-gray-100 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="text-base w-5 text-center">👤</span>
+            <span class="font-medium text-gray-800" x-text="panel.pedido?.cliente_nombre"></span>
+          </div>
+          <a :href="'tel:' + panel.pedido?.cliente_telefono"
+             class="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-green-100 transition">
+            <span>📞</span>
+            <span x-text="panel.pedido?.cliente_telefono"></span>
+          </a>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <span class="text-base w-5 text-center mt-0.5">📍</span>
+          <span class="text-sm text-gray-600 leading-snug" x-text="panel.pedido?.direccion_entrega"></span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="text-base w-5 text-center">💳</span>
+          <span class="badge"
+                :class="panel.pedido?.forma_pago === 'efectivo' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'"
+                x-text="panel.pedido?.forma_pago === 'efectivo' ? '💵 Efectivo' : '💳 Online'"></span>
+          <span class="font-semibold text-gray-800 ml-auto"
+                x-text="panel.pedido?.total?.toFixed(2) + '€'"></span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+          <span>⏱</span>
+          <span x-text="'En estado actual: ' + formatMinutos(panel.pedido?.minutos_en_estado)"
+                :class="panel.pedido?.minutos_en_estado > 30 ? 'text-red-500 font-medium' : ''"></span>
+        </div>
+      </div>
+
+      <!-- ITEMS DEL PEDIDO -->
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Productos</h3>
+        <div class="space-y-1.5">
+          <template x-for="item in panel.pedido?.items" :key="item.nombre">
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 bg-gray-100 rounded text-xs font-bold text-gray-600 flex items-center justify-center flex-shrink-0"
+                      x-text="item.cantidad"></span>
+                <span class="text-gray-700" x-text="item.nombre"></span>
+              </div>
+              <span class="text-gray-500 font-medium flex-shrink-0 ml-3"
+                    x-text="item.subtotal.toFixed(2) + '€'"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- SECCIÓN PICKING -->
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Picking</h3>
+
+        <!-- Sin picking + estado asignable -->
+        <template x-if="!panel.pedido?.picking && ['pagado','contra_reembolso'].includes(panel.pedido?.estado)">
+          <div>
+            <p class="text-sm text-gray-400 mb-3">Sin picker asignado</p>
+            <button @click="abrirModalPicker(panel.pedido.pedido_id)"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              Asignar picker
+            </button>
+          </div>
+        </template>
+
+        <!-- Picking en curso → puede completarse -->
+        <template x-if="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado'">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="badge" :class="badgePickingClass(panel.pedido?.picking?.estado)"
+                    x-text="panel.pedido?.picking?.estado"></span>
+              <span class="text-sm font-medium text-gray-700" x-text="panel.pedido?.picking?.picker_nombre || '—'"></span>
+            </div>
+            <div class="space-y-1 mb-3 text-xs text-gray-500">
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.asignado_en">
+                <span class="text-gray-400">Asignado</span>
+                <span>
+                  <span x-text="horaCorta(panel.pedido?.picking?.asignado_en)"></span>
+                  <span class="text-gray-400 ml-1">(hace <span x-text="minutosDesde(panel.pedido?.picking?.asignado_en)"></span>)</span>
+                </span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.iniciado_en">
+                <span class="text-gray-400">Empezó a empacar</span>
+                <span class="font-medium text-blue-600">
+                  <span x-text="horaCorta(panel.pedido?.picking?.iniciado_en)"></span>
+                  <span class="ml-1">(lleva <span x-text="minutosDesde(panel.pedido?.picking?.iniciado_en)"></span>)</span>
+                </span>
+              </div>
+            </div>
+            <button @click="completarPicking(panel.pedido.picking.id)"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              ✓ Completar picking
+            </button>
+          </div>
+        </template>
+
+        <!-- Picking completado -->
+        <template x-if="panel.pedido?.picking?.estado === 'completado'">
+          <div>
+            <div class="flex items-center gap-2 text-green-700 mb-2">
+              <span class="text-lg font-bold">✓</span>
+              <span class="text-sm font-medium">Picking completado</span>
+              <span class="text-xs text-gray-400 ml-auto" x-text="panel.pedido?.picking?.picker_nombre"></span>
+            </div>
+            <div class="space-y-1 text-xs text-gray-500">
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.asignado_en">
+                <span class="text-gray-400">Asignado</span>
+                <span x-text="horaCorta(panel.pedido?.picking?.asignado_en)"></span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.iniciado_en">
+                <span class="text-gray-400">Inicio</span>
+                <span x-text="horaCorta(panel.pedido?.picking?.iniciado_en)"></span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.completado_en">
+                <span class="text-gray-400">Completado</span>
+                <span x-text="horaCorta(panel.pedido?.picking?.completado_en)"></span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Estado no requiere acción de picking -->
+        <template x-if="!panel.pedido?.picking && !['pagado','contra_reembolso'].includes(panel.pedido?.estado)">
+          <span class="text-sm text-gray-300">—</span>
+        </template>
+      </div>
+
+      <!-- SECCIÓN REPARTO -->
+      <div class="px-5 py-4">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Reparto</h3>
+
+        <!-- Sin reparto + pedido preparado -->
+        <template x-if="!panel.pedido?.reparto && panel.pedido?.estado === 'preparado'">
+          <div>
+            <p class="text-sm text-gray-400 mb-3">Sin repartidor asignado</p>
+            <button @click="abrirModalRepartidor(panel.pedido.pedido_id)"
+                    class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              🛵 Asignar repartidor
+            </button>
+          </div>
+        </template>
+
+        <!-- Reparto asignado → marcar salida -->
+        <template x-if="panel.pedido?.reparto?.estado === 'asignado'">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="badge bg-yellow-100 text-yellow-800">Asignado</span>
+              <div class="text-right">
+                <div class="text-sm font-medium text-gray-700" x-text="panel.pedido?.reparto?.repartidor_nombre || '—'"></div>
+                <template x-if="panel.pedido?.reparto?.repartidor_telefono">
+                  <a :href="'tel:' + panel.pedido.reparto.repartidor_telefono"
+                     class="text-xs text-blue-600 hover:underline"
+                     x-text="panel.pedido.reparto.repartidor_telefono"></a>
+                </template>
+              </div>
+            </div>
+            <div class="space-y-1 mb-3 text-xs text-gray-500" x-show="panel.pedido?.reparto?.asignado_en">
+              <div class="flex justify-between">
+                <span class="text-gray-400">Asignado</span>
+                <span>
+                  <span x-text="horaCorta(panel.pedido?.reparto?.asignado_en)"></span>
+                  <span class="text-gray-400 ml-1">(hace <span x-text="minutosDesde(panel.pedido?.reparto?.asignado_en)"></span>)</span>
+                </span>
+              </div>
+            </div>
+            <button @click="marcarSalida(panel.pedido.reparto.id)"
+                    class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              🛵 Marcar en camino
+            </button>
+          </div>
+        </template>
+
+        <!-- En camino → marcar entregado -->
+        <template x-if="panel.pedido?.reparto?.estado === 'en_camino'">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="badge bg-orange-100 text-orange-800">En camino</span>
+              <div class="text-right">
+                <div class="text-sm font-medium text-gray-700" x-text="panel.pedido?.reparto?.repartidor_nombre || '—'"></div>
+                <template x-if="panel.pedido?.reparto?.repartidor_telefono">
+                  <a :href="'tel:' + panel.pedido.reparto.repartidor_telefono"
+                     class="text-xs text-blue-600 hover:underline"
+                     x-text="panel.pedido.reparto.repartidor_telefono"></a>
+                </template>
+              </div>
+            </div>
+            <div class="space-y-1 mb-3 text-xs text-gray-500">
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.asignado_en">
+                <span class="text-gray-400">Asignado</span>
+                <span x-text="horaCorta(panel.pedido?.reparto?.asignado_en)"></span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.hora_salida">
+                <span class="text-gray-400">Salió</span>
+                <span class="font-medium text-orange-600">
+                  <span x-text="horaCorta(panel.pedido?.reparto?.hora_salida)"></span>
+                  <span class="ml-1">(lleva <span x-text="minutosDesde(panel.pedido?.reparto?.hora_salida)"></span>)</span>
+                </span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.hora_estimada_entrega">
+                <span class="text-gray-400">Llegada estimada</span>
+                <span class="font-medium" x-text="horaCorta(panel.pedido?.reparto?.hora_estimada_entrega)"></span>
+              </div>
+            </div>
+            <button @click="marcarEntregado(panel.pedido.reparto.id)"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              ✓ Marcar entregado
+            </button>
+          </div>
+        </template>
+
+        <!-- Entregado -->
+        <template x-if="panel.pedido?.reparto?.estado === 'entregado'">
+          <div>
+            <div class="flex items-start gap-2 text-green-700 mb-2">
+              <span class="text-lg font-bold">✓</span>
+              <span class="text-sm font-medium">Entregado</span>
+              <div class="ml-auto text-right">
+                <div class="text-xs text-gray-400" x-text="panel.pedido?.reparto?.repartidor_nombre"></div>
+                <template x-if="panel.pedido?.reparto?.repartidor_telefono">
+                  <a :href="'tel:' + panel.pedido.reparto.repartidor_telefono"
+                     class="text-xs text-blue-600 hover:underline"
+                     x-text="panel.pedido.reparto.repartidor_telefono"></a>
+                </template>
+              </div>
+            </div>
+            <div class="space-y-1 text-xs text-gray-500">
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.asignado_en">
+                <span class="text-gray-400">Asignado</span>
+                <span x-text="horaCorta(panel.pedido?.reparto?.asignado_en)"></span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.hora_salida">
+                <span class="text-gray-400">Salida</span>
+                <span x-text="horaCorta(panel.pedido?.reparto?.hora_salida)"></span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Sin reparto y estado no requiere acción -->
+        <template x-if="!panel.pedido?.reparto && panel.pedido?.estado !== 'preparado'">
+          <span class="text-sm text-gray-300">—</span>
+        </template>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ======== TOAST ======== -->
   <div x-show="toast.visible" x-cloak
        class="fixed bottom-6 right-6 z-50 fade-in"
@@ -508,6 +791,8 @@
         modalError: '',
         modalPicker: { visible: false, pedido_id: null, empleado_id: '' },
         modalRepartidor: { visible: false, pedido_id: null, empleado_id: '' },
+        panel: { visible: false, pedido: null },
+        now: new Date(),
         toast: { visible: false, msg: '', error: false },
 
         tarjetasMetricas: [
@@ -534,6 +819,7 @@
           setInterval(() => this.actualizarHora(), 1000);
           await this.cargarTodo();
           setInterval(() => this.cargarTodo(), 10000);
+          setInterval(() => { this.now = new Date(); }, 30000);
           this.$nextTick(() => this.iniciarMapa());
         },
 
@@ -551,6 +837,11 @@
             this.cargar('alertas', '/dashboard/alertas'),
             this.cargar('eventos', '/dashboard/eventos'),
           ]);
+          if (this.panel.visible && this.panel.pedido) {
+            const actualizado = this.pedidos.find(p => p.pedido_id === this.panel.pedido.pedido_id);
+            this.panel.pedido = actualizado ?? null;
+            if (!this.panel.pedido) this.panel.visible = false;
+          }
           this.actualizarMapa();
         },
 
@@ -735,6 +1026,47 @@
               }
             });
           });
+        },
+
+        abrirPanel(p) {
+          this.panel = { visible: true, pedido: p };
+        },
+
+        cerrarPanel() {
+          this.panel.visible = false;
+        },
+
+        panelMinutos(p) {
+          if (!p?.fecha_creacion) return null;
+          return Math.round((new Date(p.fecha_creacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
+        },
+
+        panelPrioridadClases(mins) {
+          if (mins === null) return 'bg-gray-100 text-gray-500';
+          if (mins > 8)  return 'bg-green-100 text-green-700';
+          if (mins >= 3) return 'bg-yellow-100 text-yellow-800';
+          if (mins >= 0) return 'bg-orange-100 text-orange-700';
+          return 'bg-red-100 text-red-700';
+        },
+
+        panelMinutosTexto(mins) {
+          if (mins === null) return '';
+          if (mins > 0)  return mins + ' min';
+          if (mins === 0) return '¡Ahora!';
+          return '+' + Math.abs(mins) + ' min tarde';
+        },
+
+        horaCorta(iso) {
+          if (!iso) return null;
+          return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        },
+
+        minutosDesde(iso) {
+          if (!iso) return null;
+          const mins = Math.round((this.now - new Date(iso)) / 60000);
+          if (mins < 60) return mins + ' min';
+          const h = Math.floor(mins / 60), m = mins % 60;
+          return m > 0 ? `${h}h ${m}min` : `${h}h`;
         },
 
         mostrarToast(msg, error = false) {
