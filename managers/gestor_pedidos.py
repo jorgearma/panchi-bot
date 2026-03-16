@@ -1,8 +1,8 @@
 import logging
 from decimal import Decimal
-from models import Pedido , PedidoDetalle , Producto
+from models import Pedido, PedidoDetalle, Producto, HistorialEstadoPedido, Pago
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
-from sqlalchemy.exc import SQLAlchemyError , OperationalError
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from states import EstadoPedido, transicion_valida_pedido
 
 logger = logging.getLogger(__name__)
@@ -96,8 +96,16 @@ class GestorPedidos:
         for producto_id, cantidad in productos:
             producto = self.session.query(Producto).filter_by(ProductoID=producto_id).first()
             if producto:
-                subtotal = Decimal(str(producto.Precio)) * cantidad
-                detalle = PedidoDetalle(PedidoID=pedido_id, ProductoID=producto_id, Cantidad=cantidad, Subtotal=subtotal)
+                precio_unitario = Decimal(str(producto.Precio))
+                subtotal = precio_unitario * cantidad
+                detalle = PedidoDetalle(
+                    PedidoID=pedido_id,
+                    ProductoID=producto_id,
+                    Cantidad=cantidad,
+                    PrecioUnitario=precio_unitario,
+                    NombreProducto=producto.Nombre,
+                    Subtotal=subtotal,
+                )
                 detalles.append(detalle)
                 total_agregado += subtotal
 
@@ -127,7 +135,13 @@ class GestorPedidos:
                     pedido.Estado, nuevo_estado, pedido_id,
                 )
                 return False
+            estado_anterior = pedido.Estado
             pedido.Estado = nuevo_estado
+            self.session.add(HistorialEstadoPedido(
+                pedido_id=pedido_id,
+                estado_anterior=estado_anterior,
+                estado_nuevo=nuevo_estado,
+            ))
             self.session.commit()
             return True
         except SQLAlchemyError as error:
@@ -142,6 +156,27 @@ class GestorPedidos:
             self.session.commit()
             return True
         return False
+
+    def registrar_pago(self, pedido_id, importe_euros, referencia_externa=None, datos_raw=None):
+        """Inserta un registro de pago completado. Llamar tras confirmar el webhook de Monei."""
+        try:
+            pago = Pago(
+                pedido_id=pedido_id,
+                proveedor='monei',
+                referencia_externa=referencia_externa,
+                estado='completado',
+                importe=importe_euros,
+                moneda='EUR',
+                datos_raw=datos_raw,
+            )
+            self.session.add(pago)
+            self.session.commit()
+            logger.info("Pago registrado para pedido %s (ref: %s)", pedido_id, referencia_externa)
+            return True
+        except SQLAlchemyError as error:
+            self.session.rollback()
+            logger.error("Error al registrar pago del pedido %s: %s", pedido_id, error)
+            return False
 
     def obtener_pedido(self, pedido_id):
         try:
