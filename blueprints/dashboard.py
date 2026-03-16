@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from flask import Blueprint, jsonify, render_template, request
 
-from services import gestor_dashboard
+from services import gestor_dashboard, gestor_pedidos
 from services.twilio_service import enviar_mensaje_whatsapp
 
 logger = logging.getLogger(__name__)
@@ -190,3 +190,82 @@ def marcar_entregado(reparto_id: int):
         return _err(msg)
     _notificar(telefono, "🙌 ¡Tu pedido ha sido entregado! Gracias por tu compra. ¡Hasta la próxima!")
     return jsonify({"ok": True, "mensaje": msg})
+
+
+# ---------------------------------------------------------------------------
+# Order management: cancel, remove item, substitute item
+# ---------------------------------------------------------------------------
+
+_MOTIVOS_LABEL = {
+    'cliente_cancelo':      'El cliente canceló',
+    'falta_stock':          'Falta de stock',
+    'direccion_incorrecta': 'Dirección incorrecta',
+    'cliente_no_responde':  'Cliente no responde',
+    'pedido_duplicado':     'Pedido duplicado',
+    'otro':                 'Otro',
+}
+
+
+@blueprint_dashboard.route("/dashboard/pedido/<int:pedido_id>/cancelar", methods=["POST"])
+def cancelar_pedido(pedido_id: int):
+    data = request.get_json(silent=True) or {}
+    motivo = data.get("motivo")
+    empleado_id = data.get("empleado_id")
+
+    if not motivo:
+        return _err("Falta el campo: motivo")
+
+    ok, msg, telefono = gestor_pedidos.cancelar_pedido(pedido_id, motivo, empleado_id)
+    if not ok:
+        return _err(msg)
+
+    motivo_label = _MOTIVOS_LABEL.get(motivo, motivo)
+    _notificar(
+        telefono,
+        f"❌ Tu pedido #{pedido_id} ha sido cancelado ({motivo_label}). "
+        "Si tienes alguna duda llámanos. Disculpa las molestias.",
+    )
+    return jsonify({"ok": True, "mensaje": msg})
+
+
+@blueprint_dashboard.route("/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar", methods=["POST"])
+def eliminar_item(pedido_id: int, detalle_id: int):
+    data = request.get_json(silent=True) or {}
+    empleado_id = data.get("empleado_id")
+
+    ok, msg = gestor_pedidos.eliminar_item(pedido_id, detalle_id, empleado_id)
+    if not ok:
+        return _err(msg)
+    return jsonify({"ok": True, "mensaje": msg})
+
+
+@blueprint_dashboard.route("/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/sustituir", methods=["POST"])
+def sustituir_item(pedido_id: int, detalle_id: int):
+    data = request.get_json(silent=True) or {}
+    producto_sustituto_id = data.get("producto_sustituto_id")
+    cantidad_a_sustituir = data.get("cantidad_a_sustituir")
+    empleado_id = data.get("empleado_id")
+
+    if not producto_sustituto_id:
+        return _err("Falta el campo: producto_sustituto_id")
+
+    ok, msg = gestor_pedidos.sustituir_item(
+        pedido_id,
+        detalle_id,
+        int(producto_sustituto_id),
+        cantidad_a_sustituir=int(cantidad_a_sustituir) if cantidad_a_sustituir is not None else None,
+        empleado_id=empleado_id,
+    )
+    if not ok:
+        return _err(msg)
+    return jsonify({"ok": True, "mensaje": msg})
+
+
+@blueprint_dashboard.route("/dashboard/productos")
+def productos_disponibles():
+    try:
+        q = request.args.get("q", "").strip()
+        return _ok(gestor_dashboard.buscar_productos(q))
+    except Exception as e:
+        logger.error("Error en /dashboard/productos: %s", e)
+        return _err("Error interno", 500)

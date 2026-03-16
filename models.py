@@ -79,6 +79,9 @@ class Pedido(Base):
     forma_pago = Column(String(20), nullable=True, default='online')  # online | efectivo | tarjeta
     lat_entrega = Column(Float, nullable=True)
     lng_entrega = Column(Float, nullable=True)
+    cancel_reason = Column(String(50), nullable=True)
+    cancelled_by = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
 
     cliente = relationship("Usuario", back_populates="pedidos")
     detalles = relationship("PedidoDetalle", back_populates="pedido", cascade="all, delete-orphan")
@@ -126,6 +129,21 @@ class Pago(Base):
     updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
 
     pedido = relationship("Pedido", back_populates="pagos")
+
+
+class AuditLog(Base):
+    """Registro de auditoría para cambios operativos en pedidos (cancelaciones, modificaciones de items)."""
+    __tablename__ = 'audit_log'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    pedido_id = Column(Integer, ForeignKey('pedidos.PedidoID'), nullable=False)
+    empleado_id = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
+    accion = Column(String(50), nullable=False)   # cancelar_pedido, eliminar_item, sustituir_item
+    detalles = Column(Text, nullable=True)         # JSON con valores anteriores/nuevos
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    pedido = relationship("Pedido", backref="audit_logs")
+    empleado = relationship("Empleado")
 
 
 class HistorialEstadoPedido(Base):
