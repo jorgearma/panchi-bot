@@ -18,6 +18,19 @@ from states import EstadoPedido
 blueprint_menu = Blueprint('menu', __name__)
 
 
+def _extraer_calle(direccion: str) -> str:
+    """Returns street + number from an address string.
+
+    Handles two common formats:
+      "Calle Mayor 12, 16400 Tarancón"  → "Calle Mayor 12"
+      "Calle Mayor, 12, 16400 Tarancón" → "Calle Mayor 12"
+    """
+    parts = [p.strip() for p in direccion.split(',')]
+    if len(parts) >= 2 and parts[1].isdigit():
+        return f"{parts[0]} {parts[1]}"
+    return parts[0]
+
+
 @blueprint_menu.route('/menu/<token>', methods=['GET'])
 def quiniela(token=None):
     logger.debug("token recibido: %s", token)
@@ -62,7 +75,12 @@ def quiniela(token=None):
         logger.debug("Estado del pedido: %s, user_id=%s", estado, id_user)
 
         if estado == EstadoPedido.ENLACE:
-            return render_template('quiniela.html', usuario=datos_completos_validados, public_url=config.PUBLIC_URL or "")
+            return render_template(
+                'quiniela.html',
+                usuario=datos_completos_validados,
+                calle=_extraer_calle(datos_completos_validados.direccion),
+                public_url=config.PUBLIC_URL or "",
+            )
         elif estado == EstadoPedido.ENLACE2:
             pedido_id = last_pedido.redisID
             return redirect(f'/confirmacion_pago?pedido_id={pedido_id}')
@@ -92,6 +110,7 @@ def mostrar_confirmacion():
         token=pedido["token"],
         numero=pedido["numero"],
         direccion=pedido["direccion"],
+        calle=_extraer_calle(pedido["direccion"]),
         total=pedido["total"],
         productos=pedido["productos"],
         pedidoID=pedido["pedidoID"],
@@ -117,6 +136,7 @@ def mostrar_confirmacion_depago():
         token=pedido["token"],
         numero=pedido["numero"],
         direccion=pedido["direccion"],
+        calle=_extraer_calle(pedido["direccion"]),
         total=pedido["total"],
         productos=pedido["productos"],
         pedidoID=pedido["pedidoID"],
