@@ -215,8 +215,10 @@ class GestorDashboard:
                 "minutos_en_estado": minutos_en_estado,
                 "items": [
                     {
+                        "detalle_id": d.DetalleID,
                         "nombre": d.NombreProducto or (d.producto.Nombre if d.producto else "—"),
                         "cantidad": d.Cantidad,
+                        "precio_unitario": float(d.PrecioUnitario) if d.PrecioUnitario else 0.0,
                         "subtotal": float(d.Subtotal) if d.Subtotal else 0.0,
                     }
                     for d in p.detalles
@@ -475,6 +477,21 @@ class GestorDashboard:
             "pedidos": puntos,
             "repartidores": [],
         }
+
+    def buscar_productos(self, q: str = '') -> list:
+        """Returns products for substitute selection in the dashboard."""
+        query = self.session.query(Producto).filter(Producto.Disponible == True)
+        if q:
+            query = query.filter(Producto.Nombre.contains(q))
+        return [
+            {
+                "id": p.ProductoID,
+                "nombre": p.Nombre,
+                "precio": float(p.Precio),
+                "stock": p.Stock,
+            }
+            for p in query.order_by(Producto.Nombre).limit(20).all()
+        ]
 
     def empleados_disponibles(self, rol: str = None) -> list:
         query = self.session.query(Empleado).filter(Empleado.activo == True)
