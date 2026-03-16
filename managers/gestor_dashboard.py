@@ -603,6 +603,88 @@ class GestorDashboard:
             logger.error("Error marcando salida reparto %s: %s", reparto_id, e)
             return False, "Error de base de datos"
 
+    # -------------------------------------------------------------------------
+    # Picker methods
+    # -------------------------------------------------------------------------
+
+    def pickings_del_picker(self, empleado_id: int) -> list:
+        """Returns active pickings assigned to a specific picker."""
+        s = self.session
+        pickings = s.query(PickingPedido).filter(
+            PickingPedido.empleado_id == empleado_id,
+            PickingPedido.estado.in_([
+                EstadoPicking.EN_PROCESO.value,
+                EstadoPicking.CON_INCIDENCIAS.value,
+            ]),
+        ).order_by(PickingPedido.iniciado_en.asc()).all()
+
+        resultado = []
+        for pk in pickings:
+            items_data = []
+            for item in pk.items:
+                nombre = item.pedido_detalle.NombreProducto if item.pedido_detalle else None
+                if not nombre and item.pedido_detalle and item.pedido_detalle.producto:
+                    nombre = item.pedido_detalle.producto.Nombre
+                ubicacion = (
+                    item.pedido_detalle.producto.Ubicacion
+                    if item.pedido_detalle and item.pedido_detalle.producto else None
+                )
+                imagen = (
+                    item.pedido_detalle.producto.ImagenURL
+                    if item.pedido_detalle and item.pedido_detalle.producto else None
+                )
+                items_data.append({
+                    "item_id": item.id,
+                    "nombre": nombre or "—",
+                    "cantidad": item.pedido_detalle.Cantidad if item.pedido_detalle else 0,
+                    "ubicacion": ubicacion,
+                    "imagen": imagen,
+                    "estado": item.estado,
+                    "cantidad_encontrada": item.cantidad_encontrada,
+                    "notas": item.notas,
+                })
+
+            pendientes = sum(1 for i in items_data if i["estado"] == "pendiente")
+            resultado.append({
+                "picking_id": pk.id,
+                "pedido_id": pk.pedido_id,
+                "estado": pk.estado,
+                "direccion_entrega": pk.pedido.DireccionEntrega if pk.pedido else "—",
+                "cliente_nombre": pk.pedido.cliente.nombre if pk.pedido and pk.pedido.cliente else "—",
+                "total": float(pk.pedido.Total) if pk.pedido and pk.pedido.Total else 0.0,
+                "iniciado_en": pk.iniciado_en.isoformat() if pk.iniciado_en else None,
+                "items": items_data,
+                "items_total": len(items_data),
+                "items_pendientes": pendientes,
+                "listo_para_finalizar": pendientes == 0,
+            })
+        return resultado
+
+    def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None) -> tuple:
+        """Updates a single picking item state."""
+        ESTADOS_VALIDOS = {"encontrado", "sin_stock", "sustituido", "pendiente"}
+        if estado not in ESTADOS_VALIDOS:
+            return False, f"Estado inválido. Válidos: {', '.join(ESTADOS_VALIDOS)}"
+
+        s = self.session
+        try:
+            item = s.query(PickingItem).filter_by(id=item_id).first()
+            if not item:
+                return False, "Item no encontrado"
+
+            item.estado = estado
+            if cantidad_encontrada is not None:
+                item.cantidad_encontrada = cantidad_encontrada
+            if notas is not None:
+                item.notas = notas
+
+            s.commit()
+            return True, "Item actualizado"
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error actualizando item %s: %s", item_id, e)
+            return False, "Error de base de datos"
+
     def marcar_entregado(self, reparto_id: int) -> tuple:
         s = self.session
         try:
