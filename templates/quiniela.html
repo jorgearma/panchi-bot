@@ -1,258 +1,405 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menú de Pedidos</title>
+  <title>Menú — Panchi Bot</title>
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div id="user-info">
-    <h2>{{ usuario.nombre }}</h2>
-    <div class="user-detail">
-        <!-- Icon for address -->
-        <svg class="icon-address" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
-        </svg>
-        <span>&nbsp;&nbsp;&nbsp;{{ usuario.direccion }}</span>
-    </div>
-    <div class="user-detail">
-        <!-- Icon for delivery price -->
-        <svg class="icon-delivery" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-            <path d="M5 16C3.34 16 2 17.34 2 19C2 20.66 3.34 22 5 22C6.66 22 8 20.66 8 19C8 17.34 6.66 16 5 16ZM5 20C4.45 20 4 19.55 4 19C4 18.45 4.45 18 5 18C5.55 18 6 18.45 6 19C6 19.55 5.55 20 5 20ZM19 16C17.34 16 16 17.34 16 19C16 20.66 17.34 22 19 22C20.66 22 22 20.66 22 19C22 17.34 20.66 16 19 16ZM19 20C18.45 20 18 19.55 18 19C18 18.45 18.45 18 19 18C19.55 18 20 18.45 20 19C20 19.55 19.55 20 19 20ZM13 4H10V6H13V8H8.5L6.5 12H10.5L9.5 14H7V16H10C10.55 16 11 15.55 11 15L12.5 12H15.5L17.5 16H20V14H18.5L16.5 10H13V4Z" fill="#ffffff"/>
-        </svg>
-        <span>&nbsp;Precio del delivery: <strong style="color: rgb(248, 246, 246); font-size: 1.1em; font-family: 'Arial Black', sans-serif;">GRATIS</strong></span>
-    </div>
-    <div class="user-detail">
-        <!-- Icon for home -->
-        <svg class="icon-home" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-            <path d="M3 10L12 3L21 10V20H15V14H9V20H3V10Z" stroke="#fafbfc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span>&nbsp;&nbsp;&nbsp;<strong style="color: #fafbfc; font-size: 1.2em; font-family: 'Arial Black', sans-serif;">Panchi Bot</strong></span>
-    </div>
-    <div class="loading-indicator">
-        <span>Eligiendo</span>
-        <span class="loading-dots"></span>
-    </div>
-</div>
 
-  <h1 class="menu-title">
-    <span class="menu-label">Productos</span>
-    <hr class="title-divider">
-  </h1>
+  <header class="page-header">
+    <div class="header-avatar">{{ usuario.nombre.split()[0] }}</div>
+    <div class="header-address">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+      <span>{{ calle }}</span>
+    </div>
+    <span class="header-badge">Envío gratis</span>
+  </header>
 
-  <form id="orderForm">
-    <div id="menu"></div>               
-    <button type="button" id="submitOrder">Pagar</button>
-  </form>
-  <div id="notification-popup"></div>
-  
+  <!-- Search bar -->
+  <div id="search-bar">
+    <div class="search-input-wrap">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search-input"
+             placeholder="Buscar producto…"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="search-clear" id="search-clear" type="button" onclick="clearSearch()">✕</button>
+    </div>
+  </div>
+
+  <div id="category-nav"></div>
+
+  <div id="menu"></div>
+
+  <!-- No-results state -->
+  <div id="search-empty">
+    <div class="search-empty-icon">🔍</div>
+    <p>Sin resultados para <strong id="search-query-text"></strong></p>
+  </div>
+
+  <!-- Cart bar (fixed bottom) -->
+  <div id="cart-bar">
+    <button class="cart-bar-left" type="button" onclick="openCartSheet()">
+      <svg class="cart-bar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 01-8 0"/>
+      </svg>
+      <div class="cart-bar-info">
+        <span class="cart-count" id="cart-count">0 productos</span>
+        <span class="cart-total" id="cart-total">0,00 €</span>
+      </div>
+      <span class="cart-view-pill">
+        ver
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"/>
+        </svg>
+      </span>
+    </button>
+    <button class="cart-bar-btn" type="button" id="submitOrder">Continuar →</button>
+  </div>
+
+  <!-- Cart sheet overlay -->
+  <div class="cart-sheet-overlay" id="cart-sheet-overlay" onclick="closeCartSheet()"></div>
+
+  <!-- Cart sheet panel -->
+  <div class="cart-sheet" id="cart-sheet">
+    <div class="cart-sheet-handle"></div>
+    <div class="cart-sheet-header">
+      <span class="cart-sheet-title">🛍 Tu carrito</span>
+      <button class="cart-sheet-close" type="button" onclick="closeCartSheet()">✕</button>
+    </div>
+    <div class="cart-sheet-list" id="cart-sheet-list"></div>
+    <div class="cart-sheet-footer">
+      <div class="cart-sheet-total">
+        <span>Total</span>
+        <span class="cart-sheet-total-amount" id="cart-sheet-total-val">0,00 €</span>
+      </div>
+      <button class="cart-sheet-confirm" type="button"
+              onclick="closeCartSheet(); submitPedido()">
+        Confirmar pedido →
+      </button>
+    </div>
+  </div>
+
   <script>
+    // Module-level state
+    let menuData   = {};
+    let quantities = {};
 
-    
+    const CART_KEY = 'cart_{{ usuario.token }}';
 
-    document.addEventListener('DOMContentLoaded', () => {
-      let menuData = {}; // Variable donde se guardarán los datos dinámicos
-      const menuDiv = document.getElementById('menu');
-      const notificationPopup = document.getElementById('notification-popup');
-      const quantities = {};
+    // --- Search ---
 
-      // Función que construye el menú dinámicamente usando menuData
-    function buildMenu() {
-      // Contenedor para los botones de navegación por categoría
-      const navContainer = document.createElement('div');
-      navContainer.id = 'category-nav';
-      // Puedes agregar estilos o ubicar este contenedor donde prefieras
-      menuDiv.parentNode.insertBefore(navContainer, menuDiv);
+    function filterMenu(query) {
+      const q = query.trim().toLowerCase();
 
-      // Primero, crear un botón por cada categoría
-      Object.keys(menuData).forEach(category => {
-        const btn = document.createElement('button');
-        btn.type = 'button'; // Evita que se envíe el formulario
-        btn.innerText = category;
-        btn.addEventListener('click', () => {
-          const categorySection = document.getElementById(`category-${category}`);
-          if (categorySection) {
-            categorySection.scrollIntoView({ behavior: 'smooth' });
-          }
+      if (!q) {
+        document.querySelectorAll('.menu-item').forEach(el => el.style.display = '');
+        document.querySelectorAll('.category-section').forEach(el => el.style.display = '');
+        document.querySelectorAll('#category-nav button').forEach(el => el.style.display = '');
+        document.getElementById('search-empty').classList.remove('visible');
+        return;
+      }
+
+      let totalMatches = 0;
+
+      document.querySelectorAll('.category-section').forEach(section => {
+        const category = section.id.replace('category-', '');
+        let sectionMatches = 0;
+
+        section.querySelectorAll('.menu-item').forEach(itemEl => {
+          const matches = itemEl.dataset.name.toLowerCase().includes(q);
+          itemEl.style.display = matches ? '' : 'none';
+          if (matches) sectionMatches++;
         });
-        navContainer.appendChild(btn);
+
+        section.style.display = sectionMatches > 0 ? '' : 'none';
+        totalMatches += sectionMatches;
+
+        const navBtn = document.querySelector(
+          `#category-nav button[data-category="${category}"]`
+        );
+        if (navBtn) navBtn.style.display = sectionMatches > 0 ? '' : 'none';
       });
 
-  // Luego, crea las secciones del menú con un id único para cada categoría
-  Object.keys(menuData).forEach(category => {
-    const categoryDiv = document.createElement('div');
-    categoryDiv.id = `category-${category}`; // id para hacer scroll
-    categoryDiv.innerHTML = `<h2 class="category-bubble">${category}</h2>`;
-    Object.keys(menuData[category]).forEach(item => {
-      const producto = menuData[category][item];
-      const precio = parseFloat(producto.Precio);
-      const ingredientes = producto.ingredientes;
-      const imagen = producto.Imagen;
-      const productoID = producto.ProductoID;
-      const itemDiv = document.createElement('div');
-      itemDiv.className = 'menu-item';
-      itemDiv.innerHTML = `
-        <div class="menu-details">
-          <span class="item-name">
-            <strong><span class="item-title">${item}</span> - ${precio.toFixed(2)}€</strong>
-          </span>
-          <span class="menu-ingredients">Ingredientes: ${ingredientes}</span>
-          <div class="quantity-control">
-            <button class="decrease" data-item="${item}" data-product-id="${productoID}" disabled>-</button>
-            <span class="quantity-display" id="quantity-${item}">0</span>
-            <button class="increase" data-item="${item}" data-product-id="${productoID}">+</button>
-          </div>
-        </div>
-        <img src="${imagen}" alt="${item}">
-      `;
-      categoryDiv.appendChild(itemDiv);
+      const emptyEl = document.getElementById('search-empty');
+      if (totalMatches === 0) {
+        document.getElementById('search-query-text').textContent = `"${query.trim()}"`;
+        emptyEl.classList.add('visible');
+      } else {
+        emptyEl.classList.remove('visible');
+      }
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      document.getElementById('search-clear').classList.remove('visible');
+      filterMenu('');
+      input.focus();
+    }
+
+    // --- Cart sheet ---
+
+    function openCartSheet() {
+      const list = document.getElementById('cart-sheet-list');
+      list.innerHTML = '';
+
+      let total    = 0;
+      let hasItems = false;
+
+      Object.entries(quantities)
+        .filter(([_, q]) => q > 0)
+        .forEach(([item, qty]) => {
+          const cat = Object.keys(menuData).find(c => menuData[c][item]);
+          if (!cat) return;
+          const subtotal = parseFloat(menuData[cat][item].Precio) * qty;
+          total   += subtotal;
+          hasItems = true;
+
+          const row = document.createElement('div');
+          row.className = 'cart-sheet-item';
+          row.innerHTML = `
+            <span class="cart-sheet-item-name">${item}</span>
+            <span class="cart-sheet-item-qty">× ${qty} ud</span>
+            <span class="cart-sheet-item-price">${subtotal.toFixed(2).replace('.', ',')} €</span>
+          `;
+          list.appendChild(row);
+        });
+
+      if (!hasItems) return;
+
+      document.getElementById('cart-sheet-total-val').textContent =
+        total.toFixed(2).replace('.', ',') + ' €';
+
+      document.getElementById('cart-sheet-overlay').classList.add('open');
+      document.getElementById('cart-sheet').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCartSheet() {
+      document.getElementById('cart-sheet-overlay').classList.remove('open');
+      document.getElementById('cart-sheet').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeCartSheet();
     });
-    menuDiv.appendChild(categoryDiv);
-  });
-}
 
+    // --- Order submission ---
 
-      // Función para calcular el total del pedido
-      const calculateTotal = () => {
-        return Object.entries(quantities)
-          .filter(([_, quantity]) => quantity > 0)
-          .reduce((total, [item, quantity]) => {
-            const category = Object.keys(menuData).find(cat => menuData[cat][item]);
-            if (!category) return total;
-            const { Precio } = menuData[category][item];
-            return total + (parseFloat(Precio) * quantity);
-          }, 0);
+    async function submitPedido() {
+      const selectedItems = Object.entries(quantities)
+        .filter(([_, q]) => q > 0)
+        .map(([item, q]) => {
+          const cat = Object.keys(menuData).find(c => menuData[c][item]);
+          if (!cat) return null;
+          const { Codigo, Precio, ingredientes } = menuData[cat][item];
+          return {
+            Codigo,
+            nombre:          item,
+            precio_unitario: parseFloat(Precio),
+            precio_total:    parseFloat(Precio) * q,
+            ingredientes,
+            cantidad:        q
+          };
+        })
+        .filter(i => i !== null);
+
+      if (selectedItems.length === 0) {
+        alert('Por favor, selecciona al menos un producto.');
+        return;
+      }
+
+      const order = {
+        name:      `{{ usuario.nombre }}`,
+        token:     `{{ usuario.token }}`,
+        userId:    `{{ usuario.id }}`,
+        numero:    `{{ usuario.numero }}`,
+        direccion: `{{ usuario.direccion }}`,
+        productos: selectedItems
       };
 
-      // Función para mostrar la notificación con el total y los productos agregados (lista oculta)
-      const showNotification = () => {
-  const total = calculateTotal().toFixed(2);
-  const itemsList = Object.entries(quantities)
-    .filter(([_, quantity]) => quantity > 0)
-    .map(([item, quantity]) => {
-      const category = Object.keys(menuData).find(cat => menuData[cat][item]);
-      if (!category) return '';
-      const { Precio } = menuData[category][item];
-      return `<li>${item} - ${quantity} x ${parseFloat(Precio).toFixed(2)}€</li>`;
-    }).join('');
-  
-  notificationPopup.innerHTML = `
-    <p>Total <span id="total-amount">${total}€</span></p>
-    <ul style="display: none;">${itemsList}</ul>
-  `;
-
-
-  // Activar la vibración del contenedor
-  notificationPopup.classList.add('vibrating');
-  setTimeout(() => {
-    notificationPopup.classList.remove('vibrating');
-  }, 300); // Duración de la animación de vibración
-};
-
-document.addEventListener('click', (event) => {
-  if (notificationPopup.contains(event.target)) {
-    // Si se hace clic dentro del popup, alternar la expansión
-    notificationPopup.classList.toggle('expanded');
-    const itemsList = notificationPopup.querySelector('ul');
-    if (notificationPopup.classList.contains('expanded')) {
-      itemsList.style.display = 'block'; // Mostrar la lista
-    } else {
-      itemsList.style.display = 'none'; // Ocultar la lista
+      try {
+        const response = await fetch('{{ public_url }}/api/confirmacion', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(order)
+        });
+        const result = await response.json();
+        if (result.redirect_url) {
+          window.location.href = result.redirect_url;
+        } else {
+          alert(result.message || 'Pedido enviado correctamente.');
+        }
+      } catch (err) {
+        console.error('Error de conexión:', err);
+        alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+      }
     }
-  } else {
-    // Si se hace clic fuera del popup, cerrarlo
-    notificationPopup.classList.remove('expanded');
-    notificationPopup.querySelector('ul').style.display = 'none';
-  }
-});
-      // Obtener los datos del menú desde el endpoint
+
+    // --- Menu build & cart bar ---
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuDiv     = document.getElementById('menu');
+      const navDiv      = document.getElementById('category-nav');
+      const cartBar     = document.getElementById('cart-bar');
+      const searchInput = document.getElementById('search-input');
+      const searchClear = document.getElementById('search-clear');
+
+      // Search input listener
+      searchInput.addEventListener('input', () => {
+        const q = searchInput.value;
+        searchClear.classList.toggle('visible', q.length > 0);
+        filterMenu(q);
+      });
+
+      function buildMenu() {
+        Object.keys(menuData).forEach((category, index) => {
+          // Nav chip — data-category for targeted show/hide during search
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.innerText = category;
+          btn.dataset.category = category;
+          if (index === 0) btn.classList.add('active');
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('#category-nav button')
+              .forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const section = document.getElementById(`category-${category}`);
+            if (section) section.scrollIntoView({ behavior: 'smooth' });
+          });
+          navDiv.appendChild(btn);
+
+          // Category section
+          const section = document.createElement('div');
+          section.id = `category-${category}`;
+          section.className = 'category-section';
+          section.innerHTML = `<h2 class="category-title">${category}</h2>`;
+
+          Object.keys(menuData[category]).forEach(item => {
+            const producto     = menuData[category][item];
+            const precio       = parseFloat(producto.Precio);
+            const ingredientes = producto.ingredientes;
+            const imagen       = producto.Imagen;
+            const productoID   = producto.ProductoID;
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'menu-item';
+            itemDiv.dataset.name = item;   // used by filterMenu
+            itemDiv.innerHTML = `
+              <img src="${imagen}" alt="${item}" onerror="this.style.display='none'">
+              <div class="menu-details">
+                <p class="item-name">${item}</p>
+                <p class="item-price">${precio.toFixed(2)} €</p>
+                <p class="menu-ingredients">${ingredientes}</p>
+                <div class="quantity-control">
+                  <button class="decrease" data-item="${item}" data-product-id="${productoID}" disabled>−</button>
+                  <span class="quantity-display" id="quantity-${item}">0</span>
+                  <button class="increase" data-item="${item}" data-product-id="${productoID}">+</button>
+                </div>
+              </div>
+            `;
+            section.appendChild(itemDiv);
+          });
+
+          menuDiv.appendChild(section);
+        });
+      }
+
+      function calculateTotal() {
+        return Object.entries(quantities)
+          .filter(([_, q]) => q > 0)
+          .reduce((total, [item, q]) => {
+            const cat = Object.keys(menuData).find(c => menuData[c][item]);
+            if (!cat) return total;
+            return total + parseFloat(menuData[cat][item].Precio) * q;
+          }, 0);
+      }
+
+      function updateCartBar() {
+        const total     = calculateTotal();
+        const itemCount = Object.values(quantities).reduce((s, q) => s + q, 0);
+
+        document.getElementById('cart-count').textContent =
+          itemCount === 1 ? '1 producto' : `${itemCount} productos`;
+        document.getElementById('cart-total').textContent =
+          total.toFixed(2).replace('.', ',') + ' €';
+
+        cartBar.classList.toggle('visible', total > 0);
+        sessionStorage.setItem(CART_KEY, JSON.stringify(quantities));
+      }
+
+      function restoreCart() {
+        const saved = sessionStorage.getItem(CART_KEY);
+        if (!saved) return;
+        let savedQty;
+        try { savedQty = JSON.parse(saved); } catch { return; }
+
+        Object.entries(savedQty).forEach(([item, qty]) => {
+          if (qty <= 0) return;
+          const cat = Object.keys(menuData).find(c => menuData[c][item]);
+          if (!cat) return;                          // producto ya no existe
+
+          quantities[item] = qty;
+          const display = document.getElementById(`quantity-${item}`);
+          if (display) display.innerText = qty;
+          const dec = document.querySelector(`button.decrease[data-item="${item}"]`);
+          if (dec) dec.disabled = false;
+        });
+
+        updateCartBar();
+      }
+
       fetch('/api/productos')
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
           menuData = data;
           buildMenu();
-          
-          // Asignar listener para los botones de aumento y disminución de cantidad
+          restoreCart();
+
           document.addEventListener('click', (event) => {
-            if (event.target.classList.contains('increase') || event.target.classList.contains('decrease')) {
-              event.preventDefault();
-              const item = event.target.dataset.item;
-              if (!quantities[item]) quantities[item] = 0;
-              if (event.target.classList.contains('increase')) {
-                quantities[item]++;
-              } else if (event.target.classList.contains('decrease')) {
-                quantities[item] = Math.max(0, quantities[item] - 1);
-              }
-              document.getElementById(`quantity-${item}`).innerText = quantities[item];
-              document.querySelector(`button.decrease[data-item="${item}"]`).disabled = quantities[item] === 0;
-              showNotification();
+            const target = event.target;
+            if (!target.classList.contains('increase') && !target.classList.contains('decrease')) return;
+            event.preventDefault();
+
+            const item = target.dataset.item;
+            if (!quantities[item]) quantities[item] = 0;
+
+            if (target.classList.contains('increase')) {
+              quantities[item]++;
+            } else {
+              quantities[item] = Math.max(0, quantities[item] - 1);
             }
+
+            document.getElementById(`quantity-${item}`).innerText = quantities[item];
+            document.querySelector(`button.decrease[data-item="${item}"]`).disabled =
+              quantities[item] === 0;
+
+            updateCartBar();
           });
 
-          // Mostrar la notificación inicial
-          showNotification();
+          document.getElementById('submitOrder').addEventListener('click', submitPedido);
         })
-        .catch(error => console.error('Error al obtener el menú:', error));
-
-  document.getElementById('submitOrder').addEventListener('click', async () => {
-  // Filtrar los productos seleccionados
-  const selectedItems = Object.entries(quantities)
-    .filter(([_, quantity]) => quantity > 0)
-    .map(([item, quantity]) => {
-      const category = Object.keys(menuData).find(cat => menuData[cat][item]);
-      if (!category) return null;
-      // Extraer el identificador (codigo) del producto y la cantidad
-      const { Codigo, Precio, ingredientes } = menuData[category][item];
-      return {
-        Codigo, // Identificador único del producto
-        nombre: item, // Nombre del producto
-         // Cantidad seleccionada
-        precio_unitario: parseFloat(Precio), // Precio unitario
-        precio_total: parseFloat(Precio) * quantity, // Precio total por cantidad
-        ingredientes // Ingredientes del producto
-      };
-    })
-    .filter(item => item !== null);
-
-  if (selectedItems.length === 0) {
-    alert('Por favor, selecciona al menos un producto.');
-    return;
-  }
-
-  // Crear el objeto del pedido
-  // Crear el objeto del pedido
-const order = {
-  name: `{{ usuario.nombre }}`,
-  token: `{{ usuario.token }}`,
-  userId: `{{ usuario.id }}`,
-  numero: `{{ usuario.numero }}`,
-  direccion: `{{ usuario.direccion }}`,
-  productos: selectedItems.map(item => ({
-    ...item,
-    cantidad: quantities[item.nombre] // Agregar la cantidad seleccionada
-  }))
-};
-
-  // Enviar el pedido al servidor
-  try {
-    const response = await fetch('https://8ff4-2a02-aa7-4108-696d-fd01-c5aa-a531-e77.ngrok-free.app/api/confirmacion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(order)
-    });
-    const result = await response.json();
-    if (result.redirect_url) {
-      window.location.href = result.redirect_url;
-    } else {
-      alert(result.message || 'Pedido enviado correctamente.');
-    }
-  } catch (err) {
-    console.error('Error de conexión:', err);
-    alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
-  }
-});
+        .catch(err => console.error('Error al obtener el menú:', err));
     });
   </script>
 </body>

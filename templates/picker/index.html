@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Panchi — Picking</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .slide-up {
+      animation: slideUp .25s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    /* Tap highlight off for buttons */
+    button { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen" x-data="picker({{ picker_id or 'null' }})" x-init="init()">
+
+  <!-- ======== HEADER ======== -->
+  <header class="bg-gray-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow">
+    <div class="flex items-center gap-2">
+      <button x-show="vistaActual === 'ticket'"
+              @click="volverALista()"
+              class="text-gray-400 active:text-white transition mr-1 text-xl leading-none">‹</button>
+      <span class="font-bold text-lg">
+        <span x-show="vistaActual === 'lista'">🛒 Mis pedidos</span>
+        <span x-show="vistaActual === 'ticket'" x-cloak>
+          Pedido #<span x-text="ticketActual?.pedido_id"></span>
+        </span>
+      </span>
+    </div>
+    <div class="flex items-center gap-2 text-sm">
+      <span x-show="vistaActual === 'lista' && pedidos.length > 0"
+            class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-medium"
+            x-text="pedidos.length + ' asignado' + (pedidos.length > 1 ? 's' : '')"></span>
+      <button @click="recargar()"
+              class="text-gray-400 active:text-white transition text-xl leading-none">↻</button>
+    </div>
+  </header>
+
+  <!-- ======== SIN PICKER ID ======== -->
+  <div x-show="!pickerId" class="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
+    <div class="text-5xl mb-4">🔗</div>
+    <h2 class="text-xl font-bold text-gray-700 mb-2">Enlace incompleto</h2>
+    <p class="text-gray-500 text-sm">Accede desde el enlace que te dio el supervisor.<br>Ejemplo: <code class="bg-gray-100 px-1 rounded">/picker?id=3</code></p>
+  </div>
+
+  <!-- ======== CARGANDO ======== -->
+  <div x-show="pickerId && cargando && pedidos.length === 0"
+       class="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+    <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+    <p class="text-gray-400 text-sm">Cargando pedidos...</p>
+  </div>
+
+  <!-- ======== VISTA LISTA ======== -->
+  <div x-show="pickerId && !cargando && vistaActual === 'lista'" x-cloak>
+
+    <!-- Sin pedidos -->
+    <div x-show="pedidos.length === 0"
+         class="flex flex-col items-center justify-center min-h-[65vh] text-center px-6">
+      <div class="text-6xl mb-4">✅</div>
+      <h2 class="text-xl font-bold text-gray-700 mb-2">Sin pedidos asignados</h2>
+      <p class="text-gray-400 text-sm">No tienes pedidos pendientes ahora mismo.</p>
+      <button @click="recargar()"
+              class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium active:bg-blue-700 transition">
+        Actualizar
+      </button>
+    </div>
+
+    <!-- Lista de pedidos -->
+    <div x-show="pedidos.length > 0" class="p-4 space-y-3">
+      <template x-for="p in pedidos" :key="p.picking_id">
+        <div @click="abrirTicket(p)"
+             class="bg-white rounded-2xl shadow-sm border active:scale-95 transition-transform cursor-pointer slide-up"
+             :class="p.listo_para_finalizar ? 'border-green-300' : 'border-gray-100'">
+          <div class="p-4">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <span class="text-2xl font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                <div class="text-gray-500 text-sm mt-0.5" x-text="p.cliente_nombre"></div>
+              </div>
+              <div class="text-right">
+                <span class="text-lg font-semibold text-gray-800" x-text="p.total.toFixed(2) + '€'"></span>
+                <div class="mt-1">
+                  <span x-show="p.listo_para_finalizar"
+                        class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                    ✓ Listo
+                  </span>
+                  <span x-show="!p.listo_para_finalizar"
+                        class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium"
+                        x-text="p.items_pendientes + ' pendientes'"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dirección -->
+            <div class="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
+              <span>📍</span>
+              <span x-text="p.direccion_entrega"></span>
+            </div>
+
+            <!-- Barra de progreso -->
+            <div>
+              <div class="flex justify-between text-xs text-gray-400 mb-1">
+                <span x-text="(p.items_total - p.items_pendientes) + ' de ' + p.items_total + ' productos'"></span>
+                <span x-text="Math.round((p.items_total - p.items_pendientes) / p.items_total * 100) + '%'"></span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2">
+                <div class="h-2 rounded-full transition-all"
+                     :class="p.listo_para_finalizar ? 'bg-green-500' : 'bg-blue-500'"
+                     :style="'width:' + (p.items_total > 0 ? ((p.items_total - p.items_pendientes) / p.items_total * 100) : 0) + '%'"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pie de tarjeta -->
+          <div class="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between">
+            <span class="text-xs text-gray-400"
+                  x-text="p.iniciado_en ? 'Iniciado ' + formatHora(p.iniciado_en) : 'Recién asignado'"></span>
+            <span class="text-blue-600 text-sm font-medium">Ver ticket →</span>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ======== VISTA TICKET ======== -->
+  <div x-show="pickerId && vistaActual === 'ticket' && ticketActual" x-cloak class="pb-32">
+
+    <!-- Info del pedido -->
+    <div class="bg-white border-b border-gray-100 px-4 py-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="text-gray-500 text-sm">Cliente</span>
+          <div class="font-semibold" x-text="ticketActual?.cliente_nombre"></div>
+        </div>
+        <div class="text-right">
+          <span class="text-gray-500 text-sm">Total</span>
+          <div class="font-bold text-lg" x-text="ticketActual?.total.toFixed(2) + '€'"></div>
+        </div>
+      </div>
+      <div class="flex items-center gap-1 text-xs text-gray-400 mt-1.5">
+        <span>📍</span>
+        <span x-text="ticketActual?.direccion_entrega"></span>
+      </div>
+    </div>
+
+    <!-- Progreso -->
+    <div class="bg-white px-4 py-3 border-b border-gray-100">
+      <div class="flex justify-between text-sm text-gray-500 mb-1.5">
+        <span x-text="itemsCompletados + ' de ' + (ticketActual?.items_total || 0) + ' productos recogidos'"></span>
+        <span x-text="ticketActual?.items_pendientes + ' pendientes'"></span>
+      </div>
+      <div class="w-full bg-gray-100 rounded-full h-3">
+        <div class="h-3 rounded-full transition-all"
+             :class="ticketActual?.listo_para_finalizar ? 'bg-green-500' : 'bg-blue-500'"
+             :style="'width:' + progresoPorc + '%'"></div>
+      </div>
+    </div>
+
+    <!-- Lista de items -->
+    <div class="p-4 space-y-3">
+      <template x-for="item in ticketActual?.items" :key="item.item_id">
+        <div class="bg-white rounded-2xl border shadow-sm overflow-hidden slide-up"
+             :class="{
+               'border-green-200': item.estado === 'encontrado',
+               'border-red-200':   item.estado === 'sin_stock',
+               'border-gray-100':  item.estado === 'pendiente',
+             }">
+
+          <!-- Cabecera del item -->
+          <div class="flex items-center gap-3 p-4 pb-3">
+            <!-- Icono de estado -->
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
+                 :class="{
+                   'bg-green-100': item.estado === 'encontrado',
+                   'bg-red-100':   item.estado === 'sin_stock',
+                   'bg-gray-100':  item.estado === 'pendiente',
+                 }">
+              <span x-show="item.estado === 'encontrado'">✓</span>
+              <span x-show="item.estado === 'sin_stock'">✗</span>
+              <span x-show="item.estado === 'pendiente'">○</span>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold text-gray-900 truncate" x-text="item.nombre"></div>
+              <div class="flex items-center gap-3 mt-0.5">
+                <span class="text-sm font-medium text-blue-600"
+                      x-text="item.cantidad + ' unidades'"></span>
+                <span x-show="item.ubicacion"
+                      class="text-xs text-gray-400 flex items-center gap-1">
+                  🗂 <span x-text="item.ubicacion"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botones de acción -->
+          <div x-show="item.estado === 'pendiente'" class="px-4 pb-4 flex gap-2">
+            <button @click="marcarItem(item, 'encontrado')"
+                    class="flex-1 bg-green-500 active:bg-green-600 text-white rounded-xl py-3 font-semibold text-sm transition-transform active:scale-95">
+              ✓ Encontrado
+            </button>
+            <button @click="marcarItem(item, 'sin_stock')"
+                    class="flex-1 bg-red-400 active:bg-red-500 text-white rounded-xl py-3 font-semibold text-sm transition-transform active:scale-95">
+              ✗ Sin stock
+            </button>
+          </div>
+
+          <!-- Deshacer -->
+          <div x-show="item.estado !== 'pendiente'" class="px-4 pb-3">
+            <button @click="marcarItem(item, 'pendiente')"
+                    class="text-xs text-gray-400 active:text-gray-600 underline transition">
+              Deshacer
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ======== BOTÓN FINALIZAR (fijo abajo) ======== -->
+  <div x-show="vistaActual === 'ticket' && ticketActual" x-cloak
+       class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-20">
+
+    <div x-show="!ticketActual?.listo_para_finalizar"
+         class="text-center text-sm text-gray-400 mb-2">
+      Marca todos los productos para finalizar
+    </div>
+
+    <button @click="finalizarPicking()"
+            :disabled="!ticketActual?.listo_para_finalizar || finalizando"
+            class="w-full py-4 rounded-2xl font-bold text-lg transition-all active:scale-95"
+            :class="ticketActual?.listo_para_finalizar
+              ? 'bg-green-500 active:bg-green-600 text-white shadow-lg shadow-green-200'
+              : 'bg-gray-100 text-gray-300 cursor-not-allowed'">
+      <span x-show="!finalizando">
+        <span x-show="ticketActual?.listo_para_finalizar">✓ Finalizar picking</span>
+        <span x-show="!ticketActual?.listo_para_finalizar"
+              x-text="(ticketActual?.items_pendientes || 0) + ' productos pendientes'"></span>
+      </span>
+      <span x-show="finalizando" class="flex items-center justify-center gap-2">
+        <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
+        Finalizando...
+      </span>
+    </button>
+  </div>
+
+  <!-- ======== TOAST ======== -->
+  <div x-show="toast.visible" x-cloak
+       class="fixed top-20 left-4 right-4 z-50 slide-up">
+    <div class="rounded-2xl px-5 py-4 shadow-xl text-sm font-medium text-white flex items-center gap-3"
+         :class="toast.error ? 'bg-red-500' : 'bg-gray-900'">
+      <span class="text-lg" x-text="toast.error ? '✗' : '✓'"></span>
+      <span x-text="toast.msg"></span>
+    </div>
+  </div>
+
+  <!-- ======== JAVASCRIPT ======== -->
+  <script>
+    function picker(pickerId) {
+      return {
+        pickerId: pickerId,
+        pedidos: [],
+        vistaActual: 'lista',   // 'lista' | 'ticket'
+        ticketActual: null,
+        cargando: false,
+        finalizando: false,
+        toast: { visible: false, msg: '', error: false },
+
+        get itemsCompletados() {
+          if (!this.ticketActual) return 0;
+          return this.ticketActual.items.filter(i => i.estado !== 'pendiente').length;
+        },
+
+        get progresoPorc() {
+          if (!this.ticketActual || this.ticketActual.items_total === 0) return 0;
+          return Math.round(this.itemsCompletados / this.ticketActual.items_total * 100);
+        },
+
+        async init() {
+          if (!this.pickerId) return;
+          await this.recargar();
+          setInterval(() => {
+            if (this.vistaActual === 'lista') this.recargar();
+          }, 15000);
+        },
+
+        async recargar() {
+          if (!this.pickerId) return;
+          this.cargando = true;
+          try {
+            const r = await fetch(`/picker/mis-pedidos?picker_id=${this.pickerId}`);
+            if (r.ok) {
+              const data = await r.json();
+              this.pedidos = data;
+              // Si tenemos un ticket abierto, actualizamos sus datos
+              if (this.ticketActual) {
+                const actualizado = data.find(p => p.picking_id === this.ticketActual.picking_id);
+                if (actualizado) this.ticketActual = actualizado;
+              }
+            }
+          } finally {
+            this.cargando = false;
+          }
+        },
+
+        abrirTicket(pedido) {
+          this.ticketActual = pedido;
+          this.vistaActual = 'ticket';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+
+        volverALista() {
+          this.vistaActual = 'lista';
+          this.ticketActual = null;
+          this.recargar();
+        },
+
+        async marcarItem(item, nuevoEstado) {
+          // Optimistic update
+          const estadoAnterior = item.estado;
+          item.estado = nuevoEstado;
+          this._recalcularPendientes();
+
+          const r = await fetch(`/picker/item/${item.item_id}/estado`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: nuevoEstado }),
+          });
+
+          if (!r.ok) {
+            // Revertir si falla
+            item.estado = estadoAnterior;
+            this._recalcularPendientes();
+            const data = await r.json();
+            this.mostrarToast(data.error || 'Error al actualizar', true);
+          }
+        },
+
+        _recalcularPendientes() {
+          if (!this.ticketActual) return;
+          const pendientes = this.ticketActual.items.filter(i => i.estado === 'pendiente').length;
+          this.ticketActual.items_pendientes = pendientes;
+          this.ticketActual.listo_para_finalizar = pendientes === 0;
+        },
+
+        async finalizarPicking() {
+          if (!this.ticketActual?.listo_para_finalizar || this.finalizando) return;
+          this.finalizando = true;
+
+          try {
+            const r = await fetch(`/picker/picking/${this.ticketActual.picking_id}/finalizar`, {
+              method: 'POST',
+            });
+            const data = await r.json();
+
+            if (r.ok) {
+              this.mostrarToast('¡Picking completado! Pedido listo para reparto ✓');
+              await this.recargar();
+              setTimeout(() => this.volverALista(), 1500);
+            } else {
+              this.mostrarToast(data.error || 'Error al finalizar', true);
+            }
+          } finally {
+            this.finalizando = false;
+          }
+        },
+
+        mostrarToast(msg, error = false) {
+          this.toast = { visible: true, msg, error };
+          setTimeout(() => { this.toast.visible = false; }, 3000);
+        },
+
+        formatHora(ts) {
+          if (!ts) return '';
+          return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        },
+      };
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panchi Ops</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    #mapa { height: 320px; }
+    .badge { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold; }
+    .pulse-dot { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .scroll-logs { max-height: 220px; overflow-y: auto; }
+    .fade-in { animation: fadeIn .3s ease-in; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans" x-data="dashboard()" x-init="init()">
+
+  <!-- ======== NAVBAR ======== -->
+  <nav class="bg-gray-900 text-white px-6 py-3 flex items-center justify-between shadow-lg">
+    <div class="flex items-center gap-3">
+      <span class="text-xl font-bold tracking-tight">🛒 Panchi Ops</span>
+      <span class="text-gray-400 text-sm hidden md:block">Panel de operaciones</span>
+    </div>
+    <div class="flex items-center gap-4 text-sm">
+      <span class="text-gray-400" x-text="horaActual"></span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-green-400 pulse-dot"></span>
+        <span class="text-green-400 font-medium">EN VIVO</span>
+      </div>
+      <span class="text-gray-500 text-xs">↻ cada 10s</span>
+    </div>
+  </nav>
+
+  <!-- ======== ALERTA BANNER ======== -->
+  <div x-show="alertasError.length > 0" x-cloak
+       class="bg-red-600 text-white px-6 py-2 flex items-center gap-3 text-sm fade-in">
+    <span class="font-bold">⚠ ALERTAS:</span>
+    <span x-text="alertasError.map(a => a.mensaje).join(' · ')"></span>
+  </div>
+
+  <!-- ======== MÉTRICAS HEADER ======== -->
+  <div class="bg-white border-b border-gray-200 px-6 py-4">
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3">
+
+      <template x-for="m in tarjetasMetricas" :key="m.clave">
+        <div class="bg-gray-50 rounded-lg p-3 text-center border border-gray-100 hover:shadow-sm transition">
+          <div class="text-2xl font-bold" :class="m.color"
+               x-text="metricas[m.clave] !== undefined ? metricas[m.clave] : '—'"></div>
+          <div class="text-xs text-gray-500 mt-0.5 leading-tight" x-text="m.label"></div>
+        </div>
+      </template>
+
+      <!-- Ingresos -->
+      <div class="bg-gray-50 rounded-lg p-3 text-center border border-gray-100 hover:shadow-sm transition">
+        <div class="text-2xl font-bold text-emerald-600"
+             x-text="metricas.ingresos_hoy_eur !== undefined ? metricas.ingresos_hoy_eur.toFixed(2) + '€' : '—'"></div>
+        <div class="text-xs text-gray-500 mt-0.5">Ingresos hoy</div>
+      </div>
+
+      <!-- T.Prep -->
+      <div class="bg-gray-50 rounded-lg p-3 text-center border border-gray-100">
+        <div class="text-2xl font-bold text-blue-600"
+             x-text="metricas.tiempo_medio_preparacion_min ? metricas.tiempo_medio_preparacion_min + 'min' : '—'"></div>
+        <div class="text-xs text-gray-500 mt-0.5">T.medio prep.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======== CUERPO PRINCIPAL ======== -->
+  <div class="flex gap-0 min-h-screen">
+
+    <!-- ---- COLUMNA IZQUIERDA ---- -->
+    <div class="w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col">
+
+      <!-- ALERTAS -->
+      <div class="p-4 border-b border-gray-100">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Alertas</h2>
+          <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium"
+                x-text="alertas.length" x-show="alertas.length > 0"></span>
+        </div>
+        <div x-show="alertas.length === 0" class="text-sm text-gray-400 py-2">Sin alertas activas ✓</div>
+        <div class="space-y-2 max-h-48 overflow-y-auto">
+          <template x-for="a in alertas" :key="a.mensaje">
+            <div class="rounded-lg p-2.5 text-xs leading-snug fade-in"
+                 :class="{
+                   'bg-red-50 border border-red-200 text-red-800': a.nivel === 'error',
+                   'bg-yellow-50 border border-yellow-200 text-yellow-800': a.nivel === 'warning',
+                   'bg-blue-50 border border-blue-200 text-blue-700': a.nivel === 'info'
+                 }">
+              <span x-text="nivelEmoji(a.nivel)"></span>
+              <span x-text="a.mensaje"></span>
+              <template x-if="a.pedido_id">
+                <button class="ml-1 underline font-medium"
+                        @click="filtrarPorPedido(a.pedido_id)"
+                        x-text="'#'+a.pedido_id"></button>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- PICKING -->
+      <div class="p-4 border-b border-gray-100 flex-1 overflow-y-auto">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Picking</h2>
+          <span class="text-xs text-gray-400" x-text="picking.length + ' pedidos'"></span>
+        </div>
+
+        <div x-show="picking.length === 0" class="text-sm text-gray-400 py-2">Sin pedidos en picking</div>
+
+        <div class="space-y-3">
+          <template x-for="pk in picking" :key="'pk-'+(pk.picking_id || 'new-'+pk.pedido_id)">
+            <div class="border rounded-lg p-3 text-xs fade-in"
+                 :class="pk.tipo === 'sin_asignar' ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white'">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-bold text-sm">#<span x-text="pk.pedido_id"></span></span>
+                <span x-show="pk.tipo === 'sin_asignar'"
+                      class="badge bg-yellow-200 text-yellow-800">Sin asignar</span>
+                <span x-show="pk.estado_picking"
+                      class="badge"
+                      :class="badgePickingClass(pk.estado_picking)"
+                      x-text="pk.estado_picking"></span>
+              </div>
+
+              <!-- Picker asignado -->
+              <div x-show="pk.empleado" class="text-gray-600 mb-1.5">
+                👤 <span x-text="pk.empleado?.nombre"></span>
+              </div>
+
+              <!-- Progress bar -->
+              <div x-show="pk.items_total > 0" class="mb-2">
+                <div class="flex justify-between text-gray-500 mb-0.5">
+                  <span x-text="pk.items_completados + '/' + pk.items_total + ' items'"></span>
+                  <span x-text="pk.items_pendientes + ' pendientes'"></span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-1.5">
+                  <div class="bg-blue-500 h-1.5 rounded-full transition-all"
+                       :style="'width:' + (pk.items_total > 0 ? (pk.items_completados/pk.items_total*100) : 0) + '%'"></div>
+                </div>
+              </div>
+
+              <!-- Items list -->
+              <div class="space-y-1 mb-2 max-h-24 overflow-y-auto">
+                <template x-for="item in pk.items" :key="item.detalle_id">
+                  <div class="flex items-center gap-1.5 text-gray-600">
+                    <span :class="{
+                      'text-green-500': item.estado === 'encontrado',
+                      'text-red-500': item.estado === 'sin_stock',
+                      'text-gray-400': item.estado === 'pendiente'
+                    }">
+                      <span x-show="item.estado === 'encontrado'">✓</span>
+                      <span x-show="item.estado === 'sin_stock'">✗</span>
+                      <span x-show="item.estado === 'pendiente'">○</span>
+                    </span>
+                    <span x-text="item.cantidad + 'x ' + item.nombre"></span>
+                    <span x-show="item.ubicacion" class="text-gray-400 ml-auto"
+                          x-text="item.ubicacion"></span>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex gap-1.5 mt-2">
+                <button x-show="pk.tipo === 'sin_asignar'"
+                        @click="abrirModalPicker(pk.pedido_id)"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1.5 font-medium transition">
+                  Asignar picker
+                </button>
+                <button x-show="pk.picking_id && pk.estado_picking !== 'completado'"
+                        @click="completarPicking(pk.picking_id)"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white rounded px-2 py-1.5 font-medium transition">
+                  Completar
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- REPARTIDORES -->
+      <div class="p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Repartidores</h2>
+          <span class="text-xs text-gray-400"
+                x-text="(repartidores.empleados || []).length + ' empleados'"></span>
+        </div>
+
+        <!-- Pedidos preparados sin repartidor -->
+        <template x-if="(repartidores.pedidos_sin_asignar || []).length > 0">
+          <div class="mb-3">
+            <div class="text-xs font-medium text-red-600 mb-1.5">
+              ⚠ <span x-text="repartidores.pedidos_sin_asignar.length"></span> pedido(s) sin repartidor
+            </div>
+            <template x-for="p in repartidores.pedidos_sin_asignar" :key="'rep-sin-'+p.pedido_id">
+              <div class="border border-red-200 bg-red-50 rounded-lg p-2.5 mb-1.5 text-xs fade-in">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold">#<span x-text="p.pedido_id"></span></span>
+                  <span class="text-gray-600" x-text="p.total.toFixed(2) + '€'"></span>
+                </div>
+                <div class="text-gray-600 truncate mb-1.5" x-text="p.direccion"></div>
+                <button @click="abrirModalRepartidor(p.pedido_id)"
+                        class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded px-2 py-1.5 font-medium transition text-xs">
+                  Asignar repartidor
+                </button>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Lista empleados -->
+        <div class="space-y-2 max-h-72 overflow-y-auto">
+          <template x-for="emp in (repartidores.empleados || [])" :key="'emp-'+emp.empleado_id">
+            <div class="border rounded-lg p-2.5 text-xs"
+                 :class="emp.pedidos_activos.length > 0 ? 'border-orange-200 bg-orange-50' : 'border-gray-100 bg-gray-50'">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-semibold" x-text="emp.nombre"></span>
+                <span class="text-gray-500" x-text="emp.entregados_hoy + ' hoy'"></span>
+              </div>
+              <div class="text-gray-500 mb-1.5" x-text="emp.rol + ' · ' + (emp.telefono || 'sin tel.')"></div>
+              <template x-for="r in emp.pedidos_activos" :key="'r-'+r.reparto_id">
+                <div class="bg-white rounded border border-orange-100 p-2 mb-1">
+                  <div class="flex items-center justify-between mb-0.5">
+                    <span class="font-bold">#<span x-text="r.pedido_id"></span></span>
+                    <span class="badge"
+                          :class="badgeRepartoClass(r.estado_reparto)"
+                          x-text="r.estado_reparto"></span>
+                  </div>
+                  <div class="text-gray-500 truncate mb-1.5" x-text="r.direccion"></div>
+                  <div class="flex gap-1">
+                    <button x-show="r.estado_reparto === 'asignado'"
+                            @click="marcarSalida(r.reparto_id)"
+                            class="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded px-1.5 py-1 font-medium transition">
+                      En camino
+                    </button>
+                    <button x-show="r.estado_reparto === 'en_camino'"
+                            @click="marcarEntregado(r.reparto_id)"
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white rounded px-1.5 py-1 font-medium transition">
+                      Entregado
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <div x-show="emp.pedidos_activos.length === 0"
+                   class="text-gray-400 text-center py-1">Disponible</div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- COLUMNA DERECHA ---- -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <!-- TABLA PEDIDOS -->
+      <div class="flex-1 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-semibold text-gray-700">Pedidos activos</h2>
+          <div class="flex gap-2">
+            <select x-model="filtroEstado"
+                    class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
+              <option value="">Todos los estados</option>
+              <option value="pagado">Pagado</option>
+              <option value="en_preparacion">En preparación</option>
+              <option value="preparado">Preparado</option>
+              <option value="en_reparto">En reparto</option>
+            </select>
+            <button @click="cargarTodo()"
+                    class="text-sm bg-white border border-gray-200 hover:bg-gray-50 rounded-lg px-3 py-1.5 transition">
+              ↻ Actualizar
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
+                <th class="text-left px-4 py-3">Pedido</th>
+                <th class="text-left px-4 py-3">Cliente</th>
+                <th class="text-left px-4 py-3">Estado</th>
+                <th class="text-left px-4 py-3">Picking</th>
+                <th class="text-left px-4 py-3">Reparto</th>
+                <th class="text-right px-4 py-3">Tiempo</th>
+                <th class="text-right px-4 py-3">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="p in pedidosFiltrados" :key="p.pedido_id">
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition"
+                    :class="p.es_alerta ? 'bg-red-50 hover:bg-red-100' : ''">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-1.5">
+                      <span x-show="p.es_alerta" class="text-red-500 text-base leading-none">⚠</span>
+                      <span class="font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="font-medium text-gray-900 truncate max-w-36" x-text="p.cliente_nombre"></div>
+                    <div class="text-xs text-gray-400 truncate max-w-36" x-text="p.direccion_entrega"></div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="badge" :class="badgePedidoClass(p.estado)" x-text="estadoLabel(p.estado)"></span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <template x-if="p.picking">
+                      <div>
+                        <span class="badge" :class="badgePickingClass(p.picking.estado)" x-text="p.picking.estado"></span>
+                        <div class="text-xs text-gray-400 mt-0.5" x-text="p.picking.picker_nombre || ''"></div>
+                      </div>
+                    </template>
+                    <template x-if="!p.picking">
+                      <span class="text-gray-300 text-xs">—</span>
+                    </template>
+                  </td>
+                  <td class="px-4 py-3">
+                    <template x-if="p.reparto">
+                      <div>
+                        <span class="badge" :class="badgeRepartoClass(p.reparto.estado)" x-text="p.reparto.estado"></span>
+                        <div class="text-xs text-gray-400 mt-0.5" x-text="p.reparto.repartidor_nombre || ''"></div>
+                      </div>
+                    </template>
+                    <template x-if="!p.reparto">
+                      <span class="text-gray-300 text-xs">—</span>
+                    </template>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <span class="text-sm font-medium"
+                          :class="p.minutos_en_estado > 30 ? 'text-red-600' : 'text-gray-600'"
+                          x-text="formatMinutos(p.minutos_en_estado)"></span>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <span class="font-semibold text-gray-900" x-text="p.total.toFixed(2) + '€'"></span>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="pedidosFiltrados.length === 0">
+                <td colspan="7" class="px-4 py-8 text-center text-gray-400">Sin pedidos activos</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MAPA + LOGS -->
+      <div class="grid grid-cols-2 gap-5 px-5 pb-5">
+
+        <!-- MAPA -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-semibold text-gray-700 text-sm">Mapa de operación</h2>
+            <span class="text-xs text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">
+              Coordenadas simuladas
+            </span>
+          </div>
+          <div id="mapa"></div>
+        </div>
+
+        <!-- LOGS -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-semibold text-gray-700 text-sm">Eventos del sistema</h2>
+            <span class="text-xs text-gray-400" x-text="eventos.length + ' registros'"></span>
+          </div>
+          <div class="scroll-logs p-3 space-y-1.5">
+            <template x-for="e in eventos" :key="e.id">
+              <div class="flex items-start gap-2 text-xs py-1 border-b border-gray-50">
+                <span class="text-gray-400 whitespace-nowrap font-mono"
+                      x-text="formatTimestamp(e.timestamp)"></span>
+                <div>
+                  <span class="text-gray-500 font-medium">#<span x-text="e.pedido_id"></span></span>
+                  <span class="mx-1 text-gray-300">→</span>
+                  <span class="inline-block px-1.5 py-0.5 rounded text-xs font-medium mr-1"
+                        :class="badgePedidoClass(e.estado_anterior)"
+                        x-text="e.estado_anterior"></span>
+                  <span class="text-gray-400 mx-0.5">→</span>
+                  <span class="inline-block px-1.5 py-0.5 rounded text-xs font-medium"
+                        :class="badgePedidoClass(e.estado_nuevo)"
+                        x-text="e.estado_nuevo"></span>
+                  <span x-show="e.notas" class="text-gray-400 ml-1" x-text="'· ' + e.notas"></span>
+                </div>
+              </div>
+            </template>
+            <div x-show="eventos.length === 0" class="text-gray-400 text-center py-4 text-xs">
+              Sin eventos
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== MODAL ASIGNAR PICKER ======== -->
+  <div x-show="modalPicker.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalPicker.visible = false">
+    <div class="bg-white rounded-2xl shadow-xl w-96 p-6 fade-in">
+      <h3 class="font-bold text-lg mb-1">Asignar picker</h3>
+      <p class="text-gray-500 text-sm mb-4">Pedido #<span x-text="modalPicker.pedido_id"></span></p>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Selecciona un picker</label>
+        <select x-model="modalPicker.empleado_id"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <option value="">— Seleccionar —</option>
+          <template x-for="e in empleadosModal" :key="e.id">
+            <option :value="e.id" x-text="e.nombre + ' (' + e.rol + ')'"></option>
+          </template>
+        </select>
+      </div>
+
+      <div x-show="modalError" class="text-red-600 text-sm mb-3 bg-red-50 rounded-lg px-3 py-2"
+           x-text="modalError"></div>
+
+      <div class="flex gap-3">
+        <button @click="modalPicker.visible = false"
+                class="flex-1 border border-gray-200 rounded-lg py-2 text-sm hover:bg-gray-50 transition">
+          Cancelar
+        </button>
+        <button @click="confirmarAsignarPicker()"
+                :disabled="!modalPicker.empleado_id"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition">
+          Asignar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== MODAL ASIGNAR REPARTIDOR ======== -->
+  <div x-show="modalRepartidor.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalRepartidor.visible = false">
+    <div class="bg-white rounded-2xl shadow-xl w-96 p-6 fade-in">
+      <h3 class="font-bold text-lg mb-1">Asignar repartidor</h3>
+      <p class="text-gray-500 text-sm mb-4">Pedido #<span x-text="modalRepartidor.pedido_id"></span></p>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Selecciona un repartidor</label>
+        <select x-model="modalRepartidor.empleado_id"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+          <option value="">— Seleccionar —</option>
+          <template x-for="e in empleadosModal" :key="e.id">
+            <option :value="e.id" x-text="e.nombre + ' (' + e.rol + ')'"></option>
+          </template>
+        </select>
+      </div>
+
+      <div x-show="modalError" class="text-red-600 text-sm mb-3 bg-red-50 rounded-lg px-3 py-2"
+           x-text="modalError"></div>
+
+      <div class="flex gap-3">
+        <button @click="modalRepartidor.visible = false"
+                class="flex-1 border border-gray-200 rounded-lg py-2 text-sm hover:bg-gray-50 transition">
+          Cancelar
+        </button>
+        <button @click="confirmarAsignarRepartidor()"
+                :disabled="!modalRepartidor.empleado_id"
+                class="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition">
+          Asignar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== TOAST ======== -->
+  <div x-show="toast.visible" x-cloak
+       class="fixed bottom-6 right-6 z-50 fade-in"
+       x-transition>
+    <div class="rounded-xl px-5 py-3 shadow-xl text-sm font-medium text-white flex items-center gap-2"
+         :class="toast.error ? 'bg-red-600' : 'bg-gray-900'">
+      <span x-text="toast.error ? '✗' : '✓'"></span>
+      <span x-text="toast.msg"></span>
+    </div>
+  </div>
+
+  <!-- ======== JAVASCRIPT ======== -->
+  <script>
+    let mapaLeaflet = null;
+    let mapaMarkers = [];
+
+    function dashboard() {
+      return {
+        metricas: {},
+        pedidos: [],
+        picking: [],
+        repartidores: { empleados: [], pedidos_sin_asignar: [] },
+        alertas: [],
+        eventos: [],
+        filtroEstado: '',
+        horaActual: '',
+        empleadosModal: [],
+        modalError: '',
+        modalPicker: { visible: false, pedido_id: null, empleado_id: '' },
+        modalRepartidor: { visible: false, pedido_id: null, empleado_id: '' },
+        toast: { visible: false, msg: '', error: false },
+
+        tarjetasMetricas: [
+          { clave: 'pedidos_hoy',         label: 'Pedidos hoy',     color: 'text-gray-800' },
+          { clave: 'pedidos_activos',      label: 'Activos',         color: 'text-blue-600' },
+          { clave: 'en_preparacion',       label: 'En picking',      color: 'text-blue-500' },
+          { clave: 'en_reparto',           label: 'En reparto',      color: 'text-orange-500' },
+          { clave: 'entregados_hoy',       label: 'Entregados hoy',  color: 'text-green-600' },
+          { clave: 'pickers_activos',      label: 'Pickers activos', color: 'text-indigo-600' },
+          { clave: 'repartidores_activos', label: 'Repartidores',    color: 'text-orange-600' },
+        ],
+
+        get alertasError() {
+          return this.alertas.filter(a => a.nivel === 'error');
+        },
+
+        get pedidosFiltrados() {
+          if (!this.filtroEstado) return this.pedidos;
+          return this.pedidos.filter(p => p.estado === this.filtroEstado);
+        },
+
+        async init() {
+          this.actualizarHora();
+          setInterval(() => this.actualizarHora(), 1000);
+          await this.cargarTodo();
+          setInterval(() => this.cargarTodo(), 10000);
+          this.$nextTick(() => this.iniciarMapa());
+        },
+
+        actualizarHora() {
+          const ahora = new Date();
+          this.horaActual = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        },
+
+        async cargarTodo() {
+          await Promise.all([
+            this.cargar('metricas', '/dashboard/metricas'),
+            this.cargarPedidos(),
+            this.cargar('picking', '/dashboard/picking'),
+            this.cargar('repartidores', '/dashboard/repartidores'),
+            this.cargar('alertas', '/dashboard/alertas'),
+            this.cargar('eventos', '/dashboard/eventos'),
+          ]);
+          this.actualizarMapa();
+        },
+
+        async cargar(campo, url) {
+          try {
+            const r = await fetch(url);
+            if (r.ok) this[campo] = await r.json();
+          } catch (e) { /* silencioso */ }
+        },
+
+        async cargarPedidos() {
+          try {
+            const url = this.filtroEstado
+              ? `/dashboard/pedidos-activos?estado=${this.filtroEstado}`
+              : '/dashboard/pedidos-activos';
+            const r = await fetch(url);
+            if (r.ok) this.pedidos = await r.json();
+          } catch (e) { /* silencioso */ }
+        },
+
+        // --- MAPA ---
+
+        iniciarMapa() {
+          const el = document.getElementById('mapa');
+          if (!el || mapaLeaflet) return;
+          mapaLeaflet = L.map('mapa').setView([40.0041, -2.9980], 14);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 18,
+          }).addTo(mapaLeaflet);
+        },
+
+        actualizarMapa() {
+          if (!mapaLeaflet) return;
+          fetch('/dashboard/mapa').then(r => r.json()).then(data => {
+            mapaMarkers.forEach(m => m.remove());
+            mapaMarkers = [];
+            data.pedidos.forEach(p => {
+              const marker = L.circleMarker([p.lat, p.lng], {
+                radius: 10,
+                fillColor: p.color,
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.85,
+              }).bindPopup(
+                `<b>#${p.pedido_id}</b><br>${p.estado}<br>${p.direccion}<br><b>${p.total.toFixed(2)}€</b>`
+                + (p.simulado ? '<br><small style="color:#999">⚠ coord. simuladas</small>' : '')
+              ).addTo(mapaLeaflet);
+              mapaMarkers.push(marker);
+            });
+          }).catch(() => {});
+        },
+
+        // --- ACCIONES ---
+
+        async abrirModalPicker(pedido_id) {
+          this.modalPicker = { visible: true, pedido_id, empleado_id: '' };
+          this.modalError = '';
+          const r = await fetch('/dashboard/empleados');
+          this.empleadosModal = r.ok ? await r.json() : [];
+        },
+
+        async confirmarAsignarPicker() {
+          this.modalError = '';
+          const r = await fetch('/dashboard/picking/asignar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pedido_id: this.modalPicker.pedido_id,
+              empleado_id: parseInt(this.modalPicker.empleado_id),
+            }),
+          });
+          const data = await r.json();
+          if (r.ok) {
+            this.modalPicker.visible = false;
+            this.mostrarToast(data.mensaje);
+            await this.cargarTodo();
+          } else {
+            this.modalError = data.error;
+          }
+        },
+
+        async completarPicking(picking_id) {
+          const r = await fetch(`/dashboard/picking/${picking_id}/completar`, { method: 'POST' });
+          const data = await r.json();
+          if (r.ok) {
+            this.mostrarToast(data.mensaje);
+            await this.cargarTodo();
+          } else {
+            this.mostrarToast(data.error, true);
+          }
+        },
+
+        async abrirModalRepartidor(pedido_id) {
+          this.modalRepartidor = { visible: true, pedido_id, empleado_id: '' };
+          this.modalError = '';
+          const r = await fetch('/dashboard/empleados');
+          this.empleadosModal = r.ok ? await r.json() : [];
+        },
+
+        async confirmarAsignarRepartidor() {
+          this.modalError = '';
+          const r = await fetch('/dashboard/reparto/asignar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pedido_id: this.modalRepartidor.pedido_id,
+              empleado_id: parseInt(this.modalRepartidor.empleado_id),
+            }),
+          });
+          const data = await r.json();
+          if (r.ok) {
+            this.modalRepartidor.visible = false;
+            this.mostrarToast(data.mensaje);
+            await this.cargarTodo();
+          } else {
+            this.modalError = data.error;
+          }
+        },
+
+        async marcarSalida(reparto_id) {
+          const r = await fetch(`/dashboard/reparto/${reparto_id}/salida`, { method: 'POST' });
+          const data = await r.json();
+          if (r.ok) { this.mostrarToast(data.mensaje); await this.cargarTodo(); }
+          else { this.mostrarToast(data.error, true); }
+        },
+
+        async marcarEntregado(reparto_id) {
+          const r = await fetch(`/dashboard/reparto/${reparto_id}/entregar`, { method: 'POST' });
+          const data = await r.json();
+          if (r.ok) { this.mostrarToast(data.mensaje); await this.cargarTodo(); }
+          else { this.mostrarToast(data.error, true); }
+        },
+
+        filtrarPorPedido(pedido_id) {
+          this.filtroEstado = '';
+          this.$nextTick(() => {
+            const filas = document.querySelectorAll('tbody tr');
+            filas.forEach(f => {
+              if (f.textContent.includes('#' + pedido_id)) {
+                f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                f.classList.add('ring-2', 'ring-blue-400');
+                setTimeout(() => f.classList.remove('ring-2', 'ring-blue-400'), 2500);
+              }
+            });
+          });
+        },
+
+        mostrarToast(msg, error = false) {
+          this.toast = { visible: true, msg, error };
+          setTimeout(() => { this.toast.visible = false; }, 3000);
+        },
+
+        // --- FORMATTERS ---
+
+        formatMinutos(min) {
+          if (min === null || min === undefined) return '—';
+          if (min < 60) return min + 'min';
+          return Math.floor(min / 60) + 'h ' + (min % 60) + 'min';
+        },
+
+        formatTimestamp(ts) {
+          if (!ts) return '';
+          const d = new Date(ts);
+          return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        },
+
+        estadoLabel(estado) {
+          const labels = {
+            'Pendiente': 'Pendiente',
+            'enlace': 'Enlace',
+            'enlace2': 'Confirmación',
+            'confirmando-pago': 'Pago...',
+            'pagado': 'Pagado',
+            'en_preparacion': 'En picking',
+            'preparado': 'Preparado',
+            'en_reparto': 'En reparto',
+            'entregado': 'Entregado',
+            'cancelado': 'Cancelado',
+            'reembolsado': 'Reembolsado',
+          };
+          return labels[estado] || estado;
+        },
+
+        nivelEmoji(nivel) {
+          return { error: '🔴', warning: '🟡', info: '🔵' }[nivel] || '⚪';
+        },
+
+        badgePedidoClass(estado) {
+          const m = {
+            'pagado': 'bg-emerald-100 text-emerald-800',
+            'en_preparacion': 'bg-blue-100 text-blue-800',
+            'preparado': 'bg-indigo-100 text-indigo-800',
+            'en_reparto': 'bg-orange-100 text-orange-800',
+            'entregado': 'bg-green-100 text-green-800',
+            'cancelado': 'bg-red-100 text-red-700',
+            'reembolsado': 'bg-red-100 text-red-700',
+            'confirmando-pago': 'bg-yellow-100 text-yellow-800',
+            'enlace': 'bg-gray-100 text-gray-600',
+            'enlace2': 'bg-gray-100 text-gray-600',
+            'Pendiente': 'bg-gray-100 text-gray-600',
+          };
+          return m[estado] || 'bg-gray-100 text-gray-600';
+        },
+
+        badgePickingClass(estado) {
+          const m = {
+            'pendiente': 'bg-gray-100 text-gray-600',
+            'en_proceso': 'bg-blue-100 text-blue-800',
+            'completado': 'bg-green-100 text-green-800',
+            'con_incidencias': 'bg-red-100 text-red-700',
+            'cancelado': 'bg-red-100 text-red-700',
+          };
+          return m[estado] || 'bg-gray-100 text-gray-600';
+        },
+
+        badgeRepartoClass(estado) {
+          const m = {
+            'pendiente': 'bg-gray-100 text-gray-600',
+            'asignado': 'bg-yellow-100 text-yellow-800',
+            'en_camino': 'bg-orange-100 text-orange-800',
+            'entregado': 'bg-green-100 text-green-800',
+            'no_entregado': 'bg-red-100 text-red-700',
+            'cancelado': 'bg-red-100 text-red-700',
+          };
+          return m[estado] || 'bg-gray-100 text-gray-600';
+        },
+      };
+    }
+  </script>
+</body>
+</html>
