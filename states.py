@@ -13,11 +13,51 @@ class EstadoRegistro(str, Enum):
 
 
 class EstadoPedido(str, Enum):
+    # Flujo de compra (bot → pago)
     PENDIENTE = "Pendiente"
     ENLACE = "enlace"
     ENLACE2 = "enlace2"
     CONFIRMANDO_PAGO = "confirmando-pago"
     PAGADO = "pagado"
+    # Flujo operativo (almacén → reparto)
+    EN_PREPARACION = "en_preparacion"
+    PREPARADO = "preparado"
+    EN_REPARTO = "en_reparto"
+    ENTREGADO = "entregado"
+    # Estados de cancelación
+    CANCELADO = "cancelado"
+    REEMBOLSADO = "reembolsado"
+
+    def __str__(self):
+        return self.value
+
+
+# Estados que indican que el pedido ya no está activo para el cliente
+ESTADOS_TERMINALES_PEDIDO = {
+    EstadoPedido.ENTREGADO,
+    EstadoPedido.CANCELADO,
+    EstadoPedido.REEMBOLSADO,
+}
+
+
+class EstadoPicking(str, Enum):
+    PENDIENTE = "pendiente"
+    EN_PROCESO = "en_proceso"
+    COMPLETADO = "completado"
+    CON_INCIDENCIAS = "con_incidencias"
+    CANCELADO = "cancelado"
+
+    def __str__(self):
+        return self.value
+
+
+class EstadoReparto(str, Enum):
+    PENDIENTE = "pendiente"
+    ASIGNADO = "asignado"
+    EN_CAMINO = "en_camino"
+    ENTREGADO = "entregado"
+    NO_ENTREGADO = "no_entregado"
+    CANCELADO = "cancelado"
 
     def __str__(self):
         return self.value
@@ -34,16 +74,21 @@ TRANSICIONES_REGISTRO: dict = {
     EstadoRegistro.CONFIRMANDO_DIRECCION: [EstadoRegistro.ESPERANDO_DIRECCION],  # rollback si el usuario corrige
 }
 
-# Transiciones válidas del flujo de pedido/pago.
+# Transiciones válidas del flujo completo de pedido.
 # ENLACE → PENDIENTE es rollback por error interno (menu.py), no flujo de usuario.
 # ENLACE2 → ENLACE es navegación UI (botón "atrás" en confirmacion_pago.html).
-# PAGADO es estado terminal.
 TRANSICIONES_PEDIDO: dict = {
-    EstadoPedido.PENDIENTE: [EstadoPedido.ENLACE],
-    EstadoPedido.ENLACE: [EstadoPedido.ENLACE2, EstadoPedido.PENDIENTE],
-    EstadoPedido.ENLACE2: [EstadoPedido.CONFIRMANDO_PAGO, EstadoPedido.ENLACE],  # ENLACE = botón atrás
-    EstadoPedido.CONFIRMANDO_PAGO: [EstadoPedido.PAGADO],
-    EstadoPedido.PAGADO: [],
+    EstadoPedido.PENDIENTE:         [EstadoPedido.ENLACE, EstadoPedido.CANCELADO],
+    EstadoPedido.ENLACE:            [EstadoPedido.ENLACE2, EstadoPedido.PENDIENTE, EstadoPedido.CANCELADO],
+    EstadoPedido.ENLACE2:           [EstadoPedido.CONFIRMANDO_PAGO, EstadoPedido.ENLACE],
+    EstadoPedido.CONFIRMANDO_PAGO:  [EstadoPedido.PAGADO, EstadoPedido.CANCELADO],
+    EstadoPedido.PAGADO:            [EstadoPedido.EN_PREPARACION, EstadoPedido.REEMBOLSADO],
+    EstadoPedido.EN_PREPARACION:    [EstadoPedido.PREPARADO, EstadoPedido.CANCELADO],
+    EstadoPedido.PREPARADO:         [EstadoPedido.EN_REPARTO],
+    EstadoPedido.EN_REPARTO:        [EstadoPedido.ENTREGADO],
+    EstadoPedido.ENTREGADO:         [],
+    EstadoPedido.CANCELADO:         [EstadoPedido.REEMBOLSADO],
+    EstadoPedido.REEMBOLSADO:       [],
 }
 
 
