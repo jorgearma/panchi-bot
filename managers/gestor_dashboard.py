@@ -835,7 +835,7 @@ class GestorDashboard:
             logger.error("Error marcando no entregado reparto %s: %s", reparto_id, e)
             return False, "Error de base de datos", None
 
-    def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None) -> tuple:
+    def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None, producto_sustituto_id: int = None) -> tuple:
         """Updates a single picking item state."""
         ESTADOS_VALIDOS = {"encontrado", "sin_stock", "sustituido", "pendiente"}
         if estado not in ESTADOS_VALIDOS:
@@ -852,6 +852,12 @@ class GestorDashboard:
                 item.cantidad_encontrada = cantidad_encontrada
             if notas is not None:
                 item.notas = notas
+            if producto_sustituto_id is not None:
+                from models import Producto
+                prod = s.query(Producto).filter_by(ProductoID=producto_sustituto_id, Disponible=True).first()
+                if not prod:
+                    return False, "Producto sustituto no encontrado"
+                item.producto_sustituto_id = producto_sustituto_id
 
             s.commit()
             return True, "Item actualizado"
