@@ -125,6 +125,7 @@ Terminal states: `entregado`, `reembolsado`. Any non-terminal state can go to `c
 | `managers/gestor_usuarios.py` | `GestorUsuarios` — User DB queries |
 | `managers/gestor_productos.py` | `ProductoManager` — Product DB queries |
 | `managers/gestor_pedidos.py` | `GestorPedidos` — order creation, state transitions, detail insertion |
+| `managers/gestor_dashboard.py` | Dashboard queries: order metrics, `monitor_empleados()` for real-time staff monitor |
 | `controllers/registro.py` | Multi-step registration flow for unregistered users |
 | `controllers/mensajes_registrados.py` | `ManejadorMensajesRegistrados` — dispatches registered user messages |
 | `controllers/pedido.py` | `procesar_pedido`, `confirmar_carrito` — order initiation and cart confirmation |
@@ -164,8 +165,7 @@ Active refactor branch: `refactorizar-estructura`. Full task list with file/line
 - `services/__init__.py`: `cache = redismanager.client` (should be `redismanager`) — callers get the raw Redis client instead of the wrapper with retry/logging
 - `token_service.py`: `generar_token_temporal` should raise `ValueError`, not return a tuple
 - `controllers/registro.py`: `confirmar_direccion` should return `False` not `1`
-- Missing `templates/error.html` (referenced but absent → 500 in prod)
-- Guard None in `blueprints/menu.py:57` (depends on error.html)
+- Guard None in `blueprints/menu.py:57`
 
 **Fixed in recent commits:**
 - ~~`blueprints/webhook.py`: cast `order_id` to int before use~~ ✓
@@ -175,7 +175,6 @@ Active refactor branch: `refactorizar-estructura`. Full task list with file/line
 - `config.py` bypassed by most modules — consolidate env var reads
 - `limpiar_texto` duplicated — canonicalize in `text_utils.py`
 - Static wrapper classes `Mensajeria`, `ValidacionNombre`, `ValidacionDireccion` in `registro.py` — remove
-- `templates/map_orders.html`, `piking.html`, `cocina/comandas.py` — dead code to remove
 - `requirements.txt` incomplete (missing: shapely, spacy, sentry-sdk, tenacity, Monei)
 - `database.py`: `Base = declarative_base()` declared twice (lines 54, 76)
 - `modelos/validator_twilio.py` uses Pydantic V1 `@validator` (deprecated)
