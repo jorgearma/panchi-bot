@@ -226,12 +226,17 @@
               </div>
               <div class="text-gray-500 mb-1.5" x-text="emp.rol + ' · ' + (emp.telefono || 'sin tel.')"></div>
               <template x-for="r in emp.pedidos_activos" :key="'r-'+r.reparto_id">
-                <div class="bg-white rounded border border-orange-100 p-2 mb-1">
+                <div class="rounded border p-2 mb-1"
+                     :class="r.estado_reparto === 'en_camino'
+                       ? 'bg-blue-50 border-blue-200'
+                       : r.estado_reparto === 'asignado'
+                         ? 'bg-amber-50 border-amber-200'
+                         : 'bg-white border-orange-100'">
                   <div class="flex items-center justify-between mb-0.5">
                     <span class="font-bold">#<span x-text="r.pedido_id"></span></span>
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                           :class="badgeRepartoClass(r.estado_reparto)"
-                          x-text="r.estado_reparto"></span>
+                          x-text="r.estado_reparto === 'asignado' ? '🏪 En tienda' : r.estado_reparto === 'en_camino' ? '🛵 En reparto' : r.estado_reparto"></span>
                   </div>
                   <div class="text-gray-500 truncate mb-1.5" x-text="r.direccion"></div>
                   <div class="flex gap-1">
@@ -296,8 +301,14 @@
             </thead>
             <tbody>
               <template x-for="p in pedidosFiltrados" :key="p.pedido_id">
-                <tr class="border-b border-gray-100 hover:bg-blue-50 transition cursor-pointer select-none"
-                    :class="p.es_alerta ? 'bg-red-50 hover:bg-red-100' : ''"
+                <tr class="border-b border-gray-100 transition cursor-pointer select-none"
+                    :class="p.es_alerta
+                      ? 'bg-red-50 hover:bg-red-100'
+                      : p.reparto?.estado === 'en_camino'
+                        ? 'bg-blue-50 hover:bg-blue-100'
+                        : p.reparto?.estado === 'asignado'
+                          ? 'bg-amber-50 hover:bg-amber-100'
+                          : 'hover:bg-gray-50'"
                     @click="abrirPanel(p)">
                   <td class="px-4 py-3">
                     <div class="flex items-center gap-1.5">
