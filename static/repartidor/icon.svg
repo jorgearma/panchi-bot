@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#111827"/>
+  <!-- Rueda trasera -->
+  <circle cx="52" cy="138" r="22" fill="none" stroke="white" stroke-width="10"/>
+  <!-- Rueda delantera -->
+  <circle cx="148" cy="138" r="22" fill="none" stroke="white" stroke-width="10"/>
+  <!-- Cuerpo de la moto -->
+  <path d="M52 138 L80 100 L120 100 L148 138" fill="none" stroke="white" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Manillar -->
+  <path d="M148 138 L155 105 L168 100" fill="none" stroke="white" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Caja de reparto (maletín trasero) -->
+  <rect x="72" y="74" width="48" height="30" rx="6" fill="none" stroke="#fb923c" stroke-width="9"/>
+  <!-- Asa de la caja -->
+  <line x1="87" y1="74" x2="87" y2="66" stroke="#fb923c" stroke-width="8" stroke-linecap="round"/>
+  <line x1="105" y1="74" x2="105" y2="66" stroke="#fb923c" stroke-width="8" stroke-linecap="round"/>
+  <line x1="87" y1="66" x2="105" y2="66" stroke="#fb923c" stroke-width="8" stroke-linecap="round"/>
+</svg>
