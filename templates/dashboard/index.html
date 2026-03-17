@@ -376,10 +376,10 @@
           <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <h2 class="font-semibold text-gray-700 text-sm">Mapa de operación</h2>
             <div class="flex items-center gap-2 text-xs">
-              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"></span>+8 min</span>
-              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400"></span>3–8</span>
-              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-500"></span>0–3</span>
-              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500"></span>tarde</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Pagado</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500"></span>Picking</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500"></span>Preparado</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-500"></span>Reparto</span>
             </div>
           </div>
           <div id="mapa"></div>
@@ -933,6 +933,7 @@
   <script>
     let mapaLeaflet = null;
     let mapaMarkers = [];
+    let marcadorTienda = null;
 
     function dashboard() {
       return {
@@ -1031,65 +1032,94 @@
             attribution: '© OpenStreetMap',
             maxZoom: 18,
           }).addTo(mapaLeaflet);
+          mapaLeaflet.on('popupopen', (e) => {
+            const btn = e.popup.getElement()?.querySelector('[data-ir-pedido]');
+            if (btn) {
+              btn.onclick = () => {
+                const id = parseInt(btn.dataset.irPedido);
+                mapaLeaflet.closePopup();
+                this.filtrarPorPedido(id);
+              };
+            }
+          });
         },
 
-        mapaColorPrioridad(fechaCreacion) {
-          if (!fechaCreacion) return '#6b7280';
-          const mins = Math.round((new Date(fechaCreacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
-          if (mins > 8)  return '#22c55e';  // green-500
-          if (mins >= 3) return '#eab308';  // yellow-400
-          if (mins >= 0) return '#f97316';  // orange-500
-          return '#ef4444';                 // red-500
+        mapaColorEstado(estado) {
+          const colores = {
+            'pagado':            '#10b981',  // emerald-500
+            'contra_reembolso':  '#8b5cf6',  // violet-500
+            'en_preparacion':    '#3b82f6',  // blue-500
+            'preparado':         '#6366f1',  // indigo-500
+            'en_reparto':        '#f97316',  // orange-500
+          };
+          return colores[estado] || '#6b7280';
         },
 
-        mapaMinutosLabel(fechaCreacion) {
-          if (!fechaCreacion) return '?';
-          const mins = Math.round((new Date(fechaCreacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
-          if (mins > 0)  return mins + 'm';
-          if (mins === 0) return '0m';
-          return '+' + Math.abs(mins);
+        mapaEstadoCorto(estado) {
+          const labels = {
+            'pagado':            'PAG',
+            'contra_reembolso':  'CR',
+            'en_preparacion':    'PICK',
+            'preparado':         'LISTO',
+            'en_reparto':        'REP',
+          };
+          return labels[estado] || '?';
         },
 
         actualizarMapa() {
           if (!mapaLeaflet) return;
-          fetch('/dashboard/mapa').then(r => r.json()).then(data => {
-            mapaMarkers.forEach(m => m.remove());
-            mapaMarkers = [];
-            data.pedidos.forEach(p => {
-              const color = this.mapaColorPrioridad(p.fecha_creacion);
-              const label = this.mapaMinutosLabel(p.fecha_creacion);
+
+          // Marcador de tienda — se dibuja una sola vez
+          if (!marcadorTienda) {
+            const iconTienda = L.divIcon({
+              className: '',
+              html: `<div style="background:#1f2937;color:#fff;border:2px solid #fff;border-radius:6px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,.45);font-size:18px;">🏪</div>`,
+              iconSize: [34, 34],
+              iconAnchor: [17, 17],
+            });
+            marcadorTienda = L.marker([40.008778, -3.010905], { icon: iconTienda })
+              .bindPopup('<b>Panchi</b><br>Punto de origen')
+              .addTo(mapaLeaflet);
+          }
+
+          // Marcadores de pedidos — usar this.pedidos ya cargados
+          mapaMarkers.forEach(m => m.remove());
+          mapaMarkers = [];
+
+          const estadoLabel = {
+            'pagado': 'Pagado', 'contra_reembolso': 'Contra reembolso',
+            'en_preparacion': 'En picking', 'preparado': 'Preparado', 'en_reparto': 'En reparto',
+          };
+
+          this.pedidos
+            .filter(p => p.lat != null && p.lng != null)
+            .forEach(p => {
+              const color = this.mapaColorEstado(p.estado);
               const icon = L.divIcon({
                 className: '',
-                html: `<div style="
-                    background:${color};
-                    color:#fff;
-                    border:2px solid #fff;
-                    border-radius:50%;
-                    width:34px;height:34px;
-                    display:flex;flex-direction:column;
-                    align-items:center;justify-content:center;
-                    box-shadow:0 1px 5px rgba(0,0,0,.35);
-                    line-height:1;
-                  ">
-                  <span style="font-size:9px;font-weight:700;opacity:.85">#${p.pedido_id}</span>
-                  <span style="font-size:10px;font-weight:900">${label}</span>
+                html: `<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:8px;width:38px;height:38px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,.35);line-height:1.1;">
+                  <span style="font-size:11px;font-weight:900">#${p.pedido_id}</span>
+                  <span style="font-size:8px;font-weight:700;opacity:.9">${this.mapaEstadoCorto(p.estado)}</span>
                 </div>`,
-                iconSize: [34, 34],
-                iconAnchor: [17, 17],
+                iconSize: [38, 38],
+                iconAnchor: [19, 19],
               });
-              const mins = Math.round((new Date(p.fecha_creacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
-              const minsTexto = mins > 0 ? `${mins} min restantes` : mins === 0 ? 'Ahora' : `${Math.abs(mins)} min de retraso`;
+              const label = estadoLabel[p.estado] || p.estado;
               const marker = L.marker([p.lat, p.lng], { icon })
                 .bindPopup(`
-                  <b>#${p.pedido_id}</b><br>
-                  ${p.direccion}<br>
-                  <b>${p.total.toFixed(2)}€</b><br>
-                  <span style="color:${color};font-weight:700">${minsTexto}</span>
+                  <div style="min-width:160px">
+                    <b style="font-size:14px">#${p.pedido_id}</b>
+                    <span style="margin-left:6px;background:${color};color:#fff;padding:1px 6px;border-radius:4px;font-size:11px">${label}</span><br>
+                    <span style="font-size:12px;color:#555">${p.direccion_entrega}</span><br>
+                    <b>${p.total.toFixed(2)}€</b>
+                    <button data-ir-pedido="${p.pedido_id}" style="margin-top:6px;width:100%;background:#1d4ed8;color:#fff;border:none;border-radius:4px;padding:4px 0;font-size:12px;cursor:pointer">
+                      Ver en lista
+                    </button>
+                  </div>
                 `)
                 .addTo(mapaLeaflet);
               mapaMarkers.push(marker);
             });
-          }).catch(() => {});
         },
 
         // --- ACCIONES ---

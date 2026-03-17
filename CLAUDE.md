@@ -161,11 +161,21 @@ These are well-designed and must not be changed unless a `REFACTOR_PLAN.md` phas
 
 Active refactor branch: `refactorizar-estructura`. Full task list with file/line references in `REFACTOR_PLAN.md`. Commit convention: `fix(sec):`, `fix(data):`, `fix(ui):`, `refactor:`, `chore:`, `test:` — one issue per atomic commit.
 
+**Pending security (Fase 1) — must fix before production exposure:**
+- SEC-1: `blueprints/webhook.py:23–29` — no Twilio signature verification; any POST with `From`+`Body` fields is accepted (add `RequestValidator` from `twilio.request_validator`)
+- SEC-2: `blueprints/api.py:88–104` — `/api/cambiar_estado_a_enlace` is unauthenticated; add `X-Internal-Token` header check against `config.INTERNAL_API_TOKEN`
+- SEC-3: `main.py:23` — Sentry DSN hardcoded in source; move to `SENTRY_DSN` env var
+- SEC-4: `main.py:24` — `send_default_pii=True` sends phone numbers to Sentry servers (RGPD violation); set to `False`
+- SEC-5: `controllers/pago.py:66` — `"email": "john.doe@monei.com"` sent to Monei as real customer email
+- SEC-6: `main.py:30`, `blueprints/api.py:19–54` — CORS wildcard on financial endpoints; duplicate `OPTIONS` handlers conflict with Flask-CORS
+
 **Pending bugs (Fase 2):**
+- **BUG-CRÍTICO**: `controllers/mensajes_registrados.py:24` — `nombre_usuario` passed where `telefono` is expected in `iniciar_pedido(id, direccion, telefono)`, silently corrupting `TelefonoEntrega` column with the customer's name instead of their phone number. Requires a data migration after fix.
 - `services/__init__.py`: `cache = redismanager.client` (should be `redismanager`) — callers get the raw Redis client instead of the wrapper with retry/logging
-- `token_service.py`: `generar_token_temporal` should raise `ValueError`, not return a tuple
+- `token_service.py`: `generar_token_temporal` should raise `ValueError`, not return a tuple (currently generates broken URLs like `https://domain.com/menu/Datos de usuario inválidos.`)
 - `controllers/registro.py`: `confirmar_direccion` should return `False` not `1`
-- Guard None in `blueprints/menu.py:57`
+- `blueprints/menu.py:57` — `last_pedido` used without `None` check → AttributeError in production
+- `templates/error.html` — referenced in `blueprints/menu.py:27` but does not exist → Flask raises `TemplateNotFound` (500) instead of 403
 
 **Fixed in recent commits:**
 - ~~`blueprints/webhook.py`: cast `order_id` to int before use~~ ✓

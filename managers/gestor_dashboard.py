@@ -223,6 +223,8 @@ class GestorDashboard:
                     }
                     for d in p.detalles
                 ],
+                "lat": p.lat_entrega,
+                "lng": p.lng_entrega,
                 "picking": picking_data,
                 "reparto": reparto_data,
                 "es_alerta": es_alerta,
@@ -1121,6 +1123,8 @@ class GestorDashboard:
                 "cliente_nombre": pedido.cliente.nombre if pedido.cliente else "—",
                 "cliente_telefono": pedido.TelefonoEntrega,
                 "direccion_entrega": pedido.DireccionEntrega,
+                "lat": pedido.lat_entrega,
+                "lng": pedido.lng_entrega,
                 "total": float(pedido.Total) if pedido.Total else 0.0,
                 "pago": info_pago,
                 "items": items,
