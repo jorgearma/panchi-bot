@@ -33,7 +33,7 @@
         <span class="w-2 h-2 rounded-full bg-green-400 pulse-dot"></span>
         <span class="text-green-400 font-medium">EN VIVO</span>
       </div>
-      <span class="text-gray-500 text-xs">↻ cada 10s</span>
+      <span class="text-gray-500 text-xs">↻ cada 60s</span>
     </div>
   </nav>
 
@@ -267,7 +267,8 @@
             <select x-model="filtroEstado"
                     class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
               <option value="">Todos los estados</option>
-              <option value="pagado">Pagado</option>
+              <option value="pagado">Pagado online</option>
+              <option value="contra_reembolso">Contra reembolso</option>
               <option value="en_preparacion">En preparación</option>
               <option value="preparado">Preparado</option>
               <option value="en_reparto">En reparto</option>
@@ -286,6 +287,7 @@
                 <th class="text-left px-4 py-3">Pedido</th>
                 <th class="text-left px-4 py-3">Cliente</th>
                 <th class="text-left px-4 py-3">Estado</th>
+                <th class="text-left px-4 py-3">Pago</th>
                 <th class="text-left px-4 py-3">Picking</th>
                 <th class="text-left px-4 py-3">Reparto</th>
                 <th class="text-right px-4 py-3">Tiempo</th>
@@ -294,8 +296,9 @@
             </thead>
             <tbody>
               <template x-for="p in pedidosFiltrados" :key="p.pedido_id">
-                <tr class="border-b border-gray-100 hover:bg-gray-50 transition"
-                    :class="p.es_alerta ? 'bg-red-50 hover:bg-red-100' : ''">
+                <tr class="border-b border-gray-100 hover:bg-blue-50 transition cursor-pointer select-none"
+                    :class="p.es_alerta ? 'bg-red-50 hover:bg-red-100' : ''"
+                    @click="abrirPanel(p)">
                   <td class="px-4 py-3">
                     <div class="flex items-center gap-1.5">
                       <span x-show="p.es_alerta" class="text-red-500 text-base leading-none">⚠</span>
@@ -308,6 +311,10 @@
                   </td>
                   <td class="px-4 py-3">
                     <span class="badge" :class="badgePedidoClass(p.estado)" x-text="estadoLabel(p.estado)"></span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="badge" :class="p.forma_pago === 'efectivo' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'"
+                          x-text="p.forma_pago === 'efectivo' ? '💵 Efectivo' : '💳 Online'"></span>
                   </td>
                   <td class="px-4 py-3">
                     <template x-if="p.picking">
@@ -338,6 +345,7 @@
                   </td>
                   <td class="px-4 py-3 text-right">
                     <span class="font-semibold text-gray-900" x-text="p.total.toFixed(2) + '€'"></span>
+                    <span class="text-gray-300 ml-2">›</span>
                   </td>
                 </tr>
               </template>
@@ -356,9 +364,12 @@
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <h2 class="font-semibold text-gray-700 text-sm">Mapa de operación</h2>
-            <span class="text-xs text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">
-              Coordenadas simuladas
-            </span>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"></span>+8 min</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400"></span>3–8</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-500"></span>0–3</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500"></span>tarde</span>
+            </div>
           </div>
           <div id="mapa"></div>
         </div>
@@ -469,6 +480,433 @@
     </div>
   </div>
 
+  <!-- ======== PANEL PEDIDO ======== -->
+  <div x-show="panel.visible" x-cloak
+       class="fixed inset-0 z-40 flex justify-end"
+       @keydown.escape.window="cerrarPanel()">
+
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/30 backdrop-blur-[1px]" @click="cerrarPanel()"></div>
+
+    <!-- Drawer -->
+    <div class="relative w-96 bg-white shadow-2xl flex flex-col h-full overflow-y-auto"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="translate-x-full opacity-0"
+         x-transition:enter-end="translate-x-0 opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="translate-x-0 opacity-100"
+         x-transition:leave-end="translate-x-full opacity-0">
+
+      <!-- CABECERA -->
+      <div class="px-5 py-4 border-b border-gray-100 flex items-start justify-between sticky top-0 bg-white z-10">
+        <div>
+          <div class="flex items-center gap-2.5 mb-1.5">
+            <span class="text-2xl font-black text-gray-900">#<span x-text="panel.pedido?.pedido_id"></span></span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full"
+                  :class="panelPrioridadClases(panelMinutos(panel.pedido))"
+                  x-show="panel.pedido?.fecha_creacion"
+                  x-text="panelMinutosTexto(panelMinutos(panel.pedido))"></span>
+          </div>
+          <span class="badge" :class="badgePedidoClass(panel.pedido?.estado)"
+                x-text="estadoLabel(panel.pedido?.estado)"></span>
+        </div>
+        <button @click="cerrarPanel()"
+                class="text-gray-400 hover:text-gray-600 text-2xl leading-none transition mt-0.5">×</button>
+      </div>
+
+      <!-- DATOS CLIENTE -->
+      <div class="px-5 py-4 border-b border-gray-100 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="text-base w-5 text-center">👤</span>
+            <span class="font-medium text-gray-800" x-text="panel.pedido?.cliente_nombre"></span>
+          </div>
+          <a :href="'tel:' + panel.pedido?.cliente_telefono"
+             class="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-green-100 transition">
+            <span>📞</span>
+            <span x-text="panel.pedido?.cliente_telefono"></span>
+          </a>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <span class="text-base w-5 text-center mt-0.5">📍</span>
+          <span class="text-sm text-gray-600 leading-snug" x-text="panel.pedido?.direccion_entrega"></span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="text-base w-5 text-center">💳</span>
+          <span class="badge"
+                :class="panel.pedido?.forma_pago === 'efectivo' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'"
+                x-text="panel.pedido?.forma_pago === 'efectivo' ? '💵 Efectivo' : '💳 Online'"></span>
+          <span class="font-semibold text-gray-800 ml-auto"
+                x-text="panel.pedido?.total?.toFixed(2) + '€'"></span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+          <span>⏱</span>
+          <span x-text="'En estado actual: ' + formatMinutos(panel.pedido?.minutos_en_estado)"
+                :class="panel.pedido?.minutos_en_estado > 30 ? 'text-red-500 font-medium' : ''"></span>
+        </div>
+      </div>
+
+      <!-- ITEMS DEL PEDIDO -->
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Productos</h3>
+        <div class="space-y-1.5">
+          <template x-for="item in panel.pedido?.items" :key="item.detalle_id">
+            <div class="flex items-center justify-between text-sm group">
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <span class="w-5 h-5 bg-gray-100 rounded text-xs font-bold text-gray-600 flex items-center justify-center flex-shrink-0"
+                      x-text="item.cantidad"></span>
+                <span class="text-gray-700 truncate" x-text="item.nombre"></span>
+              </div>
+              <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                <span class="text-gray-500 font-medium" x-text="item.subtotal.toFixed(2) + '€'"></span>
+                <template x-if="puedeModificarItems(panel.pedido?.estado)">
+                  <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button @click="abrirSustituir(item)"
+                            title="Sustituir producto"
+                            class="w-6 h-6 rounded bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold transition">⇄</button>
+                    <button @click="eliminarItem(item)"
+                            title="Eliminar item"
+                            class="w-6 h-6 rounded bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center text-xs transition">✕</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+        <!-- Nuevo total tras modificaciones -->
+        <div class="mt-2 pt-2 border-t border-gray-100 flex justify-between text-sm font-semibold text-gray-800">
+          <span>Total</span>
+          <span x-text="panel.pedido?.total?.toFixed(2) + '€'"></span>
+        </div>
+      </div>
+
+      <!-- SECCIÓN PICKING -->
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Picking</h3>
+
+        <!-- Sin picking + estado asignable -->
+        <template x-if="!panel.pedido?.picking && ['pagado','contra_reembolso'].includes(panel.pedido?.estado)">
+          <div>
+            <p class="text-sm text-gray-400 mb-3">Sin picker asignado</p>
+            <button @click="abrirModalPicker(panel.pedido.pedido_id)"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              Asignar picker
+            </button>
+          </div>
+        </template>
+
+        <!-- Picking en curso → puede completarse -->
+        <template x-if="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado'">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="badge" :class="badgePickingClass(panel.pedido?.picking?.estado)"
+                    x-text="panel.pedido?.picking?.estado"></span>
+              <span class="text-sm font-medium text-gray-700" x-text="panel.pedido?.picking?.picker_nombre || '—'"></span>
+            </div>
+            <div class="space-y-1 mb-3 text-xs text-gray-500">
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.asignado_en">
+                <span class="text-gray-400">Asignado</span>
+                <span>
+                  <span x-text="horaCorta(panel.pedido?.picking?.asignado_en)"></span>
+                  <span class="text-gray-400 ml-1">(hace <span x-text="minutosDesde(panel.pedido?.picking?.asignado_en)"></span>)</span>
+                </span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.iniciado_en">
+                <span class="text-gray-400">Empezó a empacar</span>
+                <span class="font-medium text-blue-600">
+                  <span x-text="horaCorta(panel.pedido?.picking?.iniciado_en)"></span>
+                  <span class="ml-1">(lleva <span x-text="minutosDesde(panel.pedido?.picking?.iniciado_en)"></span>)</span>
+                </span>
+              </div>
+            </div>
+            <button @click="completarPicking(panel.pedido.picking.id)"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              ✓ Completar picking
+            </button>
+          </div>
+        </template>
+
+        <!-- Picking completado -->
+        <template x-if="panel.pedido?.picking?.estado === 'completado'">
+          <div>
+            <div class="flex items-center gap-2 text-green-700 mb-2">
+              <span class="text-lg font-bold">✓</span>
+              <span class="text-sm font-medium">Picking completado</span>
+              <span class="text-xs text-gray-400 ml-auto" x-text="panel.pedido?.picking?.picker_nombre"></span>
+            </div>
+            <div class="space-y-1 text-xs text-gray-500">
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.asignado_en">
+                <span class="text-gray-400">Asignado</span>
+                <span x-text="horaCorta(panel.pedido?.picking?.asignado_en)"></span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.iniciado_en">
+                <span class="text-gray-400">Inicio</span>
+                <span x-text="horaCorta(panel.pedido?.picking?.iniciado_en)"></span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.picking?.completado_en">
+                <span class="text-gray-400">Completado</span>
+                <span x-text="horaCorta(panel.pedido?.picking?.completado_en)"></span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Estado no requiere acción de picking -->
+        <template x-if="!panel.pedido?.picking && !['pagado','contra_reembolso'].includes(panel.pedido?.estado)">
+          <span class="text-sm text-gray-300">—</span>
+        </template>
+      </div>
+
+      <!-- SECCIÓN REPARTO -->
+      <div class="px-5 py-4">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Reparto</h3>
+
+        <!-- Sin reparto + pedido preparado -->
+        <template x-if="!panel.pedido?.reparto && panel.pedido?.estado === 'preparado'">
+          <div>
+            <p class="text-sm text-gray-400 mb-3">Sin repartidor asignado</p>
+            <button @click="abrirModalRepartidor(panel.pedido.pedido_id)"
+                    class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              🛵 Asignar repartidor
+            </button>
+          </div>
+        </template>
+
+        <!-- Reparto asignado → marcar salida -->
+        <template x-if="panel.pedido?.reparto?.estado === 'asignado'">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="badge bg-yellow-100 text-yellow-800">Asignado</span>
+              <div class="text-right">
+                <div class="text-sm font-medium text-gray-700" x-text="panel.pedido?.reparto?.repartidor_nombre || '—'"></div>
+                <template x-if="panel.pedido?.reparto?.repartidor_telefono">
+                  <a :href="'tel:' + panel.pedido.reparto.repartidor_telefono"
+                     class="text-xs text-blue-600 hover:underline"
+                     x-text="panel.pedido.reparto.repartidor_telefono"></a>
+                </template>
+              </div>
+            </div>
+            <div class="space-y-1 mb-3 text-xs text-gray-500" x-show="panel.pedido?.reparto?.asignado_en">
+              <div class="flex justify-between">
+                <span class="text-gray-400">Asignado</span>
+                <span>
+                  <span x-text="horaCorta(panel.pedido?.reparto?.asignado_en)"></span>
+                  <span class="text-gray-400 ml-1">(hace <span x-text="minutosDesde(panel.pedido?.reparto?.asignado_en)"></span>)</span>
+                </span>
+              </div>
+            </div>
+            <button @click="marcarSalida(panel.pedido.reparto.id)"
+                    class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              🛵 Marcar en camino
+            </button>
+          </div>
+        </template>
+
+        <!-- En camino → marcar entregado -->
+        <template x-if="panel.pedido?.reparto?.estado === 'en_camino'">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="badge bg-orange-100 text-orange-800">En camino</span>
+              <div class="text-right">
+                <div class="text-sm font-medium text-gray-700" x-text="panel.pedido?.reparto?.repartidor_nombre || '—'"></div>
+                <template x-if="panel.pedido?.reparto?.repartidor_telefono">
+                  <a :href="'tel:' + panel.pedido.reparto.repartidor_telefono"
+                     class="text-xs text-blue-600 hover:underline"
+                     x-text="panel.pedido.reparto.repartidor_telefono"></a>
+                </template>
+              </div>
+            </div>
+            <div class="space-y-1 mb-3 text-xs text-gray-500">
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.asignado_en">
+                <span class="text-gray-400">Asignado</span>
+                <span x-text="horaCorta(panel.pedido?.reparto?.asignado_en)"></span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.hora_salida">
+                <span class="text-gray-400">Salió</span>
+                <span class="font-medium text-orange-600">
+                  <span x-text="horaCorta(panel.pedido?.reparto?.hora_salida)"></span>
+                  <span class="ml-1">(lleva <span x-text="minutosDesde(panel.pedido?.reparto?.hora_salida)"></span>)</span>
+                </span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.hora_estimada_entrega">
+                <span class="text-gray-400">Llegada estimada</span>
+                <span class="font-medium" x-text="horaCorta(panel.pedido?.reparto?.hora_estimada_entrega)"></span>
+              </div>
+            </div>
+            <button @click="marcarEntregado(panel.pedido.reparto.id)"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              ✓ Marcar entregado
+            </button>
+          </div>
+        </template>
+
+        <!-- Entregado -->
+        <template x-if="panel.pedido?.reparto?.estado === 'entregado'">
+          <div>
+            <div class="flex items-start gap-2 text-green-700 mb-2">
+              <span class="text-lg font-bold">✓</span>
+              <span class="text-sm font-medium">Entregado</span>
+              <div class="ml-auto text-right">
+                <div class="text-xs text-gray-400" x-text="panel.pedido?.reparto?.repartidor_nombre"></div>
+                <template x-if="panel.pedido?.reparto?.repartidor_telefono">
+                  <a :href="'tel:' + panel.pedido.reparto.repartidor_telefono"
+                     class="text-xs text-blue-600 hover:underline"
+                     x-text="panel.pedido.reparto.repartidor_telefono"></a>
+                </template>
+              </div>
+            </div>
+            <div class="space-y-1 text-xs text-gray-500">
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.asignado_en">
+                <span class="text-gray-400">Asignado</span>
+                <span x-text="horaCorta(panel.pedido?.reparto?.asignado_en)"></span>
+              </div>
+              <div class="flex justify-between" x-show="panel.pedido?.reparto?.hora_salida">
+                <span class="text-gray-400">Salida</span>
+                <span x-text="horaCorta(panel.pedido?.reparto?.hora_salida)"></span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Sin reparto y estado no requiere acción -->
+        <template x-if="!panel.pedido?.reparto && panel.pedido?.estado !== 'preparado'">
+          <span class="text-sm text-gray-300">—</span>
+        </template>
+      </div>
+
+      <!-- CANCELAR PEDIDO -->
+      <template x-if="puedeCancel(panel.pedido?.estado)">
+        <div class="px-5 py-4">
+          <button @click="abrirCancelacion()"
+                  class="w-full border border-red-300 text-red-600 hover:bg-red-50 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95 flex items-center justify-center gap-2">
+            <span>✕</span>
+            <span>Cancelar pedido</span>
+          </button>
+        </div>
+      </template>
+
+    </div>
+  </div>
+
+  <!-- ======== MODAL CANCELAR PEDIDO ======== -->
+  <div x-show="modalCancelacion.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalCancelacion.visible = false">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+      <h3 class="font-bold text-lg mb-1 text-red-700">Cancelar pedido #<span x-text="panel.pedido?.pedido_id"></span></h3>
+      <p class="text-gray-500 text-sm mb-4">Esta acción no se puede deshacer. Selecciona el motivo.</p>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Motivo de cancelación</label>
+        <select x-model="modalCancelacion.motivo"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+          <option value="">— Selecciona un motivo —</option>
+          <option value="cliente_cancelo">El cliente canceló</option>
+          <option value="falta_stock">Falta de stock</option>
+          <option value="direccion_incorrecta">Dirección incorrecta</option>
+          <option value="cliente_no_responde">Cliente no responde</option>
+          <option value="pedido_duplicado">Pedido duplicado</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <p x-show="modalError" class="text-red-600 text-sm mb-3" x-text="modalError"></p>
+      <div class="flex gap-3">
+        <button @click="modalCancelacion.visible = false"
+                class="flex-1 border border-gray-300 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition">
+          Volver
+        </button>
+        <button @click="confirmarCancelacion()"
+                :disabled="!modalCancelacion.motivo"
+                class="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95">
+          Confirmar cancelación
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== MODAL SUSTITUIR PRODUCTO ======== -->
+  <div x-show="modalSustituir.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalSustituir.visible = false">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+      <h3 class="font-bold text-lg mb-1">Sustituir producto</h3>
+      <p class="text-sm text-gray-500 mb-4">
+        Sustituyendo: <strong x-text="modalSustituir.item?.nombre"></strong>
+        (×<span x-text="modalSustituir.item?.cantidad"></span>)
+      </p>
+      <!-- Quantity selector — only shown when item has more than 1 unit -->
+      <template x-if="modalSustituir.item?.cantidad > 1">
+        <div class="mb-3 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+          <span class="text-sm text-amber-800 flex-1">¿Cuántas unidades sustituir?</span>
+          <div class="flex items-center gap-2">
+            <button @click="if(modalSustituir.cantidadSustituir > 1) modalSustituir.cantidadSustituir--"
+                    class="w-7 h-7 rounded-lg bg-white border border-amber-300 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-100 transition">−</button>
+            <span class="w-6 text-center font-bold text-amber-900 text-sm" x-text="modalSustituir.cantidadSustituir"></span>
+            <button @click="if(modalSustituir.cantidadSustituir < modalSustituir.item.cantidad) modalSustituir.cantidadSustituir++"
+                    class="w-7 h-7 rounded-lg bg-white border border-amber-300 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-100 transition">+</button>
+          </div>
+          <span class="text-xs text-amber-600">de <span x-text="modalSustituir.item?.cantidad"></span></span>
+        </div>
+      </template>
+      <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Buscar producto sustituto</label>
+        <div class="flex gap-2">
+          <input type="text" x-model="modalSustituir.busqueda"
+                 @input.debounce.400ms="buscarProductosSustitucion()"
+                 placeholder="Nombre del producto..."
+                 class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+        </div>
+      </div>
+      <div class="mb-3 max-h-48 overflow-y-auto border border-gray-100 rounded-lg">
+        <template x-if="modalSustituir.productos.length === 0">
+          <p class="text-xs text-gray-400 p-3 text-center">
+            <span x-text="modalSustituir.busqueda ? 'Sin resultados' : 'Escribe para buscar'"></span>
+          </p>
+        </template>
+        <template x-for="p in modalSustituir.productos" :key="p.id">
+          <button @click="modalSustituir.productoSeleccionado = p"
+                  :class="modalSustituir.productoSeleccionado?.id === p.id
+                    ? 'bg-blue-50 border-blue-400 text-blue-800'
+                    : 'hover:bg-gray-50 border-transparent text-gray-700'"
+                  class="w-full text-left px-3 py-2 border-l-4 text-sm transition">
+            <div class="font-medium" x-text="p.nombre"></div>
+            <div class="text-xs text-gray-400">
+              <span x-text="p.precio.toFixed(2) + '€'"></span>
+              · Stock: <span x-text="p.stock"></span>
+            </div>
+          </button>
+        </template>
+      </div>
+      <template x-if="modalSustituir.productoSeleccionado">
+        <div class="mb-3 text-sm bg-blue-50 rounded-lg p-3">
+          <div class="font-medium text-blue-800" x-text="'✓ ' + modalSustituir.productoSeleccionado.nombre"></div>
+          <div class="text-xs text-blue-600 mt-0.5 space-y-0.5">
+            <div>×<span x-text="modalSustituir.cantidadSustituir"></span>
+              → <strong x-text="(modalSustituir.productoSeleccionado.precio * modalSustituir.cantidadSustituir).toFixed(2) + '€'"></strong>
+            </div>
+            <template x-if="modalSustituir.cantidadSustituir < modalSustituir.item?.cantidad">
+              <div class="text-amber-600">
+                Quedan ×<span x-text="modalSustituir.item.cantidad - modalSustituir.cantidadSustituir"></span>
+                <span x-text="modalSustituir.item.nombre"></span> en el pedido
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+      <p x-show="modalError" class="text-red-600 text-sm mb-3" x-text="modalError"></p>
+      <div class="flex gap-3">
+        <button @click="modalSustituir.visible = false"
+                class="flex-1 border border-gray-300 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition">
+          Cancelar
+        </button>
+        <button @click="confirmarSustitucion()"
+                :disabled="!modalSustituir.productoSeleccionado"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95">
+          Confirmar sustitución
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ======== TOAST ======== -->
   <div x-show="toast.visible" x-cloak
        class="fixed bottom-6 right-6 z-50 fade-in"
@@ -499,6 +937,10 @@
         modalError: '',
         modalPicker: { visible: false, pedido_id: null, empleado_id: '' },
         modalRepartidor: { visible: false, pedido_id: null, empleado_id: '' },
+        modalCancelacion: { visible: false, motivo: '' },
+        modalSustituir: { visible: false, item: null, busqueda: '', productos: [], productoSeleccionado: null, cantidadSustituir: 1 },
+        panel: { visible: false, pedido: null },
+        now: new Date(),
         toast: { visible: false, msg: '', error: false },
 
         tarjetasMetricas: [
@@ -524,7 +966,8 @@
           this.actualizarHora();
           setInterval(() => this.actualizarHora(), 1000);
           await this.cargarTodo();
-          setInterval(() => this.cargarTodo(), 10000);
+          setInterval(() => this.cargarTodo(), 60000);
+          setInterval(() => { this.now = new Date(); }, 30000);
           this.$nextTick(() => this.iniciarMapa());
         },
 
@@ -542,6 +985,11 @@
             this.cargar('alertas', '/dashboard/alertas'),
             this.cargar('eventos', '/dashboard/eventos'),
           ]);
+          if (this.panel.visible && this.panel.pedido) {
+            const actualizado = this.pedidos.find(p => p.pedido_id === this.panel.pedido.pedido_id);
+            this.panel.pedido = actualizado ?? null;
+            if (!this.panel.pedido) this.panel.visible = false;
+          }
           this.actualizarMapa();
         },
 
@@ -574,23 +1022,60 @@
           }).addTo(mapaLeaflet);
         },
 
+        mapaColorPrioridad(fechaCreacion) {
+          if (!fechaCreacion) return '#6b7280';
+          const mins = Math.round((new Date(fechaCreacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
+          if (mins > 8)  return '#22c55e';  // green-500
+          if (mins >= 3) return '#eab308';  // yellow-400
+          if (mins >= 0) return '#f97316';  // orange-500
+          return '#ef4444';                 // red-500
+        },
+
+        mapaMinutosLabel(fechaCreacion) {
+          if (!fechaCreacion) return '?';
+          const mins = Math.round((new Date(fechaCreacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
+          if (mins > 0)  return mins + 'm';
+          if (mins === 0) return '0m';
+          return '+' + Math.abs(mins);
+        },
+
         actualizarMapa() {
           if (!mapaLeaflet) return;
           fetch('/dashboard/mapa').then(r => r.json()).then(data => {
             mapaMarkers.forEach(m => m.remove());
             mapaMarkers = [];
             data.pedidos.forEach(p => {
-              const marker = L.circleMarker([p.lat, p.lng], {
-                radius: 10,
-                fillColor: p.color,
-                color: '#fff',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.85,
-              }).bindPopup(
-                `<b>#${p.pedido_id}</b><br>${p.estado}<br>${p.direccion}<br><b>${p.total.toFixed(2)}€</b>`
-                + (p.simulado ? '<br><small style="color:#999">⚠ coord. simuladas</small>' : '')
-              ).addTo(mapaLeaflet);
+              const color = this.mapaColorPrioridad(p.fecha_creacion);
+              const label = this.mapaMinutosLabel(p.fecha_creacion);
+              const icon = L.divIcon({
+                className: '',
+                html: `<div style="
+                    background:${color};
+                    color:#fff;
+                    border:2px solid #fff;
+                    border-radius:50%;
+                    width:34px;height:34px;
+                    display:flex;flex-direction:column;
+                    align-items:center;justify-content:center;
+                    box-shadow:0 1px 5px rgba(0,0,0,.35);
+                    line-height:1;
+                  ">
+                  <span style="font-size:9px;font-weight:700;opacity:.85">#${p.pedido_id}</span>
+                  <span style="font-size:10px;font-weight:900">${label}</span>
+                </div>`,
+                iconSize: [34, 34],
+                iconAnchor: [17, 17],
+              });
+              const mins = Math.round((new Date(p.fecha_creacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
+              const minsTexto = mins > 0 ? `${mins} min restantes` : mins === 0 ? 'Ahora' : `${Math.abs(mins)} min de retraso`;
+              const marker = L.marker([p.lat, p.lng], { icon })
+                .bindPopup(`
+                  <b>#${p.pedido_id}</b><br>
+                  ${p.direccion}<br>
+                  <b>${p.total.toFixed(2)}€</b><br>
+                  <span style="color:${color};font-weight:700">${minsTexto}</span>
+                `)
+                .addTo(mapaLeaflet);
               mapaMarkers.push(marker);
             });
           }).catch(() => {});
@@ -677,6 +1162,89 @@
           else { this.mostrarToast(data.error, true); }
         },
 
+        // --- CANCEL / ITEM MANAGEMENT ---
+
+        puedeCancel(estado) {
+          return ['Pendiente','enlace','confirmando-pago','contra_reembolso','en_preparacion','pagado'].includes(estado);
+        },
+
+        puedeModificarItems(estado) {
+          return ['pagado','contra_reembolso','en_preparacion'].includes(estado);
+        },
+
+        abrirCancelacion() {
+          this.modalCancelacion = { visible: true, motivo: '' };
+          this.modalError = '';
+        },
+
+        async confirmarCancelacion() {
+          this.modalError = '';
+          const r = await fetch(`/dashboard/pedido/${this.panel.pedido.pedido_id}/cancelar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ motivo: this.modalCancelacion.motivo }),
+          });
+          const data = await r.json();
+          if (r.ok) {
+            this.modalCancelacion.visible = false;
+            this.cerrarPanel();
+            this.mostrarToast(data.mensaje);
+            await this.cargarTodo();
+          } else {
+            this.modalError = data.error;
+          }
+        },
+
+        async eliminarItem(item) {
+          if (!confirm(`¿Eliminar "${item.nombre}" del pedido?`)) return;
+          const r = await fetch(
+            `/dashboard/pedido/${this.panel.pedido.pedido_id}/item/${item.detalle_id}/eliminar`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }
+          );
+          const data = await r.json();
+          if (r.ok) {
+            this.mostrarToast(data.mensaje);
+            await this.cargarTodo();
+          } else {
+            this.mostrarToast(data.error, true);
+          }
+        },
+
+        abrirSustituir(item) {
+          this.modalSustituir = { visible: true, item, busqueda: '', productos: [], productoSeleccionado: null, cantidadSustituir: item.cantidad };
+          this.modalError = '';
+        },
+
+        async buscarProductosSustitucion() {
+          if (!this.modalSustituir.busqueda.trim()) { this.modalSustituir.productos = []; return; }
+          const r = await fetch(`/dashboard/productos?q=${encodeURIComponent(this.modalSustituir.busqueda)}`);
+          this.modalSustituir.productos = r.ok ? await r.json() : [];
+        },
+
+        async confirmarSustitucion() {
+          this.modalError = '';
+          const { item, productoSeleccionado, cantidadSustituir } = this.modalSustituir;
+          const r = await fetch(
+            `/dashboard/pedido/${this.panel.pedido.pedido_id}/item/${item.detalle_id}/sustituir`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                producto_sustituto_id: productoSeleccionado.id,
+                cantidad_a_sustituir: parseInt(cantidadSustituir),
+              }),
+            }
+          );
+          const data = await r.json();
+          if (r.ok) {
+            this.modalSustituir.visible = false;
+            this.mostrarToast(data.mensaje);
+            await this.cargarTodo();
+          } else {
+            this.modalError = data.error;
+          }
+        },
+
         filtrarPorPedido(pedido_id) {
           this.filtroEstado = '';
           this.$nextTick(() => {
@@ -689,6 +1257,47 @@
               }
             });
           });
+        },
+
+        abrirPanel(p) {
+          this.panel = { visible: true, pedido: p };
+        },
+
+        cerrarPanel() {
+          this.panel.visible = false;
+        },
+
+        panelMinutos(p) {
+          if (!p?.fecha_creacion) return null;
+          return Math.round((new Date(p.fecha_creacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
+        },
+
+        panelPrioridadClases(mins) {
+          if (mins === null) return 'bg-gray-100 text-gray-500';
+          if (mins > 8)  return 'bg-green-100 text-green-700';
+          if (mins >= 3) return 'bg-yellow-100 text-yellow-800';
+          if (mins >= 0) return 'bg-orange-100 text-orange-700';
+          return 'bg-red-100 text-red-700';
+        },
+
+        panelMinutosTexto(mins) {
+          if (mins === null) return '';
+          if (mins > 0)  return mins + ' min';
+          if (mins === 0) return '¡Ahora!';
+          return '+' + Math.abs(mins) + ' min tarde';
+        },
+
+        horaCorta(iso) {
+          if (!iso) return null;
+          return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        },
+
+        minutosDesde(iso) {
+          if (!iso) return null;
+          const mins = Math.round((this.now - new Date(iso)) / 60000);
+          if (mins < 60) return mins + ' min';
+          const h = Math.floor(mins / 60), m = mins % 60;
+          return m > 0 ? `${h}h ${m}min` : `${h}h`;
         },
 
         mostrarToast(msg, error = false) {
@@ -712,17 +1321,18 @@
 
         estadoLabel(estado) {
           const labels = {
-            'Pendiente': 'Pendiente',
-            'enlace': 'Enlace',
-            'enlace2': 'Confirmación',
-            'confirmando-pago': 'Pago...',
-            'pagado': 'Pagado',
-            'en_preparacion': 'En picking',
-            'preparado': 'Preparado',
-            'en_reparto': 'En reparto',
-            'entregado': 'Entregado',
-            'cancelado': 'Cancelado',
-            'reembolsado': 'Reembolsado',
+            'Pendiente':         'Pendiente',
+            'enlace':            'Enlace',
+            'enlace2':           'Confirmación',
+            'confirmando-pago':  'Pago...',
+            'pagado':            'Pagado',
+            'contra_reembolso':  'Contra reembolso',
+            'en_preparacion':    'En picking',
+            'preparado':         'Preparado',
+            'en_reparto':        'En reparto',
+            'entregado':         'Entregado',
+            'cancelado':         'Cancelado',
+            'reembolsado':       'Reembolsado',
           };
           return labels[estado] || estado;
         },
@@ -733,17 +1343,18 @@
 
         badgePedidoClass(estado) {
           const m = {
-            'pagado': 'bg-emerald-100 text-emerald-800',
-            'en_preparacion': 'bg-blue-100 text-blue-800',
-            'preparado': 'bg-indigo-100 text-indigo-800',
-            'en_reparto': 'bg-orange-100 text-orange-800',
-            'entregado': 'bg-green-100 text-green-800',
-            'cancelado': 'bg-red-100 text-red-700',
-            'reembolsado': 'bg-red-100 text-red-700',
+            'pagado':           'bg-emerald-100 text-emerald-800',
+            'contra_reembolso': 'bg-purple-100 text-purple-800',
+            'en_preparacion':   'bg-blue-100 text-blue-800',
+            'preparado':        'bg-indigo-100 text-indigo-800',
+            'en_reparto':       'bg-orange-100 text-orange-800',
+            'entregado':        'bg-green-100 text-green-800',
+            'cancelado':        'bg-red-100 text-red-700',
+            'reembolsado':      'bg-red-100 text-red-700',
             'confirmando-pago': 'bg-yellow-100 text-yellow-800',
-            'enlace': 'bg-gray-100 text-gray-600',
-            'enlace2': 'bg-gray-100 text-gray-600',
-            'Pendiente': 'bg-gray-100 text-gray-600',
+            'enlace':           'bg-gray-100 text-gray-600',
+            'enlace2':          'bg-gray-100 text-gray-600',
+            'Pendiente':        'bg-gray-100 text-gray-600',
           };
           return m[estado] || 'bg-gray-100 text-gray-600';
         },

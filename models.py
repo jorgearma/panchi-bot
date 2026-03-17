@@ -1,5 +1,5 @@
 import json
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean, Text, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -77,6 +77,11 @@ class Pedido(Base):
     estadopago = Column(String(255), nullable=True)
     estadoauxiliar = Column(String(255), nullable=True)
     forma_pago = Column(String(20), nullable=True, default='online')  # online | efectivo | tarjeta
+    lat_entrega = Column(Float, nullable=True)
+    lng_entrega = Column(Float, nullable=True)
+    cancel_reason = Column(String(50), nullable=True)
+    cancelled_by = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
 
     cliente = relationship("Usuario", back_populates="pedidos")
     detalles = relationship("PedidoDetalle", back_populates="pedido", cascade="all, delete-orphan")
@@ -124,6 +129,21 @@ class Pago(Base):
     updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
 
     pedido = relationship("Pedido", back_populates="pagos")
+
+
+class AuditLog(Base):
+    """Registro de auditoría para cambios operativos en pedidos (cancelaciones, modificaciones de items)."""
+    __tablename__ = 'audit_log'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    pedido_id = Column(Integer, ForeignKey('pedidos.PedidoID'), nullable=False)
+    empleado_id = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
+    accion = Column(String(50), nullable=False)   # cancelar_pedido, eliminar_item, sustituir_item
+    detalles = Column(Text, nullable=True)         # JSON con valores anteriores/nuevos
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    pedido = relationship("Pedido", backref="audit_logs")
+    empleado = relationship("Empleado")
 
 
 class HistorialEstadoPedido(Base):
@@ -235,6 +255,14 @@ class Reparto(Base):
     motivo_no_entrega = Column(String(500), nullable=True)
     prueba_entrega_url = Column(String(500), nullable=True)
     notas = Column(String(500), nullable=True)
+    # Cobro presencial — rellenado por el repartidor al confirmar el pago
+    # SQL: ALTER TABLE repartos ADD metodo_cobro VARCHAR(20), importe_cobrado DECIMAL(10,2),
+    #      cambio_devuelto DECIMAL(10,2), importe_efectivo DECIMAL(10,2), importe_tarjeta DECIMAL(10,2)
+    metodo_cobro    = Column(String(20),       nullable=True)   # efectivo | tarjeta | mixto
+    importe_cobrado = Column(DECIMAL(10, 2),   nullable=True)   # total que cobró el repartidor
+    cambio_devuelto = Column(DECIMAL(10, 2),   nullable=True)   # solo efectivo: cambio devuelto
+    importe_efectivo = Column(DECIMAL(10, 2),  nullable=True)   # solo mixto: parte en efectivo
+    importe_tarjeta  = Column(DECIMAL(10, 2),  nullable=True)   # solo mixto: parte en tarjeta
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
 

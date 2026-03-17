@@ -4,19 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Panchi — Picking</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/picker/manifest.json{% if picker_id %}?id={{ picker_id }}{% endif %}">
+  <meta name="theme-color" content="#111827">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Picking">
+  <link rel="apple-touch-icon" href="/static/picker/icon-180.png">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
     .slide-up {
-      animation: slideUp .25s ease-out;
+      animation: slideUp .2s ease-out;
     }
     @keyframes slideUp {
-      from { opacity: 0; transform: translateY(16px); }
+      from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    /* Tap highlight off for buttons */
     button { -webkit-tap-highlight-color: transparent; }
+    .tap-xl { min-height: 56px; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen" x-data="picker({{ picker_id or 'null' }})" x-init="init()">
@@ -26,7 +36,7 @@
     <div class="flex items-center gap-2">
       <button x-show="vistaActual === 'ticket'"
               @click="volverALista()"
-              class="text-gray-400 active:text-white transition mr-1 text-xl leading-none">‹</button>
+              class="p-2 -ml-2 text-gray-400 active:text-white transition text-2xl leading-none">‹</button>
       <span class="font-bold text-lg">
         <span x-show="vistaActual === 'lista'">🛒 Mis pedidos</span>
         <span x-show="vistaActual === 'ticket'" x-cloak>
@@ -39,9 +49,17 @@
             class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-medium"
             x-text="pedidos.length + ' asignado' + (pedidos.length > 1 ? 's' : '')"></span>
       <button @click="recargar()"
-              class="text-gray-400 active:text-white transition text-xl leading-none">↻</button>
+              class="p-2 -mr-1 text-gray-400 active:text-white transition text-xl leading-none">↻</button>
     </div>
   </header>
+
+  <!-- ======== BANNER OFFLINE ======== -->
+  <div x-show="!isOnline" x-cloak
+       class="bg-amber-500 text-white text-xs text-center py-2 px-4 font-semibold sticky top-[52px] z-20">
+    Sin conexión — los cambios se enviarán al reconectar
+    <span x-show="offlineQueue.length > 0"
+          x-text="'(' + offlineQueue.length + ' pendiente' + (offlineQueue.length > 1 ? 's' : '') + ')'"></span>
+  </div>
 
   <!-- ======== SIN PICKER ID ======== -->
   <div x-show="!pickerId" class="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
@@ -60,19 +78,17 @@
   <!-- ======== VISTA LISTA ======== -->
   <div x-show="pickerId && !cargando && vistaActual === 'lista'" x-cloak>
 
-    <!-- Sin pedidos -->
     <div x-show="pedidos.length === 0"
          class="flex flex-col items-center justify-center min-h-[65vh] text-center px-6">
       <div class="text-6xl mb-4">✅</div>
       <h2 class="text-xl font-bold text-gray-700 mb-2">Sin pedidos asignados</h2>
       <p class="text-gray-400 text-sm">No tienes pedidos pendientes ahora mismo.</p>
       <button @click="recargar()"
-              class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium active:bg-blue-700 transition">
+              class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium active:bg-blue-700 transition tap-xl">
         Actualizar
       </button>
     </div>
 
-    <!-- Lista de pedidos -->
     <div x-show="pedidos.length > 0" class="p-4 space-y-3">
       <template x-for="p in pedidos" :key="p.picking_id">
         <div @click="abrirTicket(p)"
@@ -97,14 +113,10 @@
                 </div>
               </div>
             </div>
-
-            <!-- Dirección -->
             <div class="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
               <span>📍</span>
               <span x-text="p.direccion_entrega"></span>
             </div>
-
-            <!-- Barra de progreso -->
             <div>
               <div class="flex justify-between text-xs text-gray-400 mb-1">
                 <span x-text="(p.items_total - p.items_pendientes) + ' de ' + p.items_total + ' productos'"></span>
@@ -117,8 +129,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Pie de tarjeta -->
           <div class="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between">
             <span class="text-xs text-gray-400"
                   x-text="p.iniciado_en ? 'Iniciado ' + formatHora(p.iniciado_en) : 'Recién asignado'"></span>
@@ -130,18 +140,26 @@
   </div>
 
   <!-- ======== VISTA TICKET ======== -->
-  <div x-show="pickerId && vistaActual === 'ticket' && ticketActual" x-cloak class="pb-32">
+  <div x-show="pickerId && vistaActual === 'ticket' && ticketActual" x-cloak class="pb-36">
 
     <!-- Info del pedido -->
     <div class="bg-white border-b border-gray-100 px-4 py-3">
       <div class="flex items-center justify-between">
-        <div>
+        <div class="flex-1 min-w-0 mr-3">
           <span class="text-gray-500 text-sm">Cliente</span>
-          <div class="font-semibold" x-text="ticketActual?.cliente_nombre"></div>
+          <div class="font-semibold truncate" x-text="ticketActual?.cliente_nombre"></div>
         </div>
-        <div class="text-right">
-          <span class="text-gray-500 text-sm">Total</span>
-          <div class="font-bold text-lg" x-text="ticketActual?.total.toFixed(2) + '€'"></div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <!-- Botón llamar al cliente -->
+          <a x-show="ticketActual?.cliente_telefono"
+             :href="'tel:' + ticketActual?.cliente_telefono"
+             class="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 font-semibold text-sm px-3 py-2 rounded-xl active:bg-blue-100 transition tap-xl">
+            📞 <span>Llamar</span>
+          </a>
+          <div class="text-right">
+            <span class="text-gray-500 text-sm">Total</span>
+            <div class="font-bold text-lg" x-text="ticketActual?.total.toFixed(2) + '€'"></div>
+          </div>
         </div>
       </div>
       <div class="flex items-center gap-1 text-xs text-gray-400 mt-1.5">
@@ -153,8 +171,12 @@
     <!-- Progreso -->
     <div class="bg-white px-4 py-3 border-b border-gray-100">
       <div class="flex justify-between text-sm text-gray-500 mb-1.5">
-        <span x-text="itemsCompletados + ' de ' + (ticketActual?.items_total || 0) + ' productos recogidos'"></span>
-        <span x-text="ticketActual?.items_pendientes + ' pendientes'"></span>
+        <span x-text="itemsCompletados + ' de ' + (ticketActual?.items_total || 0) + ' recogidos'"></span>
+        <span x-show="ticketActual?.items_pendientes > 0"
+              class="text-amber-600 font-medium"
+              x-text="ticketActual?.items_pendientes + ' pendientes'"></span>
+        <span x-show="ticketActual?.listo_para_finalizar"
+              class="text-green-600 font-semibold">✓ Todo recogido</span>
       </div>
       <div class="w-full bg-gray-100 rounded-full h-3">
         <div class="h-3 rounded-full transition-all"
@@ -163,60 +185,102 @@
       </div>
     </div>
 
-    <!-- Lista de items -->
+    <!-- Lista de items — ordenados por ubicación, pendientes primero -->
     <div class="p-4 space-y-3">
-      <template x-for="item in ticketActual?.items" :key="item.item_id">
+      <template x-for="item in itemsOrdenados" :key="item.item_id">
         <div class="bg-white rounded-2xl border shadow-sm overflow-hidden slide-up"
              :class="{
-               'border-green-200': item.estado === 'encontrado',
-               'border-red-200':   item.estado === 'sin_stock',
-               'border-gray-100':  item.estado === 'pendiente',
+               'border-green-200 bg-green-50/30':  item.estado === 'encontrado',
+               'border-orange-200 bg-orange-50/30': item.estado === 'sustituido',
+               'border-red-200 bg-red-50/30':       item.estado === 'sin_stock',
+               'border-gray-100':                   item.estado === 'pendiente',
+               'ring-2 ring-blue-400 ring-offset-1': item.item_id === primerPendiente?.item_id && item.estado === 'pendiente',
              }">
 
-          <!-- Cabecera del item -->
-          <div class="flex items-center gap-3 p-4 pb-3">
-            <!-- Icono de estado -->
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-                 :class="{
-                   'bg-green-100': item.estado === 'encontrado',
-                   'bg-red-100':   item.estado === 'sin_stock',
-                   'bg-gray-100':  item.estado === 'pendiente',
-                 }">
-              <span x-show="item.estado === 'encontrado'">✓</span>
-              <span x-show="item.estado === 'sin_stock'">✗</span>
-              <span x-show="item.estado === 'pendiente'">○</span>
+          <!-- Indicador "siguiente" en el primer pendiente -->
+          <div x-show="item.item_id === primerPendiente?.item_id && item.estado === 'pendiente'"
+               class="bg-blue-600 text-white text-xs px-4 py-1.5 font-semibold tracking-wide">
+            → SIGUIENTE
+          </div>
+
+          <!-- Cuerpo -->
+          <div class="flex gap-3 p-4 pb-3">
+
+            <!-- Imagen -->
+            <div class="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+              <img x-show="item.imagen"
+                   :src="item.imagen"
+                   :alt="item.nombre"
+                   class="w-full h-full object-cover"
+                   loading="lazy" />
+              <div x-show="!item.imagen"
+                   class="w-full h-full flex items-center justify-center text-gray-300 text-2xl">
+                📦
+              </div>
             </div>
 
+            <!-- Info -->
             <div class="flex-1 min-w-0">
-              <div class="font-semibold text-gray-900 truncate" x-text="item.nombre"></div>
-              <div class="flex items-center gap-3 mt-0.5">
-                <span class="text-sm font-medium text-blue-600"
-                      x-text="item.cantidad + ' unidades'"></span>
-                <span x-show="item.ubicacion"
-                      class="text-xs text-gray-400 flex items-center gap-1">
-                  🗂 <span x-text="item.ubicacion"></span>
+              <div class="flex items-start justify-between gap-2">
+                <div class="font-bold text-gray-900 leading-tight text-base" x-text="item.nombre"></div>
+                <div x-show="item.estado === 'encontrado'"
+                     class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-green-600 font-bold text-sm">✓</div>
+                <div x-show="item.estado === 'sustituido'"
+                     class="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold text-sm">↔</div>
+                <div x-show="item.estado === 'sin_stock'"
+                     class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-red-500 font-bold text-sm">✗</div>
+              </div>
+
+              <!-- Cantidad pedida / encontrada -->
+              <div class="flex items-baseline gap-2 mt-0.5">
+                <span class="text-blue-600 font-extrabold text-xl"
+                      x-text="item.cantidad + ' ud.'"></span>
+                <!-- Cantidad parcial encontrada -->
+                <span x-show="item.estado === 'encontrado' && item.cantidad_encontrada !== null && item.cantidad_encontrada !== item.cantidad"
+                      class="text-xs text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md"
+                      x-text="'encontradas: ' + item.cantidad_encontrada"></span>
+              </div>
+
+              <!-- Ubicación -->
+              <div x-show="item.ubicacion" class="mt-1.5">
+                <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-sm font-bold px-2.5 py-1 rounded-lg">
+                  📍 <span x-text="item.ubicacion"></span>
                 </span>
+              </div>
+
+              <!-- Motivo registrado (solo en items completados) -->
+              <div x-show="item.estado !== 'pendiente' && item.notas" class="mt-1.5">
+                <span class="text-xs text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-md font-medium"
+                      x-text="formatMotivo(item.notas)"></span>
               </div>
             </div>
           </div>
 
-          <!-- Botones de acción -->
+          <!-- Botones de acción — solo cuando pendiente -->
           <div x-show="item.estado === 'pendiente'" class="px-4 pb-4 flex gap-2">
-            <button @click="marcarItem(item, 'encontrado')"
-                    class="flex-1 bg-green-500 active:bg-green-600 text-white rounded-xl py-3 font-semibold text-sm transition-transform active:scale-95">
-              ✓ Encontrado
+            <!-- Encontrado: 75% -->
+            <button @click="item.cantidad > 1 ? abrirModalCantidad(item) : marcarItem(item, 'encontrado', { cantidad_encontrada: 1 })"
+                    :disabled="item._guardando"
+                    class="flex-[3] bg-green-500 active:bg-green-600 text-white rounded-xl font-bold text-base transition-transform active:scale-95 disabled:opacity-50 tap-xl">
+              <span x-show="!item._guardando">✓ Encontrado</span>
+              <span x-show="item._guardando" class="flex items-center justify-center gap-2">
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
+              </span>
             </button>
-            <button @click="marcarItem(item, 'sin_stock')"
-                    class="flex-1 bg-red-400 active:bg-red-500 text-white rounded-xl py-3 font-semibold text-sm transition-transform active:scale-95">
-              ✗ Sin stock
+            <!-- Sin stock: 25% — ahora abre modal -->
+            <button @click="abrirModalSinStock(item)"
+                    :disabled="item._guardando"
+                    class="flex-1 bg-gray-100 active:bg-red-100 text-red-500 border border-gray-200 rounded-xl font-semibold text-sm transition-transform active:scale-95 disabled:opacity-40 tap-xl">
+              ✗
             </button>
           </div>
 
-          <!-- Deshacer -->
-          <div x-show="item.estado !== 'pendiente'" class="px-4 pb-3">
-            <button @click="marcarItem(item, 'pendiente')"
-                    class="text-xs text-gray-400 active:text-gray-600 underline transition">
-              Deshacer
+          <!-- Deshacer — botón real -->
+          <div x-show="item.estado !== 'pendiente'" class="px-4 pb-4">
+            <button @click="marcarItem(item, 'pendiente', {})"
+                    :disabled="item._guardando"
+                    class="w-full border border-gray-200 rounded-xl py-3 text-sm text-gray-500 active:bg-gray-50 disabled:opacity-40 transition tap-xl">
+              ↩ Deshacer
             </button>
           </div>
         </div>
@@ -224,7 +288,7 @@
     </div>
   </div>
 
-  <!-- ======== BOTÓN FINALIZAR (fijo abajo) ======== -->
+  <!-- ======== BOTÓN FINALIZAR ======== -->
   <div x-show="vistaActual === 'ticket' && ticketActual" x-cloak
        class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-20">
 
@@ -233,7 +297,7 @@
       Marca todos los productos para finalizar
     </div>
 
-    <button @click="finalizarPicking()"
+    <button @click="abrirConfirmarFinalizar()"
             :disabled="!ticketActual?.listo_para_finalizar || finalizando"
             class="w-full py-4 rounded-2xl font-bold text-lg transition-all active:scale-95"
             :class="ticketActual?.listo_para_finalizar
@@ -251,6 +315,37 @@
     </button>
   </div>
 
+  <!-- ======== MODAL CONFIRMAR FINALIZAR ======== -->
+
+  <div x-show="confirmarFinalizar" x-cloak
+       @click="confirmarFinalizar = false"
+       class="fixed inset-0 bg-black/40 z-40"></div>
+
+  <div x-show="confirmarFinalizar" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-y-full opacity-0"
+       x-transition:enter-end="translate-y-0 opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="translate-y-0 opacity-100"
+       x-transition:leave-end="translate-y-full opacity-0"
+       class="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl p-6">
+    <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
+    <div class="text-lg font-bold text-gray-900 mb-1">¿Finalizar picking?</div>
+    <p class="text-sm text-gray-500 mb-6">
+      El pedido pasará a <strong>preparado</strong> y se avisará al repartidor.<br>Esta acción no se puede deshacer desde aquí.
+    </p>
+    <div class="flex gap-3">
+      <button @click="confirmarFinalizar = false"
+              class="flex-1 border border-gray-200 rounded-xl py-4 text-gray-600 font-semibold text-sm active:bg-gray-50 tap-xl">
+        Cancelar
+      </button>
+      <button @click="confirmarFinalizar = false; finalizarPicking()"
+              class="flex-[2] bg-green-500 active:bg-green-600 text-white rounded-xl py-4 font-bold text-sm tap-xl">
+        ✓ Sí, finalizar
+      </button>
+    </div>
+  </div>
+
   <!-- ======== TOAST ======== -->
   <div x-show="toast.visible" x-cloak
        class="fixed top-20 left-4 right-4 z-50 slide-up">
@@ -261,17 +356,277 @@
     </div>
   </div>
 
+  <!-- ======================================================= -->
+  <!-- MODAL — CANTIDAD (bottom sheet, solo cuando cantidad >1) -->
+  <!-- ======================================================= -->
+
+  <!-- Backdrop -->
+  <div x-show="modalCantidad.visible" x-cloak
+       @click="cancelarModalCantidad()"
+       class="fixed inset-0 bg-black/40 z-40"></div>
+
+  <!-- Sheet -->
+  <div x-show="modalCantidad.visible" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-y-full opacity-0"
+       x-transition:enter-end="translate-y-0 opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="translate-y-0 opacity-100"
+       x-transition:leave-end="translate-y-full opacity-0"
+       class="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl">
+
+    <!-- Handle -->
+    <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-5"></div>
+
+    <!-- Título -->
+    <div class="px-5 pb-4 border-b border-gray-100">
+      <div class="font-bold text-gray-900 text-lg" x-text="modalCantidad.item?.nombre"></div>
+      <div class="text-sm text-gray-500 mt-0.5"
+           x-text="'Pedido: ' + (modalCantidad.item?.cantidad || 0) + ' unidades'"></div>
+    </div>
+
+    <!-- Confirmar todas de un toque -->
+    <div class="px-5 pt-5 pb-4">
+      <button @click="confirmarTodasCantidad()"
+              class="w-full bg-green-500 active:bg-green-600 text-white rounded-2xl py-5 font-bold text-lg tap-xl">
+        ✓ Todas (<span x-text="modalCantidad.item?.cantidad"></span> ud.)
+      </button>
+    </div>
+
+    <!-- Divisor -->
+    <div class="flex items-center px-5 pb-5 gap-3">
+      <div class="flex-1 h-px bg-gray-200"></div>
+      <span class="text-xs text-gray-400 font-medium">o ajustar si faltan</span>
+      <div class="flex-1 h-px bg-gray-200"></div>
+    </div>
+
+    <!-- Stepper -->
+    <div class="px-5 pb-4">
+      <div class="flex items-center justify-center gap-6">
+        <button @click="ajustarCantidad(-1)"
+                :disabled="modalCantidad.cantidad <= 0"
+                class="w-16 h-16 bg-gray-100 rounded-2xl text-3xl font-bold text-gray-600 active:bg-gray-200 disabled:opacity-30 flex items-center justify-center tap-xl">
+          −
+        </button>
+        <span class="text-5xl font-extrabold text-gray-900 w-20 text-center tabular-nums"
+              x-text="modalCantidad.cantidad"></span>
+        <button @click="ajustarCantidad(1)"
+                :disabled="modalCantidad.cantidad >= (modalCantidad.item?.cantidad || 0)"
+                class="w-16 h-16 bg-gray-100 rounded-2xl text-3xl font-bold text-gray-600 active:bg-gray-200 disabled:opacity-30 flex items-center justify-center tap-xl">
+          +
+        </button>
+      </div>
+      <div class="text-center text-sm mt-3">
+        <span x-show="modalCantidad.cantidad > 0 && modalCantidad.cantidad < (modalCantidad.item?.cantidad || 0)"
+              class="text-amber-600 font-medium"
+              x-text="'Parcial: ' + modalCantidad.cantidad + ' de ' + (modalCantidad.item?.cantidad || 0)"></span>
+        <span x-show="modalCantidad.cantidad === 0"
+              class="text-red-500 font-medium">0 encontradas — usa el botón ✗ mejor</span>
+        <span x-show="modalCantidad.cantidad === (modalCantidad.item?.cantidad || 0)"
+              class="text-green-600 font-medium">Completo ✓</span>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="px-5 pb-8 flex gap-3">
+      <button @click="cancelarModalCantidad()"
+              class="flex-1 border border-gray-200 rounded-xl py-4 text-gray-600 font-semibold text-sm active:bg-gray-50 tap-xl">
+        Cancelar
+      </button>
+      <button @click="confirmarCantidad()"
+              :disabled="modalCantidad.cantidad === 0"
+              class="flex-[2] bg-green-500 active:bg-green-600 text-white rounded-xl py-4 font-bold text-sm disabled:opacity-40 tap-xl">
+        ✓ Confirmar (<span x-text="modalCantidad.cantidad"></span> ud.)
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL — SIN STOCK (bottom sheet)                        -->
+  <!-- ======================================================= -->
+
+  <!-- Backdrop -->
+  <div x-show="modalSinStock.visible" x-cloak
+       @click="cancelarModalSinStock()"
+       class="fixed inset-0 bg-black/40 z-40"></div>
+
+  <!-- Sheet -->
+  <div x-show="modalSinStock.visible" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-y-full opacity-0"
+       x-transition:enter-end="translate-y-0 opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="translate-y-0 opacity-100"
+       x-transition:leave-end="translate-y-full opacity-0"
+       class="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[88vh] overflow-y-auto">
+
+    <!-- Handle -->
+    <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-5"></div>
+
+    <!-- Título -->
+    <div class="px-5 pb-4 border-b border-gray-100">
+      <div class="font-bold text-gray-900 text-lg" x-text="modalSinStock.item?.nombre"></div>
+      <div class="text-sm text-gray-500 mt-0.5"
+           x-text="(modalSinStock.item?.cantidad || 0) + ' unidades pedidas'"></div>
+    </div>
+
+    <!-- Motivo -->
+    <div class="px-5 py-4 border-b border-gray-100">
+      <div class="text-sm font-semibold text-gray-600 mb-3">¿Motivo?</div>
+      <div class="grid grid-cols-3 gap-2">
+        <button @click="modalSinStock.motivo = 'sin_stock'"
+                :class="modalSinStock.motivo === 'sin_stock'
+                  ? 'bg-red-100 border-red-300 text-red-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600'"
+                class="border rounded-xl py-3 px-2 text-xs font-semibold text-center transition-colors tap-xl">
+          📦<br>Sin stock
+        </button>
+        <button @click="modalSinStock.motivo = 'dañado'"
+                :class="modalSinStock.motivo === 'dañado'
+                  ? 'bg-red-100 border-red-300 text-red-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600'"
+                class="border rounded-xl py-3 px-2 text-xs font-semibold text-center transition-colors tap-xl">
+          🚫<br>Dañado
+        </button>
+        <button @click="modalSinStock.motivo = 'no_encuentro'"
+                :class="modalSinStock.motivo === 'no_encuentro'
+                  ? 'bg-red-100 border-red-300 text-red-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600'"
+                class="border rounded-xl py-3 px-2 text-xs font-semibold text-center transition-colors tap-xl">
+          🔍<br>No lo encuentro
+        </button>
+      </div>
+    </div>
+
+    <!-- Sustitución -->
+    <div class="px-5 py-4 border-b border-gray-100">
+      <div class="text-sm font-semibold text-gray-600 mb-3">
+        Sustituto <span class="font-normal text-gray-400">(opcional)</span>
+      </div>
+
+      <!-- Sustituto seleccionado -->
+      <div x-show="modalSinStock.sustituto" class="mb-3">
+        <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+          <div>
+            <div class="font-semibold text-green-800 text-sm" x-text="modalSinStock.sustituto?.nombre"></div>
+            <div class="text-xs text-green-600 mt-0.5"
+                 x-text="modalSinStock.sustituto?.precio?.toFixed(2) + '€'"></div>
+          </div>
+          <button @click="limpiarSustituto()"
+                  class="w-8 h-8 flex items-center justify-center text-green-600 active:text-green-800 text-lg">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Búsqueda -->
+      <div x-show="!modalSinStock.sustituto">
+        <div class="relative">
+          <input type="text"
+                 x-model="modalSinStock.query"
+                 @input.debounce.300ms="buscarSustitutos($event.target.value)"
+                 placeholder="Buscar producto sustituto..."
+                 autocomplete="off"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-400 pr-10" />
+          <div x-show="modalSinStock.buscando"
+               class="absolute right-3 top-3.5 w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+
+        <!-- Resultados -->
+        <div x-show="modalSinStock.resultados.length > 0"
+             class="mt-2 border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-50">
+          <template x-for="prod in modalSinStock.resultados" :key="prod.id">
+            <button @click="seleccionarSustituto(prod)"
+                    class="w-full flex items-center justify-between px-4 py-3 text-left active:bg-gray-100">
+              <div>
+                <div class="text-sm font-medium text-gray-800" x-text="prod.nombre"></div>
+                <div class="text-xs text-gray-400 mt-0.5" x-text="'Stock: ' + prod.stock"></div>
+              </div>
+              <span class="text-sm text-gray-600 font-semibold ml-3 flex-shrink-0"
+                    x-text="prod.precio.toFixed(2) + '€'"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Sin resultados -->
+        <div x-show="modalSinStock.query.length >= 2 && !modalSinStock.buscando && modalSinStock.resultados.length === 0"
+             class="mt-2 text-center text-xs text-gray-400 py-3">
+          Sin resultados para "<span x-text="modalSinStock.query"></span>"
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="px-5 py-4 pb-8 flex gap-3">
+      <button @click="cancelarModalSinStock()"
+              class="flex-1 border border-gray-200 rounded-xl py-4 text-gray-600 font-semibold text-sm active:bg-gray-50 tap-xl">
+        Cancelar
+      </button>
+      <button @click="confirmarSinStock()"
+              class="flex-[2] rounded-xl py-4 font-bold text-sm text-white active:scale-95 transition-transform tap-xl"
+              :class="modalSinStock.sustituto ? 'bg-orange-500 active:bg-orange-600' : 'bg-red-500 active:bg-red-600'">
+        <span x-show="!modalSinStock.sustituto">✗ Confirmar sin stock</span>
+        <span x-show="modalSinStock.sustituto">↔ Confirmar sustitución</span>
+      </button>
+    </div>
+  </div>
+
   <!-- ======== JAVASCRIPT ======== -->
   <script>
     function picker(pickerId) {
+      // Cuando se abre desde el icono de pantalla de inicio (sin ?id=X en la URL),
+      // recuperar el ID guardado en la visita anterior.
+      if (!pickerId) {
+        const saved = localStorage.getItem('panchi_picker_id');
+        if (saved) pickerId = parseInt(saved, 10);
+      }
+
       return {
-        pickerId: pickerId,
-        pedidos: [],
-        vistaActual: 'lista',   // 'lista' | 'ticket'
+        pickerId:     pickerId,
+        pedidos:      [],
+        vistaActual:  'lista',
         ticketActual: null,
-        cargando: false,
-        finalizando: false,
-        toast: { visible: false, msg: '', error: false },
+        cargando:     false,
+        finalizando:  false,
+        isOnline:     true,
+        offlineQueue: [],
+        toast:        { visible: false, msg: '', error: false },
+        _toastTimer:       null,
+        _searchTimer:      null,
+        confirmarFinalizar: false,
+
+        // ---- Modales ----
+        modalCantidad: {
+          visible:  false,
+          item:     null,
+          cantidad: 1,
+        },
+        modalSinStock: {
+          visible:    false,
+          item:       null,
+          motivo:     'sin_stock',   // sin_stock | dañado | no_encuentro
+          sustituto:  null,          // { id, nombre, precio }
+          query:      '',
+          resultados: [],
+          buscando:   false,
+        },
+
+        // ---- Computed ----
+
+        get itemsOrdenados() {
+          if (!this.ticketActual) return [];
+          return [...this.ticketActual.items].sort((a, b) => {
+            const ap = a.estado === 'pendiente' ? 0 : 1;
+            const bp = b.estado === 'pendiente' ? 0 : 1;
+            if (ap !== bp) return ap - bp;
+            return (a.ubicacion || 'ZZZZ').localeCompare(b.ubicacion || 'ZZZZ');
+          });
+        },
+
+        get primerPendiente() {
+          if (!this.ticketActual) return null;
+          return this.itemsOrdenados.find(i => i.estado === 'pendiente') ?? null;
+        },
 
         get itemsCompletados() {
           if (!this.ticketActual) return 0;
@@ -283,83 +638,159 @@
           return Math.round(this.itemsCompletados / this.ticketActual.items_total * 100);
         },
 
+        // ---- Lifecycle ----
+
         async init() {
           if (!this.pickerId) return;
+          // Persistir ID para futuras visitas desde pantalla de inicio
+          localStorage.setItem('panchi_picker_id', this.pickerId);
+          this.isOnline = navigator.onLine;
+          window.addEventListener('online',  () => { this.isOnline = true;  this._flushQueue(); });
+          window.addEventListener('offline', () => { this.isOnline = false; });
           await this.recargar();
           setInterval(() => {
             if (this.vistaActual === 'lista') this.recargar();
-          }, 15000);
+          }, 60000);
         },
+
+        // ---- Data ----
 
         async recargar() {
           if (!this.pickerId) return;
           this.cargando = true;
           try {
             const r = await fetch(`/picker/mis-pedidos?picker_id=${this.pickerId}`);
-            if (r.ok) {
-              const data = await r.json();
-              this.pedidos = data;
-              // Si tenemos un ticket abierto, actualizamos sus datos
-              if (this.ticketActual) {
-                const actualizado = data.find(p => p.picking_id === this.ticketActual.picking_id);
-                if (actualizado) this.ticketActual = actualizado;
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const data = await r.json();
+            data.forEach(p => p.items.forEach(item => { item._guardando = false; }));
+            this.pedidos = data;
+            if (this.ticketActual) {
+              const actualizado = data.find(p => p.picking_id === this.ticketActual.picking_id);
+              if (actualizado && !this.ticketActual.items.some(i => i._guardando)) {
+                actualizado.items.forEach(item => { item._guardando = false; });
+                this.ticketActual = actualizado;
               }
             }
+          } catch (_e) {
+            this.mostrarToast('Error al cargar pedidos', true);
           } finally {
             this.cargando = false;
           }
         },
 
+        // ---- Navegación ----
+
         abrirTicket(pedido) {
           this.ticketActual = pedido;
-          this.vistaActual = 'ticket';
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          this.vistaActual  = 'ticket';
+          window.scrollTo({ top: 0, behavior: 'instant' });
         },
 
         volverALista() {
-          this.vistaActual = 'lista';
+          this.vistaActual  = 'lista';
           this.ticketActual = null;
           this.recargar();
         },
 
-        async marcarItem(item, nuevoEstado) {
-          // Optimistic update
+        // ---- Picking core ----
+
+        async marcarItem(item, nuevoEstado, extra = {}) {
+          if (item._guardando) return;
+
           const estadoAnterior = item.estado;
-          item.estado = nuevoEstado;
+          item.estado     = nuevoEstado;
+          item._guardando = true;
+
+          // Reflejar cantidad_encontrada en el objeto local para mostrarla inmediatamente
+          if (extra.cantidad_encontrada !== undefined) {
+            item.cantidad_encontrada = extra.cantidad_encontrada;
+          }
+
           this._recalcularPendientes();
 
-          const r = await fetch(`/picker/item/${item.item_id}/estado`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ estado: nuevoEstado }),
-          });
+          if (!this.isOnline) {
+            this.offlineQueue.push({ item_id: item.item_id, estado: nuevoEstado, estadoAnterior, extra });
+            item._guardando = false;
+            this.mostrarToast('Sin conexión — se enviará al reconectar');
+            return;
+          }
 
-          if (!r.ok) {
-            // Revertir si falla
+          await this._enviarEstado(item, nuevoEstado, estadoAnterior, extra);
+        },
+
+        async _enviarEstado(item, nuevoEstado, estadoAnterior, extra = {}, intentos = 0) {
+          try {
+            const r = await fetch(`/picker/item/${item.item_id}/estado`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ estado: nuevoEstado, ...extra }),
+            });
+
+            if (!r.ok) {
+              if (r.status >= 500 && intentos < 2) {
+                await new Promise(res => setTimeout(res, 600 * (intentos + 1)));
+                return this._enviarEstado(item, nuevoEstado, estadoAnterior, extra, intentos + 1);
+              }
+              item.estado = estadoAnterior;
+              item.cantidad_encontrada = null;
+              this._recalcularPendientes();
+              const data = await r.json().catch(() => ({}));
+              this.mostrarToast(data.error || 'Error al actualizar', true);
+            }
+          } catch (_e) {
+            if (intentos < 2) {
+              await new Promise(res => setTimeout(res, 600 * (intentos + 1)));
+              return this._enviarEstado(item, nuevoEstado, estadoAnterior, extra, intentos + 1);
+            }
             item.estado = estadoAnterior;
+            item.cantidad_encontrada = null;
             this._recalcularPendientes();
-            const data = await r.json();
-            this.mostrarToast(data.error || 'Error al actualizar', true);
+            this.mostrarToast('Sin conexión — intenta de nuevo', true);
+          } finally {
+            item._guardando = false;
+          }
+        },
+
+        async _flushQueue() {
+          if (!this.offlineQueue.length) return;
+          const cola = [...this.offlineQueue];
+          this.offlineQueue = [];
+
+          for (const job of cola) {
+            const item = this.ticketActual?.items.find(i => i.item_id === job.item_id);
+            if (!item) continue;
+            item.estado = job.estado;
+            if (job.extra?.cantidad_encontrada !== undefined) {
+              item.cantidad_encontrada = job.extra.cantidad_encontrada;
+            }
+            this._recalcularPendientes();
+            await this._enviarEstado(item, job.estado, job.estadoAnterior, job.extra || {});
+          }
+
+          if (cola.length > 0) {
+            const n = cola.length;
+            this.mostrarToast(`${n} cambio${n > 1 ? 's' : ''} sincronizado${n > 1 ? 's' : ''} ✓`);
           }
         },
 
         _recalcularPendientes() {
           if (!this.ticketActual) return;
           const pendientes = this.ticketActual.items.filter(i => i.estado === 'pendiente').length;
-          this.ticketActual.items_pendientes = pendientes;
+          this.ticketActual.items_pendientes     = pendientes;
           this.ticketActual.listo_para_finalizar = pendientes === 0;
+        },
+
+        abrirConfirmarFinalizar() {
+          if (!this.ticketActual?.listo_para_finalizar || this.finalizando) return;
+          this.confirmarFinalizar = true;
         },
 
         async finalizarPicking() {
           if (!this.ticketActual?.listo_para_finalizar || this.finalizando) return;
           this.finalizando = true;
-
           try {
-            const r = await fetch(`/picker/picking/${this.ticketActual.picking_id}/finalizar`, {
-              method: 'POST',
-            });
-            const data = await r.json();
-
+            const r    = await fetch(`/picker/picking/${this.ticketActual.picking_id}/finalizar`, { method: 'POST' });
+            const data = await r.json().catch(() => ({}));
             if (r.ok) {
               this.mostrarToast('¡Picking completado! Pedido listo para reparto ✓');
               await this.recargar();
@@ -367,14 +798,129 @@
             } else {
               this.mostrarToast(data.error || 'Error al finalizar', true);
             }
+          } catch (_e) {
+            this.mostrarToast('Error inesperado al finalizar', true);
           } finally {
             this.finalizando = false;
           }
         },
 
+        // ---- Modal cantidad ----
+
+        abrirModalCantidad(item) {
+          this.modalCantidad = { visible: true, item, cantidad: item.cantidad };
+        },
+
+        cancelarModalCantidad() {
+          this.modalCantidad = { visible: false, item: null, cantidad: 1 };
+        },
+
+        ajustarCantidad(delta) {
+          const max = this.modalCantidad.item?.cantidad || 0;
+          this.modalCantidad.cantidad = Math.max(0, Math.min(max, this.modalCantidad.cantidad + delta));
+        },
+
+        confirmarTodasCantidad() {
+          this.modalCantidad.cantidad = this.modalCantidad.item?.cantidad || 0;
+          this.confirmarCantidad();
+        },
+
+        confirmarCantidad() {
+          const item = this.modalCantidad.item;
+          const qty  = this.modalCantidad.cantidad;
+          if (!item) return;
+          this.cancelarModalCantidad();
+          if (qty === 0) {
+            // 0 encontradas → abrir flujo sin stock directamente
+            this.abrirModalSinStock(item);
+            return;
+          }
+          this.marcarItem(item, 'encontrado', { cantidad_encontrada: qty });
+        },
+
+        // ---- Modal sin stock ----
+
+        abrirModalSinStock(item) {
+          this.modalSinStock = {
+            visible:    true,
+            item,
+            motivo:     'sin_stock',
+            sustituto:  null,
+            query:      '',
+            resultados: [],
+            buscando:   false,
+          };
+        },
+
+        cancelarModalSinStock() {
+          this.modalSinStock.visible = false;
+        },
+
+        confirmarSinStock() {
+          const item = this.modalSinStock.item;
+          if (!item) return;
+
+          const extra = {
+            cantidad_encontrada:  0,
+            notas:                this.modalSinStock.motivo,
+          };
+
+          let estado = 'sin_stock';
+          if (this.modalSinStock.sustituto) {
+            estado = 'sustituido';
+            extra.producto_sustituto_id = this.modalSinStock.sustituto.id;
+          }
+
+          this.cancelarModalSinStock();
+          this.marcarItem(item, estado, extra);
+        },
+
+        async buscarSustitutos(q) {
+          clearTimeout(this._searchTimer);
+          if (q.length < 2) {
+            this.modalSinStock.resultados = [];
+            return;
+          }
+          this._searchTimer = setTimeout(async () => {
+            this.modalSinStock.buscando = true;
+            try {
+              const r = await fetch(`/picker/buscar-productos?q=${encodeURIComponent(q)}`);
+              if (r.ok) {
+                const data = await r.json();
+                this.modalSinStock.resultados = data.filter(
+                  p => p.id !== this.modalSinStock.item?.producto_id
+                );
+              }
+            } catch (_) {}
+            finally { this.modalSinStock.buscando = false; }
+          }, 300);
+        },
+
+        seleccionarSustituto(prod) {
+          this.modalSinStock.sustituto  = prod;
+          this.modalSinStock.resultados = [];
+          this.modalSinStock.query      = '';
+        },
+
+        limpiarSustituto() {
+          this.modalSinStock.sustituto = null;
+        },
+
+        // ---- Utilidades ----
+
         mostrarToast(msg, error = false) {
+          clearTimeout(this._toastTimer);
           this.toast = { visible: true, msg, error };
-          setTimeout(() => { this.toast.visible = false; }, 3000);
+          this._toastTimer = setTimeout(() => { this.toast.visible = false; }, 3000);
+        },
+
+        formatMotivo(notas) {
+          const labels = {
+            'sin_stock':    'Sin stock',
+            'dañado':       'Dañado',
+            'no_encuentro': 'No lo encontré',
+          };
+          return labels[notas] || notas;
         },
 
         formatHora(ts) {
@@ -382,6 +928,16 @@
           return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         },
       };
+    }
+  </script>
+  <!-- ======== SERVICE WORKER ======== -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('/picker/sw.js', { scope: '/picker' })
+          .catch(err => console.warn('SW no registrado:', err));
+      });
     }
   </script>
 </body>

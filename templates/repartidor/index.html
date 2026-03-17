@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Panchi — Reparto</title>
+  <meta name="theme-color" content="#111827" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Reparto" />
+  <link rel="manifest" href="/repartidor/manifest.json{% if repartidor_id %}?id={{ repartidor_id }}{% endif %}" />
+  <link rel="apple-touch-icon" href="/static/repartidor/icon-180.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
@@ -34,15 +41,19 @@
         <span x-show="vista === 'resumen'" x-cloak>
           Resumen #<span x-text="actual?.pedido_id"></span>
         </span>
-        <span x-show="vista === 'no-entregar'" x-cloak>No entregado</span>
       </span>
     </div>
     <div class="flex items-center gap-2">
+      <!-- Connection status -->
+      <span x-show="!conexionOk" class="text-xs text-red-400 font-medium" x-cloak>Sin conexión</span>
+      <span x-show="conexionOk && lastFetchTime && vista === 'lista'"
+            class="w-2 h-2 rounded-full bg-green-400" x-cloak></span>
       <span x-show="vista === 'lista' && pedidosActivos.length > 0"
             class="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-medium"
             x-text="pedidosActivos.length + ' pendiente' + (pedidosActivos.length > 1 ? 's' : '')"></span>
       <button @click="recargar()"
-              class="text-gray-400 active:text-white transition text-xl leading-none">↻</button>
+              class="text-gray-400 active:text-white transition text-xl leading-none"
+              :class="cargando ? 'animate-spin' : ''">↻</button>
     </div>
   </header>
 
@@ -67,7 +78,7 @@
   ================================================================ -->
   <div x-show="repartidorId && !cargando && vista === 'lista'" x-cloak>
 
-    <!-- Sin pedidos activos -->
+    <!-- Sin pedidos -->
     <div x-show="pedidosActivos.length === 0 && pedidosHistorial.length === 0"
          class="flex flex-col items-center justify-center min-h-[65vh] text-center px-6">
       <div class="text-6xl mb-4">✅</div>
@@ -81,7 +92,7 @@
 
     <div x-show="pedidosActivos.length > 0 || pedidosHistorial.length > 0" class="p-4 space-y-4">
 
-      <!-- Pendientes / en curso -->
+      <!-- Pendientes (ordenados por urgencia) -->
       <template x-if="pedidosActivos.length > 0">
         <div>
           <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
@@ -92,27 +103,24 @@
               <div @click="abrirPedido(p)"
                    class="bg-white rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform cursor-pointer slide-up">
                 <div class="p-4">
-                  <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center justify-between mb-3">
                     <div>
-                      <span class="text-2xl font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="text-xl font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
                       <div class="text-gray-500 text-sm mt-0.5" x-text="p.cliente_nombre"></div>
                     </div>
-                    <div class="text-right">
-                      <span class="text-lg font-bold" x-text="p.total.toFixed(2) + '€'"></span>
-                      <div class="mt-1">
-                        <span class="badge-estado" :class="badgeRepartoClass(p.estado_reparto)"
-                              x-text="labelEstado(p.estado_reparto)"></span>
-                      </div>
+                    <div class="flex flex-col items-center rounded-2xl px-4 py-2 min-w-[72px]"
+                         :class="priorityColor(calculateRemainingMinutes(p.fecha_creacion))">
+                      <span class="text-xs font-medium opacity-70 mb-0.5">
+                        Entrega <span x-text="formatPromisedTime(p.fecha_creacion)"></span>
+                      </span>
+                      <span class="text-3xl font-black leading-none tracking-tight"
+                            x-text="formatRemaining(calculateRemainingMinutes(p.fecha_creacion))"></span>
                     </div>
                   </div>
-
-                  <!-- Dirección -->
                   <div class="flex items-start gap-1.5 text-sm text-gray-600 mb-2">
                     <span class="mt-0.5">📍</span>
                     <span x-text="p.direccion_entrega"></span>
                   </div>
-
-                  <!-- Pago -->
                   <div class="flex items-center gap-1.5">
                     <span class="text-xs px-2 py-1 rounded-lg font-semibold"
                           :class="badgePagoClass(p.pago.estado)"
@@ -122,7 +130,6 @@
                           x-text="p.pago.importe.toFixed(2) + '€'"></span>
                   </div>
                 </div>
-
                 <div class="border-t border-gray-100 px-4 py-2.5 flex justify-between items-center">
                   <span class="text-xs text-gray-400"
                         x-text="p.items.length + ' producto' + (p.items.length !== 1 ? 's' : '')"></span>
@@ -134,13 +141,24 @@
         </div>
       </template>
 
-      <!-- Historial del día -->
+      <!-- Historial del día (acordeón) con badge de rendimiento -->
       <template x-if="pedidosHistorial.length > 0">
-        <div>
-          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1 mt-2">
-            Completados hoy
-          </h3>
-          <div class="space-y-2">
+        <div class="mt-2">
+          <button @click="historialAbierto = !historialAbierto"
+                  class="w-full flex items-center justify-between px-1 py-2 active:opacity-70 transition">
+            <div class="flex items-center gap-2">
+              <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Completados hoy</h3>
+              <span class="bg-gray-200 text-gray-500 text-xs font-semibold px-1.5 py-0.5 rounded-full"
+                    x-text="pedidosHistorial.length"></span>
+            </div>
+            <span class="text-gray-400 text-sm transition-transform duration-200"
+                  :class="historialAbierto ? 'rotate-90' : ''">›</span>
+          </button>
+          <div x-show="historialAbierto"
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="opacity-0 -translate-y-1"
+               x-transition:enter-end="opacity-100 translate-y-0"
+               class="space-y-2 mt-1">
             <template x-for="p in pedidosHistorial" :key="p.reparto_id">
               <div @click="abrirResumen(p)"
                    class="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition">
@@ -156,12 +174,37 @@
                   </div>
                 </div>
                 <div class="flex items-center gap-2">
+                  <!-- Badge rendimiento -->
+                  <template x-if="p.estado_reparto === 'entregado' && minutesTaken(p) !== null">
+                    <span class="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                          :class="wasOnTime(p) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'"
+                          x-text="minutesTaken(p) + ' min'"></span>
+                  </template>
                   <span class="font-medium text-gray-700" x-text="p.total.toFixed(2) + '€'"></span>
                   <span class="text-gray-300 text-sm">›</span>
                 </div>
               </div>
             </template>
           </div>
+        </div>
+      </template>
+
+      <!-- Cierre de caja — visible cuando hay historial del día -->
+      <template x-if="pedidosHistorial.length > 0">
+        <div class="pb-6 mt-2">
+          <a :href="'/repartidor/cierre?id=' + repartidorId"
+             class="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-3.5 shadow-sm active:bg-gray-50 transition cursor-pointer">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">💰</div>
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Cierre de caja</p>
+                <p class="text-xs text-gray-400">Resumen del efectivo del turno</p>
+              </div>
+            </div>
+            <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
         </div>
       </template>
 
@@ -173,53 +216,136 @@
   ================================================================ -->
   <div x-show="vista === 'pedido' && actual" x-cloak class="pb-44">
 
-    <!-- PAGO — lo más visible arriba del todo -->
-    <div class="px-4 pt-4 pb-3">
-      <div class="rounded-2xl p-4 text-center"
-           :class="badgePagoFondoClass(actual?.pago?.estado)">
-        <div class="text-3xl mb-1">
-          <span x-show="actual?.pago?.estado === 'pagado_online'">💳</span>
-          <span x-show="actual?.pago?.estado === 'cobrar_efectivo'">💵</span>
-          <span x-show="actual?.pago?.estado === 'cobrar_tarjeta'">📟</span>
+    <!-- DIRECCIÓN + MAPS -->
+    <div class="px-4 pt-4 pb-0">
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+
+        <!-- Cabecera: estado del reparto -->
+        <div class="flex items-center justify-between px-4 pt-3 pb-2">
+          <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Dirección de entrega</span>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
+                :class="actual?.estado_reparto === 'asignado'
+                  ? 'bg-orange-100 text-orange-700'
+                  : 'bg-blue-100 text-blue-700'">
+            <span x-show="actual?.estado_reparto === 'asignado'">⏳ Pendiente de salida</span>
+            <span x-show="actual?.estado_reparto === 'en_camino'" x-cloak>🛵 En camino</span>
+          </span>
         </div>
-        <div class="font-bold text-xl" x-text="actual?.pago?.label"></div>
-        <div x-show="actual?.pago?.estado !== 'pagado_online'"
-             class="text-3xl font-black mt-1"
-             x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></div>
-        <div x-show="actual?.pago?.estado === 'pagado_online'"
-             class="text-sm opacity-75 mt-0.5">No cobrar nada al cliente</div>
+
+        <!-- Dirección -->
+        <div class="px-4 pb-3">
+          <p class="font-bold text-gray-900 text-base leading-snug" x-text="actual?.direccion_entrega"></p>
+        </div>
+
+        <!-- CTA Maps — bloqueado hasta haber salido -->
+        <div class="border-t border-gray-100">
+
+          <!-- Estado asignado: Maps desactivado con aviso -->
+          <div x-show="actual?.estado_reparto === 'asignado'"
+               class="flex items-center gap-3 px-4 py-3 bg-gray-50 cursor-not-allowed">
+            <span class="text-xl opacity-30">🗺️</span>
+            <div class="flex-1">
+              <p class="text-sm text-gray-400 font-medium">Maps se abrirá al pulsar</p>
+              <p class="text-xs text-gray-400">"Salir a repartir" en la parte inferior</p>
+            </div>
+            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0 0v2m0-2h2m-2 0H10m9-7a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+
+          <!-- Estado en_camino: Maps activo -->
+          <a x-show="actual?.estado_reparto === 'en_camino'"
+             x-cloak
+             :href="mapsUrl(actual?.direccion_entrega)"
+             target="_blank"
+             class="flex items-center gap-3 px-4 py-3.5 bg-blue-600 active:bg-blue-700 transition active:scale-[0.98] cursor-pointer">
+            <span class="text-xl">🗺️</span>
+            <div class="flex-1">
+              <p class="text-sm font-bold text-white">Abrir en Google Maps</p>
+              <p class="text-xs text-blue-200">Navegación directa al destino</p>
+            </div>
+            <svg class="w-5 h-5 text-white/60 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
+
+        </div>
       </div>
     </div>
 
-    <!-- CLIENTE + DIRECCIÓN -->
-    <div class="bg-white mx-4 rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-3">
-      <div class="p-4">
-        <div class="flex items-start justify-between mb-3">
-          <div>
-            <div class="text-xs text-gray-400 mb-0.5">Cliente</div>
-            <div class="font-bold text-lg" x-text="actual?.cliente_nombre"></div>
+    <!-- PAGO -->
+    <div class="px-4 pt-3 pb-0">
+
+      <!-- Pagado online: sin acción -->
+      <div x-show="actual?.pago?.estado === 'pagado_online'"
+           class="rounded-2xl p-4 text-center bg-green-50 border border-green-200">
+        <div class="text-3xl mb-1">💳</div>
+        <div class="font-bold text-xl text-green-800">Pagado online</div>
+        <div class="text-sm text-green-600 mt-0.5">No cobrar nada al cliente</div>
+      </div>
+
+      <!-- Cobro pendiente o confirmado -->
+      <div x-show="actual?.pago?.estado !== 'pagado_online'"
+           class="bg-white rounded-2xl border shadow-sm overflow-hidden transition-colors duration-300"
+           :class="pagoConfirmado ? 'border-green-300' : 'border-orange-300'">
+
+        <!-- Importe + estado -->
+        <div class="p-4 text-center transition-colors duration-300"
+             :class="pagoConfirmado ? 'bg-green-50' : 'bg-orange-50'">
+          <div class="text-2xl mb-1">
+            <span x-show="actual?.pago?.estado === 'cobrar_efectivo'">💵</span>
+            <span x-show="actual?.pago?.estado === 'cobrar_tarjeta'">📟</span>
           </div>
-          <!-- Botón llamar -->
-          <a :href="'tel:' + actual?.cliente_telefono"
-             class="flex flex-col items-center gap-1 bg-green-50 border border-green-200 rounded-xl px-3 py-2 active:bg-green-100 transition">
-            <span class="text-xl">📞</span>
-            <span class="text-xs text-green-700 font-medium">Llamar</span>
-          </a>
+          <div class="text-3xl font-black transition-colors duration-300"
+               :class="pagoConfirmado ? 'text-green-700' : 'text-orange-900'"
+               x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></div>
+          <div class="text-sm font-medium mt-0.5 transition-colors duration-300"
+               :class="pagoConfirmado ? 'text-green-600' : 'text-orange-700'"
+               x-text="pagoConfirmado ? '✓ Cobrado' : actual?.pago?.label"></div>
         </div>
 
-        <!-- Dirección + Google Maps -->
-        <div class="flex items-start gap-3">
-          <div class="flex-1">
-            <div class="text-xs text-gray-400 mb-0.5">Dirección de entrega</div>
-            <div class="font-medium text-gray-800" x-text="actual?.direccion_entrega"></div>
+        <!-- CTA: cobrar o resumen de lo cobrado -->
+        <div class="border-t transition-colors duration-300"
+             :class="pagoConfirmado ? 'border-green-200' : 'border-orange-200'">
+
+          <!-- Sin confirmar -->
+          <button x-show="!pagoConfirmado"
+                  @click="mostrarCobro = true"
+                  class="w-full flex items-center justify-center gap-2 py-3.5 bg-orange-500 active:bg-orange-600 text-white font-bold text-base transition active:scale-[0.98]">
+            <span>💰</span>
+            <span>Cobrar al cliente</span>
+          </button>
+
+          <!-- Confirmado: resumen + opción de editar -->
+          <div x-show="pagoConfirmado"
+               class="flex items-center justify-between px-4 py-3">
+            <div class="flex items-center gap-1.5 text-sm text-gray-600">
+              <span class="text-green-500">✓</span>
+              <span x-text="resumeCobro"></span>
+            </div>
+            <button @click="resetCobro()"
+                    class="text-xs text-gray-400 underline active:text-gray-600 transition ml-3 flex-shrink-0">
+              Cambiar
+            </button>
           </div>
-          <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((actual?.direccion_entrega || '') + ', Tarancón, España')"
-             target="_blank"
-             class="flex flex-col items-center gap-1 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 active:bg-blue-100 transition flex-shrink-0">
-            <span class="text-xl">🗺️</span>
-            <span class="text-xs text-blue-700 font-medium">Maps</span>
-          </a>
         </div>
+      </div>
+
+    </div>
+
+    <!-- CLIENTE -->
+    <div class="bg-white mx-4 mt-3 rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-3">
+      <div class="p-4 flex items-center justify-between">
+        <div>
+          <div class="text-xs text-gray-400 mb-0.5">Cliente</div>
+          <div class="font-bold text-lg" x-text="actual?.cliente_nombre"></div>
+          <div class="text-sm text-gray-400 mt-0.5" x-text="actual?.cliente_telefono"></div>
+        </div>
+        <a :href="'tel:' + actual?.cliente_telefono"
+           class="flex flex-col items-center gap-1 bg-green-50 border border-green-200 rounded-xl px-4 py-3 active:bg-green-100 transition">
+          <span class="text-2xl">📞</span>
+          <span class="text-xs text-green-700 font-semibold">Llamar</span>
+        </a>
       </div>
     </div>
 
@@ -253,12 +379,12 @@
   </div>
 
   <!-- ================================================================
-       VISTA RESUMEN (post-entrega, solo lectura + corrección)
+       VISTA RESUMEN (post-entrega)
   ================================================================ -->
   <div x-show="vista === 'resumen' && actual" x-cloak class="pb-10">
 
-    <!-- Banner de estado -->
-    <div class="mx-4 mt-4 rounded-2xl p-4 text-center mb-4 slide-up"
+    <!-- Banner estado -->
+    <div class="mx-4 mt-4 rounded-2xl p-4 text-center mb-3 slide-up"
          :class="actual?.estado_reparto === 'entregado'
            ? 'bg-green-50 border border-green-200'
            : 'bg-red-50 border border-red-200'">
@@ -275,7 +401,114 @@
            x-text="actual?.motivo_no_entrega"></div>
     </div>
 
-    <!-- Info del pedido (igual que en vista pedido pero compacto) -->
+    <!-- RENDIMIENTO (solo pedidos entregados) -->
+    <template x-if="actual?.estado_reparto === 'entregado'">
+      <div class="mx-4 mb-3 slide-up">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+          <!-- Cabecera con badge on-time -->
+          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <span class="font-semibold text-gray-700 text-sm">📊 Rendimiento</span>
+            <template x-if="wasOnTime(actual) === true">
+              <span class="text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">🟢 A tiempo</span>
+            </template>
+            <template x-if="wasOnTime(actual) === false">
+              <span class="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">🔴 Con retraso</span>
+            </template>
+          </div>
+
+          <!-- Timeline -->
+          <div class="px-4 py-3 space-y-1">
+
+            <!-- Pedido recibido -->
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-base flex-shrink-0">🕐</div>
+              <div class="flex-1">
+                <div class="text-xs text-gray-400">Pedido recibido</div>
+                <div class="font-semibold text-gray-800 text-sm" x-text="formatHora(actual?.fecha_creacion)"></div>
+              </div>
+            </div>
+
+            <div class="ml-4 w-px h-4 bg-gray-200 mx-[0.9rem]"></div>
+
+            <!-- Salida -->
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-base flex-shrink-0">🛵</div>
+              <div class="flex-1">
+                <div class="text-xs text-gray-400">Salida a repartir</div>
+                <div class="font-semibold text-gray-800 text-sm"
+                     x-text="actual?.hora_salida ? formatHora(actual.hora_salida) : '—'"></div>
+              </div>
+              <template x-if="actual?.hora_salida && actual?.fecha_creacion">
+                <span class="text-xs text-gray-400"
+                      x-text="'+' + Math.round((new Date(actual.hora_salida) - new Date(actual.fecha_creacion)) / 60000) + ' min'">
+                </span>
+              </template>
+            </div>
+
+            <div class="ml-4 w-px h-4 bg-gray-200 mx-[0.9rem]"></div>
+
+            <!-- Entregado -->
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-base flex-shrink-0">✅</div>
+              <div class="flex-1">
+                <div class="text-xs text-gray-400">Entregado</div>
+                <div class="font-semibold text-gray-800 text-sm"
+                     x-text="actual?.hora_entrega_real ? formatHora(actual.hora_entrega_real) : '—'"></div>
+              </div>
+              <template x-if="minutesTaken(actual) !== null">
+                <span class="text-xs font-bold"
+                      :class="wasOnTime(actual) ? 'text-green-600' : 'text-red-500'"
+                      x-text="'+' + minutesTaken(actual) + ' min total'">
+                </span>
+              </template>
+            </div>
+          </div>
+
+          <!-- Métricas -->
+          <div class="border-t border-gray-100 px-4 py-3 grid grid-cols-2 gap-3">
+            <div class="text-center bg-gray-50 rounded-xl py-2.5">
+              <div class="text-xs text-gray-400 mb-0.5">Tiempo en camino</div>
+              <div class="font-bold text-lg text-gray-800">
+                <template x-if="actual?.hora_salida && actual?.hora_entrega_real">
+                  <span x-text="Math.round((new Date(actual.hora_entrega_real) - new Date(actual.hora_salida)) / 60000) + ' min'"></span>
+                </template>
+                <template x-if="!actual?.hora_salida || !actual?.hora_entrega_real">
+                  <span class="text-gray-300 font-normal text-base">—</span>
+                </template>
+              </div>
+            </div>
+            <div class="text-center bg-gray-50 rounded-xl py-2.5">
+              <div class="text-xs text-gray-400 mb-0.5">Tiempo total</div>
+              <div class="font-bold text-lg"
+                   :class="wasOnTime(actual) ? 'text-green-600' : (wasOnTime(actual) === false ? 'text-red-500' : 'text-gray-800')">
+                <template x-if="minutesTaken(actual) !== null">
+                  <span x-text="minutesTaken(actual) + ' min'"></span>
+                </template>
+                <template x-if="minutesTaken(actual) === null">
+                  <span class="text-gray-300 font-normal text-base">—</span>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Margen vs promesa -->
+          <template x-if="minutesTaken(actual) !== null">
+            <div class="border-t border-gray-100 px-4 py-2.5 text-center text-xs text-gray-500">
+              Promesa al cliente: 20 min ·
+              <span :class="wasOnTime(actual) ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'"
+                    x-text="wasOnTime(actual)
+                      ? 'sobraron ' + (20 - minutesTaken(actual)) + ' min'
+                      : 'llegaste ' + (minutesTaken(actual) - 20) + ' min tarde'">
+              </span>
+            </div>
+          </template>
+
+        </div>
+      </div>
+    </template>
+
+    <!-- Info del pedido -->
     <div class="bg-white mx-4 rounded-2xl border border-gray-100 shadow-sm mb-3">
       <div class="p-4 space-y-3">
         <div class="flex justify-between">
@@ -291,7 +524,7 @@
           <span class="text-gray-500 text-sm block mb-0.5">Dirección</span>
           <div class="flex items-center gap-2">
             <span class="font-medium text-sm flex-1" x-text="actual?.direccion_entrega"></span>
-            <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((actual?.direccion_entrega || '') + ', Tarancón, España')"
+            <a :href="mapsUrl(actual?.direccion_entrega)"
                target="_blank"
                class="text-blue-500 text-xs border border-blue-200 rounded-lg px-2 py-1 active:bg-blue-50 transition">
               🗺️ Maps
@@ -311,7 +544,7 @@
       </div>
     </div>
 
-    <!-- Productos -->
+    <!-- Productos entregados -->
     <div class="bg-white mx-4 rounded-2xl border border-gray-100 shadow-sm mb-4">
       <div class="px-4 py-3 border-b border-gray-100">
         <span class="font-semibold text-gray-700 text-sm">Productos entregados</span>
@@ -330,11 +563,11 @@
       </div>
     </div>
 
-    <!-- Corrección de errores -->
+    <!-- Corrección -->
     <div class="mx-4 mb-6">
       <div class="text-xs text-gray-400 text-center mb-2">¿Hay algún error? Puedes corregirlo</div>
       <button x-show="actual?.estado_reparto === 'entregado'"
-              @click="vista = 'no-entregar'"
+              @click="mostrarNoEntregar = true"
               class="w-full border border-red-200 text-red-600 bg-red-50 rounded-xl py-3 text-sm font-medium active:bg-red-100 transition">
         Marcar como no entregado
       </button>
@@ -347,18 +580,45 @@
   </div>
 
   <!-- ================================================================
-       VISTA NO ENTREGADO (motivo)
+       BACKDROP + BOTTOM SHEET NO ENTREGADO
   ================================================================ -->
-  <div x-show="vista === 'no-entregar'" x-cloak class="p-4 pb-32">
+  <div x-show="mostrarNoEntregar"
+       @click="cerrarNoEntregar()"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 bg-black/40 z-40"
+       x-cloak>
+  </div>
 
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4 slide-up">
-      <h3 class="font-bold text-gray-800 mb-1">¿Por qué no se pudo entregar?</h3>
-      <p class="text-gray-400 text-sm mb-4">El supervisor lo verá en el dashboard.</p>
+  <div x-show="mostrarNoEntregar"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="translate-y-full"
+       x-transition:enter-end="translate-y-0"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="translate-y-0"
+       x-transition:leave-end="translate-y-full"
+       class="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto"
+       x-cloak>
 
+    <!-- Handle + cabecera fija -->
+    <div class="sticky top-0 bg-white rounded-t-3xl pt-3 pb-3 px-4 border-b border-gray-100">
+      <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-3"></div>
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-gray-800">¿Por qué no se pudo entregar?</h3>
+        <button @click="cerrarNoEntregar()" class="text-gray-400 text-2xl leading-none active:text-gray-600 w-8 h-8 flex items-center justify-center">×</button>
+      </div>
+      <p class="text-gray-400 text-sm mt-0.5">El supervisor lo verá en el dashboard.</p>
+    </div>
+
+    <div class="p-4 pb-10">
       <!-- Motivos rápidos -->
       <div class="grid grid-cols-2 gap-2 mb-4">
         <template x-for="m in motivosRapidos" :key="m">
-          <button @click="motivoSeleccionado = m"
+          <button @click="motivoSeleccionado = m; motivoLibre = ''"
                   class="rounded-xl border py-3 px-3 text-sm font-medium text-left transition active:scale-95"
                   :class="motivoSeleccionado === m
                     ? 'border-orange-400 bg-orange-50 text-orange-700'
@@ -369,7 +629,7 @@
       </div>
 
       <!-- Motivo libre -->
-      <div class="mb-2">
+      <div class="mb-4">
         <label class="text-xs text-gray-400 block mb-1">O escribe otro motivo</label>
         <textarea x-model="motivoLibre"
                   @input="motivoSeleccionado = ''"
@@ -377,68 +637,327 @@
                   rows="3"
                   class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"></textarea>
       </div>
-    </div>
 
+      <!-- Confirmar no entregado -->
+      <button @click="confirmarNoEntregado()"
+              :disabled="!motivoFinal || procesando"
+              class="w-full py-4 rounded-2xl font-bold text-lg transition active:scale-95"
+              :class="motivoFinal
+                ? 'bg-red-500 active:bg-red-600 text-white'
+                : 'bg-gray-100 text-gray-300 cursor-not-allowed'">
+        <span x-show="!procesando">Confirmar no entregado</span>
+        <span x-show="procesando" class="flex items-center justify-center gap-2">
+          <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
+          Guardando...
+        </span>
+      </button>
+    </div>
   </div>
 
   <!-- ================================================================
-       BOTONES FIJOS INFERIORES según la vista
+       BOTONES FIJOS INFERIORES — vista PEDIDO
   ================================================================ -->
-
-  <!-- Botones vista PEDIDO -->
-  <div x-show="vista === 'pedido' && actual" x-cloak
+  <div x-show="vista === 'pedido' && actual && !mostrarNoEntregar" x-cloak
        class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-20 space-y-2">
 
-    <!-- Salida a repartir -->
-    <button x-show="actual?.estado_reparto === 'asignado'"
-            @click="marcarSalida()"
-            :disabled="procesando"
-            class="w-full bg-orange-500 active:bg-orange-600 disabled:opacity-40 text-white py-4 rounded-2xl font-bold text-lg transition active:scale-95">
-      <span x-show="!procesando">🛵 Salir a repartir</span>
-      <span x-show="procesando" class="flex items-center justify-center gap-2">
-        <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
-        Procesando...
-      </span>
-    </button>
+    <!-- Salida a repartir — abre Maps automáticamente -->
+    <div x-show="actual?.estado_reparto === 'asignado'">
+      <button @click="salirYNavegar()"
+              :disabled="procesando"
+              class="w-full bg-orange-500 active:bg-orange-600 disabled:opacity-40 text-white py-4 rounded-2xl font-bold text-lg transition active:scale-95">
+        <span x-show="!procesando" class="flex flex-col items-center leading-tight">
+          <span>🛵 Salir a repartir</span>
+          <span class="text-xs font-normal text-orange-200 mt-0.5">Abre Maps automáticamente</span>
+        </span>
+        <span x-show="procesando" class="flex items-center justify-center gap-2">
+          <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
+          Procesando...
+        </span>
+      </button>
+    </div>
 
-    <!-- En camino: dos botones -->
+    <!-- En camino: no-entregado + hold-to-confirm entregado -->
     <template x-if="actual?.estado_reparto === 'en_camino'">
-      <div class="flex gap-2">
-        <button @click="vista = 'no-entregar'"
-                class="flex-1 border border-red-300 text-red-600 bg-red-50 py-4 rounded-2xl font-bold active:bg-red-100 transition active:scale-95">
-          ✗ No entregado
-        </button>
-        <button @click="marcarEntregado()"
-                :disabled="procesando"
-                class="flex-1 bg-green-500 active:bg-green-600 disabled:opacity-40 text-white py-4 rounded-2xl font-bold text-lg transition active:scale-95">
-          <span x-show="!procesando">✓ Entregado</span>
-          <span x-show="procesando" class="flex items-center justify-center gap-2">
-            <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          </span>
-        </button>
+      <div>
+        <div class="flex gap-2">
+          <button @click="mostrarNoEntregar = true"
+                  class="flex-1 border border-red-300 text-red-600 bg-red-50 py-4 rounded-2xl font-bold active:bg-red-100 transition active:scale-95">
+            ✗ No entregado
+          </button>
+
+          <!-- HOLD TO CONFIRM — mantener pulsado 1.5s -->
+          <button
+            @mousedown="startHold()"
+            @touchstart.prevent="startHold()"
+            @mouseup="_stopHold()"
+            @mouseleave="_stopHold()"
+            @touchend="_stopHold()"
+            @touchcancel="_stopHold()"
+            :disabled="procesando || !canDeliver"
+            style="touch-action: none;"
+            class="relative overflow-hidden flex-1 text-white py-4 rounded-2xl font-bold text-lg select-none transition-colors duration-200"
+            :class="canDeliver ? 'bg-green-500 disabled:opacity-40' : 'bg-gray-300 cursor-not-allowed'">
+            <!-- Barra de progreso (relleno izquierda→derecha) -->
+            <div class="absolute inset-0 bg-green-700 origin-left rounded-2xl"
+                 :style="'transform: scaleX(' + (holdProgress / 100) + '); transition: ' + (holdActive ? 'none' : 'transform 0.15s ease-out')">
+            </div>
+            <span class="relative z-10 pointer-events-none">
+              <!-- Bloqueado por cobro pendiente -->
+              <span x-show="!canDeliver" class="flex items-center justify-center gap-1.5 text-sm text-gray-500">
+                🔒 <span>Entregado</span>
+              </span>
+              <!-- Listo para confirmar -->
+              <span x-show="canDeliver && !procesando && holdProgress === 0">✓ Entregado</span>
+              <span x-show="canDeliver && !procesando && holdProgress > 0" class="text-sm font-medium">Confirmando…</span>
+              <span x-show="procesando" class="flex items-center justify-center gap-2">
+                <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <!-- Instrucción: cobro pendiente -->
+        <p x-show="!canDeliver"
+           @click="mostrarCobro = true"
+           class="text-center text-xs text-orange-600 font-semibold mt-1.5 flex items-center justify-center gap-1 cursor-pointer active:opacity-70">
+          <span>💰</span>
+          <span class="underline">Confirma el cobro para poder entregar</span>
+        </p>
+        <!-- Instrucción: listo -->
+        <p x-show="canDeliver && !procesando" class="text-center text-xs text-gray-400 mt-1.5">
+          Mantén pulsado "Entregado" para confirmar
+        </p>
       </div>
     </template>
   </div>
 
-  <!-- Botón vista NO-ENTREGAR -->
-  <div x-show="vista === 'no-entregar'" x-cloak
-       class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-20">
-    <button @click="confirmarNoEntregado()"
-            :disabled="!motivoFinal || procesando"
-            class="w-full py-4 rounded-2xl font-bold text-lg transition active:scale-95"
-            :class="motivoFinal
-              ? 'bg-red-500 active:bg-red-600 text-white'
-              : 'bg-gray-100 text-gray-300 cursor-not-allowed'">
-      <span x-show="!procesando">Confirmar no entregado</span>
-      <span x-show="procesando" class="flex items-center justify-center gap-2">
-        <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
-        Guardando...
-      </span>
-    </button>
+  <!-- ================================================================
+       BACKDROP + BOTTOM SHEET COBRO
+  ================================================================ -->
+  <div x-show="mostrarCobro"
+       @click="cerrarCobro()"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 bg-black/40 z-40"
+       x-cloak>
+  </div>
+
+  <div x-show="mostrarCobro"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="translate-y-full"
+       x-transition:enter-end="translate-y-0"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="translate-y-0"
+       x-transition:leave-end="translate-y-full"
+       class="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[92vh] overflow-y-auto"
+       x-cloak>
+
+    <!-- Handle + cabecera -->
+    <div class="sticky top-0 bg-white rounded-t-3xl pt-3 pb-3 px-4 border-b border-gray-100">
+      <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-3"></div>
+      <div class="flex items-start justify-between">
+        <div>
+          <h3 class="font-bold text-gray-800 text-lg">Cobrar al cliente</h3>
+          <p class="text-2xl font-black text-orange-600 leading-tight"
+             x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></p>
+        </div>
+        <button @click="cerrarCobro()"
+                class="text-gray-400 text-2xl leading-none active:text-gray-600 w-9 h-9 flex items-center justify-center mt-0.5">×</button>
+      </div>
+    </div>
+
+    <div class="p-4 pb-12">
+
+      <!-- Selector de método de cobro -->
+      <div class="grid grid-cols-3 gap-2 mb-5">
+        <button @click="metodoCobro = 'efectivo'"
+                class="border rounded-2xl py-3.5 flex flex-col items-center gap-1.5 active:scale-95 transition"
+                :class="metodoCobro === 'efectivo'
+                  ? 'border-orange-400 bg-orange-50 text-orange-700'
+                  : 'border-gray-200 text-gray-500 active:bg-gray-50'">
+          <span class="text-2xl">💵</span>
+          <span class="text-xs font-semibold">Efectivo</span>
+        </button>
+        <button @click="metodoCobro = 'tarjeta'"
+                class="border rounded-2xl py-3.5 flex flex-col items-center gap-1.5 active:scale-95 transition"
+                :class="metodoCobro === 'tarjeta'
+                  ? 'border-blue-400 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 text-gray-500 active:bg-gray-50'">
+          <span class="text-2xl">📟</span>
+          <span class="text-xs font-semibold">Tarjeta</span>
+        </button>
+        <button @click="metodoCobro = 'mixto'"
+                class="border rounded-2xl py-3.5 flex flex-col items-center gap-1.5 active:scale-95 transition"
+                :class="metodoCobro === 'mixto'
+                  ? 'border-purple-400 bg-purple-50 text-purple-700'
+                  : 'border-gray-200 text-gray-500 active:bg-gray-50'">
+          <span class="text-2xl">🔀</span>
+          <span class="text-xs font-semibold">Mixto</span>
+        </button>
+      </div>
+
+      <!-- ── PANEL EFECTIVO ───────────────────────────────────── -->
+      <div x-show="metodoCobro === 'efectivo'" class="space-y-4">
+
+        <div>
+          <label class="text-xs text-gray-400 font-medium block mb-2">El cliente entrega</label>
+          <div class="flex items-center gap-2">
+            <input type="number"
+                   x-model="importeDado"
+                   inputmode="decimal"
+                   placeholder="0.00"
+                   step="0.01"
+                   min="0"
+                   class="flex-1 border border-gray-200 rounded-2xl px-4 py-3.5 text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-orange-300 text-right tabular-nums">
+            <span class="text-xl font-bold text-gray-400">€</span>
+          </div>
+        </div>
+
+        <!-- Importes rápidos -->
+        <div>
+          <p class="text-xs text-gray-400 mb-2">Billetes comunes</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="v in quickAmounts" :key="v">
+              <button @click="importeDado = v.toString()"
+                      class="border rounded-xl px-3.5 py-2 text-sm font-semibold transition active:scale-95"
+                      :class="parseFloat(importeDado) === v
+                        ? 'border-orange-400 bg-orange-50 text-orange-700'
+                        : 'border-gray-200 text-gray-600 active:bg-gray-50'"
+                      x-text="v + ' €'">
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <!-- Resultado cambio -->
+        <template x-if="cambioEfectivo !== null">
+          <div class="rounded-2xl p-4 text-center"
+               :class="cambioEfectivo >= 0
+                 ? 'bg-green-50 border border-green-200'
+                 : 'bg-red-50 border border-red-200'">
+            <div class="text-xs font-semibold uppercase tracking-wide mb-1"
+                 :class="cambioEfectivo >= 0 ? 'text-green-500' : 'text-red-400'">
+              <span x-show="cambioEfectivo > 0">Devuelve al cliente</span>
+              <span x-show="cambioEfectivo === 0">Sin cambio</span>
+              <span x-show="cambioEfectivo < 0">Falta por cobrar</span>
+            </div>
+            <div class="text-4xl font-black tabular-nums"
+                 :class="cambioEfectivo >= 0 ? 'text-green-700' : 'text-red-600'"
+                 x-text="Math.abs(cambioEfectivo).toFixed(2) + ' €'"></div>
+          </div>
+        </template>
+
+        <button @click="confirmarCobro()"
+                :disabled="cambioEfectivo === null || cambioEfectivo < 0"
+                class="w-full py-4 rounded-2xl font-bold text-lg transition active:scale-95"
+                :class="(cambioEfectivo !== null && cambioEfectivo >= 0)
+                  ? 'bg-orange-500 text-white active:bg-orange-600'
+                  : 'bg-gray-100 text-gray-300 cursor-not-allowed'">
+          Confirmar cobro en efectivo
+        </button>
+      </div>
+
+      <!-- ── PANEL TARJETA ────────────────────────────────────── -->
+      <div x-show="metodoCobro === 'tarjeta'" class="space-y-4">
+
+        <div class="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-center">
+          <div class="text-4xl mb-2">📟</div>
+          <div class="font-semibold text-blue-800">Cobra con el datáfono</div>
+          <div class="text-4xl font-black text-blue-900 mt-2 tabular-nums"
+               x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></div>
+        </div>
+
+        <button @click="confirmarCobro()"
+                class="w-full bg-blue-600 active:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg transition active:scale-95">
+          Confirmar cobro con tarjeta
+        </button>
+      </div>
+
+      <!-- ── PANEL MIXTO ──────────────────────────────────────── -->
+      <div x-show="metodoCobro === 'mixto'" class="space-y-4">
+
+        <!-- Total a cobrar -->
+        <div class="bg-purple-50 border border-purple-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+          <span class="text-sm text-purple-700 font-medium">Total a cobrar</span>
+          <span class="text-xl font-black text-purple-900 tabular-nums"
+                x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></span>
+        </div>
+
+        <!-- Input efectivo -->
+        <div>
+          <label class="text-xs text-gray-400 font-medium block mb-2">💵 Parte en efectivo</label>
+          <div class="flex items-center gap-2">
+            <input type="number"
+                   x-model="importeEfectivoMixto"
+                   inputmode="decimal"
+                   placeholder="0.00"
+                   step="0.01"
+                   min="0"
+                   class="flex-1 border border-gray-200 rounded-2xl px-4 py-3 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-300 text-right tabular-nums">
+            <span class="font-bold text-gray-400">€</span>
+          </div>
+        </div>
+
+        <!-- Input tarjeta -->
+        <div>
+          <label class="text-xs text-gray-400 font-medium block mb-2">📟 Parte en tarjeta</label>
+          <div class="flex items-center gap-2">
+            <input type="number"
+                   x-model="importeTarjetaMixto"
+                   inputmode="decimal"
+                   placeholder="0.00"
+                   step="0.01"
+                   min="0"
+                   class="flex-1 border border-gray-200 rounded-2xl px-4 py-3 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-300 text-right tabular-nums">
+            <span class="font-bold text-gray-400">€</span>
+          </div>
+        </div>
+
+        <!-- Validación total -->
+        <template x-if="totalMixtoCalculado > 0">
+          <div class="rounded-2xl p-3 text-center"
+               :class="mixtoValido
+                 ? 'bg-green-50 border border-green-200'
+                 : 'bg-orange-50 border border-orange-200'">
+            <template x-if="mixtoValido">
+              <span class="text-green-700 font-semibold text-sm">✓ Total correcto</span>
+            </template>
+            <template x-if="!mixtoValido">
+              <div class="text-orange-700 font-semibold text-sm">
+                <span x-show="totalMixtoCalculado < (actual?.pago?.importe || 0)">
+                  Falta
+                  <span class="font-black tabular-nums"
+                        x-text="((actual?.pago?.importe || 0) - totalMixtoCalculado).toFixed(2) + ' €'"></span>
+                </span>
+                <span x-show="totalMixtoCalculado > (actual?.pago?.importe || 0)">
+                  Exceso de
+                  <span class="font-black tabular-nums"
+                        x-text="(totalMixtoCalculado - (actual?.pago?.importe || 0)).toFixed(2) + ' €'"></span>
+                </span>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <button @click="confirmarCobro()"
+                :disabled="!mixtoValido"
+                class="w-full py-4 rounded-2xl font-bold text-lg transition active:scale-95"
+                :class="mixtoValido
+                  ? 'bg-purple-600 text-white active:bg-purple-700'
+                  : 'bg-gray-100 text-gray-300 cursor-not-allowed'">
+          Confirmar cobro mixto
+        </button>
+      </div>
+
+    </div>
   </div>
 
   <!-- ======== TOAST ======== -->
-  <div x-show="toast.visible" x-cloak class="fixed top-20 left-4 right-4 z-50 slide-up">
+  <div x-show="toast.visible" x-cloak class="fixed top-20 left-4 right-4 z-[60] slide-up">
     <div class="rounded-2xl px-5 py-4 shadow-xl text-sm font-medium text-white flex items-center gap-3"
          :class="toast.error ? 'bg-red-500' : 'bg-gray-900'">
       <span class="text-lg" x-text="toast.error ? '✗' : '✓'"></span>
@@ -449,13 +968,20 @@
   <!-- ======== JAVASCRIPT ======== -->
   <script>
     function repartidor(repartidorId) {
+      if (!repartidorId) {
+        const saved = localStorage.getItem('panchi_repartidor_id');
+        if (saved) repartidorId = parseInt(saved, 10);
+      }
       return {
         repartidorId,
         pedidos: [],
-        vista: 'lista',       // lista | pedido | resumen | no-entregar
+        vista: 'lista',       // lista | pedido | resumen
         actual: null,
         cargando: false,
         procesando: false,
+        historialAbierto: false,
+        mostrarNoEntregar: false,
+        now: new Date(),
         motivoSeleccionado: '',
         motivoLibre: '',
         motivosRapidos: [
@@ -466,10 +992,31 @@
         ],
         toast: { visible: false, msg: '', error: false },
 
+        // Hold-to-confirm
+        holdProgress: 0,
+        holdActive: false,
+        _holdTimer: null,
+
+        // Conexión
+        conexionOk: true,
+        lastFetchTime: null,
+
+        // Cobro
+        pagoConfirmado: false,
+        mostrarCobro: false,
+        metodoCobro: '',
+        importeDado: '',
+        importeEfectivoMixto: '',
+        importeTarjetaMixto: '',
+        _resumeCobro: '',
+
         get pedidosActivos() {
-          return this.pedidos.filter(p =>
-            ['asignado', 'en_camino'].includes(p.estado_reparto)
-          );
+          return this.pedidos
+            .filter(p => ['asignado', 'en_camino'].includes(p.estado_reparto))
+            .sort((a, b) =>
+              this.calculateRemainingMinutes(a.fecha_creacion) -
+              this.calculateRemainingMinutes(b.fecha_creacion)
+            );
         },
 
         get pedidosHistorial() {
@@ -482,12 +1029,57 @@
           return this.motivoLibre.trim() || this.motivoSeleccionado;
         },
 
+        // ── Cobro: computed ───────────────────────────────────────
+        get needsCobro() {
+          return this.actual?.pago?.estado !== 'pagado_online';
+        },
+
+        get canDeliver() {
+          return !this.needsCobro || this.pagoConfirmado;
+        },
+
+        get resumeCobro() {
+          return this._resumeCobro;
+        },
+
+        get cambioEfectivo() {
+          const dado = parseFloat(this.importeDado);
+          const total = this.actual?.pago?.importe || 0;
+          if (isNaN(dado) || dado <= 0) return null;
+          return parseFloat((dado - total).toFixed(2));
+        },
+
+        get totalMixtoCalculado() {
+          const ef = parseFloat(this.importeEfectivoMixto) || 0;
+          const tj = parseFloat(this.importeTarjetaMixto) || 0;
+          return parseFloat((ef + tj).toFixed(2));
+        },
+
+        get mixtoValido() {
+          const total = this.actual?.pago?.importe || 0;
+          return this.totalMixtoCalculado > 0
+            && Math.abs(this.totalMixtoCalculado - total) < 0.005;
+        },
+
+        get quickAmounts() {
+          const total = this.actual?.pago?.importe || 0;
+          const amounts = new Set();
+          [5, 10, 20, 50, 100].forEach(bill => {
+            let v = bill;
+            while (v < total) v += bill;
+            amounts.add(v);
+          });
+          return [...amounts].sort((a, b) => a - b).slice(0, 5);
+        },
+
         async init() {
           if (!this.repartidorId) return;
+          localStorage.setItem('panchi_repartidor_id', this.repartidorId);
           await this.recargar();
           setInterval(() => {
             if (this.vista === 'lista') this.recargar();
-          }, 15000);
+          }, 60000);
+          setInterval(() => { this.now = new Date(); }, 30000);
         },
 
         async recargar() {
@@ -497,12 +1089,17 @@
             const r = await fetch(`/repartidor/mis-pedidos?repartidor_id=${this.repartidorId}`);
             if (r.ok) {
               this.pedidos = await r.json();
-              // Refresh current if open
+              this.conexionOk = true;
+              this.lastFetchTime = new Date();
               if (this.actual) {
                 const updated = this.pedidos.find(p => p.reparto_id === this.actual.reparto_id);
                 if (updated) this.actual = updated;
               }
+            } else {
+              this.conexionOk = false;
             }
+          } catch {
+            this.conexionOk = false;
           } finally {
             this.cargando = false;
           }
@@ -511,6 +1108,8 @@
         abrirPedido(p) {
           this.actual = p;
           this.vista = 'pedido';
+          this.pagoConfirmado = false;
+          this._resumeCobro = '';
           window.scrollTo({ top: 0, behavior: 'smooth' });
         },
 
@@ -525,7 +1124,114 @@
           this.actual = null;
           this.motivoSeleccionado = '';
           this.motivoLibre = '';
+          this.mostrarNoEntregar = false;
+          this.pagoConfirmado = false;
+          this._resumeCobro = '';
+          this.importeDado = '';
+          this.importeEfectivoMixto = '';
+          this.importeTarjetaMixto = '';
+          this.metodoCobro = '';
+          this._stopHold();
           this.recargar();
+        },
+
+        cerrarNoEntregar() {
+          this.mostrarNoEntregar = false;
+          this.motivoSeleccionado = '';
+          this.motivoLibre = '';
+        },
+
+        // ── Cobro ─────────────────────────────────────────────────
+        cerrarCobro() {
+          this.mostrarCobro = false;
+        },
+
+        resetCobro() {
+          this.pagoConfirmado = false;
+          this._resumeCobro = '';
+          this.importeDado = '';
+          this.importeEfectivoMixto = '';
+          this.importeTarjetaMixto = '';
+          this.metodoCobro = '';
+          this.mostrarCobro = true;
+        },
+
+        confirmarCobro() {
+          const importe = this.actual?.pago?.importe || 0;
+          if (this.metodoCobro === 'efectivo') {
+            const cambio = this.cambioEfectivo;
+            if (cambio === null || cambio < 0) return;
+            this._resumeCobro = cambio === 0
+              ? `Efectivo ${importe.toFixed(2)} € (sin cambio)`
+              : `Efectivo · cambio ${cambio.toFixed(2)} €`;
+          } else if (this.metodoCobro === 'tarjeta') {
+            this._resumeCobro = `Tarjeta ${importe.toFixed(2)} €`;
+          } else if (this.metodoCobro === 'mixto') {
+            if (!this.mixtoValido) return;
+            const ef = parseFloat(this.importeEfectivoMixto).toFixed(2);
+            const tj = parseFloat(this.importeTarjetaMixto).toFixed(2);
+            this._resumeCobro = `Mixto · ${ef} € efectivo + ${tj} € tarjeta`;
+          } else {
+            return;
+          }
+          this.pagoConfirmado = true;
+          this.mostrarCobro = false;
+          this.mostrarToast('Cobro registrado ✓');
+          this._persistirCobro();
+        },
+
+        async _persistirCobro() {
+          try {
+            await fetch(`/repartidor/reparto/${this.actual.reparto_id}/registrar-cobro`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                metodo_cobro:     this.metodoCobro,
+                importe_cobrado:  this.actual?.pago?.importe || 0,
+                cambio_devuelto:  this.metodoCobro === 'efectivo' ? this.cambioEfectivo : null,
+                importe_efectivo: this.metodoCobro === 'mixto' ? parseFloat(this.importeEfectivoMixto) : null,
+                importe_tarjeta:  this.metodoCobro === 'mixto' ? parseFloat(this.importeTarjetaMixto) : null,
+              }),
+            });
+          } catch (_) {
+            // fallo silencioso — el cobro queda confirmado localmente
+          }
+        },
+
+        // ── Hold-to-confirm ──────────────────────────────────────
+        startHold() {
+          if (this.procesando || !this.canDeliver) return;
+          this.holdActive = true;
+          this.holdProgress = 0;
+          const startTime = Date.now();
+          this._holdTimer = setInterval(() => {
+            this.holdProgress = Math.min(100, ((Date.now() - startTime) / 1500) * 100);
+            if (this.holdProgress >= 100) {
+              this._stopHold();
+              this.marcarEntregado();
+            }
+          }, 30);
+        },
+
+        _stopHold() {
+          if (this._holdTimer) {
+            clearInterval(this._holdTimer);
+            this._holdTimer = null;
+          }
+          this.holdActive = false;
+          this.holdProgress = 0;
+        },
+
+        // ── Helpers de navegación ────────────────────────────────
+        mapsUrl(direccion) {
+          return 'https://www.google.com/maps/dir/?api=1&destination='
+            + encodeURIComponent((direccion || '') + ', Tarancón, España');
+        },
+
+        // ── Acciones API ─────────────────────────────────────────
+        async salirYNavegar() {
+          const ok = await this.marcarSalida();
+          if (ok) window.open(this.mapsUrl(this.actual?.direccion_entrega), '_blank');
         },
 
         async marcarSalida() {
@@ -536,8 +1242,10 @@
             if (r.ok) {
               this.actual.estado_reparto = 'en_camino';
               this.mostrarToast('¡En camino! Buena entrega 🛵');
+              return true;
             } else {
               this.mostrarToast(data.error, true);
+              return false;
             }
           } finally {
             this.procesando = false;
@@ -550,13 +1258,17 @@
             const r = await fetch(`/repartidor/reparto/${this.actual.reparto_id}/entregar`, { method: 'POST' });
             const data = await r.json();
             if (r.ok) {
+              // Actualizar estado local de inmediato, sin esperar recarga
+              this.actual = {
+                ...this.actual,
+                estado_reparto: 'entregado',
+                hora_entrega_real: new Date().toISOString(),
+              };
+              this.vista = 'resumen';
+              window.scrollTo({ top: 0 });
               this.mostrarToast('Pedido entregado ✓');
-              await this.recargar();
-              // Ir a resumen después de un momento
-              setTimeout(() => {
-                const updated = this.pedidos.find(p => p.reparto_id === this.actual?.reparto_id);
-                if (updated) { this.actual = updated; this.vista = 'resumen'; }
-              }, 800);
+              // Recargar en segundo plano para sincronizar timestamps reales del servidor
+              this.recargar();
             } else {
               this.mostrarToast(data.error, true);
             }
@@ -577,9 +1289,10 @@
             const data = await r.json();
             if (r.ok) {
               this.mostrarToast('Registrado. El supervisor lo verá.');
+              this.mostrarNoEntregar = false;
               await this.recargar();
               const updated = this.pedidos.find(p => p.reparto_id === this.actual?.reparto_id);
-              if (updated) { this.actual = updated; }
+              if (updated) this.actual = updated;
               this.motivoSeleccionado = '';
               this.motivoLibre = '';
               this.vista = 'resumen';
@@ -609,33 +1322,52 @@
           }
         },
 
-        mostrarToast(msg, error = false) {
-          this.toast = { visible: true, msg, error };
-          setTimeout(() => { this.toast.visible = false; }, 3000);
+        // ── Helpers de rendimiento ───────────────────────────────
+        minutesTaken(p) {
+          if (!p?.fecha_creacion || !p?.hora_entrega_real) return null;
+          return Math.round((new Date(p.hora_entrega_real) - new Date(p.fecha_creacion)) / 60000);
+        },
+
+        wasOnTime(p) {
+          const min = this.minutesTaken(p);
+          if (min === null) return null;
+          return min <= 20;
+        },
+
+        // ── Helpers de tiempo ────────────────────────────────────
+        calculateRemainingMinutes(fechaCreacion) {
+          if (!fechaCreacion) return 99;
+          const promised = new Date(new Date(fechaCreacion).getTime() + 20 * 60 * 1000);
+          return Math.round((promised - this.now) / 60000);
+        },
+
+        priorityColor(minutes) {
+          if (minutes > 8)  return 'bg-green-100 text-green-700';
+          if (minutes >= 3) return 'bg-yellow-100 text-yellow-800';
+          if (minutes >= 0) return 'bg-orange-100 text-orange-700';
+          return 'bg-red-100 text-red-700';
+        },
+
+        formatRemaining(minutes) {
+          if (minutes > 0) return minutes + ' min';
+          if (minutes === 0) return '0 min';
+          return '+' + Math.abs(minutes);
+        },
+
+        formatPromisedTime(fechaCreacion) {
+          if (!fechaCreacion) return '--:--';
+          const t = new Date(new Date(fechaCreacion).getTime() + 20 * 60 * 1000);
+          return t.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         },
 
         formatHora(ts) {
-          if (!ts) return '';
+          if (!ts) return '—';
           return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         },
 
-        labelEstado(estado) {
-          const m = {
-            asignado: 'Asignado',
-            en_camino: 'En camino',
-            entregado: 'Entregado',
-            no_entregado: 'No entregado',
-          };
-          return m[estado] || estado;
-        },
-
-        badgeRepartoClass(estado) {
-          return {
-            asignado:     'bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full font-medium',
-            en_camino:    'bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-medium',
-            entregado:    'bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium',
-            no_entregado: 'bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full font-medium',
-          }[estado] || 'bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-medium';
+        mostrarToast(msg, error = false) {
+          this.toast = { visible: true, msg, error };
+          setTimeout(() => { this.toast.visible = false; }, 3000);
         },
 
         badgePagoClass(estado) {
@@ -654,6 +1386,14 @@
           }[estado] || 'bg-gray-50 border border-gray-200 text-gray-800';
         },
       };
+    }
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/repartidor/sw.js', { scope: '/repartidor' })
+          .catch(err => console.warn('SW registration failed:', err));
+      });
     }
   </script>
 </body>

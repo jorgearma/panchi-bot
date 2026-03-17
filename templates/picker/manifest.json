@@ -1,0 +1,29 @@
+{
+  "name": "Panchi — Picking",
+  "short_name": "Picking",
+  "description": "Interfaz de picking para preparación de pedidos",
+  "start_url": "/picker{% if picker_id %}?id={{ picker_id }}{% endif %}",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#111827",
+  "background_color": "#f3f4f6",
+  "icons": [
+    {
+      "src": "/static/picker/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/picker/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/picker/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

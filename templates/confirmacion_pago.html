@@ -60,8 +60,36 @@
 
   <div class="action-bar">
     <button class="btn btn-back" onclick="handleBack()">← Volver</button>
-    <button class="btn btn-confirm" id="confirmarPedido">Confirmar pago</button>
+    <div class="pay-options">
+      <button class="btn btn-confirm" id="pagarOnline">💳 Pagar online</button>
+      <button class="btn btn-cash"    id="pagarEfectivo">💵 Pagar en casa</button>
+    </div>
   </div>
+
+  <style>
+    .pay-options {
+      display: flex;
+      gap: 0.5rem;
+      flex: 1;
+    }
+    .pay-options .btn {
+      flex: 1;
+    }
+    .btn-cash {
+      background: #4caf50;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-cash:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
 
   <script>
     // --- Quitar una unidad ---
@@ -95,7 +123,6 @@
 
     // --- Volver al menú (siempre resetea el estado antes de navegar) ---
     async function handleBack() {
-      // Sync sessionStorage with the current DOM state (user may have removed/reduced items)
       const updatedQty = {};
       document.querySelectorAll('#productos li').forEach(li => {
         const nombre = li.querySelector('.order-item-name').textContent.trim();
@@ -116,14 +143,10 @@
       window.location.href = '/menu/{{ token }}';
     }
 
-    // --- Confirmar y pagar ---
-    document.getElementById('confirmarPedido').addEventListener('click', async () => {
+    // --- Construir el objeto de pedido desde el DOM ---
+    function buildOrder() {
       const items = document.querySelectorAll('#productos li');
-
-      if (items.length === 0) {
-        alert('No hay productos en el pedido. Añade algo antes de confirmar.');
-        return;
-      }
+      if (items.length === 0) return null;
 
       const productos = Array.from(items).map(li => ({
         codigo:   li.getAttribute('data-codigo'),
@@ -132,25 +155,35 @@
         precio:   parseFloat(li.querySelector('.order-item-price').textContent.replace('€', '').trim()),
       }));
 
-      const totalActual = parseFloat(
-        document.getElementById('order-total-val').textContent.replace('€', '').trim()
-      );
-
-      const order = {
+      return {
         name:      '{{ name }}',
         direccion: '{{ direccion }}',
         userID:    '{{ userID }}',
         numero:    '{{ numero }}',
         token:     '{{ token }}',
         productos,
-        total: totalActual
+        total: parseFloat(document.getElementById('order-total-val').textContent.replace('€', '').trim()),
       };
+    }
+
+    // --- Enviar el pedido al endpoint indicado ---
+    async function submitOrder(endpoint) {
+      const order = buildOrder();
+      if (!order) {
+        alert('No hay productos en el pedido. Añade algo antes de confirmar.');
+        return;
+      }
+
+      const btnOnline   = document.getElementById('pagarOnline');
+      const btnEfectivo = document.getElementById('pagarEfectivo');
+      btnOnline.disabled   = true;
+      btnEfectivo.disabled = true;
 
       try {
-        const response = await fetch('{{ public_url }}/api/agregar_pedido', {
+        const response = await fetch('{{ public_url }}' + endpoint, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify(order)
+          body:    JSON.stringify(order),
         });
         const result = await response.json();
         if (result.redirect_url) {
@@ -162,7 +195,17 @@
       } catch (err) {
         console.error('Error de conexión:', err);
         alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+        btnOnline.disabled   = false;
+        btnEfectivo.disabled = false;
       }
+    }
+
+    document.getElementById('pagarOnline').addEventListener('click', () => {
+      submitOrder('/api/agregar_pedido');
+    });
+
+    document.getElementById('pagarEfectivo').addEventListener('click', () => {
+      submitOrder('/api/agregar_pedido_efectivo');
     });
   </script>
 </body>

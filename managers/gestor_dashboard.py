@@ -1,6 +1,5 @@
 import logging
-import random
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func
@@ -18,30 +17,48 @@ from states import (
 logger = logging.getLogger(__name__)
 
 
+def _iso(dt) -> str | None:
+    """Serializes a UTC datetime to ISO 8601 with 'Z' suffix.
+    Without 'Z', browsers interpret the string as local time instead of UTC,
+    causing a 1-hour (or 2-hour in summer) offset in all time calculations.
+    """
+    return dt.isoformat() + 'Z' if dt else None
+
+
 # Tarancón coordinates (center)
 _TARANCON_LAT = 40.0041
 _TARANCON_LNG = -2.9980
 
 _COLORES_ESTADO = {
-    EstadoPedido.PAGADO.value: "#10b981",
-    EstadoPedido.EN_PREPARACION.value: "#3b82f6",
-    EstadoPedido.PREPARADO.value: "#6366f1",
-    EstadoPedido.EN_REPARTO.value: "#f97316",
+    EstadoPedido.PAGADO.value:           "#10b981",
+    EstadoPedido.CONTRA_REEMBOLSO.value: "#8b5cf6",
+    EstadoPedido.EN_PREPARACION.value:   "#3b82f6",
+    EstadoPedido.PREPARADO.value:        "#6366f1",
+    EstadoPedido.EN_REPARTO.value:       "#f97316",
 }
 
 # Minutes before an order in a state is flagged as delayed
 _UMBRALES_RETRASO = {
-    EstadoPedido.PAGADO.value: (10, "warning", "pagado sin iniciar picking"),
-    EstadoPedido.EN_PREPARACION.value: (30, "warning", "en preparación"),
-    EstadoPedido.PREPARADO.value: (15, "error", "preparado sin repartidor"),
-    EstadoPedido.EN_REPARTO.value: (60, "error", "en reparto"),
+    EstadoPedido.PAGADO.value:           (10, "warning", "pagado sin iniciar picking"),
+    EstadoPedido.CONTRA_REEMBOLSO.value: (10, "warning", "contra reembolso sin iniciar picking"),
+    EstadoPedido.EN_PREPARACION.value:   (30, "warning", "en preparación"),
+    EstadoPedido.PREPARADO.value:        (15, "error",   "preparado sin repartidor"),
+    EstadoPedido.EN_REPARTO.value:       (60, "error",   "en reparto"),
 }
 
+# Estados que deben aparecer en el panel operativo
 _ESTADOS_OPERATIVOS = [
     EstadoPedido.PAGADO.value,
+    EstadoPedido.CONTRA_REEMBOLSO.value,
     EstadoPedido.EN_PREPARACION.value,
     EstadoPedido.PREPARADO.value,
     EstadoPedido.EN_REPARTO.value,
+]
+
+# Estados que necesitan que se les asigne picking (listos para preparar)
+_ESTADOS_LISTOS_PARA_PICKING = [
+    EstadoPedido.PAGADO.value,
+    EstadoPedido.CONTRA_REEMBOLSO.value,
 ]
 
 
@@ -160,7 +177,9 @@ class GestorDashboard:
                         f"{p.picking.empleado.Nombre} {p.picking.empleado.Apellido}"
                         if p.picking.empleado else None
                     ),
-                    "iniciado_en": p.picking.iniciado_en.isoformat() if p.picking.iniciado_en else None,
+                    "asignado_en": _iso(p.picking.created_at),
+                    "iniciado_en": _iso(p.picking.iniciado_en),
+                    "completado_en": _iso(p.picking.completado_en),
                 }
 
             reparto_data = None
@@ -172,7 +191,12 @@ class GestorDashboard:
                         f"{p.reparto.repartidor.Nombre} {p.reparto.repartidor.Apellido}"
                         if p.reparto.repartidor else None
                     ),
-                    "hora_salida": p.reparto.hora_salida.isoformat() if p.reparto.hora_salida else None,
+                    "repartidor_telefono": (
+                        p.reparto.repartidor.Telefono if p.reparto.repartidor else None
+                    ),
+                    "asignado_en": _iso(p.reparto.created_at),
+                    "hora_salida": _iso(p.reparto.hora_salida),
+                    "hora_estimada_entrega": _iso(p.reparto.hora_estimada_entrega),
                 }
 
             umbral_info = _UMBRALES_RETRASO.get(p.Estado)
@@ -184,10 +208,21 @@ class GestorDashboard:
                 "cliente_telefono": p.TelefonoEntrega,
                 "direccion_entrega": p.DireccionEntrega,
                 "estado": p.Estado,
+                "forma_pago": p.forma_pago or "online",
                 "total": float(p.Total) if p.Total else 0.0,
-                "fecha_creacion": p.FechaCreacion.isoformat() if p.FechaCreacion else None,
+                "fecha_creacion": _iso(p.FechaCreacion),
                 "minutos_activo": minutos,
                 "minutos_en_estado": minutos_en_estado,
+                "items": [
+                    {
+                        "detalle_id": d.DetalleID,
+                        "nombre": d.NombreProducto or (d.producto.Nombre if d.producto else "—"),
+                        "cantidad": d.Cantidad,
+                        "precio_unitario": float(d.PrecioUnitario) if d.PrecioUnitario else 0.0,
+                        "subtotal": float(d.Subtotal) if d.Subtotal else 0.0,
+                    }
+                    for d in p.detalles
+                ],
                 "picking": picking_data,
                 "reparto": reparto_data,
                 "es_alerta": es_alerta,
@@ -199,10 +234,10 @@ class GestorDashboard:
         s = self.session
         resultado = []
 
-        # Orders paid but not yet assigned to a picker
+        # Orders ready for picking (pagado online o contra reembolso) sin picker asignado aún
         pickings_existentes_ids = [pk.pedido_id for pk in s.query(PickingPedido.pedido_id).all()]
         pagados_sin_picking = s.query(Pedido).filter(
-            Pedido.Estado == EstadoPedido.PAGADO.value,
+            Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
             ~Pedido.PedidoID.in_(pickings_existentes_ids) if pickings_existentes_ids else True,
         ).all()
 
@@ -228,7 +263,7 @@ class GestorDashboard:
                 "items_total": len(items),
                 "items_pendientes": len(items),
                 "items_completados": 0,
-                "fecha_creacion": p.FechaCreacion.isoformat() if p.FechaCreacion else None,
+                "fecha_creacion": _iso(p.FechaCreacion),
             })
 
         # Active pickings
@@ -281,8 +316,8 @@ class GestorDashboard:
                 "items_total": len(items_data),
                 "items_pendientes": pendientes,
                 "items_completados": completados,
-                "iniciado_en": pk.iniciado_en.isoformat() if pk.iniciado_en else None,
-                "fecha_creacion": pk.created_at.isoformat() if pk.created_at else None,
+                "iniciado_en": _iso(pk.iniciado_en),
+                "fecha_creacion": _iso(pk.created_at),
             })
 
         return resultado
@@ -318,9 +353,9 @@ class GestorDashboard:
                     "pedido_id": r.pedido_id,
                     "estado_reparto": r.estado,
                     "direccion": r.pedido.DireccionEntrega if r.pedido else "—",
-                    "hora_salida": r.hora_salida.isoformat() if r.hora_salida else None,
+                    "hora_salida": _iso(r.hora_salida),
                     "hora_estimada_entrega": (
-                        r.hora_estimada_entrega.isoformat() if r.hora_estimada_entrega else None
+                        _iso(r.hora_estimada_entrega)
                     ),
                     "total": float(r.pedido.Total) if r.pedido and r.pedido.Total else 0.0,
                 }
@@ -344,7 +379,7 @@ class GestorDashboard:
                     "pedido_id": p.PedidoID,
                     "direccion": p.DireccionEntrega,
                     "total": float(p.Total) if p.Total else 0.0,
-                    "fecha_creacion": p.FechaCreacion.isoformat() if p.FechaCreacion else None,
+                    "fecha_creacion": _iso(p.FechaCreacion),
                 }
                 for p in preparados_sin_reparto
             ],
@@ -368,7 +403,7 @@ class GestorDashboard:
                             "pedido_id": p.PedidoID,
                             "mensaje": f"Pedido #{p.PedidoID} lleva {int(minutos)}min {desc}",
                             "minutos": int(minutos),
-                            "creada_en": ahora.isoformat(),
+                            "creada_en": _iso(ahora),
                         })
 
         # Prepared orders with no delivery driver
@@ -382,7 +417,7 @@ class GestorDashboard:
                 "nivel": "error",
                 "pedido_id": p.PedidoID,
                 "mensaje": f"Pedido #{p.PedidoID} preparado pero sin repartidor asignado",
-                "creada_en": ahora.isoformat(),
+                "creada_en": _iso(ahora),
             })
 
         # Low stock
@@ -392,7 +427,7 @@ class GestorDashboard:
                 "nivel": "info" if prod.Stock > 0 else "warning",
                 "producto_id": prod.ProductoID,
                 "mensaje": f"'{prod.Nombre}' — Stock: {prod.Stock} unidades",
-                "creada_en": ahora.isoformat(),
+                "creada_en": _iso(ahora),
             })
 
         nivel_orden = {"error": 0, "warning": 1, "info": 2}
@@ -409,7 +444,7 @@ class GestorDashboard:
         return [
             {
                 "id": e.id,
-                "timestamp": e.cambiado_en.isoformat() if e.cambiado_en else None,
+                "timestamp": _iso(e.cambiado_en),
                 "pedido_id": e.pedido_id,
                 "estado_anterior": e.estado_anterior,
                 "estado_nuevo": e.estado_nuevo,
@@ -419,34 +454,44 @@ class GestorDashboard:
         ]
 
     def mapa(self) -> dict:
-        """Returns map data. Coordinates are simulated until real geocoding is added.
-        TODO: Replace lat/lng generation with Google Maps Geocoding API using DireccionEntrega.
-        """
         pedidos = self.session.query(Pedido).filter(
             Pedido.Estado.in_(_ESTADOS_OPERATIVOS)
         ).all()
 
         puntos = []
         for p in pedidos:
-            # TODO: geocode p.DireccionEntrega via Google Maps
-            lat = _TARANCON_LAT + random.uniform(-0.015, 0.015)
-            lng = _TARANCON_LNG + random.uniform(-0.020, 0.020)
+            if p.lat_entrega is None or p.lng_entrega is None:
+                continue
             puntos.append({
                 "pedido_id": p.PedidoID,
                 "estado": p.Estado,
                 "direccion": p.DireccionEntrega,
-                "lat": round(lat, 6),
-                "lng": round(lng, 6),
-                "color": _COLORES_ESTADO.get(p.Estado, "#6b7280"),
+                "lat": p.lat_entrega,
+                "lng": p.lng_entrega,
+                "fecha_creacion": _iso(p.FechaCreacion),
                 "total": float(p.Total) if p.Total else 0.0,
-                "simulado": True,
             })
 
         return {
             "centro": {"lat": _TARANCON_LAT, "lng": _TARANCON_LNG},
             "pedidos": puntos,
-            "repartidores": [],  # TODO: add GPS tracking
+            "repartidores": [],
         }
+
+    def buscar_productos(self, q: str = '') -> list:
+        """Returns products for substitute selection in the dashboard."""
+        query = self.session.query(Producto).filter(Producto.Disponible == True)
+        if q:
+            query = query.filter(Producto.Nombre.contains(q))
+        return [
+            {
+                "id": p.ProductoID,
+                "nombre": p.Nombre,
+                "precio": float(p.Precio),
+                "stock": p.Stock,
+            }
+            for p in query.order_by(Producto.Nombre).limit(20).all()
+        ]
 
     def empleados_disponibles(self, rol: str = None) -> list:
         query = self.session.query(Empleado).filter(Empleado.activo == True)
@@ -472,7 +517,7 @@ class GestorDashboard:
             pedido = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
             if not pedido:
                 return False, "Pedido no encontrado"
-            if pedido.Estado != EstadoPedido.PAGADO.value:
+            if pedido.Estado not in _ESTADOS_LISTOS_PARA_PICKING:
                 return False, f"Estado actual '{pedido.Estado}' no permite asignar picking"
 
             empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id, activo=True).first()
@@ -656,6 +701,7 @@ class GestorDashboard:
                 )
                 items_data.append({
                     "item_id": item.id,
+                    "producto_id": item.pedido_detalle.ProductoID if item.pedido_detalle else None,
                     "nombre": nombre or "—",
                     "cantidad": item.pedido_detalle.Cantidad if item.pedido_detalle else 0,
                     "ubicacion": ubicacion,
@@ -672,8 +718,9 @@ class GestorDashboard:
                 "estado": pk.estado,
                 "direccion_entrega": pk.pedido.DireccionEntrega if pk.pedido else "—",
                 "cliente_nombre": pk.pedido.cliente.nombre if pk.pedido and pk.pedido.cliente else "—",
+                "cliente_telefono": pk.pedido.TelefonoEntrega if pk.pedido else None,
                 "total": float(pk.pedido.Total) if pk.pedido and pk.pedido.Total else 0.0,
-                "iniciado_en": pk.iniciado_en.isoformat() if pk.iniciado_en else None,
+                "iniciado_en": _iso(pk.iniciado_en),
                 "items": items_data,
                 "items_total": len(items_data),
                 "items_pendientes": pendientes,
@@ -757,9 +804,10 @@ class GestorDashboard:
                 "total": float(pedido.Total) if pedido.Total else 0.0,
                 "pago": info_pago,
                 "items": items,
-                "hora_salida": r.hora_salida.isoformat() if r.hora_salida else None,
-                "hora_estimada_entrega": r.hora_estimada_entrega.isoformat() if r.hora_estimada_entrega else None,
-                "hora_entrega_real": r.hora_entrega_real.isoformat() if r.hora_entrega_real else None,
+                "fecha_creacion": _iso(pedido.FechaCreacion),
+                "hora_salida": _iso(r.hora_salida),
+                "hora_estimada_entrega": _iso(r.hora_estimada_entrega),
+                "hora_entrega_real": _iso(r.hora_entrega_real),
                 "motivo_no_entrega": r.motivo_no_entrega,
                 "notas": r.notas,
             })
@@ -789,7 +837,7 @@ class GestorDashboard:
             logger.error("Error marcando no entregado reparto %s: %s", reparto_id, e)
             return False, "Error de base de datos", None
 
-    def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None) -> tuple:
+    def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None, producto_sustituto_id: int = None) -> tuple:
         """Updates a single picking item state."""
         ESTADOS_VALIDOS = {"encontrado", "sin_stock", "sustituido", "pendiente"}
         if estado not in ESTADOS_VALIDOS:
@@ -806,6 +854,12 @@ class GestorDashboard:
                 item.cantidad_encontrada = cantidad_encontrada
             if notas is not None:
                 item.notas = notas
+            if producto_sustituto_id is not None:
+                from models import Producto
+                prod = s.query(Producto).filter_by(ProductoID=producto_sustituto_id, Disponible=True).first()
+                if not prod:
+                    return False, "Producto sustituto no encontrado"
+                item.producto_sustituto_id = producto_sustituto_id
 
             s.commit()
             return True, "Item actualizado"
@@ -843,3 +897,121 @@ class GestorDashboard:
             s.rollback()
             logger.error("Error marcando entregado reparto %s: %s", reparto_id, e)
             return False, "Error de base de datos", None
+
+    def registrar_cobro(
+        self,
+        reparto_id: int,
+        metodo_cobro: str,
+        importe_cobrado: float,
+        cambio_devuelto: float | None = None,
+        importe_efectivo: float | None = None,
+        importe_tarjeta: float | None = None,
+    ) -> tuple:
+        """Persists the payment collection made by the delivery driver."""
+        METODOS_VALIDOS = {'efectivo', 'tarjeta', 'mixto'}
+        if metodo_cobro not in METODOS_VALIDOS:
+            return False, f"Método inválido. Válidos: {', '.join(METODOS_VALIDOS)}"
+
+        s = self.session
+        try:
+            reparto = s.query(Reparto).filter_by(id=reparto_id).first()
+            if not reparto:
+                return False, "Reparto no encontrado"
+
+            reparto.metodo_cobro     = metodo_cobro
+            reparto.importe_cobrado  = importe_cobrado
+            reparto.cambio_devuelto  = cambio_devuelto
+            reparto.importe_efectivo = importe_efectivo
+            reparto.importe_tarjeta  = importe_tarjeta
+            s.commit()
+            return True, "Cobro registrado"
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error registrando cobro reparto %s: %s", reparto_id, e)
+            return False, "Error de base de datos"
+
+    def cierre_caja_repartidor(self, repartidor_id: int, fecha: date | None = None) -> dict:
+        """Returns cash-closing summary for a repartidor on a given day (default: today UTC)."""
+        if fecha is None:
+            fecha = datetime.utcnow().date()
+
+        dia_inicio = datetime.combine(fecha, datetime.min.time())
+        dia_fin    = dia_inicio + timedelta(days=1)
+
+        s = self.session
+        repartos = (
+            s.query(Reparto)
+            .filter(
+                Reparto.repartidor_id == repartidor_id,
+                Reparto.estado == EstadoReparto.ENTREGADO.value,
+                Reparto.hora_entrega_real >= dia_inicio,
+                Reparto.hora_entrega_real < dia_fin,
+            )
+            .order_by(Reparto.hora_entrega_real)
+            .all()
+        )
+
+        online_list, efectivo_list, tarjeta_list, mixto_list, sin_registro = [], [], [], [], []
+
+        for r in repartos:
+            pedido = r.pedido
+            if not pedido:
+                continue
+            if r.metodo_cobro == 'efectivo':
+                efectivo_list.append(r)
+            elif r.metodo_cobro == 'tarjeta':
+                tarjeta_list.append(r)
+            elif r.metodo_cobro == 'mixto':
+                mixto_list.append(r)
+            else:
+                # Sin cobro registrado — inferir del pedido
+                pago_ok = next((p for p in pedido.pagos if p.estado == 'completado'), None)
+                if pago_ok or getattr(pedido, 'forma_pago', 'online') == 'online':
+                    online_list.append(r)
+                else:
+                    sin_registro.append(r)
+
+        # Efectivo total a entregar al local = efectivo puro + parte efectivo de mixto
+        total_efectivo = round(
+            sum(float(r.importe_cobrado or 0) for r in efectivo_list)
+            + sum(float(r.importe_efectivo or 0) for r in mixto_list),
+            2,
+        )
+        total_tarjeta = round(
+            sum(float(r.importe_cobrado or 0) for r in tarjeta_list)
+            + sum(float(r.importe_tarjeta or 0) for r in mixto_list),
+            2,
+        )
+
+        def _detalle(r):
+            pedido = r.pedido
+            return {
+                "reparto_id":    r.id,
+                "pedido_id":     pedido.PedidoID if pedido else None,
+                "cliente":       pedido.cliente.nombre if pedido and pedido.cliente else "—",
+                "hora_entrega":  _iso(r.hora_entrega_real),
+                "metodo_cobro":  r.metodo_cobro,
+                "importe":       float(pedido.Total) if pedido and pedido.Total else 0.0,
+                "importe_cobrado":  float(r.importe_cobrado or 0),
+                "cambio_devuelto":  float(r.cambio_devuelto or 0),
+                "importe_efectivo": float(r.importe_efectivo or 0),
+                "importe_tarjeta":  float(r.importe_tarjeta or 0),
+            }
+
+        return {
+            "fecha":          fecha.isoformat(),
+            "repartidor_id":  repartidor_id,
+            "total_pedidos":  len(repartos),
+            "online":         {"count": len(online_list),   "total": 0.0},
+            "efectivo":       {"count": len(efectivo_list), "total": round(sum(float(r.importe_cobrado or 0) for r in efectivo_list), 2)},
+            "tarjeta":        {"count": len(tarjeta_list),  "total": round(sum(float(r.importe_cobrado or 0) for r in tarjeta_list), 2)},
+            "mixto":          {
+                "count":    len(mixto_list),
+                "efectivo": round(sum(float(r.importe_efectivo or 0) for r in mixto_list), 2),
+                "tarjeta":  round(sum(float(r.importe_tarjeta  or 0) for r in mixto_list), 2),
+            },
+            "sin_registro":   {"count": len(sin_registro)},
+            "total_efectivo_a_entregar": total_efectivo,
+            "total_tarjeta_registrado":  total_tarjeta,
+            "detalle": [_detalle(r) for r in repartos],
+        }

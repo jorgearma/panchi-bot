@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 from services import gestor_pedidos, gestor_productos, get_monei, cache
 from states import EstadoPedido
 from controllers.pedido import confirmar_carrito
-from controllers.pago import iniciar_pago
+from controllers.pago import iniciar_pago, iniciar_pago_efectivo
 
 blueprint_api = Blueprint('api', __name__)
 
@@ -98,6 +98,37 @@ def cambiar_estado_a_enlace():
 
     gestor_pedidos.actualizar_estado(pedido.PedidoID, EstadoPedido.ENLACE)
     return jsonify({"message": "Estado actualizado a 'enlace'"}), 200
+
+
+@blueprint_api.route('/api/agregar_pedido_efectivo', methods=['POST'])
+def agregar_pedido_efectivo():
+    data = request.json
+    logger.debug("Datos recibidos en agregar_pedido_efectivo: %s", data)
+
+    token = data.get("token", "")
+    if not token or not cache.get(token):
+        return jsonify({"error": "Sesión inválida o expirada"}), 401
+
+    id_usuario = data.get("userID")
+    if not id_usuario:
+        return jsonify({"error": "ID de usuario no proporcionado"}), 400
+
+    success, result = iniciar_pago_efectivo(
+        user_id=id_usuario,
+        productos_recibidos=data.get("productos", []),
+        nombre_cliente=data.get("name"),
+        numero_cliente=data.get("numero"),
+        direccion_cliente=data.get("direccion"),
+        cache=cache,
+        gestor_pedidos=gestor_pedidos,
+        gestor_productos=gestor_productos,
+        public_url=config.PUBLIC_URL or "",
+    )
+
+    if not success:
+        return jsonify({"error": result}), 400
+
+    return jsonify({"redirect_url": result, "message": "Pedido confirmado. Pago a la entrega."}), 200
 
 
 @blueprint_api.route('/api/volver_al_menu', methods=['POST'])
