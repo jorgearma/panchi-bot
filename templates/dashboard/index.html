@@ -11,7 +11,7 @@
   <style>
     [x-cloak] { display: none !important; }
     #mapa { height: 320px; }
-    .badge { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold; }
+    /* .badge replaced with Tailwind inline classes */
     .pulse-dot { animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
     .scroll-logs { max-height: 220px; overflow-y: auto; }
@@ -123,9 +123,9 @@
               <div class="flex items-center justify-between mb-1.5">
                 <span class="font-bold text-sm">#<span x-text="pk.pedido_id"></span></span>
                 <span x-show="pk.tipo === 'sin_asignar'"
-                      class="badge bg-yellow-200 text-yellow-800">Sin asignar</span>
+                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-200 text-yellow-800">Sin asignar</span>
                 <span x-show="pk.estado_picking"
-                      class="badge"
+                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                       :class="badgePickingClass(pk.estado_picking)"
                       x-text="pk.estado_picking"></span>
               </div>
@@ -229,7 +229,7 @@
                 <div class="bg-white rounded border border-orange-100 p-2 mb-1">
                   <div class="flex items-center justify-between mb-0.5">
                     <span class="font-bold">#<span x-text="r.pedido_id"></span></span>
-                    <span class="badge"
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                           :class="badgeRepartoClass(r.estado_reparto)"
                           x-text="r.estado_reparto"></span>
                   </div>
@@ -310,16 +310,16 @@
                     <div class="text-xs text-gray-400 truncate max-w-36" x-text="p.direccion_entrega"></div>
                   </td>
                   <td class="px-4 py-3">
-                    <span class="badge" :class="badgePedidoClass(p.estado)" x-text="estadoLabel(p.estado)"></span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" :class="badgePedidoClass(p.estado)" x-text="estadoLabel(p.estado)"></span>
                   </td>
                   <td class="px-4 py-3">
-                    <span class="badge" :class="p.forma_pago === 'efectivo' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'"
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" :class="p.forma_pago === 'efectivo' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'"
                           x-text="p.forma_pago === 'efectivo' ? '💵 Efectivo' : '💳 Online'"></span>
                   </td>
                   <td class="px-4 py-3">
                     <template x-if="p.picking">
                       <div>
-                        <span class="badge" :class="badgePickingClass(p.picking.estado)" x-text="p.picking.estado"></span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" :class="badgePickingClass(p.picking.estado)" x-text="p.picking.estado"></span>
                         <div class="text-xs text-gray-400 mt-0.5" x-text="p.picking.picker_nombre || ''"></div>
                       </div>
                     </template>
@@ -330,7 +330,7 @@
                   <td class="px-4 py-3">
                     <template x-if="p.reparto">
                       <div>
-                        <span class="badge" :class="badgeRepartoClass(p.reparto.estado)" x-text="p.reparto.estado"></span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" :class="badgeRepartoClass(p.reparto.estado)" x-text="p.reparto.estado"></span>
                         <div class="text-xs text-gray-400 mt-0.5" x-text="p.reparto.repartidor_nombre || ''"></div>
                       </div>
                     </template>
@@ -507,7 +507,7 @@
                   x-show="panel.pedido?.fecha_creacion"
                   x-text="panelMinutosTexto(panelMinutos(panel.pedido))"></span>
           </div>
-          <span class="badge" :class="badgePedidoClass(panel.pedido?.estado)"
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" :class="badgePedidoClass(panel.pedido?.estado)"
                 x-text="estadoLabel(panel.pedido?.estado)"></span>
         </div>
         <button @click="cerrarPanel()"
@@ -533,7 +533,7 @@
         </div>
         <div class="flex items-center gap-2.5">
           <span class="text-base w-5 text-center">💳</span>
-          <span class="badge"
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                 :class="panel.pedido?.forma_pago === 'efectivo' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'"
                 x-text="panel.pedido?.forma_pago === 'efectivo' ? '💵 Efectivo' : '💳 Online'"></span>
           <span class="font-semibold text-gray-800 ml-auto"
@@ -599,7 +599,7 @@
         <template x-if="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado'">
           <div>
             <div class="flex items-center justify-between mb-2">
-              <span class="badge" :class="badgePickingClass(panel.pedido?.picking?.estado)"
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" :class="badgePickingClass(panel.pedido?.picking?.estado)"
                     x-text="panel.pedido?.picking?.estado"></span>
               <span class="text-sm font-medium text-gray-700" x-text="panel.pedido?.picking?.picker_nombre || '—'"></span>
             </div>
@@ -676,7 +676,7 @@
         <template x-if="panel.pedido?.reparto?.estado === 'asignado'">
           <div>
             <div class="flex items-center justify-between mb-2">
-              <span class="badge bg-yellow-100 text-yellow-800">Asignado</span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Asignado</span>
               <div class="text-right">
                 <div class="text-sm font-medium text-gray-700" x-text="panel.pedido?.reparto?.repartidor_nombre || '—'"></div>
                 <template x-if="panel.pedido?.reparto?.repartidor_telefono">
@@ -706,7 +706,7 @@
         <template x-if="panel.pedido?.reparto?.estado === 'en_camino'">
           <div>
             <div class="flex items-center justify-between mb-2">
-              <span class="badge bg-orange-100 text-orange-800">En camino</span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-800">En camino</span>
               <div class="text-right">
                 <div class="text-sm font-medium text-gray-700" x-text="panel.pedido?.reparto?.repartidor_nombre || '—'"></div>
                 <template x-if="panel.pedido?.reparto?.repartidor_telefono">
