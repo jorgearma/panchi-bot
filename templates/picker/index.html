@@ -4,6 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Panchi — Picking</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/picker/manifest.json{% if picker_id %}?id={{ picker_id }}{% endif %}">
+  <meta name="theme-color" content="#111827">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Picking">
+  <link rel="apple-touch-icon" href="/static/picker/icon-180.png">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
@@ -135,13 +145,21 @@
     <!-- Info del pedido -->
     <div class="bg-white border-b border-gray-100 px-4 py-3">
       <div class="flex items-center justify-between">
-        <div>
+        <div class="flex-1 min-w-0 mr-3">
           <span class="text-gray-500 text-sm">Cliente</span>
-          <div class="font-semibold" x-text="ticketActual?.cliente_nombre"></div>
+          <div class="font-semibold truncate" x-text="ticketActual?.cliente_nombre"></div>
         </div>
-        <div class="text-right">
-          <span class="text-gray-500 text-sm">Total</span>
-          <div class="font-bold text-lg" x-text="ticketActual?.total.toFixed(2) + '€'"></div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <!-- Botón llamar al cliente -->
+          <a x-show="ticketActual?.cliente_telefono"
+             :href="'tel:' + ticketActual?.cliente_telefono"
+             class="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 font-semibold text-sm px-3 py-2 rounded-xl active:bg-blue-100 transition tap-xl">
+            📞 <span>Llamar</span>
+          </a>
+          <div class="text-right">
+            <span class="text-gray-500 text-sm">Total</span>
+            <div class="font-bold text-lg" x-text="ticketActual?.total.toFixed(2) + '€'"></div>
+          </div>
         </div>
       </div>
       <div class="flex items-center gap-1 text-xs text-gray-400 mt-1.5">
@@ -229,6 +247,12 @@
                   📍 <span x-text="item.ubicacion"></span>
                 </span>
               </div>
+
+              <!-- Motivo registrado (solo en items completados) -->
+              <div x-show="item.estado !== 'pendiente' && item.notas" class="mt-1.5">
+                <span class="text-xs text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-md font-medium"
+                      x-text="formatMotivo(item.notas)"></span>
+              </div>
             </div>
           </div>
 
@@ -273,7 +297,7 @@
       Marca todos los productos para finalizar
     </div>
 
-    <button @click="finalizarPicking()"
+    <button @click="abrirConfirmarFinalizar()"
             :disabled="!ticketActual?.listo_para_finalizar || finalizando"
             class="w-full py-4 rounded-2xl font-bold text-lg transition-all active:scale-95"
             :class="ticketActual?.listo_para_finalizar
@@ -289,6 +313,37 @@
         Finalizando...
       </span>
     </button>
+  </div>
+
+  <!-- ======== MODAL CONFIRMAR FINALIZAR ======== -->
+
+  <div x-show="confirmarFinalizar" x-cloak
+       @click="confirmarFinalizar = false"
+       class="fixed inset-0 bg-black/40 z-40"></div>
+
+  <div x-show="confirmarFinalizar" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-y-full opacity-0"
+       x-transition:enter-end="translate-y-0 opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="translate-y-0 opacity-100"
+       x-transition:leave-end="translate-y-full opacity-0"
+       class="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl p-6">
+    <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
+    <div class="text-lg font-bold text-gray-900 mb-1">¿Finalizar picking?</div>
+    <p class="text-sm text-gray-500 mb-6">
+      El pedido pasará a <strong>preparado</strong> y se avisará al repartidor.<br>Esta acción no se puede deshacer desde aquí.
+    </p>
+    <div class="flex gap-3">
+      <button @click="confirmarFinalizar = false"
+              class="flex-1 border border-gray-200 rounded-xl py-4 text-gray-600 font-semibold text-sm active:bg-gray-50 tap-xl">
+        Cancelar
+      </button>
+      <button @click="confirmarFinalizar = false; finalizarPicking()"
+              class="flex-[2] bg-green-500 active:bg-green-600 text-white rounded-xl py-4 font-bold text-sm tap-xl">
+        ✓ Sí, finalizar
+      </button>
+    </div>
   </div>
 
   <!-- ======== TOAST ======== -->
@@ -519,6 +574,13 @@
   <!-- ======== JAVASCRIPT ======== -->
   <script>
     function picker(pickerId) {
+      // Cuando se abre desde el icono de pantalla de inicio (sin ?id=X en la URL),
+      // recuperar el ID guardado en la visita anterior.
+      if (!pickerId) {
+        const saved = localStorage.getItem('panchi_picker_id');
+        if (saved) pickerId = parseInt(saved, 10);
+      }
+
       return {
         pickerId:     pickerId,
         pedidos:      [],
@@ -529,8 +591,9 @@
         isOnline:     true,
         offlineQueue: [],
         toast:        { visible: false, msg: '', error: false },
-        _toastTimer:  null,
-        _searchTimer: null,
+        _toastTimer:       null,
+        _searchTimer:      null,
+        confirmarFinalizar: false,
 
         // ---- Modales ----
         modalCantidad: {
@@ -579,6 +642,8 @@
 
         async init() {
           if (!this.pickerId) return;
+          // Persistir ID para futuras visitas desde pantalla de inicio
+          localStorage.setItem('panchi_picker_id', this.pickerId);
           this.isOnline = navigator.onLine;
           window.addEventListener('online',  () => { this.isOnline = true;  this._flushQueue(); });
           window.addEventListener('offline', () => { this.isOnline = false; });
@@ -715,6 +780,11 @@
           this.ticketActual.listo_para_finalizar = pendientes === 0;
         },
 
+        abrirConfirmarFinalizar() {
+          if (!this.ticketActual?.listo_para_finalizar || this.finalizando) return;
+          this.confirmarFinalizar = true;
+        },
+
         async finalizarPicking() {
           if (!this.ticketActual?.listo_para_finalizar || this.finalizando) return;
           this.finalizando = true;
@@ -815,7 +885,12 @@
             this.modalSinStock.buscando = true;
             try {
               const r = await fetch(`/picker/buscar-productos?q=${encodeURIComponent(q)}`);
-              if (r.ok) this.modalSinStock.resultados = await r.json();
+              if (r.ok) {
+                const data = await r.json();
+                this.modalSinStock.resultados = data.filter(
+                  p => p.id !== this.modalSinStock.item?.producto_id
+                );
+              }
             } catch (_) {}
             finally { this.modalSinStock.buscando = false; }
           }, 300);
@@ -839,11 +914,30 @@
           this._toastTimer = setTimeout(() => { this.toast.visible = false; }, 3000);
         },
 
+        formatMotivo(notas) {
+          const labels = {
+            'sin_stock':    'Sin stock',
+            'dañado':       'Dañado',
+            'no_encuentro': 'No lo encontré',
+          };
+          return labels[notas] || notas;
+        },
+
         formatHora(ts) {
           if (!ts) return '';
           return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         },
       };
+    }
+  </script>
+  <!-- ======== SERVICE WORKER ======== -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('/picker/sw.js', { scope: '/picker' })
+          .catch(err => console.warn('SW no registrado:', err));
+      });
     }
   </script>
 </body>
