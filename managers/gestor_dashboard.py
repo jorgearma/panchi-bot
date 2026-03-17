@@ -701,6 +701,7 @@ class GestorDashboard:
                 )
                 items_data.append({
                     "item_id": item.id,
+                    "producto_id": item.pedido_detalle.ProductoID if item.pedido_detalle else None,
                     "nombre": nombre or "—",
                     "cantidad": item.pedido_detalle.Cantidad if item.pedido_detalle else 0,
                     "ubicacion": ubicacion,
@@ -717,6 +718,7 @@ class GestorDashboard:
                 "estado": pk.estado,
                 "direccion_entrega": pk.pedido.DireccionEntrega if pk.pedido else "—",
                 "cliente_nombre": pk.pedido.cliente.nombre if pk.pedido and pk.pedido.cliente else "—",
+                "cliente_telefono": pk.pedido.TelefonoEntrega if pk.pedido else None,
                 "total": float(pk.pedido.Total) if pk.pedido and pk.pedido.Total else 0.0,
                 "iniciado_en": _iso(pk.iniciado_en),
                 "items": items_data,
