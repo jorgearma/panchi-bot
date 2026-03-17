@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Panchi-Bot is a WhatsApp-based food ordering system for a restaurant in Tarancón, Spain. Customers interact via WhatsApp (Twilio), follow a tokenized link to select products from a web menu, and pay via Monei. The bot handles registration, order creation, and payment confirmation.
 
+## Setup
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python -m spacy download es_core_news_sm
+cp .env.example .env  # fill in real values
+```
+
 ## Running the App
 
 ```bash
@@ -17,13 +27,16 @@ The Flask dev server starts on port 5000. For WhatsApp webhooks to work, a tunne
 
 ## Running Tests
 
+**Requires local Redis.**
+
 ```bash
 pytest                                                              # all tests
 pytest tests/test_api_pedido.py                                    # single file
 pytest tests/test_states.py::TestEstadoPedidoEnum::test_valores_string  # single test
+pytest -v --tb=short                                               # verbose with short tracebacks
 ```
 
-`tests/conftest.py` provides shared `app` and `client` fixtures (Flask test client) for integration tests.
+`tests/conftest.py` provides shared `app` and `client` fixtures (Flask test client) for integration tests. The suite currently has 110 passing tests. Tests require a live Redis instance; for CI without Redis, mock `managers.gestor_redis.redis.Redis` with `fakeredis`.
 
 ## Architecture
 
@@ -47,9 +60,13 @@ states      →  (enums + pure functions — no internal imports)
 `main.py` exposes `create_app(config: dict = None) -> Flask`. It calls `load_dotenv()` first, then builds the Flask app inside the factory. All singleton instances live in `services/__init__.py` — never instantiated elsewhere.
 
 ```
-blueprints/webhook.py   POST /webhook (Twilio), POST /webhook/monei (Monei)
-blueprints/menu.py      GET /menu/<token>, /confirmacion_pago, /pago_confirmado
-blueprints/api.py       POST /api/confirmacion, /api/agregar_pedido, /api/productos, etc.
+blueprints/webhook.py    POST /webhook (Twilio), POST /webhook/monei (Monei)
+blueprints/menu.py       GET /menu/<token>, /confirmacion_pago, /pago_confirmado
+blueprints/api.py        POST /api/confirmacion, /api/agregar_pedido, /api/productos, etc.
+blueprints/dashboard.py  GET/POST /dashboard/* — order management, metrics, picking/reparto assignment
+blueprints/picker.py     GET/POST /picker/* — picker interface (item state updates, finalize picking)
+blueprints/repartidor.py GET/POST /repartidor/* — delivery driver interface (salida, entregar, no-entregar)
+blueprints/productos.py  /productos_admin — product administration
 ```
 
 ### Singleton Initialization
@@ -87,7 +104,9 @@ Name validation uses spaCy (`es_core_news_sm`, loaded lazily). Address validatio
 4. `POST /api/agregar_pedido` → `controllers/pago.py::iniciar_pago` re-validates prices against DB, creates Monei payment, transitions to `confirmando-pago`
 5. Monei calls `POST /webhook/monei` → HMAC signature verified → order set to `pagado`, WhatsApp confirmation sent
 
-Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → `pagado`
+Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` | `contra-reembolso` → `pagado` → `en-preparacion` → `preparado` → `en-reparto` → `entregado`
+
+Terminal states: `entregado`, `reembolsado`. Any non-terminal state can go to `cancelado`.
 
 ### Key Modules
 
@@ -95,10 +114,10 @@ Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → 
 |------|------|
 | `main.py` | `create_app()` factory — Flask setup, Sentry, blueprints, logging config |
 | `services/__init__.py` | Singletons: `gestor_pedidos`, `gestor_usuarios`, `gestor_productos`, `cache`, `get_monei()` |
-| `states.py` | `EstadoPedido` + `EstadoRegistro` str-enums, transition maps, `transicion_valida_*` pure functions |
+| `states.py` | `EstadoPedido`, `EstadoRegistro`, `EstadoPicking`, `EstadoReparto` str-enums, transition maps, `transicion_valida_*` pure functions |
 | `config.py` | All env var constants — reads `os.environ` (populated by `main.py` before any import) |
 | `database.py` | SQLAlchemy engine + session factory |
-| `models.py` | ORM models: `Usuario`, `Producto`, `Pedido`, `PedidoDetalle`, `Empleado` |
+| `models.py` | ORM models: `Usuario`, `Categoria`, `Producto`, `Pedido`, `PedidoDetalle`, `Pago`, `HistorialEstadoPedido`, `Rol`, `Empleado`, `PickingPedido`, `PickingItem`, `Reparto`, `Incidencia` |
 | `schemas/twilio.py` | Pydantic V2 validators for Twilio webhook data (`WebhookRequest`, `PedidoInput`) |
 | `schemas/usuario.py` | `UsuarioDatos` — Pydantic model for user data in Redis tokens (includes `token` field) |
 | `managers/gestor_redis.py` | `RedisManager` infrastructure adapter + `redismanager` singleton |
@@ -119,18 +138,51 @@ Order states: `Pendiente` → `enlace` → `enlace2` → `confirmando-pago` → 
 
 ### State Machine Conventions
 
-All valid transitions are declared in `states.py` — never hardcode them elsewhere. `GestorPedidos.actualizar_estado` and `EstadoUsuario.actualizar_estado` call the pure validators and block invalid moves with `logger.error`. Both enums inherit from `str` so they serialize to JSON and compare equal to raw strings from Redis/DB without conversion.
+All valid transitions are declared in `states.py` — never hardcode them elsewhere. `GestorPedidos.actualizar_estado` and `EstadoUsuario.actualizar_estado` call the pure validators and block invalid moves with `logger.error`. All four enums (`EstadoPedido`, `EstadoRegistro`, `EstadoPicking`, `EstadoReparto`) inherit from `str` so they serialize to JSON and compare equal to raw strings from Redis/DB without conversion.
 
 ### Security — Monei Webhook
 
 `blueprints/webhook.py::webhook_monei` verifies the `MONEI-SIGNATURE` header with `hmac.compare_digest` before processing any payload. Returns 401 if the signature is missing or invalid. `MONEI_WEBHOOK_SECRET` must be set in the environment.
 
+### What NOT to Touch During Refactor
+
+These are well-designed and must not be changed unless a `REFACTOR_PLAN.md` phase explicitly requires it:
+- **`states.py`** — enum values are stored in the DB; changing them breaks production data
+- **`controllers/pago.py`** — price re-validation against DB is the anti-fraud protection; keep it
+- **`controllers/pedido.py::confirmar_carrito`** — state transition and cart logic are correct
+- **`managers/gestor_pedidos.py::actualizar_estado`** — transition validation + rollback pattern
+- **`managers/estado_usuario.py`** — `transicion_valida_registro` guard before every write
+- **`blueprints/webhook.py::webhook_monei`** — HMAC verification with `hmac.compare_digest`
+- **`database.py` session system** (`get_db` + `teardown_appcontext`) — clean Flask session handling
+- **Lazy singleton init** (Twilio, spaCy, Monei) — deliberate pattern, do not eagerly initialize
+
 ### Known Technical Debt
 
-See `REFACTOR_PLAN.md` for the full phase-by-phase refactor plan (security fixes → data bugs → tech debt → test coverage). The active branch is `refactorizar-estructura`.
+Active refactor branch: `refactorizar-estructura`. Full task list with file/line references in `REFACTOR_PLAN.md`. Commit convention: `fix(sec):`, `fix(data):`, `fix(ui):`, `refactor:`, `chore:`, `test:` — one issue per atomic commit.
 
-Key items not to overlook:
-- Legacy route `/webhoo/monei` (typo) in `blueprints/webhook.py` — remove once Monei dashboard points to `/webhook/monei`.
+**Pending bugs (Fase 2):**
+- `services/__init__.py`: `cache = redismanager.client` (should be `redismanager`) — callers get the raw Redis client instead of the wrapper with retry/logging
+- `token_service.py`: `generar_token_temporal` should raise `ValueError`, not return a tuple
+- `controllers/registro.py`: `confirmar_direccion` should return `False` not `1`
+- Missing `templates/error.html` (referenced but absent → 500 in prod)
+- Guard None in `blueprints/menu.py:57` (depends on error.html)
+
+**Fixed in recent commits:**
+- ~~`blueprints/webhook.py`: cast `order_id` to int before use~~ ✓
+- ~~Guard `ENLACE2` state in `controllers/pago.py`~~ ✓
+
+**Pending quality (Fase 3):**
+- `config.py` bypassed by most modules — consolidate env var reads
+- `limpiar_texto` duplicated — canonicalize in `text_utils.py`
+- Static wrapper classes `Mensajeria`, `ValidacionNombre`, `ValidacionDireccion` in `registro.py` — remove
+- `templates/map_orders.html`, `piking.html`, `cocina/comandas.py` — dead code to remove
+- `requirements.txt` incomplete (missing: shapely, spacy, sentry-sdk, tenacity, Monei)
+- `database.py`: `Base = declarative_base()` declared twice (lines 54, 76)
+- `modelos/validator_twilio.py` uses Pydantic V1 `@validator` (deprecated)
+
+**Legacy route:** `/webhoo/monei` (typo) still in `blueprints/webhook.py` — remove once Monei dashboard points to `/webhook/monei`.
+
+**Other notes:**
 - `cocina/` directory is intentionally empty (placeholder for future kitchen-display features).
 - `scripts/generar_calles.py` regenerates `calles_tarancon.json` from source data — run manually when the street list needs updating.
 
@@ -155,5 +207,9 @@ GOOGLE_MAPS_API_KEY
 PUBLIC_URL          # ngrok or production URL used for menu/payment links
 SQL_SERVER, SQL_DATABASE, SQL_UID, SQL_PWD
 REDIS_HOST, REDIS_PORT, REDIS_DB
-OPENAI_API_KEY      # not yet actively used
+SENTRY_DSN          # optional; Sentry skipped when TESTING=True
+ALLOWED_ORIGIN      # CORS allowed origin; defaults to * if unset
+INTERNAL_API_TOKEN      # protects /api/cambiar_estado_a_enlace; generate with secrets.token_hex(32)
+CUSTOMER_SUPPORT_PHONE  # shown to clients when their order is in preparation or delivery
+OPENAI_API_KEY          # not yet actively used
 ```

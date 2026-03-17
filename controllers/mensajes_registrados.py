@@ -1,4 +1,5 @@
 import logging
+import config
 from services.twilio_service import enviar_mensaje_whatsapp
 from services import gestor_pedidos, gestor_usuarios
 from utils.menu_opciones import mostrar_menu
@@ -9,9 +10,6 @@ from states import EstadoPedido
 
 logger = logging.getLogger(__name__)
 
-
-# # esta clase maneja el flujo de mensajes 
-# # y la logica de los registrados
 
 class ManejadorMensajesRegistrados:
 
@@ -35,6 +33,65 @@ class ManejadorMensajesRegistrados:
             numero_cliente
         )
         return "Mensaje enviado", 200
+
+    @staticmethod
+    def _responder_pedido_en_curso(pedido_activo, numero_cliente):
+        """
+        Informa al cliente sobre su pedido activo en preparación o reparto.
+        Bloquea cualquier intento de iniciar un nuevo pedido.
+        """
+        estado = pedido_activo.Estado
+        soporte = config.CUSTOMER_SUPPORT_PHONE or "atención al cliente"
+
+        if estado == EstadoPedido.PAGADO:
+            mensaje = (
+                "Hemos recibido tu pedido y el pago se ha confirmado. ✅\n"
+                "En breve nuestro equipo comenzará a prepararlo.\n"
+                f"Si necesitas ayuda, contacta con atención al cliente: {soporte}."
+            )
+
+        elif estado == EstadoPedido.CONTRA_REEMBOLSO:
+            mensaje = (
+                "Tu pedido ha sido confirmado. ✅\n"
+                "El pago se realizará a la entrega.\n"
+                "En breve nuestro equipo comenzará a prepararlo.\n"
+                f"Si necesitas ayuda, contacta con atención al cliente: {soporte}."
+            )
+
+        elif estado in (EstadoPedido.EN_PREPARACION, EstadoPedido.PREPARADO):
+            mensaje = (
+                "Tu pedido ya está en preparación. 🛒\n"
+                "Ahora mismo nuestro equipo lo está preparando en almacén.\n"
+                f"Si necesitas ayuda, contacta con atención al cliente: {soporte}."
+            )
+
+        elif estado == EstadoPedido.EN_REPARTO:
+            reparto = pedido_activo.reparto
+            repartidor = reparto.repartidor if reparto else None
+            if repartidor:
+                nombre = f"{repartidor.Nombre} {repartidor.Apellido}".strip()
+                telefono = repartidor.Telefono or "no disponible"
+                mensaje = (
+                    "Tu pedido está en camino. 🚚\n"
+                    f"Repartidor asignado: {nombre}.\n"
+                    f"Teléfono del repartidor: {telefono}.\n"
+                    f"Si necesitas ayuda adicional, contacta con atención al cliente: {soporte}."
+                )
+            else:
+                mensaje = (
+                    "Tu pedido está en camino. 🚚\n"
+                    f"Si necesitas ayuda, contacta con atención al cliente: {soporte}."
+                )
+
+        else:
+            logger.warning(
+                "_responder_pedido_en_curso llamado con estado inesperado: %s (pedido %s)",
+                estado, pedido_activo.PedidoID,
+            )
+            return None
+
+        enviar_mensaje_whatsapp(mensaje, numero_cliente)
+        return "mensaje enviado", 200
 
     @staticmethod
     def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
@@ -74,49 +131,37 @@ class ManejadorMensajesRegistrados:
         estado_del_pedido = pedido_activo.Estado
         logger.debug("Estado del pedido: %s", estado_del_pedido)
         id_pedido_activo = pedido_activo.PedidoID
-        #desarrollar logica de caundo el usuario esta en el  paso de  elegir restaurante  estado "pendiente"
+
         if estado_del_pedido == EstadoPedido.PENDIENTE:
             mensaje = procesar_pedido(mensaje_cliente, numero_cliente, id_pedido_activo, usuario_datos)
             logger.debug("Mensaje procesado para usuario: %s", numero_cliente)
             enviar_mensaje_whatsapp(mensaje, numero_cliente)
-            return " mensaje enviado",200
+            return " mensaje enviado", 200
 
-
-
-
-        #desarrollar logica cuando el estado del pedido es "enlace" o enlace2
         if estado_del_pedido == EstadoPedido.ENLACE or estado_del_pedido == EstadoPedido.ENLACE2:
             enlace = pedido_activo.enlace
             mensaje = f"Puede continuar con su pedido en el *enlace* proporcionado \n\n▪*Enlace* unico 👇 \n\n🔗{(enlace)}"
             enviar_mensaje_whatsapp(mensaje, numero_cliente)
-            return  " mensaje enviado",200
+            return " mensaje enviado", 200
 
-        #desarrollar logica de cuando el usuario este la pagina de pago
         if estado_del_pedido == EstadoPedido.CONFIRMANDO_PAGO:
             enlace_pago = pedido_activo.enlace
-            enviar_mensaje_whatsapp(f"🔗 {enlace_pago}\n ✅ Pago seguro  con *MONEI*" , numero_cliente)
-            return  " mensaje enviado",200
+            enviar_mensaje_whatsapp(f"🔗 {enlace_pago}\n ✅ Pago seguro  con *MONEI*", numero_cliente)
+            return " mensaje enviado", 200
 
-        # Pedido ya pagado o en proceso operativo (almacén/reparto) — el cliente puede hacer uno nuevo
+        # Pedido activo (pagado, confirmado o en proceso) — bloquear nuevo pedido e informar al cliente
         if estado_del_pedido in (
             EstadoPedido.PAGADO,
+            EstadoPedido.CONTRA_REEMBOLSO,
             EstadoPedido.EN_PREPARACION,
             EstadoPedido.PREPARADO,
             EstadoPedido.EN_REPARTO,
         ):
             logger.info(
-                "Pedido %s en estado '%s' — iniciando nuevo pedido para %s.",
-                id_pedido_activo, estado_del_pedido, numero_cliente
+                "Pedido %s en estado '%s' — bloqueando nuevo pedido para %s.",
+                id_pedido_activo, estado_del_pedido, numero_cliente,
             )
-            return ManejadorMensajesRegistrados._iniciar_pedido_y_enviar_menu(numero_cliente, usuario_datos)
+            return ManejadorMensajesRegistrados._responder_pedido_en_curso(pedido_activo, numero_cliente)
 
-        else:
-            enviar_mensaje_whatsapp("Lo sentimos, no pudimos procesar su mensaje. Por favor, intente más tarde.", numero_cliente)
-            return " mensaje enviado", 200
-
-
-
-
-
-
-
+        enviar_mensaje_whatsapp("Lo sentimos, no pudimos procesar su mensaje. Por favor, intente más tarde.", numero_cliente)
+        return " mensaje enviado", 200

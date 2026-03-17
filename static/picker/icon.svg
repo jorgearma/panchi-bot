@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#111827"/>
+  <!-- Caja / paquete -->
+  <rect x="32" y="74" width="128" height="94" rx="10" fill="none" stroke="white" stroke-width="11"/>
+  <!-- Tapa de la caja -->
+  <rect x="22" y="48" width="148" height="36" rx="10" fill="none" stroke="white" stroke-width="11"/>
+  <!-- División central de la tapa -->
+  <line x1="96" y1="48" x2="96" y2="84" stroke="white" stroke-width="11" stroke-linecap="round"/>
+  <!-- Checkmark verde -->
+  <path d="M58 118 L80 142 L134 88" stroke="#4ade80" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
