@@ -21,6 +21,11 @@
       to   { opacity:1; transform:translateY(0); }
     }
     button { -webkit-tap-highlight-color: transparent; }
+    @keyframes glowRed {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); }
+      50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0.25); }
+    }
+    .card-nuevo { animation: glowRed 1.4s ease-in-out infinite; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen"
@@ -51,6 +56,10 @@
       <span x-show="vista === 'lista' && pedidosActivos.length > 0"
             class="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-medium"
             x-text="pedidosActivos.length + ' pendiente' + (pedidosActivos.length > 1 ? 's' : '')"></span>
+      <span x-show="vista === 'lista' && pedidosNuevosEnCalle.length > 0"
+            x-cloak
+            class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold animate-pulse"
+            x-text="pedidosNuevosEnCalle.length + ' nuevo' + (pedidosNuevosEnCalle.length > 1 ? 's' : '')"></span>
       <button @click="recargar()"
               class="text-gray-400 active:text-white transition text-xl leading-none"
               :class="cargando ? 'animate-spin' : ''">↻</button>
@@ -92,48 +101,124 @@
 
     <div x-show="pedidosActivos.length > 0 || pedidosHistorial.length > 0" class="p-4 space-y-4">
 
-      <!-- Pendientes (ordenados por urgencia) -->
-      <template x-if="pedidosActivos.length > 0">
+      <!-- ── SECCIÓN: EN REPARTO (azul) ── -->
+      <template x-if="pedidosEnReparto.length > 0">
         <div>
-          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
-            Pendientes de entrega
-          </h3>
-          <div class="space-y-3">
-            <template x-for="p in pedidosActivos" :key="p.reparto_id">
+          <div class="flex items-center gap-2 mb-2 px-1">
+            <h3 class="text-xs font-semibold text-blue-600 uppercase tracking-wide">En reparto</h3>
+            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-1.5 py-0.5 rounded-full"
+                  x-text="pedidosEnReparto.length"></span>
+          </div>
+          <div class="space-y-2">
+            <template x-for="p in pedidosEnReparto" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
-                   class="bg-white rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform cursor-pointer slide-up">
-                <div class="p-4">
-                  <div class="flex items-center justify-between mb-3">
-                    <div>
-                      <span class="text-xl font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
-                      <div class="text-gray-500 text-sm mt-0.5" x-text="p.cliente_nombre"></div>
+                   class="rounded-xl shadow-sm border border-blue-200 border-l-4 border-l-blue-500 bg-blue-50 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
+                <div class="px-4 py-3 flex items-center gap-3">
+                  <!-- Info principal -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-base font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="text-xs px-1.5 py-0.5 rounded font-semibold"
+                            :class="badgePagoClass(p.pago.estado)"
+                            x-text="p.pago.label"></span>
+                      <span x-show="p.pago.estado !== 'pagado_online'"
+                            class="text-sm font-bold text-gray-700"
+                            x-text="p.pago.importe.toFixed(2) + '€'"></span>
                     </div>
-                    <div class="flex flex-col items-center rounded-2xl px-4 py-2 min-w-[72px]"
-                         :class="priorityColor(calculateRemainingMinutes(p.fecha_creacion))">
-                      <span class="text-xs font-medium opacity-70 mb-0.5">
-                        Entrega <span x-text="formatPromisedTime(p.fecha_creacion)"></span>
-                      </span>
-                      <span class="text-3xl font-black leading-none tracking-tight"
-                            x-text="formatRemaining(calculateRemainingMinutes(p.fecha_creacion))"></span>
-                    </div>
+                    <div class="text-sm text-gray-600 truncate" x-text="p.cliente_nombre"></div>
+                    <div class="text-xs text-gray-400 truncate mt-0.5">📍 <span x-text="p.direccion_entrega"></span></div>
                   </div>
-                  <div class="flex items-start gap-1.5 text-sm text-gray-600 mb-2">
-                    <span class="mt-0.5">📍</span>
-                    <span x-text="p.direccion_entrega"></span>
+                  <!-- Timer -->
+                  <div class="flex flex-col items-center rounded-xl px-3 py-2 min-w-[64px] flex-shrink-0"
+                       :class="priorityColor(calculateRemainingMinutes(p.fecha_creacion))">
+                    <span class="text-xs font-medium opacity-70 leading-none mb-0.5"
+                          x-text="formatPromisedTime(p.fecha_creacion)"></span>
+                    <span class="text-2xl font-black leading-none"
+                          x-text="formatRemaining(calculateRemainingMinutes(p.fecha_creacion))"></span>
                   </div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-xs px-2 py-1 rounded-lg font-semibold"
-                          :class="badgePagoClass(p.pago.estado)"
-                          x-text="p.pago.label"></span>
-                    <span x-show="p.pago.estado !== 'pagado_online'"
-                          class="text-sm font-bold text-gray-800"
-                          x-text="p.pago.importe.toFixed(2) + '€'"></span>
-                  </div>
+                  <span class="text-blue-400 flex-shrink-0">›</span>
                 </div>
-                <div class="border-t border-gray-100 px-4 py-2.5 flex justify-between items-center">
-                  <span class="text-xs text-gray-400"
-                        x-text="p.items.length + ' producto' + (p.items.length !== 1 ? 's' : '')"></span>
-                  <span class="text-orange-500 text-sm font-medium">Ver pedido →</span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- ── SECCIÓN: NUEVOS EN CALLE (rojo) ── -->
+      <template x-if="pedidosNuevosEnCalle.length > 0">
+        <div>
+          <div class="flex items-center gap-2 mb-2 px-1">
+            <h3 class="text-xs font-semibold text-red-600 uppercase tracking-wide">Recibidos mientras repartes</h3>
+            <span class="bg-red-100 text-red-700 text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse"
+                  x-text="pedidosNuevosEnCalle.length"></span>
+          </div>
+          <div class="space-y-2">
+            <template x-for="p in pedidosNuevosEnCalle" :key="p.reparto_id">
+              <div @click="abrirPedido(p)"
+                   class="card-nuevo rounded-xl shadow-sm border border-red-300 border-l-4 border-l-red-500 bg-red-50 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
+                <div class="px-4 py-3 flex items-center gap-3">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-base font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="text-xs px-1.5 py-0.5 rounded font-semibold"
+                            :class="badgePagoClass(p.pago.estado)"
+                            x-text="p.pago.label"></span>
+                      <span x-show="p.pago.estado !== 'pagado_online'"
+                            class="text-sm font-bold text-gray-700"
+                            x-text="p.pago.importe.toFixed(2) + '€'"></span>
+                    </div>
+                    <div class="text-sm text-gray-600 truncate" x-text="p.cliente_nombre"></div>
+                    <div class="text-xs text-gray-400 truncate mt-0.5">📍 <span x-text="p.direccion_entrega"></span></div>
+                  </div>
+                  <div class="flex flex-col items-center rounded-xl px-3 py-2 min-w-[64px] flex-shrink-0"
+                       :class="priorityColor(calculateRemainingMinutes(p.fecha_creacion))">
+                    <span class="text-xs font-medium opacity-70 leading-none mb-0.5"
+                          x-text="formatPromisedTime(p.fecha_creacion)"></span>
+                    <span class="text-2xl font-black leading-none"
+                          x-text="formatRemaining(calculateRemainingMinutes(p.fecha_creacion))"></span>
+                  </div>
+                  <span class="text-red-400 flex-shrink-0">›</span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- ── SECCIÓN: EN TIENDA (amarillo) ── -->
+      <template x-if="pedidosEnTiendaConocidos.length > 0">
+        <div>
+          <div class="flex items-center gap-2 mb-2 px-1">
+            <h3 class="text-xs font-semibold text-amber-600 uppercase tracking-wide">En tienda</h3>
+            <span class="bg-amber-100 text-amber-800 text-xs font-bold px-1.5 py-0.5 rounded-full"
+                  x-text="pedidosEnTiendaConocidos.length"></span>
+          </div>
+          <div class="space-y-2">
+            <template x-for="p in pedidosEnTiendaConocidos" :key="p.reparto_id">
+              <div @click="abrirPedido(p)"
+                   class="rounded-xl shadow-sm border border-amber-200 border-l-4 border-l-amber-500 bg-amber-50 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
+                <div class="px-4 py-3 flex items-center gap-3">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-base font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="text-xs px-1.5 py-0.5 rounded font-semibold"
+                            :class="badgePagoClass(p.pago.estado)"
+                            x-text="p.pago.label"></span>
+                      <span x-show="p.pago.estado !== 'pagado_online'"
+                            class="text-sm font-bold text-gray-700"
+                            x-text="p.pago.importe.toFixed(2) + '€'"></span>
+                    </div>
+                    <div class="text-sm text-gray-600 truncate" x-text="p.cliente_nombre"></div>
+                    <div class="text-xs text-gray-400 truncate mt-0.5">📍 <span x-text="p.direccion_entrega"></span></div>
+                  </div>
+                  <div class="flex flex-col items-center rounded-xl px-3 py-2 min-w-[64px] flex-shrink-0"
+                       :class="priorityColor(calculateRemainingMinutes(p.fecha_creacion))">
+                    <span class="text-xs font-medium opacity-70 leading-none mb-0.5"
+                          x-text="formatPromisedTime(p.fecha_creacion)"></span>
+                    <span class="text-2xl font-black leading-none"
+                          x-text="formatRemaining(calculateRemainingMinutes(p.fecha_creacion))"></span>
+                  </div>
+                  <span class="text-amber-400 flex-shrink-0">›</span>
                 </div>
               </div>
             </template>
@@ -956,14 +1041,6 @@
     </div>
   </div>
 
-  <!-- ======== TOAST ======== -->
-  <div x-show="toast.visible" x-cloak class="fixed top-20 left-4 right-4 z-[60] slide-up">
-    <div class="rounded-2xl px-5 py-4 shadow-xl text-sm font-medium text-white flex items-center gap-3"
-         :class="toast.error ? 'bg-red-500' : 'bg-gray-900'">
-      <span class="text-lg" x-text="toast.error ? '✗' : '✓'"></span>
-      <span x-text="toast.msg"></span>
-    </div>
-  </div>
 
   <!-- ======== JAVASCRIPT ======== -->
   <script>
@@ -997,6 +1074,9 @@
         holdActive: false,
         _holdTimer: null,
 
+        // Pedidos asignado que ya eran conocidos antes de salir a repartir
+        pedidosConocidos: new Set(),
+
         // Conexión
         conexionOk: true,
         lastFetchTime: null,
@@ -1013,6 +1093,36 @@
         get pedidosActivos() {
           return this.pedidos
             .filter(p => ['asignado', 'en_camino'].includes(p.estado_reparto))
+            .sort((a, b) =>
+              this.calculateRemainingMinutes(a.fecha_creacion) -
+              this.calculateRemainingMinutes(b.fecha_creacion)
+            );
+        },
+
+        get pedidosEnReparto() {
+          return this.pedidos
+            .filter(p => p.estado_reparto === 'en_camino')
+            .sort((a, b) =>
+              this.calculateRemainingMinutes(a.fecha_creacion) -
+              this.calculateRemainingMinutes(b.fecha_creacion)
+            );
+        },
+
+        // Pedidos que el repartidor ya sabía antes de salir (amber)
+        get pedidosEnTiendaConocidos() {
+          return this.pedidos
+            .filter(p => p.estado_reparto === 'asignado' && this.pedidosConocidos.has(p.reparto_id))
+            .sort((a, b) =>
+              this.calculateRemainingMinutes(a.fecha_creacion) -
+              this.calculateRemainingMinutes(b.fecha_creacion)
+            );
+        },
+
+        // Pedidos asignados mientras está en calle repartiendo (rojo)
+        get pedidosNuevosEnCalle() {
+          if (!this.pedidos.some(p => p.estado_reparto === 'en_camino')) return [];
+          return this.pedidos
+            .filter(p => p.estado_reparto === 'asignado' && !this.pedidosConocidos.has(p.reparto_id))
             .sort((a, b) =>
               this.calculateRemainingMinutes(a.fecha_creacion) -
               this.calculateRemainingMinutes(b.fecha_creacion)
@@ -1091,6 +1201,12 @@
               this.pedidos = await r.json();
               this.conexionOk = true;
               this.lastFetchTime = new Date();
+              // Si no hay nadie en camino, todos los asignados son "conocidos"
+              if (!this.pedidos.some(p => p.estado_reparto === 'en_camino')) {
+                this.pedidos
+                  .filter(p => p.estado_reparto === 'asignado')
+                  .forEach(p => this.pedidosConocidos.add(p.reparto_id));
+              }
               if (this.actual) {
                 const updated = this.pedidos.find(p => p.reparto_id === this.actual.reparto_id);
                 if (updated) this.actual = updated;
@@ -1230,8 +1346,7 @@
 
         // ── Acciones API ─────────────────────────────────────────
         async salirYNavegar() {
-          const ok = await this.marcarSalida();
-          if (ok) window.open(this.mapsUrl(this.actual?.direccion_entrega), '_blank');
+          await this.marcarSalida();
         },
 
         async marcarSalida() {
@@ -1258,17 +1373,8 @@
             const r = await fetch(`/repartidor/reparto/${this.actual.reparto_id}/entregar`, { method: 'POST' });
             const data = await r.json();
             if (r.ok) {
-              // Actualizar estado local de inmediato, sin esperar recarga
-              this.actual = {
-                ...this.actual,
-                estado_reparto: 'entregado',
-                hora_entrega_real: new Date().toISOString(),
-              };
-              this.vista = 'resumen';
-              window.scrollTo({ top: 0 });
               this.mostrarToast('Pedido entregado ✓');
-              // Recargar en segundo plano para sincronizar timestamps reales del servidor
-              this.recargar();
+              this.volverALista();
             } else {
               this.mostrarToast(data.error, true);
             }
@@ -1366,8 +1472,7 @@
         },
 
         mostrarToast(msg, error = false) {
-          this.toast = { visible: true, msg, error };
-          setTimeout(() => { this.toast.visible = false; }, 3000);
+          // toasts desactivados
         },
 
         badgePagoClass(estado) {
