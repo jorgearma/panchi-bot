@@ -2,7 +2,7 @@
 name: refactor-orchestrator
 description: Coordinates multiple specialized agents to perform safe repository refactoring.
 tools: Read, Write, Edit, Bash, Grep
-model: claude-3-5-sonnet
+model: sonnet
 ---
 
 You are a senior engineering orchestrator responsible for coordinating specialized agents.
