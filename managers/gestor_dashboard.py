@@ -1347,6 +1347,11 @@ class GestorDashboard:
             if not reparto:
                 return False, "Reparto no encontrado", None
 
+            # Guard: para contra reembolso (efectivo/tarjeta), el cobro debe estar registrado
+            forma_pago = reparto.pedido.forma_pago if reparto.pedido else None
+            if forma_pago in ('efectivo', 'tarjeta') and reparto.metodo_cobro is None:
+                return False, "Debes registrar el cobro antes de marcar como entregado", None
+
             reparto.estado = EstadoReparto.ENTREGADO.value
             reparto.hora_entrega_real = datetime.utcnow()
 
