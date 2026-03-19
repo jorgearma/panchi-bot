@@ -93,7 +93,15 @@
       <template x-for="p in pedidos" :key="p.picking_id">
         <div @click="abrirTicket(p)"
              class="bg-white rounded-2xl shadow-sm border active:scale-95 transition-transform cursor-pointer slide-up"
-             :class="p.listo_para_finalizar ? 'border-green-300' : 'border-gray-100'">
+             :class="p.picking_completo ? 'border-green-400' : 'border-gray-100'">
+
+          <!-- Banner de picking completo -->
+          <div x-show="p.picking_completo"
+               class="bg-green-500 text-white text-sm font-bold px-4 py-2.5 rounded-t-2xl flex items-center gap-2">
+            <span>✅</span>
+            <span>Picking completo — listo para repartir</span>
+          </div>
+
           <div class="p-4">
             <div class="flex items-start justify-between mb-2">
               <div>
@@ -103,11 +111,11 @@
               <div class="text-right">
                 <span class="text-lg font-semibold text-gray-800" x-text="p.total.toFixed(2) + '€'"></span>
                 <div class="mt-1">
-                  <span x-show="p.listo_para_finalizar"
+                  <span x-show="p.picking_completo"
                         class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
                     ✓ Listo
                   </span>
-                  <span x-show="!p.listo_para_finalizar"
+                  <span x-show="!p.picking_completo"
                         class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium"
                         x-text="p.items_pendientes + ' pendientes'"></span>
                 </div>
@@ -119,13 +127,13 @@
             </div>
             <div>
               <div class="flex justify-between text-xs text-gray-400 mb-1">
-                <span x-text="(p.items_total - p.items_pendientes) + ' de ' + p.items_total + ' productos'"></span>
-                <span x-text="Math.round((p.items_total - p.items_pendientes) / p.items_total * 100) + '%'"></span>
+                <span x-text="(p.items_listos ?? (p.items_total - p.items_pendientes)) + ' de ' + p.items_total + ' productos'"></span>
+                <span x-text="Math.round((p.items_listos ?? (p.items_total - p.items_pendientes)) / p.items_total * 100) + '%'"></span>
               </div>
               <div class="w-full bg-gray-100 rounded-full h-2">
                 <div class="h-2 rounded-full transition-all"
-                     :class="p.listo_para_finalizar ? 'bg-green-500' : 'bg-blue-500'"
-                     :style="'width:' + (p.items_total > 0 ? ((p.items_total - p.items_pendientes) / p.items_total * 100) : 0) + '%'"></div>
+                     :class="p.picking_completo ? 'bg-green-500' : 'bg-blue-500'"
+                     :style="'width:' + (p.items_total > 0 ? ((p.items_listos ?? (p.items_total - p.items_pendientes)) / p.items_total * 100) : 0) + '%'"></div>
               </div>
             </div>
           </div>
@@ -775,9 +783,21 @@
 
         _recalcularPendientes() {
           if (!this.ticketActual) return;
+          const total     = this.ticketActual.items_total || this.ticketActual.items.length;
           const pendientes = this.ticketActual.items.filter(i => i.estado === 'pendiente').length;
+          const listos    = total - pendientes;
           this.ticketActual.items_pendientes     = pendientes;
+          this.ticketActual.items_listos         = listos;
+          this.ticketActual.picking_completo     = pendientes === 0 && total > 0;
           this.ticketActual.listo_para_finalizar = pendientes === 0;
+          // Sync back to the pedidos list so the list card updates too
+          const enLista = this.pedidos.find(p => p.picking_id === this.ticketActual.picking_id);
+          if (enLista) {
+            enLista.items_pendientes     = pendientes;
+            enLista.items_listos         = listos;
+            enLista.picking_completo     = pendientes === 0 && total > 0;
+            enLista.listo_para_finalizar = pendientes === 0;
+          }
         },
 
         abrirConfirmarFinalizar() {
