@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 blueprint_auth = Blueprint('auth', __name__)
 
+_ROLES_VALIDOS = {'manager', 'picker', 'repartidor', 'admin'}
+
 
 def _get_empleado_by_email(email: str):
     return get_db().query(Empleado).filter_by(Email=email, activo=True).first()
@@ -48,6 +50,7 @@ def login():
         return render_template('auth/login.html', error='Credenciales incorrectas'), 401
 
     rol_nombre = empleado.rol.nombre if empleado.rol else None
+    session.clear()  # Prevent stale session data from persisting into authenticated session
     session['empleado_id'] = empleado.EmpleadoID
     session['empleado_nombre'] = empleado.Nombre
     session['rol'] = rol_nombre
