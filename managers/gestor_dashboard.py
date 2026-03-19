@@ -1175,6 +1175,7 @@ class GestorDashboard:
                 })
 
             pendientes = sum(1 for i in items_data if i["estado"] == "pendiente")
+            listos = len(items_data) - pendientes
             resultado.append({
                 "picking_id": pk.id,
                 "pedido_id": pk.pedido_id,
@@ -1186,7 +1187,9 @@ class GestorDashboard:
                 "iniciado_en": _iso(pk.iniciado_en),
                 "items": items_data,
                 "items_total": len(items_data),
+                "items_listos": listos,
                 "items_pendientes": pendientes,
+                "picking_completo": pendientes == 0 and len(items_data) > 0,
                 "listo_para_finalizar": pendientes == 0,
             })
         return resultado
