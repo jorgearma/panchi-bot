@@ -2,8 +2,9 @@ import logging
 import os
 from datetime import date
 
-from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory
+from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, session
 
+from blueprints.auth import requiere_rol
 from services import gestor_dashboard
 from services.twilio_service import enviar_mensaje_whatsapp
 
@@ -22,8 +23,9 @@ blueprint_repartidor = Blueprint("repartidor", __name__)
 
 
 @blueprint_repartidor.route("/repartidor", strict_slashes=False)
+@requiere_rol('repartidor', 'manager', 'admin')
 def index():
-    repartidor_id = request.args.get("id", type=int)
+    repartidor_id = session.get('empleado_id')
     return render_template("repartidor/index.html", repartidor_id=repartidor_id)
 
 
@@ -42,8 +44,9 @@ def apple_touch_icon():
 
 
 @blueprint_repartidor.route("/repartidor/manifest.json")
+@requiere_rol('repartidor', 'manager', 'admin')
 def manifest():
-    repartidor_id = request.args.get("id", type=int)
+    repartidor_id = session.get('empleado_id')
     return Response(
         render_template("repartidor/manifest.json", repartidor_id=repartidor_id),
         mimetype="application/manifest+json",
@@ -62,10 +65,9 @@ def service_worker():
 
 
 @blueprint_repartidor.route("/repartidor/mis-pedidos")
+@requiere_rol('repartidor', 'manager', 'admin')
 def mis_pedidos():
-    repartidor_id = request.args.get("repartidor_id", type=int)
-    if not repartidor_id:
-        return jsonify({"error": "Falta repartidor_id"}), 400
+    repartidor_id = session.get('empleado_id')
     try:
         return jsonify(gestor_dashboard.repartos_del_repartidor(repartidor_id))
     except Exception as e:
@@ -74,6 +76,7 @@ def mis_pedidos():
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/salida", methods=["POST"])
+@requiere_rol('repartidor', 'manager', 'admin')
 def marcar_salida(reparto_id: int):
     ok, msg, telefono = gestor_dashboard.marcar_salida_reparto(reparto_id)
     if not ok:
@@ -83,6 +86,7 @@ def marcar_salida(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/entregar", methods=["POST"])
+@requiere_rol('repartidor', 'manager', 'admin')
 def marcar_entregado(reparto_id: int):
     ok, msg, telefono = gestor_dashboard.marcar_entregado(reparto_id)
     if not ok:
@@ -92,6 +96,7 @@ def marcar_entregado(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/no-entregar", methods=["POST"])
+@requiere_rol('repartidor', 'manager', 'admin')
 def marcar_no_entregado(reparto_id: int):
     data = request.get_json(silent=True) or {}
     motivo = data.get("motivo", "").strip()
@@ -105,6 +110,7 @@ def marcar_no_entregado(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/registrar-cobro", methods=["POST"])
+@requiere_rol('repartidor', 'manager', 'admin')
 def registrar_cobro(reparto_id: int):
     data = request.get_json(silent=True) or {}
     metodo = data.get("metodo_cobro", "").strip()
@@ -126,19 +132,17 @@ def registrar_cobro(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/cierre")
+@requiere_rol('repartidor', 'manager', 'admin')
 def cierre():
-    repartidor_id = request.args.get("id", type=int)
-    if not repartidor_id:
-        return "Falta el parámetro id", 400
+    repartidor_id = session.get('empleado_id')
     return render_template("repartidor/cierre.html", repartidor_id=repartidor_id)
 
 
 @blueprint_repartidor.route("/repartidor/cierre/datos")
+@requiere_rol('repartidor', 'manager', 'admin')
 def cierre_datos():
-    repartidor_id = request.args.get("repartidor_id", type=int)
+    repartidor_id = session.get('empleado_id')
     fecha_str = request.args.get("fecha")
-    if not repartidor_id:
-        return jsonify({"error": "Falta repartidor_id"}), 400
     try:
         fecha = date.fromisoformat(fecha_str) if fecha_str else None
         return jsonify(gestor_dashboard.cierre_caja_repartidor(repartidor_id, fecha))
