@@ -114,6 +114,16 @@
           </button>
           <div x-show="mapaVisible" x-cloak>
             <div id="mapa-rep"></div>
+            <!-- Fallback: aviso cuando algún pedido activo no tiene coordenadas -->
+            <template x-if="pedidosActivos.some(p => p.lat == null || p.lng == null)">
+              <div class="px-4 py-2 bg-amber-50 border-t border-amber-100 flex items-center gap-2">
+                <span class="text-amber-500 text-sm">&#9888;</span>
+                <span class="text-xs text-amber-700">
+                  Algunos pedidos no tienen coordenadas y no aparecen en el mapa.
+                  Usa la dirección de texto para navegar.
+                </span>
+              </div>
+            </template>
           </div>
         </div>
       </template>
