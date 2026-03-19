@@ -1,5 +1,5 @@
 # Diseño — Panchi-Bot: Llevar a Producción
-**Fecha:** 2026-03-19 | **Rama:** `refactorizar-estructura` | **Estado:** Aprobado
+**Fecha:** 2026-03-19 | **Rama:** `refactorizar-estructura` | **Estado:** Aprobado (v2)
 
 ---
 
@@ -13,40 +13,70 @@ Panchi-Bot es un sistema de pedidos para restaurante vía WhatsApp (Twilio). El 
 
 ---
 
-## Enfoque elegido: Por capas horizontales
+## Estado verificado del codebase (2026-03-19)
 
-Cuatro fases en orden estricto de dependencia:
-1. Cerrar bugs pendientes (base de datos fiable)
-2. Sistema de logs y métricas (visibilidad real del negocio)
-3. Pulido de todas las interfaces (experiencia sin aristas)
-4. Hardening de producción (estabilidad, resiliencia, deployment)
+Los siguientes items del REFACTOR_PLAN.md ya están resueltos en el código actual y **no requieren trabajo**:
 
-El motivo de este orden: las métricas no son fiables si los datos tienen bugs; la UX no tiene sentido pulir sobre una base inestable; el hardening requiere que todo lo anterior esté correcto.
+| Item | Estado |
+|------|--------|
+| BUG-1: cast `order_id` a int en webhook Monei | ✅ Resuelto — `webhook.py:128` |
+| BUG-2: `cache = redismanager.client` | ✅ Resuelto — `services/__init__.py:25` lee `redismanager` |
+| BUG-3: `generar_token_temporal` devuelve tupla | ✅ Resuelto — `token_service.py:18` lanza `ValueError` |
+| BUG-4: `confirmar_direccion` devuelve `1` | ✅ Resuelto — `registro.py:36` retorna `False` |
+| BUG-5: `error.html` no existe | ✅ Resuelto — `templates/error.html` existe |
+| BUG-6: `last_pedido` sin guard None | ✅ Resuelto — `menu.py` tiene el guard |
+| BUG-CRÍTICO: `nombre_usuario` vs `numero_cliente` | ✅ Resuelto — `mensajes_registrados.py:25` pasa `numero_cliente` |
+| TD-11: `requirements.txt` incompleto | ✅ Resuelto — shapely, spacy, sentry-sdk, tenacity, Monei presentes |
+| DB-1: `Base = declarative_base()` doble | ✅ Resuelto — única declaración en `database.py:27` |
+| TD-3: Clases wrapper estáticas `Mensajeria`, `ValidacionNombre`, `ValidacionDireccion` | ✅ Resuelto — no existen en el codebase actual |
+| TD-12: Múltiples `logging.basicConfig` dispersos | ✅ Resuelto — única llamada en `create_app()` (`main.py:16`) |
+| SEC-1..SEC-6: Fase de seguridad | ✅ Completada en rama anterior |
+| Fase 4 tests (110 passing) | ✅ Completada |
 
 ---
 
-## Fase 1 — Bugs Pendientes
+## Enfoque elegido: Por capas horizontales
 
-**Criterio de aceptación:** `pytest` pasa al 100% (≥110 tests) después de cada fix. Ningún bug de esta lista queda abierto antes de continuar.
+Cuatro fases en orden estricto de dependencia:
 
-### Bugs de integridad
+1. **Base fiable** — cerrar los items abiertos reales que bloquean producción
+2. **Visibilidad** — sistema de logs y métricas
+3. **Pulido** — experiencia sin aristas en todas las interfaces
+4. **Hardening** — resiliencia, configuración, autenticación de paneles, deployment
 
-| ID | Fichero | Problema | Impacto |
-|----|---------|----------|---------|
-| BUG-1 | `blueprints/webhook.py` | `order_id` no se castea a `int` antes de usarlo | Pagos confirmados por Monei no actualizan el pedido |
-| BUG-2 | `services/__init__.py:23` | `cache = redismanager.client` en lugar de `redismanager` | Callers reciben el cliente raw sin retry/logging del wrapper |
-| BUG-3 | `services/token_service.py:17` | `generar_token_temporal` devuelve tupla en error en lugar de lanzar `ValueError` | URLs rotas del tipo `.../menu/Datos de usuario inválidos.` |
-| BUG-4 | `controllers/registro.py:36` | `confirmar_direccion` devuelve `1` en lugar de `False` | Lógica de registro rota silenciosamente en casos de error |
-| BUG-5 | `templates/` | `error.html` no existe | Flask lanza 500 (TemplateNotFound) en lugar de 403 |
-| BUG-6 | `blueprints/menu.py:57` | `last_pedido` sin guard `None` | AttributeError en producción cuando el usuario no tiene pedidos |
+```
+Fase 1 (base fiable)
+    └── Fase 2 (logs/métricas)   ← requiere datos fiables
+            └── Fase 3 (pulido)  ← requiere visibilidad para validar
+                    └── Fase 4 (hardening) ← requiere todo lo anterior correcto
+```
 
-### Deuda técnica bloqueante
+Cada fase se valida con `pytest` al completo antes de continuar.
 
-| ID | Fichero | Problema |
-|----|---------|----------|
-| TD-11 | `requirements.txt` | Faltan dependencias: `shapely`, `spacy`, `sentry-sdk`, `tenacity`, `Monei` — el deploy falla al instalar |
-| LEGACY-1 | `blueprints/webhook.py` | Ruta `/webhoo/monei` (typo) sigue activa — eliminar una vez Monei dashboard apunte a `/webhook/monei` |
-| DB-1 | `database.py:54,76` | `Base = declarative_base()` declarado dos veces |
+---
+
+## Fase 1 — Base Fiable
+
+**Criterio de aceptación:** `pytest` pasa al 100% (≥110 tests) después de cada cambio. Todos los items de esta fase resueltos antes de continuar.
+
+### Items reales abiertos
+
+| ID | Fichero | Problema | Impacto en producción |
+|----|---------|----------|-----------------------|
+| AUDIT-1 | `database.py` | `AuditLog` se importa y usa en `gestor_pedidos.py` (líneas 258, 306, 413) pero no está en `conectar_bd1()` | En un deploy limpio la tabla no existe → `ProgrammingError` en la primera cancelación o modificación de item desde el dashboard |
+| LEGACY-1 | `blueprints/webhook.py:90` | Ruta `/webhoo/monei` (typo) sigue activa | Eliminar cuando el dashboard de Monei apunte a `/webhook/monei` |
+| TD-13 | `database.py:71,73` | `print()` en lugar de `logger` en `conectar_bd1()` | Logs de BD que no llegan a los ficheros de log en producción |
+
+### Nota sobre migración de datos
+
+El BUG-CRÍTICO (`TelefonoEntrega` con nombre en lugar de teléfono) ya está corregido en el código. Si el sistema fue usado con el código incorrecto, ejecutar antes de producción:
+```sql
+UPDATE p SET p.TelefonoEntrega = u.Telefono
+FROM Pedidos p
+JOIN Usuarios u ON p.UsuarioID = u.ID
+WHERE p.TelefonoEntrega = u.Nombre;
+```
+Si es un deploy desde cero (sin datos previos), este paso no aplica.
 
 ---
 
@@ -54,18 +84,18 @@ El motivo de este orden: las métricas no son fiables si los datos tienen bugs; 
 
 ### 2a — Logs estructurados
 
-Consolidar en un único `logging.basicConfig` en `create_app()`. Eliminar todos los `print()` en managers y controllers, reemplazar por `logger`. El logger emite líneas con campos: `timestamp`, `evento`, `pedido_id` (si aplica), `usuario` (si aplica), `modulo`.
+Un único `logging.basicConfig` en `create_app()` (consolidando TD-12 y TD-13 de Fase 1 como base). El logger emite líneas con campos: `timestamp`, `nivel`, `evento`, `pedido_id` (si aplica), `usuario` (si aplica), `modulo`.
 
 **Eventos mínimos a loguear:**
 - Registro nuevo completado
 - Pedido iniciado / carrito confirmado / pago iniciado / pago confirmado
-- Cambio de estado de pedido (con estado anterior y nuevo)
+- Cambio de estado de pedido (estado anterior → nuevo)
 - Error de entrega / incidencia abierta
 - Error de autenticación (firma Twilio, token interno)
 
 ### 2b — Métricas de negocio en el dashboard
 
-Nueva sección en el dashboard existente (sin servicios externos). Los datos se extraen de `HistorialEstadoPedido`, que ya guarda timestamps de cada transición.
+Nueva sección en el dashboard existente (sin servicios externos). Los datos se extraen directamente de `HistorialEstadoPedido`, que ya guarda timestamps de cada transición de estado.
 
 **Métricas a mostrar:**
 - Pedidos por hora y por día (gráfico de barras simple)
@@ -77,8 +107,8 @@ Nueva sección en el dashboard existente (sin servicios externos). Los datos se 
 
 ### 2c — Alertas en dashboard
 
-Warning visible (sin sonido, sin notificación push) cuando:
-- Un pedido lleva más de N minutos en el mismo estado (N configurable por estado)
+Warning visible (sin notificación push) cuando:
+- Un pedido lleva más de N minutos en el mismo estado (N configurable por estado en `config.py`)
 - Hay una incidencia abierta sin resolver
 
 ---
@@ -93,68 +123,68 @@ Criterio: cada flujo se puede recorrer completo con datos reales sin errores ni 
 - Revisión de ortografía y tono uniforme en todos los mensajes salientes
 
 ### 3b — Menú web
-- Página `error.html` con mensaje útil según tipo de error: token inválido, pedido ya pagado, enlace caducado
 - Flujo contra reembolso revisado end-to-end (cash y tarjeta en casa)
 - Validación de carrito vacío antes de confirmar
+- Mensajes de error en `error.html` diferenciados por tipo: token inválido, pedido ya pagado, enlace caducado
 
 ### 3c — App del Picker
 - Indicador claro de items pendientes vs items listos
 - Aviso explícito cuando el picking está completo y el pedido puede pasar a reparto
-- Estado consistente si el picker cierra la app a medias (el estado persiste en BD)
+- Estado consistente si el picker cierra la app a medias (el estado persiste en BD, no en memoria)
 
 ### 3d — App del Repartidor
-- Flujo de cobro obligatorio (cash / tarjeta / mixto) antes de poder marcar como entregado
-- Mapa con coordenadas reales: revisión de edge cases (dirección sin coordenadas, GPS no disponible)
+- Flujo de cobro (cash / tarjeta / mixto): el botón "Entregado" permanece desactivado en el frontend hasta que se complete el cobro; adicionalmente, el endpoint `marcar_entregado` añade un guard server-side: verificar que `reparto.metodo_cobro IS NOT NULL` para pedidos con `forma_pago` en efectivo o tarjeta antes de permitir la transición a `entregado`
+- Mapa con coordenadas reales: manejo explícito de edge cases (dirección sin coordenadas → fallback a texto; GPS no disponible → aviso al repartidor)
 - Flujo completo de incidencias: apertura, descripción, cierre
 
 ### 3e — Dashboard y Monitor
-- Monitor de empleados: actualización automática (polling o SSE) sin recarga manual
-- Asignación de repartidor: no permite asignar si ya hay uno asignado sin confirmación explícita
-- Cambio de estado manual: guard contra transiciones inválidas con mensaje de error claro
+- Monitor de empleados: polling cada 15 segundos (no SSE — suficiente para 50-200 pedidos/día, sin infraestructura adicional)
+- Asignación de repartidor: confirmación explícita si ya hay uno asignado
+- Cambio de estado manual: guard contra transiciones inválidas con mensaje de error claro al operador
 
 ---
 
 ## Fase 4 — Hardening de Producción
 
-### 4a — Resiliencia
-- Reintentos con backoff exponencial en llamadas a Twilio y Monei (usando `tenacity`)
-- Timeout explícito en llamadas a Google Maps y Monei (máximo 5s)
-- Si Redis no está disponible: degradación limpia (sin crash), log de alerta, funcionalidad sin estado en caché desactivada temporalmente
+### 4a — Autenticación de paneles internos (BLOQUEANTE)
 
-### 4b — Configuración
-- Validación de variables de entorno obligatorias al arrancar `create_app()`: si falta alguna, fallo inmediato con mensaje claro (no fallo silencioso en primer request)
-- `config.py` como única fuente de verdad para todas las variables (consolidar los módulos que leen `os.environ` directamente)
-- Separación dev/prod en configuración: debug off, logs a fichero en prod
+`dashboard`, `picker` y `repartidor` no tienen ningún mecanismo de autenticación. En cuanto el sistema sea accesible desde internet, cualquiera puede asignar pickers, cambiar estados o marcar entregas.
 
-### 4c — Deployment
+**Solución mínima:** login con PIN por rol, usando sesiones Flask con `werkzeug.security` para verificar el hash (ya disponible, `Empleado.password_hash` ya está en el modelo en `models.py:191`). Tres roles: `manager` (dashboard completo), `picker` (solo picker), `repartidor` (solo repartidor). El modelo `Rol` ya existe — reutilizar.
+
+**Binding sesión-empleado:** tras el login, la sesión almacena `session['empleado_id']`. Los endpoints de picker y repartidor actualmente reciben la identidad por parámetro URL (`?id=<empleado_id>`). Como parte de esta fase, el `empleado_id` se lee exclusivamente de la sesión, eliminando el parámetro `?id=` de las URLs. Esto impide que un empleado autenticado suplante a otro cambiando el parámetro.
+
+### 4b — Resiliencia
+
+- Reintentos con backoff exponencial en llamadas a Twilio y Monei (usando `tenacity`, ya en requirements)
+- Timeout explícito en llamadas a Google Maps y Monei: máximo 5 segundos
+- Redis: si falla, el sistema loguea el error y devuelve 503 con mensaje claro. **No** se implementa degradación silenciosa — Redis es estructural para rate-limit y tokens. Hacerlo opcional requeriría refactorizar los blueprints webhook y menu, lo que está fuera del scope de esta fase. La disponibilidad de Redis es un requisito de infraestructura.
+
+### 4c — Configuración
+
+- Validación de variables de entorno obligatorias en `create_app()`: si falta alguna, fallo inmediato con mensaje claro (no fallo silencioso en primer request)
+- `config.py` como única fuente de verdad — consolidar los módulos que leen `os.environ` directamente
+- Separación dev/prod: debug off, logs a fichero en prod, `SECRET_KEY` generada con `secrets.token_hex(32)`
+
+### 4d — Deployment
+
 - `gunicorn` como servidor WSGI (no el dev server de Flask)
 - `docker-compose.yml` con servicios: app + Redis + reverse proxy (nginx o caddy)
-- Ruta `/health` que verifica: conexión a BD, conexión a Redis, variables críticas presentes
+- Ruta `/health` que verifica: conexión a BD, conexión a Redis, variables críticas presentes — usada por el proxy para health checks
 
-### 4d — Observabilidad
-- Verificar que Sentry recibe errores con contexto útil (pedido_id, usuario) — ya configurado en Fase 1 de seguridad
-- Rotación de logs si se escribe a fichero (evitar llenado de disco)
-- Runbook mínimo: cómo arrancar, cómo reiniciar, cómo recuperar un pedido en estado incorrecto manualmente
+### 4e — Observabilidad
+
+- Verificar que Sentry recibe errores con contexto útil (`pedido_id`, módulo) — ya configurado en Fase de Seguridad
+- Rotación de logs si se escribe a fichero (`logging.handlers.RotatingFileHandler`)
+- Runbook mínimo: cómo arrancar, cómo reiniciar, cómo recuperar manualmente un pedido en estado incorrecto
 
 ---
 
 ## Lo que NO incluye este plan
 
 - CI/CD automatizado
-- Autenticación SSO o roles complejos
 - Rediseño visual de ninguna interfaz
 - Servicios externos de métricas (Grafana, Prometheus, Datadog)
+- Degradación silenciosa de Redis (requiere refactor arquitectónico fuera de scope)
 - Kitchen display (`cocina/` — placeholder, fuera de scope)
-
----
-
-## Orden de ejecución y dependencias
-
-```
-Fase 1 (bugs)
-    └── Fase 2 (logs/métricas)   ← requiere datos fiables
-            └── Fase 3 (pulido)  ← requiere visibilidad para validar
-                    └── Fase 4 (hardening) ← requiere todo lo anterior correcto
-```
-
-Cada fase se valida con `pytest` al completo antes de continuar a la siguiente.
+- Decisión de proveedor cloud (pendiente de decisión del usuario)
