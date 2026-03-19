@@ -32,6 +32,7 @@ def create_app(config: dict = None) -> Flask:
     if config:
         app.config.update(config)
 
+    from blueprints.auth import blueprint_auth
     from blueprints.webhook import blueprint_webhook
     from blueprints.menu import blueprint_menu
     from blueprints.api import blueprint_api
@@ -40,6 +41,7 @@ def create_app(config: dict = None) -> Flask:
     from blueprints.repartidor import blueprint_repartidor
     from blueprints.productos import blueprint_productos
 
+    app.register_blueprint(blueprint_auth)
     app.register_blueprint(blueprint_webhook)
     app.register_blueprint(blueprint_menu)
     app.register_blueprint(blueprint_api)
