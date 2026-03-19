@@ -26,6 +26,7 @@ def confirmar_direccion(numero_cliente, mensaje_cliente, data_redis):
         from services import gestor_usuarios, gestor_pedidos
         estado = data_redis
         gestor_usuarios.guardar_usuario(numero_cliente, estado["nombre"], estado["direccion"])
+        logger.info("REGISTRO_COMPLETADO usuario=%s", numero_cliente)
         menu_despues_registro = mostrar_menu()
         _enviar_mensaje_registro(numero_cliente, estado["nombre"], menu_despues_registro)
         usuario_info = gestor_usuarios.obtener_usuario_completo(numero_cliente)
