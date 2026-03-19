@@ -87,12 +87,14 @@ def actualizar_item(item_id: int):
         except (TypeError, ValueError):
             return jsonify({"error": "producto_sustituto_id inválido"}), 400
 
+    picker_id = data.get("picker_id")
     ok, msg = gestor_dashboard.actualizar_item_picking(
         item_id=item_id,
         estado=estado,
         cantidad_encontrada=data.get("cantidad_encontrada"),
         notas=data.get("notas"),
         producto_sustituto_id=producto_sustituto_id,
+        picker_id=picker_id,
     )
     if not ok:
         return jsonify({"error": msg}), 400
@@ -113,7 +115,9 @@ def buscar_productos():
 
 @blueprint_picker.route("/picker/picking/<int:picking_id>/finalizar", methods=["POST"])
 def finalizar_picking(picking_id: int):
-    ok, msg, telefono = gestor_dashboard.completar_picking(picking_id)
+    data = request.get_json(silent=True) or {}
+    picker_id = data.get("picker_id")
+    ok, msg, telefono = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
     if not ok:
         return jsonify({"error": msg}), 400
     _notificar(telefono, "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦")

@@ -119,15 +119,23 @@
         <div class="space-y-3">
           <template x-for="pk in picking" :key="'pk-'+(pk.picking_id || 'new-'+pk.pedido_id)">
             <div class="border rounded-lg p-3 text-xs fade-in"
-                 :class="pk.tipo === 'sin_asignar' ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white'">
+                 :class="{
+                   'border-yellow-300 bg-yellow-50': pk.tipo === 'sin_asignar',
+                   'border-amber-400 bg-amber-50': pk.tipo === 'sin_picker',
+                   'border-gray-200 bg-white': pk.tipo === 'activo'
+                 }">
               <div class="flex items-center justify-between mb-1.5">
                 <span class="font-bold text-sm">#<span x-text="pk.pedido_id"></span></span>
-                <span x-show="pk.tipo === 'sin_asignar'"
-                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-200 text-yellow-800">Sin asignar</span>
-                <span x-show="pk.estado_picking"
-                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
-                      :class="badgePickingClass(pk.estado_picking)"
-                      x-text="pk.estado_picking"></span>
+                <div class="flex items-center gap-1">
+                  <span x-show="pk.tipo === 'sin_asignar'"
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-200 text-yellow-800">SIN ASIGNAR</span>
+                  <span x-show="pk.tipo === 'sin_picker'"
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-200 text-amber-900">SIN PICKER</span>
+                  <span x-show="pk.estado_picking && pk.tipo === 'activo'"
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
+                        :class="badgePickingClass(pk.estado_picking)"
+                        x-text="pk.estado_picking"></span>
+                </div>
               </div>
 
               <!-- Picker asignado -->
@@ -135,11 +143,11 @@
                 👤 <span x-text="pk.empleado?.nombre"></span>
               </div>
 
-              <!-- Progress bar -->
-              <div x-show="pk.items_total > 0" class="mb-2">
+              <!-- Progress bar — shown for activo and sin_picker when items exist -->
+              <div x-show="pk.items_total > 0 && (pk.tipo === 'activo' || pk.tipo === 'sin_picker')" class="mb-2">
                 <div class="flex justify-between text-gray-500 mb-0.5">
-                  <span x-text="pk.items_completados + '/' + pk.items_total + ' items'"></span>
-                  <span x-text="pk.items_pendientes + ' pendientes'"></span>
+                  <span x-text="pk.items_completados + '/' + pk.items_total + ' items hechos'"></span>
+                  <span x-text="pk.items_pendientes + ' pend.'"></span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-1.5">
                   <div class="bg-blue-500 h-1.5 rounded-full transition-all"
@@ -149,7 +157,7 @@
 
               <!-- Items list -->
               <div class="space-y-1 mb-2 max-h-24 overflow-y-auto">
-                <template x-for="item in pk.items" :key="item.detalle_id">
+                <template x-for="item in pk.items" :key="item.detalle_id || item.item_id">
                   <div class="flex items-center gap-1.5 text-gray-600">
                     <span :class="{
                       'text-green-500': item.estado === 'encontrado',
@@ -167,17 +175,46 @@
                 </template>
               </div>
 
+              <!-- Notas / historial de reasignaciones -->
+              <template x-if="pk.notas">
+                <details class="mb-2">
+                  <summary class="cursor-pointer text-gray-400 hover:text-gray-600 text-xs select-none">Historial</summary>
+                  <pre class="mt-1 text-gray-500 text-xs whitespace-pre-wrap leading-snug" x-text="pk.notas"></pre>
+                </details>
+              </template>
+
               <!-- Actions -->
-              <div class="flex gap-1.5 mt-2">
+              <div class="flex gap-1.5 mt-2 flex-wrap">
+                <!-- sin_asignar: only assign button -->
                 <button x-show="pk.tipo === 'sin_asignar'"
                         @click="abrirModalPicker(pk.pedido_id)"
                         class="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1.5 font-medium transition">
                   Asignar picker
                 </button>
-                <button x-show="pk.picking_id && pk.estado_picking !== 'completado'"
+
+                <!-- sin_picker: assign picker via reasignar endpoint -->
+                <button x-show="pk.tipo === 'sin_picker'"
+                        @click="abrirModalReasignar(pk.picking_id)"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1.5 font-medium transition">
+                  Asignar picker
+                </button>
+
+                <!-- activo: complete + reasignar + desasignar -->
+                <button x-show="pk.tipo === 'activo' && pk.picking_id && pk.estado_picking !== 'completado'"
                         @click="completarPicking(pk.picking_id)"
                         class="flex-1 bg-green-600 hover:bg-green-700 text-white rounded px-2 py-1.5 font-medium transition">
                   Completar
+                </button>
+                <button x-show="pk.tipo === 'activo' && pk.picking_id && pk.estado_picking !== 'completado'"
+                        @click="abrirModalReasignar(pk.picking_id)"
+                        class="bg-indigo-500 hover:bg-indigo-600 text-white rounded px-2 py-1.5 font-medium transition">
+                  Reasignar
+                </button>
+                <button x-show="pk.tipo === 'activo' && pk.picking_id && pk.estado_picking !== 'completado'"
+                        @click="desasignarPicker(pk.picking_id)"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded px-2 py-1.5 font-medium transition"
+                        title="Quitar picker">
+                  ×
                 </button>
               </div>
             </div>
@@ -455,6 +492,42 @@
     </div>
   </div>
 
+  <!-- ======== MODAL REASIGNAR PICKER ======== -->
+  <div x-show="modalReasignar.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalReasignar.visible = false">
+    <div class="bg-white rounded-2xl shadow-xl w-96 p-6 fade-in">
+      <h3 class="font-bold text-lg mb-1">Reasignar picker</h3>
+      <p class="text-gray-500 text-sm mb-4">Picking #<span x-text="modalReasignar.picking_id"></span></p>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Selecciona el nuevo picker</label>
+        <select x-model="modalReasignar.empleado_id"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          <option value="">— Seleccionar —</option>
+          <template x-for="e in empleadosModal" :key="e.id">
+            <option :value="e.id" x-text="e.nombre + ' (' + e.rol + ')'"></option>
+          </template>
+        </select>
+      </div>
+
+      <div x-show="modalError" class="text-red-600 text-sm mb-3 bg-red-50 rounded-lg px-3 py-2"
+           x-text="modalError"></div>
+
+      <div class="flex gap-3">
+        <button @click="modalReasignar.visible = false"
+                class="flex-1 border border-gray-200 rounded-lg py-2 text-sm hover:bg-gray-50 transition">
+          Cancelar
+        </button>
+        <button @click="confirmarReasignarPicker()"
+                :disabled="!modalReasignar.empleado_id"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition">
+          Reasignar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ======== MODAL ASIGNAR REPARTIDOR ======== -->
   <div x-show="modalRepartidor.visible" x-cloak
        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -606,13 +679,24 @@
           </div>
         </template>
 
+        <!-- Picking sin picker asignado (devuelto al pool) -->
+        <template x-if="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado' && !panel.pedido?.picking?.picker_nombre">
+          <div>
+            <p class="text-sm text-amber-600 font-medium mb-3">⚠ Sin picker asignado</p>
+            <button @click="abrirModalReasignar(panel.pedido.picking.id)"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              Asignar picker
+            </button>
+          </div>
+        </template>
+
         <!-- Picking en curso → puede completarse -->
-        <template x-if="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado'">
+        <template x-if="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado' && panel.pedido?.picking?.picker_nombre">
           <div>
             <div class="flex items-center justify-between mb-2">
               <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" :class="badgePickingClass(panel.pedido?.picking?.estado)"
                     x-text="panel.pedido?.picking?.estado"></span>
-              <span class="text-sm font-medium text-gray-700" x-text="panel.pedido?.picking?.picker_nombre || '—'"></span>
+              <span class="text-sm font-medium text-gray-700" x-text="panel.pedido?.picking?.picker_nombre"></span>
             </div>
             <div class="space-y-1 mb-3 text-xs text-gray-500">
               <div class="flex justify-between" x-show="panel.pedido?.picking?.asignado_en">
@@ -950,6 +1034,7 @@
         modalPicker: { visible: false, pedido_id: null, empleado_id: '' },
         modalRepartidor: { visible: false, pedido_id: null, empleado_id: '' },
         modalCancelacion: { visible: false, motivo: '' },
+        modalReasignar: { visible: false, picking_id: null, empleado_id: '' },
         modalSustituir: { visible: false, item: null, busqueda: '', productos: [], productoSeleccionado: null, cantidadSustituir: 1 },
         panel: { visible: false, pedido: null },
         now: new Date(),
@@ -1160,6 +1245,42 @@
           } else {
             this.mostrarToast(data.error, true);
           }
+        },
+
+        async abrirModalReasignar(picking_id) {
+          this.modalReasignar = { visible: true, picking_id, empleado_id: '' };
+          this.modalError = '';
+          const r = await fetch('/dashboard/empleados');
+          this.empleadosModal = r.ok ? await r.json() : [];
+        },
+
+        async confirmarReasignarPicker() {
+          this.modalError = '';
+          if (!this.modalReasignar.empleado_id) { this.modalError = 'Selecciona un picker'; return; }
+          await this.reasignarPicker(this.modalReasignar.picking_id, parseInt(this.modalReasignar.empleado_id));
+          if (!this.modalError) this.modalReasignar.visible = false;
+        },
+
+        async reasignarPicker(picking_id, nuevo_empleado_id) {
+          const r = await fetch(`/dashboard/picking/${picking_id}/reasignar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empleado_id: nuevo_empleado_id }),
+          });
+          const data = await r.json();
+          if (!r.ok) {
+            this.modalError = data.error || 'Error al reasignar';
+            this.mostrarToast(data.error || 'Error al reasignar', true);
+            return;
+          }
+          this.mostrarToast(data.mensaje);
+          await this.cargar('picking', '/dashboard/picking');
+          await this.cargarPedidos();
+        },
+
+        async desasignarPicker(picking_id) {
+          if (!confirm('¿Quitar el picker de este pedido? Quedará sin asignar.')) return;
+          await this.reasignarPicker(picking_id, null);
         },
 
         async abrirModalRepartidor(pedido_id) {

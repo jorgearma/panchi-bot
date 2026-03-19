@@ -173,6 +173,18 @@ def asignar_picker():
     return jsonify({"ok": True, "mensaje": msg})
 
 
+@blueprint_dashboard.route("/dashboard/picking/<int:picking_id>/reasignar", methods=["POST"])
+def reasignar_picker(picking_id: int):
+    data = request.get_json(silent=True) or {}
+    empleado_id_raw = data.get("empleado_id")
+    nuevo_empleado_id = int(empleado_id_raw) if empleado_id_raw is not None else None
+
+    ok, msg = gestor_dashboard.reasignar_picker(picking_id, nuevo_empleado_id)
+    if not ok:
+        return _err(msg)
+    return jsonify({"ok": True, "mensaje": msg})
+
+
 @blueprint_dashboard.route("/dashboard/picking/<int:picking_id>/completar", methods=["POST"])
 def completar_picking(picking_id: int):
     ok, msg, telefono = gestor_dashboard.completar_picking(picking_id)

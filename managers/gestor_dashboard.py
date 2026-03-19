@@ -268,13 +268,14 @@ class GestorDashboard:
                 "fecha_creacion": _iso(p.FechaCreacion),
             })
 
-        # Active pickings
+        # Active pickings — only those with a picker assigned
         pickings = s.query(PickingPedido).filter(
             PickingPedido.estado.in_([
                 EstadoPicking.PENDIENTE.value,
                 EstadoPicking.EN_PROCESO.value,
                 EstadoPicking.CON_INCIDENCIAS.value,
-            ])
+            ]),
+            PickingPedido.empleado_id != None,
         ).order_by(PickingPedido.created_at.asc()).all()
 
         for pk in pickings:
@@ -320,6 +321,66 @@ class GestorDashboard:
                 "items_completados": completados,
                 "iniciado_en": _iso(pk.iniciado_en),
                 "fecha_creacion": _iso(pk.created_at),
+                "cliente_nombre": pk.pedido.cliente.nombre if pk.pedido and pk.pedido.cliente else "—",
+                "direccion_entrega": pk.pedido.DireccionEntrega if pk.pedido else None,
+                "total": float(pk.pedido.Total) if pk.pedido and pk.pedido.Total else 0,
+                "estado_pedido": pk.pedido.Estado if pk.pedido else None,
+                "asignado_en": _iso(pk.created_at),
+                "notas": pk.notas,
+            })
+
+        # Sin picker: PickingPedido exists (estado=PENDIENTE, empleado_id=NULL)
+        sin_picker_qs = (
+            s.query(PickingPedido)
+            .filter(
+                PickingPedido.estado == EstadoPicking.PENDIENTE.value,
+                PickingPedido.empleado_id == None,
+            )
+            .all()
+        )
+
+        for pk in sin_picker_qs:
+            items_data = []
+            for item in pk.items:
+                nombre = (item.pedido_detalle.NombreProducto if item.pedido_detalle else None)
+                if not nombre and item.pedido_detalle and item.pedido_detalle.producto:
+                    nombre = item.pedido_detalle.producto.Nombre
+                ubicacion = (
+                    item.pedido_detalle.producto.Ubicacion
+                    if item.pedido_detalle and item.pedido_detalle.producto else None
+                )
+                items_data.append({
+                    "item_id": item.id,
+                    "detalle_id": item.pedido_detalle_id,
+                    "nombre": nombre or "—",
+                    "cantidad": item.pedido_detalle.Cantidad if item.pedido_detalle else 0,
+                    "ubicacion": ubicacion,
+                    "estado": item.estado,
+                    "cantidad_encontrada": item.cantidad_encontrada,
+                    "notas": item.notas,
+                })
+
+            pendientes = sum(1 for i in items_data if i["estado"] == "pendiente")
+            completados = sum(1 for i in items_data if i["estado"] in ("encontrado", "sustituido"))
+
+            resultado.append({
+                "tipo": "sin_picker",
+                "pedido_id": pk.pedido_id,
+                "picking_id": pk.id,
+                "estado_picking": pk.estado,
+                "empleado": None,
+                "items": items_data,
+                "items_total": len(items_data),
+                "items_pendientes": pendientes,
+                "items_completados": completados,
+                "iniciado_en": _iso(pk.iniciado_en),
+                "fecha_creacion": _iso(pk.created_at),
+                "cliente_nombre": pk.pedido.cliente.nombre if pk.pedido and pk.pedido.cliente else "—",
+                "direccion_entrega": pk.pedido.DireccionEntrega if pk.pedido else None,
+                "total": float(pk.pedido.Total) if pk.pedido and pk.pedido.Total else 0,
+                "estado_pedido": pk.pedido.Estado if pk.pedido else None,
+                "asignado_en": None,
+                "notas": pk.notas,
             })
 
         return resultado
@@ -884,13 +945,65 @@ class GestorDashboard:
             logger.error("Error asignando picker para pedido %s: %s", pedido_id, e)
             return False, "Error de base de datos"
 
-    def completar_picking(self, picking_id: int) -> tuple:
+    def reasignar_picker(self, picking_id: int, nuevo_empleado_id: int | None) -> tuple:
+        s = self.session
+        _ESTADOS_REASIGNABLES = {
+            EstadoPicking.PENDIENTE.value,
+            EstadoPicking.EN_PROCESO.value,
+            EstadoPicking.CON_INCIDENCIAS.value,
+        }
+        try:
+            picking = s.query(PickingPedido).filter_by(id=picking_id).first()
+            if not picking:
+                return False, "Picking no encontrado"
+
+            if picking.estado not in _ESTADOS_REASIGNABLES:
+                return False, f"No se puede reasignar un picking en estado '{picking.estado}'"
+
+            if nuevo_empleado_id is not None:
+                empleado = s.query(Empleado).filter_by(EmpleadoID=nuevo_empleado_id, activo=True).first()
+                if not empleado:
+                    return False, "Empleado no válido o inactivo"
+
+            if nuevo_empleado_id == picking.empleado_id:
+                return False, "El picker ya está asignado a este pedido"
+
+            anterior_nombre = (
+                f"{picking.empleado.Nombre} {picking.empleado.Apellido}"
+                if picking.empleado else "sin asignar"
+            )
+            if nuevo_empleado_id is not None:
+                nuevo_empleado = s.query(Empleado).filter_by(EmpleadoID=nuevo_empleado_id).first()
+                nuevo_nombre = f"{nuevo_empleado.Nombre} {nuevo_empleado.Apellido}"
+            else:
+                nuevo_nombre = "sin asignar"
+
+            timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+            entrada_log = f"[{timestamp}] {anterior_nombre} → {nuevo_nombre}"
+            picking.notas = (picking.notas + "\n" + entrada_log).strip() if picking.notas else entrada_log
+
+            picking.empleado_id = nuevo_empleado_id
+            picking.estado = EstadoPicking.EN_PROCESO.value if nuevo_empleado_id else EstadoPicking.PENDIENTE.value
+
+            s.commit()
+            if nuevo_empleado_id:
+                return True, "Picker reasignado correctamente"
+            return True, "Picker eliminado del picking"
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error reasignando picker para picking %s: %s", picking_id, e)
+            return False, "Error interno"
+
+    def completar_picking(self, picking_id: int, picker_id: int | None = None) -> tuple:
         """Returns (ok, msg, telefono_cliente). telefono_cliente is None on error."""
         s = self.session
         try:
             picking = s.query(PickingPedido).filter_by(id=picking_id).first()
             if not picking:
                 return False, "Picking no encontrado", None
+
+            if picker_id is not None and picking.empleado_id != picker_id:
+                return False, "Este picking fue reasignado a otro picker", None
 
             picking.estado = EstadoPicking.COMPLETADO.value
             picking.completado_en = datetime.utcnow()
@@ -1161,7 +1274,7 @@ class GestorDashboard:
             logger.error("Error marcando no entregado reparto %s: %s", reparto_id, e)
             return False, "Error de base de datos", None
 
-    def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None, producto_sustituto_id: int = None) -> tuple:
+    def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None, producto_sustituto_id: int = None, picker_id: int | None = None) -> tuple:
         """Updates a single picking item state."""
         ESTADOS_VALIDOS = {"encontrado", "sin_stock", "sustituido", "pendiente"}
         if estado not in ESTADOS_VALIDOS:
@@ -1172,6 +1285,9 @@ class GestorDashboard:
             item = s.query(PickingItem).filter_by(id=item_id).first()
             if not item:
                 return False, "Item no encontrado"
+
+            if picker_id is not None and item.picking and item.picking.empleado_id != picker_id:
+                return False, "Este picking fue reasignado a otro picker"
 
             item.estado = estado
             if cantidad_encontrada is not None:
