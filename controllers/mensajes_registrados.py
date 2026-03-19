@@ -140,6 +140,13 @@ class ManejadorMensajesRegistrados:
 
         if estado_del_pedido == EstadoPedido.ENLACE or estado_del_pedido == EstadoPedido.ENLACE2:
             enlace = pedido_activo.enlace
+            if not enlace:
+                enviar_mensaje_whatsapp(
+                    "Tu enlace de pedido ha caducado ⏱️\n"
+                    "Escribe *1* para generar un nuevo enlace y continuar tu pedido.",
+                    numero_cliente,
+                )
+                return " mensaje enviado", 200
             mensaje = f"Puede continuar con su pedido en el *enlace* proporcionado \n\n▪*Enlace* unico 👇 \n\n🔗{(enlace)}"
             enviar_mensaje_whatsapp(mensaje, numero_cliente)
             return " mensaje enviado", 200

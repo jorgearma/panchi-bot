@@ -119,15 +119,23 @@
         <div class="space-y-3">
           <template x-for="pk in picking" :key="'pk-'+(pk.picking_id || 'new-'+pk.pedido_id)">
             <div class="border rounded-lg p-3 text-xs fade-in"
-                 :class="pk.tipo === 'sin_asignar' ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white'">
+                 :class="{
+                   'border-yellow-300 bg-yellow-50': pk.tipo === 'sin_asignar',
+                   'border-amber-400 bg-amber-50': pk.tipo === 'sin_picker',
+                   'border-gray-200 bg-white': pk.tipo === 'activo'
+                 }">
               <div class="flex items-center justify-between mb-1.5">
                 <span class="font-bold text-sm">#<span x-text="pk.pedido_id"></span></span>
-                <span x-show="pk.tipo === 'sin_asignar'"
-                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-200 text-yellow-800">Sin asignar</span>
-                <span x-show="pk.estado_picking"
-                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
-                      :class="badgePickingClass(pk.estado_picking)"
-                      x-text="pk.estado_picking"></span>
+                <div class="flex items-center gap-1">
+                  <span x-show="pk.tipo === 'sin_asignar'"
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-200 text-yellow-800">SIN ASIGNAR</span>
+                  <span x-show="pk.tipo === 'sin_picker'"
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-200 text-amber-900">SIN PICKER</span>
+                  <span x-show="pk.estado_picking && pk.tipo === 'activo'"
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
+                        :class="badgePickingClass(pk.estado_picking)"
+                        x-text="pk.estado_picking"></span>
+                </div>
               </div>
 
               <!-- Picker asignado -->
@@ -135,11 +143,11 @@
                 👤 <span x-text="pk.empleado?.nombre"></span>
               </div>
 
-              <!-- Progress bar -->
-              <div x-show="pk.items_total > 0" class="mb-2">
+              <!-- Progress bar — shown for activo and sin_picker when items exist -->
+              <div x-show="pk.items_total > 0 && (pk.tipo === 'activo' || pk.tipo === 'sin_picker')" class="mb-2">
                 <div class="flex justify-between text-gray-500 mb-0.5">
-                  <span x-text="pk.items_completados + '/' + pk.items_total + ' items'"></span>
-                  <span x-text="pk.items_pendientes + ' pendientes'"></span>
+                  <span x-text="pk.items_completados + '/' + pk.items_total + ' items hechos'"></span>
+                  <span x-text="pk.items_pendientes + ' pend.'"></span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-1.5">
                   <div class="bg-blue-500 h-1.5 rounded-full transition-all"
@@ -149,7 +157,7 @@
 
               <!-- Items list -->
               <div class="space-y-1 mb-2 max-h-24 overflow-y-auto">
-                <template x-for="item in pk.items" :key="item.detalle_id">
+                <template x-for="item in pk.items" :key="item.detalle_id || item.item_id">
                   <div class="flex items-center gap-1.5 text-gray-600">
                     <span :class="{
                       'text-green-500': item.estado === 'encontrado',
@@ -167,17 +175,46 @@
                 </template>
               </div>
 
+              <!-- Notas / historial de reasignaciones -->
+              <template x-if="pk.notas">
+                <details class="mb-2">
+                  <summary class="cursor-pointer text-gray-400 hover:text-gray-600 text-xs select-none">Historial</summary>
+                  <pre class="mt-1 text-gray-500 text-xs whitespace-pre-wrap leading-snug" x-text="pk.notas"></pre>
+                </details>
+              </template>
+
               <!-- Actions -->
-              <div class="flex gap-1.5 mt-2">
+              <div class="flex gap-1.5 mt-2 flex-wrap">
+                <!-- sin_asignar: only assign button -->
                 <button x-show="pk.tipo === 'sin_asignar'"
                         @click="abrirModalPicker(pk.pedido_id)"
                         class="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1.5 font-medium transition">
                   Asignar picker
                 </button>
-                <button x-show="pk.picking_id && pk.estado_picking !== 'completado'"
+
+                <!-- sin_picker: assign picker via reasignar endpoint -->
+                <button x-show="pk.tipo === 'sin_picker'"
+                        @click="abrirModalReasignar(pk.picking_id)"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1.5 font-medium transition">
+                  Asignar picker
+                </button>
+
+                <!-- activo: complete + reasignar + desasignar -->
+                <button x-show="pk.tipo === 'activo' && pk.picking_id && pk.estado_picking !== 'completado'"
                         @click="completarPicking(pk.picking_id)"
                         class="flex-1 bg-green-600 hover:bg-green-700 text-white rounded px-2 py-1.5 font-medium transition">
                   Completar
+                </button>
+                <button x-show="pk.tipo === 'activo' && pk.picking_id && pk.estado_picking !== 'completado'"
+                        @click="abrirModalReasignar(pk.picking_id)"
+                        class="bg-indigo-500 hover:bg-indigo-600 text-white rounded px-2 py-1.5 font-medium transition">
+                  Reasignar
+                </button>
+                <button x-show="pk.tipo === 'activo' && pk.picking_id && pk.estado_picking !== 'completado'"
+                        @click="desasignarPicker(pk.picking_id)"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded px-2 py-1.5 font-medium transition"
+                        title="Quitar picker">
+                  ×
                 </button>
               </div>
             </div>
@@ -206,7 +243,7 @@
                   <span class="text-gray-600" x-text="p.total.toFixed(2) + '€'"></span>
                 </div>
                 <div class="text-gray-600 truncate mb-1.5" x-text="p.direccion"></div>
-                <button @click="abrirModalRepartidor(p.pedido_id)"
+                <button @click="abrirModalRepartidor(p.pedido_id, p.repartidor_nombre)"
                         class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded px-2 py-1.5 font-medium transition text-xs">
                   Asignar repartidor
                 </button>
@@ -376,10 +413,10 @@
           <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <h2 class="font-semibold text-gray-700 text-sm">Mapa de operación</h2>
             <div class="flex items-center gap-2 text-xs">
-              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"></span>+8 min</span>
-              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400"></span>3–8</span>
-              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-500"></span>0–3</span>
-              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500"></span>tarde</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Pagado</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500"></span>Picking</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500"></span>Preparado</span>
+              <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-full bg-orange-500"></span>Reparto</span>
             </div>
           </div>
           <div id="mapa"></div>
@@ -455,15 +492,54 @@
     </div>
   </div>
 
+  <!-- ======== MODAL REASIGNAR PICKER ======== -->
+  <div x-show="modalReasignar.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalReasignar.visible = false">
+    <div class="bg-white rounded-2xl shadow-xl w-96 p-6 fade-in">
+      <h3 class="font-bold text-lg mb-1">Reasignar picker</h3>
+      <p class="text-gray-500 text-sm mb-4">Picking #<span x-text="modalReasignar.picking_id"></span></p>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Selecciona el nuevo picker</label>
+        <select x-model="modalReasignar.empleado_id"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          <option value="">— Seleccionar —</option>
+          <template x-for="e in empleadosModal" :key="e.id">
+            <option :value="e.id" x-text="e.nombre + ' (' + e.rol + ')'"></option>
+          </template>
+        </select>
+      </div>
+
+      <div x-show="modalError" class="text-red-600 text-sm mb-3 bg-red-50 rounded-lg px-3 py-2"
+           x-text="modalError"></div>
+
+      <div class="flex gap-3">
+        <button @click="modalReasignar.visible = false"
+                class="flex-1 border border-gray-200 rounded-lg py-2 text-sm hover:bg-gray-50 transition">
+          Cancelar
+        </button>
+        <button @click="confirmarReasignarPicker()"
+                :disabled="!modalReasignar.empleado_id"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition">
+          Reasignar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ======== MODAL ASIGNAR REPARTIDOR ======== -->
   <div x-show="modalRepartidor.visible" x-cloak
        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
        @click.self="modalRepartidor.visible = false">
     <div class="bg-white rounded-2xl shadow-xl w-96 p-6 fade-in">
-      <h3 class="font-bold text-lg mb-1">Asignar repartidor</h3>
-      <p class="text-gray-500 text-sm mb-4">Pedido #<span x-text="modalRepartidor.pedido_id"></span></p>
+      <h3 class="font-bold text-lg mb-1" x-text="modalRepartidor.repartidor_actual ? 'Reasignar repartidor' : 'Asignar repartidor'"></h3>
+      <p class="text-gray-500 text-sm mb-1">Pedido #<span x-text="modalRepartidor.pedido_id"></span></p>
+      <p x-show="modalRepartidor.repartidor_actual" class="text-amber-600 text-xs mb-3 bg-amber-50 rounded px-2 py-1">
+        ⚠ Repartidor actual: <span class="font-semibold" x-text="modalRepartidor.repartidor_actual"></span>
+      </p>
 
-      <div class="mb-4">
+      <div class="mb-4" :class="modalRepartidor.repartidor_actual ? '' : 'mt-3'">
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Selecciona un repartidor</label>
         <select x-model="modalRepartidor.empleado_id"
                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
@@ -606,13 +682,24 @@
           </div>
         </template>
 
+        <!-- Picking sin picker asignado (devuelto al pool) -->
+        <template x-if="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado' && !panel.pedido?.picking?.picker_nombre">
+          <div>
+            <p class="text-sm text-amber-600 font-medium mb-3">⚠ Sin picker asignado</p>
+            <button @click="abrirModalReasignar(panel.pedido.picking.id)"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
+              Asignar picker
+            </button>
+          </div>
+        </template>
+
         <!-- Picking en curso → puede completarse -->
-        <template x-if="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado'">
+        <template x-if="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado' && panel.pedido?.picking?.picker_nombre">
           <div>
             <div class="flex items-center justify-between mb-2">
               <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" :class="badgePickingClass(panel.pedido?.picking?.estado)"
                     x-text="panel.pedido?.picking?.estado"></span>
-              <span class="text-sm font-medium text-gray-700" x-text="panel.pedido?.picking?.picker_nombre || '—'"></span>
+              <span class="text-sm font-medium text-gray-700" x-text="panel.pedido?.picking?.picker_nombre"></span>
             </div>
             <div class="space-y-1 mb-3 text-xs text-gray-500">
               <div class="flex justify-between" x-show="panel.pedido?.picking?.asignado_en">
@@ -676,7 +763,7 @@
         <template x-if="!panel.pedido?.reparto && panel.pedido?.estado === 'preparado'">
           <div>
             <p class="text-sm text-gray-400 mb-3">Sin repartidor asignado</p>
-            <button @click="abrirModalRepartidor(panel.pedido.pedido_id)"
+            <button @click="abrirModalRepartidor(panel.pedido.pedido_id, panel.pedido?.reparto?.repartidor_nombre)"
                     class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
               🛵 Asignar repartidor
             </button>
@@ -933,6 +1020,7 @@
   <script>
     let mapaLeaflet = null;
     let mapaMarkers = [];
+    let marcadorTienda = null;
 
     function dashboard() {
       return {
@@ -949,6 +1037,7 @@
         modalPicker: { visible: false, pedido_id: null, empleado_id: '' },
         modalRepartidor: { visible: false, pedido_id: null, empleado_id: '' },
         modalCancelacion: { visible: false, motivo: '' },
+        modalReasignar: { visible: false, picking_id: null, empleado_id: '' },
         modalSustituir: { visible: false, item: null, busqueda: '', productos: [], productoSeleccionado: null, cantidadSustituir: 1 },
         panel: { visible: false, pedido: null },
         now: new Date(),
@@ -1031,65 +1120,94 @@
             attribution: '© OpenStreetMap',
             maxZoom: 18,
           }).addTo(mapaLeaflet);
+          mapaLeaflet.on('popupopen', (e) => {
+            const btn = e.popup.getElement()?.querySelector('[data-ir-pedido]');
+            if (btn) {
+              btn.onclick = () => {
+                const id = parseInt(btn.dataset.irPedido);
+                mapaLeaflet.closePopup();
+                this.filtrarPorPedido(id);
+              };
+            }
+          });
         },
 
-        mapaColorPrioridad(fechaCreacion) {
-          if (!fechaCreacion) return '#6b7280';
-          const mins = Math.round((new Date(fechaCreacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
-          if (mins > 8)  return '#22c55e';  // green-500
-          if (mins >= 3) return '#eab308';  // yellow-400
-          if (mins >= 0) return '#f97316';  // orange-500
-          return '#ef4444';                 // red-500
+        mapaColorEstado(estado) {
+          const colores = {
+            'pagado':            '#10b981',  // emerald-500
+            'contra_reembolso':  '#8b5cf6',  // violet-500
+            'en_preparacion':    '#3b82f6',  // blue-500
+            'preparado':         '#6366f1',  // indigo-500
+            'en_reparto':        '#f97316',  // orange-500
+          };
+          return colores[estado] || '#6b7280';
         },
 
-        mapaMinutosLabel(fechaCreacion) {
-          if (!fechaCreacion) return '?';
-          const mins = Math.round((new Date(fechaCreacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
-          if (mins > 0)  return mins + 'm';
-          if (mins === 0) return '0m';
-          return '+' + Math.abs(mins);
+        mapaEstadoCorto(estado) {
+          const labels = {
+            'pagado':            'PAG',
+            'contra_reembolso':  'CR',
+            'en_preparacion':    'PICK',
+            'preparado':         'LISTO',
+            'en_reparto':        'REP',
+          };
+          return labels[estado] || '?';
         },
 
         actualizarMapa() {
           if (!mapaLeaflet) return;
-          fetch('/dashboard/mapa').then(r => r.json()).then(data => {
-            mapaMarkers.forEach(m => m.remove());
-            mapaMarkers = [];
-            data.pedidos.forEach(p => {
-              const color = this.mapaColorPrioridad(p.fecha_creacion);
-              const label = this.mapaMinutosLabel(p.fecha_creacion);
+
+          // Marcador de tienda — se dibuja una sola vez
+          if (!marcadorTienda) {
+            const iconTienda = L.divIcon({
+              className: '',
+              html: `<div style="background:#1f2937;color:#fff;border:2px solid #fff;border-radius:6px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,.45);font-size:18px;">🏪</div>`,
+              iconSize: [34, 34],
+              iconAnchor: [17, 17],
+            });
+            marcadorTienda = L.marker([40.008778, -3.010905], { icon: iconTienda })
+              .bindPopup('<b>Panchi</b><br>Punto de origen')
+              .addTo(mapaLeaflet);
+          }
+
+          // Marcadores de pedidos — usar this.pedidos ya cargados
+          mapaMarkers.forEach(m => m.remove());
+          mapaMarkers = [];
+
+          const estadoLabel = {
+            'pagado': 'Pagado', 'contra_reembolso': 'Contra reembolso',
+            'en_preparacion': 'En picking', 'preparado': 'Preparado', 'en_reparto': 'En reparto',
+          };
+
+          this.pedidos
+            .filter(p => p.lat != null && p.lng != null)
+            .forEach(p => {
+              const color = this.mapaColorEstado(p.estado);
               const icon = L.divIcon({
                 className: '',
-                html: `<div style="
-                    background:${color};
-                    color:#fff;
-                    border:2px solid #fff;
-                    border-radius:50%;
-                    width:34px;height:34px;
-                    display:flex;flex-direction:column;
-                    align-items:center;justify-content:center;
-                    box-shadow:0 1px 5px rgba(0,0,0,.35);
-                    line-height:1;
-                  ">
-                  <span style="font-size:9px;font-weight:700;opacity:.85">#${p.pedido_id}</span>
-                  <span style="font-size:10px;font-weight:900">${label}</span>
+                html: `<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:8px;width:38px;height:38px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,.35);line-height:1.1;">
+                  <span style="font-size:11px;font-weight:900">#${p.pedido_id}</span>
+                  <span style="font-size:8px;font-weight:700;opacity:.9">${this.mapaEstadoCorto(p.estado)}</span>
                 </div>`,
-                iconSize: [34, 34],
-                iconAnchor: [17, 17],
+                iconSize: [38, 38],
+                iconAnchor: [19, 19],
               });
-              const mins = Math.round((new Date(p.fecha_creacion).getTime() + 20 * 60 * 1000 - Date.now()) / 60000);
-              const minsTexto = mins > 0 ? `${mins} min restantes` : mins === 0 ? 'Ahora' : `${Math.abs(mins)} min de retraso`;
+              const label = estadoLabel[p.estado] || p.estado;
               const marker = L.marker([p.lat, p.lng], { icon })
                 .bindPopup(`
-                  <b>#${p.pedido_id}</b><br>
-                  ${p.direccion}<br>
-                  <b>${p.total.toFixed(2)}€</b><br>
-                  <span style="color:${color};font-weight:700">${minsTexto}</span>
+                  <div style="min-width:160px">
+                    <b style="font-size:14px">#${p.pedido_id}</b>
+                    <span style="margin-left:6px;background:${color};color:#fff;padding:1px 6px;border-radius:4px;font-size:11px">${label}</span><br>
+                    <span style="font-size:12px;color:#555">${p.direccion_entrega}</span><br>
+                    <b>${p.total.toFixed(2)}€</b>
+                    <button data-ir-pedido="${p.pedido_id}" style="margin-top:6px;width:100%;background:#1d4ed8;color:#fff;border:none;border-radius:4px;padding:4px 0;font-size:12px;cursor:pointer">
+                      Ver en lista
+                    </button>
+                  </div>
                 `)
                 .addTo(mapaLeaflet);
               mapaMarkers.push(marker);
             });
-          }).catch(() => {});
         },
 
         // --- ACCIONES ---
@@ -1132,8 +1250,44 @@
           }
         },
 
-        async abrirModalRepartidor(pedido_id) {
-          this.modalRepartidor = { visible: true, pedido_id, empleado_id: '' };
+        async abrirModalReasignar(picking_id) {
+          this.modalReasignar = { visible: true, picking_id, empleado_id: '' };
+          this.modalError = '';
+          const r = await fetch('/dashboard/empleados');
+          this.empleadosModal = r.ok ? await r.json() : [];
+        },
+
+        async confirmarReasignarPicker() {
+          this.modalError = '';
+          if (!this.modalReasignar.empleado_id) { this.modalError = 'Selecciona un picker'; return; }
+          await this.reasignarPicker(this.modalReasignar.picking_id, parseInt(this.modalReasignar.empleado_id));
+          if (!this.modalError) this.modalReasignar.visible = false;
+        },
+
+        async reasignarPicker(picking_id, nuevo_empleado_id) {
+          const r = await fetch(`/dashboard/picking/${picking_id}/reasignar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empleado_id: nuevo_empleado_id }),
+          });
+          const data = await r.json();
+          if (!r.ok) {
+            this.modalError = data.error || 'Error al reasignar';
+            this.mostrarToast(data.error || 'Error al reasignar', true);
+            return;
+          }
+          this.mostrarToast(data.mensaje);
+          await this.cargar('picking', '/dashboard/picking');
+          await this.cargarPedidos();
+        },
+
+        async desasignarPicker(picking_id) {
+          if (!confirm('¿Quitar el picker de este pedido? Quedará sin asignar.')) return;
+          await this.reasignarPicker(picking_id, null);
+        },
+
+        async abrirModalRepartidor(pedido_id, repartidorActual) {
+          this.modalRepartidor = { visible: true, pedido_id, empleado_id: '', repartidor_actual: repartidorActual || null };
           this.modalError = '';
           const r = await fetch('/dashboard/empleados');
           this.empleadosModal = r.ok ? await r.json() : [];
@@ -1141,6 +1295,12 @@
 
         async confirmarAsignarRepartidor() {
           this.modalError = '';
+          if (this.modalRepartidor.repartidor_actual) {
+            const confirmado = confirm(
+              `Este pedido ya tiene asignado a ${this.modalRepartidor.repartidor_actual}. ¿Quieres reasignarlo?`
+            );
+            if (!confirmado) return;
+          }
           const r = await fetch('/dashboard/reparto/asignar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

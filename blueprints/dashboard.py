@@ -2,8 +2,9 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template, request, session
 
+from blueprints.auth import requiere_rol
 from services import gestor_dashboard, gestor_pedidos
 from services.twilio_service import enviar_mensaje_whatsapp
 
@@ -48,16 +49,19 @@ def _err(msg, code=400):
 # ---------------------------------------------------------------------------
 
 @blueprint_dashboard.route("/dashboard")
+@requiere_rol('manager', 'admin')
 def index():
     return render_template("dashboard/index.html")
 
 
 @blueprint_dashboard.route("/dashboard/monitor")
+@requiere_rol('manager', 'admin')
 def monitor():
     return render_template("dashboard/monitor.html")
 
 
 @blueprint_dashboard.route("/dashboard/monitor/datos")
+@requiere_rol('manager', 'admin')
 def monitor_datos():
     try:
         monitor_data = gestor_dashboard.monitor_empleados()
@@ -80,6 +84,7 @@ def monitor_datos():
 # ---------------------------------------------------------------------------
 
 @blueprint_dashboard.route("/dashboard/metricas")
+@requiere_rol('manager', 'admin')
 def metricas():
     try:
         return _ok(gestor_dashboard.metricas())
@@ -89,6 +94,7 @@ def metricas():
 
 
 @blueprint_dashboard.route("/dashboard/pedidos-activos")
+@requiere_rol('manager', 'admin')
 def pedidos_activos():
     try:
         estado = request.args.get("estado")
@@ -99,6 +105,7 @@ def pedidos_activos():
 
 
 @blueprint_dashboard.route("/dashboard/picking")
+@requiere_rol('manager', 'admin')
 def picking():
     try:
         return _ok(gestor_dashboard.picking_activo())
@@ -108,6 +115,7 @@ def picking():
 
 
 @blueprint_dashboard.route("/dashboard/repartidores")
+@requiere_rol('manager', 'admin')
 def repartidores():
     try:
         return _ok(gestor_dashboard.repartidores())
@@ -117,6 +125,7 @@ def repartidores():
 
 
 @blueprint_dashboard.route("/dashboard/alertas")
+@requiere_rol('manager', 'admin')
 def alertas():
     try:
         return _ok(gestor_dashboard.alertas())
@@ -126,6 +135,7 @@ def alertas():
 
 
 @blueprint_dashboard.route("/dashboard/eventos")
+@requiere_rol('manager', 'admin')
 def eventos():
     try:
         limit = min(int(request.args.get("limit", 50)), 200)
@@ -136,6 +146,7 @@ def eventos():
 
 
 @blueprint_dashboard.route("/dashboard/mapa")
+@requiere_rol('manager', 'admin')
 def mapa():
     try:
         return _ok(gestor_dashboard.mapa())
@@ -145,6 +156,7 @@ def mapa():
 
 
 @blueprint_dashboard.route("/dashboard/empleados")
+@requiere_rol('manager', 'admin')
 def empleados():
     try:
         rol = request.args.get("rol")
@@ -159,6 +171,7 @@ def empleados():
 # ---------------------------------------------------------------------------
 
 @blueprint_dashboard.route("/dashboard/picking/asignar", methods=["POST"])
+@requiere_rol('manager', 'admin')
 def asignar_picker():
     data = request.get_json(silent=True) or {}
     pedido_id = data.get("pedido_id")
@@ -173,7 +186,21 @@ def asignar_picker():
     return jsonify({"ok": True, "mensaje": msg})
 
 
+@blueprint_dashboard.route("/dashboard/picking/<int:picking_id>/reasignar", methods=["POST"])
+@requiere_rol('manager', 'admin')
+def reasignar_picker(picking_id: int):
+    data = request.get_json(silent=True) or {}
+    empleado_id_raw = data.get("empleado_id")
+    nuevo_empleado_id = int(empleado_id_raw) if empleado_id_raw is not None else None
+
+    ok, msg = gestor_dashboard.reasignar_picker(picking_id, nuevo_empleado_id)
+    if not ok:
+        return _err(msg)
+    return jsonify({"ok": True, "mensaje": msg})
+
+
 @blueprint_dashboard.route("/dashboard/picking/<int:picking_id>/completar", methods=["POST"])
+@requiere_rol('manager', 'admin')
 def completar_picking(picking_id: int):
     ok, msg, telefono = gestor_dashboard.completar_picking(picking_id)
     if not ok:
@@ -183,6 +210,7 @@ def completar_picking(picking_id: int):
 
 
 @blueprint_dashboard.route("/dashboard/reparto/asignar", methods=["POST"])
+@requiere_rol('manager', 'admin')
 def asignar_repartidor():
     data = request.get_json(silent=True) or {}
     pedido_id = data.get("pedido_id")
@@ -198,6 +226,7 @@ def asignar_repartidor():
 
 
 @blueprint_dashboard.route("/dashboard/reparto/<int:reparto_id>/salida", methods=["POST"])
+@requiere_rol('manager', 'admin')
 def marcar_salida(reparto_id: int):
     ok, msg, telefono = gestor_dashboard.marcar_salida_reparto(reparto_id)
     if not ok:
@@ -207,6 +236,7 @@ def marcar_salida(reparto_id: int):
 
 
 @blueprint_dashboard.route("/dashboard/reparto/<int:reparto_id>/entregar", methods=["POST"])
+@requiere_rol('manager', 'admin')
 def marcar_entregado(reparto_id: int):
     ok, msg, telefono = gestor_dashboard.marcar_entregado(reparto_id)
     if not ok:
@@ -230,10 +260,11 @@ _MOTIVOS_LABEL = {
 
 
 @blueprint_dashboard.route("/dashboard/pedido/<int:pedido_id>/cancelar", methods=["POST"])
+@requiere_rol('manager', 'admin')
 def cancelar_pedido(pedido_id: int):
     data = request.get_json(silent=True) or {}
     motivo = data.get("motivo")
-    empleado_id = data.get("empleado_id")
+    empleado_id = session.get('empleado_id')
 
     if not motivo:
         return _err("Falta el campo: motivo")
@@ -252,9 +283,9 @@ def cancelar_pedido(pedido_id: int):
 
 
 @blueprint_dashboard.route("/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar", methods=["POST"])
+@requiere_rol('manager', 'admin')
 def eliminar_item(pedido_id: int, detalle_id: int):
-    data = request.get_json(silent=True) or {}
-    empleado_id = data.get("empleado_id")
+    empleado_id = session.get('empleado_id')
 
     ok, msg = gestor_pedidos.eliminar_item(pedido_id, detalle_id, empleado_id)
     if not ok:
@@ -263,11 +294,12 @@ def eliminar_item(pedido_id: int, detalle_id: int):
 
 
 @blueprint_dashboard.route("/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/sustituir", methods=["POST"])
+@requiere_rol('manager', 'admin')
 def sustituir_item(pedido_id: int, detalle_id: int):
     data = request.get_json(silent=True) or {}
     producto_sustituto_id = data.get("producto_sustituto_id")
     cantidad_a_sustituir = data.get("cantidad_a_sustituir")
-    empleado_id = data.get("empleado_id")
+    empleado_id = session.get('empleado_id')
 
     if not producto_sustituto_id:
         return _err("Falta el campo: producto_sustituto_id")
@@ -285,6 +317,7 @@ def sustituir_item(pedido_id: int, detalle_id: int):
 
 
 @blueprint_dashboard.route("/dashboard/productos")
+@requiere_rol('manager', 'admin')
 def productos_disponibles():
     try:
         q = request.args.get("q", "").strip()

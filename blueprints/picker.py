@@ -1,8 +1,9 @@
 import logging
 
 import os
-from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory
+from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, session
 
+from blueprints.auth import requiere_rol
 from services import gestor_dashboard
 from services.twilio_service import enviar_mensaje_whatsapp
 
@@ -21,8 +22,9 @@ blueprint_picker = Blueprint("picker", __name__)
 
 
 @blueprint_picker.route("/picker", strict_slashes=False)
+@requiere_rol('picker', 'manager', 'admin')
 def index():
-    picker_id = request.args.get("id", type=int)
+    picker_id = session.get('empleado_id')
     return render_template("picker/index.html", picker_id=picker_id)
 
 
@@ -42,8 +44,9 @@ def apple_touch_icon():
 
 
 @blueprint_picker.route("/picker/manifest.json")
+@requiere_rol('picker', 'manager', 'admin')
 def manifest():
-    picker_id = request.args.get("id", type=int)
+    picker_id = session.get('empleado_id')
     return Response(
         render_template("picker/manifest.json", picker_id=picker_id),
         mimetype="application/manifest+json",
@@ -62,10 +65,9 @@ def service_worker():
 
 
 @blueprint_picker.route("/picker/mis-pedidos")
+@requiere_rol('picker', 'manager', 'admin')
 def mis_pedidos():
-    picker_id = request.args.get("picker_id", type=int)
-    if not picker_id:
-        return jsonify({"error": "Falta picker_id"}), 400
+    picker_id = session.get('empleado_id')
     try:
         return jsonify(gestor_dashboard.pickings_del_picker(picker_id))
     except Exception as e:
@@ -74,6 +76,7 @@ def mis_pedidos():
 
 
 @blueprint_picker.route("/picker/item/<int:item_id>/estado", methods=["POST"])
+@requiere_rol('picker', 'manager', 'admin')
 def actualizar_item(item_id: int):
     data = request.get_json(silent=True) or {}
     estado = data.get("estado")
@@ -87,12 +90,14 @@ def actualizar_item(item_id: int):
         except (TypeError, ValueError):
             return jsonify({"error": "producto_sustituto_id inválido"}), 400
 
+    picker_id = session.get('empleado_id')
     ok, msg = gestor_dashboard.actualizar_item_picking(
         item_id=item_id,
         estado=estado,
         cantidad_encontrada=data.get("cantidad_encontrada"),
         notas=data.get("notas"),
         producto_sustituto_id=producto_sustituto_id,
+        picker_id=picker_id,
     )
     if not ok:
         return jsonify({"error": msg}), 400
@@ -100,6 +105,7 @@ def actualizar_item(item_id: int):
 
 
 @blueprint_picker.route("/picker/buscar-productos")
+@requiere_rol('picker', 'manager', 'admin')
 def buscar_productos():
     q = request.args.get("q", "").strip()
     if len(q) < 2:
@@ -112,8 +118,10 @@ def buscar_productos():
 
 
 @blueprint_picker.route("/picker/picking/<int:picking_id>/finalizar", methods=["POST"])
+@requiere_rol('picker', 'manager', 'admin')
 def finalizar_picking(picking_id: int):
-    ok, msg, telefono = gestor_dashboard.completar_picking(picking_id)
+    picker_id = session.get('empleado_id')
+    ok, msg, telefono = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
     if not ok:
         return jsonify({"error": msg}), 400
     _notificar(telefono, "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦")

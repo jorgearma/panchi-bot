@@ -26,6 +26,7 @@ def confirmar_direccion(numero_cliente, mensaje_cliente, data_redis):
         from services import gestor_usuarios, gestor_pedidos
         estado = data_redis
         gestor_usuarios.guardar_usuario(numero_cliente, estado["nombre"], estado["direccion"])
+        logger.info("REGISTRO_COMPLETADO usuario=%s", numero_cliente)
         menu_despues_registro = mostrar_menu()
         _enviar_mensaje_registro(numero_cliente, estado["nombre"], menu_despues_registro)
         usuario_info = gestor_usuarios.obtener_usuario_completo(numero_cliente)
@@ -134,7 +135,11 @@ class RegistroUsuario:
                 self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_NOMBRE)
                 return "Solicitud de nombre enviada", 200
             else:
-                _enviar_cancelacion_registro(self.numero_cliente)
+                enviar_mensaje_whatsapp(
+                    "Para comenzar tu registro escribe *Si* ✅\n"
+                    "Si no quieres registrarte ahora, simplemente ignora este mensaje.",
+                    self.numero_cliente
+                )
                 return "Registro cancelado", 200
 
         elif estado_actual == EstadoRegistro.ESPERANDO_NOMBRE:
@@ -162,15 +167,21 @@ class RegistroUsuario:
         elif estado_actual == EstadoRegistro.CONFIRMANDO_DIRECCION:
             data_redis = self.estado_usuario.obtener_estado()
             logger.debug("data redis: %s", data_redis)
+            if mensaje_cliente.lower() not in {"si", "sí", "no"}:
+                enviar_mensaje_whatsapp(
+                    "Escribe *Si* para confirmar tu dirección, o *No* para escribirla de nuevo.",
+                    self.numero_cliente
+                )
+                return "Respuesta inválida en confirmación", 200
             respuesta = confirmar_direccion(self.numero_cliente, mensaje_cliente, data_redis)
             if respuesta is False:
                 self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_DIRECCION)
                 enviar_mensaje_whatsapp(
-                    "😊 *¡Vale!* Vamos a intentarlo de nuevo.\nPor favor, *ingresa una dirección* \n\n👇 *Ejemplos:* 👇 \n\n•Calle Los Labradores 3, 1B\n•avenida pablo iglecias 79, 1b", 
+                    "😊 *¡Vale!* Vamos a intentarlo de nuevo.\nPor favor, *ingresa una dirección* \n\n👇 *Ejemplos:* 👇 \n\n•Calle Los Labradores 3, 1B\n•avenida pablo iglecias 79, 1b",
                     self.numero_cliente
                 )
                 return "paso atras", 200
-            
+
             return respuesta
 
 def manejar_registro(numero_cliente, mensaje_cliente, redismanager):
