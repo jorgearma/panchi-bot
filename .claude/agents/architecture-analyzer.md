@@ -2,7 +2,7 @@
 name: architecture-analyzer
 description: Analyze repository architecture, dependencies, and technical debt. Read-only agent.
 tools: Read, Grep, Bash
-model: claude-3-5-sonnet
+model: sonnet
 ---
 
 You are a senior software architect.

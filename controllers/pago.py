@@ -93,6 +93,10 @@ def iniciar_pago(
 
         gestor_pedidos.actualizar_estado(pedido_activo_id, EstadoPedido.CONFIRMANDO_PAGO)
         gestor_pedidos.guardar_enlace(pedido_activo_id, redirect_url)
+        logger.info(
+            "PAGO_INICIADO pedido_id=%s importe=%s",
+            pedido_activo_id, amount_in_cents,
+        )
 
         if redirect_url:
             return True, redirect_url

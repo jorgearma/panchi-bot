@@ -1,8 +1,11 @@
+import logging
 import os
 import urllib.parse
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+
+logger = logging.getLogger(__name__)
 
 params = urllib.parse.quote_plus(
     f"DRIVER=ODBC Driver 18 for SQL Server;"
@@ -50,7 +53,7 @@ def conectar_bd1():
         from models import (
             Usuario, Pedido, PedidoDetalle, Producto, Empleado,
             Categoria, Pago, HistorialEstadoPedido,
-            Rol, PickingPedido, PickingItem, Reparto, Incidencia,
+            Rol, PickingPedido, PickingItem, Reparto, Incidencia, AuditLog,
         )
 
         # Orden respeta dependencias de FK
@@ -67,8 +70,9 @@ def conectar_bd1():
         Base.metadata.create_all(engine, tables=[PickingItem.__table__])
         Base.metadata.create_all(engine, tables=[Reparto.__table__])
         Base.metadata.create_all(engine, tables=[Incidencia.__table__])
+        Base.metadata.create_all(engine, tables=[AuditLog.__table__])
 
-        print("✅ Base de datos inicializada correctamente.")
+        logger.info("Base de datos inicializada correctamente.")
     except Exception as e:
-        print(f"❌ Error al inicializar la base de datos: {e}")
+        logger.error("Error al inicializar la base de datos: %s", e)
 

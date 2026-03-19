@@ -55,9 +55,13 @@ def agregar_pedido():
     if not id_usuario:
         return jsonify({"error": "ID de usuario no proporcionado"}), 400
 
+    carrito = data.get("productos", data.get("carrito", []))
+    if not carrito:
+        return jsonify({"error": "El carrito está vacío"}), 400
+
     success, result = iniciar_pago(
         user_id=id_usuario,
-        productos_recibidos=data.get("productos", []),
+        productos_recibidos=carrito,
         nombre_cliente=data.get("name"),
         numero_cliente=data.get("numero"),
         direccion_cliente=data.get("direccion"),

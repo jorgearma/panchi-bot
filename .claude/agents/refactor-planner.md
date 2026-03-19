@@ -2,7 +2,7 @@
 name: refactor-planner
 description: Create safe refactor plans for Python and Flask projects.
 tools: Read, Grep
-model: claude-3-5-sonnet
+model: sonnet
 ---
 
 You are a senior backend architect specialized in refactoring production systems.

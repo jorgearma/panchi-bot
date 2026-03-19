@@ -2,7 +2,7 @@
 name: python-refactor-engineer
 description: Safely refactor Python code with minimal behavior change.
 tools: Read, Write, Edit, Bash
-model: claude-3-5-sonnet
+model: sonnet
 ---
 
 You are a senior Python engineer.

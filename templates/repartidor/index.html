@@ -12,6 +12,8 @@
   <link rel="manifest" href="/repartidor/manifest.json{% if repartidor_id %}?id={{ repartidor_id }}{% endif %}" />
   <link rel="apple-touch-icon" href="/static/repartidor/icon-180.png" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
@@ -26,6 +28,7 @@
       50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0.25); }
     }
     .card-nuevo { animation: glowRed 1.4s ease-in-out infinite; }
+    #mapa-rep { height: 220px; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen"
@@ -101,6 +104,30 @@
 
     <div x-show="pedidosActivos.length > 0 || pedidosHistorial.length > 0" class="p-4 space-y-4">
 
+      <!-- ── MAPA DE ENTREGAS ── -->
+      <template x-if="true">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <button @click="toggleMapa()"
+                  class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 transition">
+            <span class="text-sm font-semibold text-gray-700">🗺️ Ver mis entregas en el mapa</span>
+            <span class="text-gray-400 text-xs" x-text="mapaVisible ? '▲' : '▼'"></span>
+          </button>
+          <div x-show="mapaVisible" x-cloak>
+            <div id="mapa-rep"></div>
+            <!-- Fallback: aviso cuando algún pedido activo no tiene coordenadas -->
+            <template x-if="pedidosActivos.some(p => p.lat == null || p.lng == null)">
+              <div class="px-4 py-2 bg-amber-50 border-t border-amber-100 flex items-center gap-2">
+                <span class="text-amber-500 text-sm">&#9888;</span>
+                <span class="text-xs text-amber-700">
+                  Algunos pedidos no tienen coordenadas y no aparecen en el mapa.
+                  Usa la dirección de texto para navegar.
+                </span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
       <!-- ── SECCIÓN: EN REPARTO (azul) ── -->
       <template x-if="pedidosEnReparto.length > 0">
         <div>
@@ -112,6 +139,8 @@
           <div class="space-y-2">
             <template x-for="p in pedidosEnReparto" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
+                   :id="'card-' + p.reparto_id"
+                   :class="pedidoDestacado === p.reparto_id ? 'ring-2 ring-blue-500 ring-offset-1' : ''"
                    class="rounded-xl shadow-sm border border-blue-200 border-l-4 border-l-blue-500 bg-blue-50 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
                 <div class="px-4 py-3 flex items-center gap-3">
                   <!-- Info principal -->
@@ -155,6 +184,8 @@
           <div class="space-y-2">
             <template x-for="p in pedidosNuevosEnCalle" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
+                   :id="'card-' + p.reparto_id"
+                   :class="pedidoDestacado === p.reparto_id ? 'ring-2 ring-red-500 ring-offset-1' : ''"
                    class="card-nuevo rounded-xl shadow-sm border border-red-300 border-l-4 border-l-red-500 bg-red-50 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
                 <div class="px-4 py-3 flex items-center gap-3">
                   <div class="flex-1 min-w-0">
@@ -196,6 +227,8 @@
           <div class="space-y-2">
             <template x-for="p in pedidosEnTiendaConocidos" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
+                   :id="'card-' + p.reparto_id"
+                   :class="pedidoDestacado === p.reparto_id ? 'ring-2 ring-amber-500 ring-offset-1' : ''"
                    class="rounded-xl shadow-sm border border-amber-200 border-l-4 border-l-amber-500 bg-amber-50 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
                 <div class="px-4 py-3 flex items-center gap-3">
                   <div class="flex-1 min-w-0">
@@ -745,14 +778,14 @@
   <div x-show="vista === 'pedido' && actual && !mostrarNoEntregar" x-cloak
        class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-20 space-y-2">
 
-    <!-- Salida a repartir — abre Maps automáticamente -->
+    <!-- Salida a repartir -->
     <div x-show="actual?.estado_reparto === 'asignado'">
       <button @click="salirYNavegar()"
               :disabled="procesando"
               class="w-full bg-orange-500 active:bg-orange-600 disabled:opacity-40 text-white py-4 rounded-2xl font-bold text-lg transition active:scale-95">
         <span x-show="!procesando" class="flex flex-col items-center leading-tight">
           <span>🛵 Salir a repartir</span>
-          <span class="text-xs font-normal text-orange-200 mt-0.5">Abre Maps automáticamente</span>
+          <span class="text-xs font-normal text-orange-200 mt-0.5">Vuelve a tu lista de entregas</span>
         </span>
         <span x-show="procesando" class="flex items-center justify-center gap-2">
           <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
@@ -1044,6 +1077,10 @@
 
   <!-- ======== JAVASCRIPT ======== -->
   <script>
+    let mapaRep = null;
+    let mapaRepMarkers = [];
+    let marcadorTiendaRep = null;
+
     function repartidor(repartidorId) {
       if (!repartidorId) {
         const saved = localStorage.getItem('panchi_repartidor_id');
@@ -1080,6 +1117,10 @@
         // Conexión
         conexionOk: true,
         lastFetchTime: null,
+
+        // Mapa
+        mapaVisible: false,
+        pedidoDestacado: null,
 
         // Cobro
         pagoConfirmado: false,
@@ -1201,6 +1242,7 @@
               this.pedidos = await r.json();
               this.conexionOk = true;
               this.lastFetchTime = new Date();
+              if (this.mapaVisible) this.actualizarMapaRepartidor();
               // Si no hay nadie en camino, todos los asignados son "conocidos"
               if (!this.pedidos.some(p => p.estado_reparto === 'en_camino')) {
                 this.pedidos
@@ -1338,6 +1380,93 @@
           this.holdProgress = 0;
         },
 
+        // ── Mapa de entregas ──────────────────────────────────────
+        resaltarTarjeta(reparto_id) {
+          this.pedidoDestacado = reparto_id;
+          this.$nextTick(() => {
+            const el = document.getElementById('card-' + reparto_id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+          setTimeout(() => { this.pedidoDestacado = null; }, 2000);
+        },
+
+        toggleMapa() {
+          this.mapaVisible = !this.mapaVisible;
+          if (this.mapaVisible) {
+            // setTimeout en lugar de $nextTick: iOS necesita tiempo para pintar
+            // el contenedor antes de que Leaflet pueda medir sus dimensiones
+            setTimeout(() => this.iniciarMapaRepartidor(), 50);
+          }
+        },
+
+        iniciarMapaRepartidor() {
+          const el = document.getElementById('mapa-rep');
+          if (!el) return;
+          if (!mapaRep) {
+            mapaRep = L.map('mapa-rep', {
+              tap: false,              // elimina el emulador de tap de Leaflet (causa clicks erráticos en iOS)
+              dragging: false,         // mapa estático: evita que capture el scroll de la página
+              touchZoom: false,        // sin pinch-zoom (overview fijo)
+              scrollWheelZoom: false,
+              doubleClickZoom: false,
+              zoomControl: false,
+            }).setView([40.010049, -3.012543], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap',
+              maxZoom: 18,
+            }).addTo(mapaRep);
+          }
+          // invalidateSize siempre al mostrar: corrige el cuadrado en blanco en iOS
+          mapaRep.invalidateSize();
+          this.actualizarMapaRepartidor();
+        },
+
+        actualizarMapaRepartidor() {
+          if (!mapaRep) return;
+
+          // Marcador de tienda — se dibuja una sola vez
+          if (!marcadorTiendaRep) {
+            const iconTienda = L.divIcon({
+              className: '',
+              html: `
+                      <div style="
+                        width:8px;
+                        height:8px;
+                        background:#000;
+                        border-radius:50%;
+                        box-shadow:0 0 6px rgba(0,0,0,0.6);
+                      "></div>
+                    `,
+              iconSize: [32, 32],
+              iconAnchor: [16, 16],
+            });
+            marcadorTiendaRep = L.marker([40.008778, -3.010905], { icon: iconTienda })
+              .bindPopup('<br>Tienda')
+              .addTo(mapaRep);
+          }
+
+          // Marcadores de pedidos activos con coordenadas
+          mapaRepMarkers.forEach(m => m.remove());
+          mapaRepMarkers = [];
+
+          const conCoordenadas = this.pedidosActivos.filter(p => p.estado_reparto === 'en_camino' && p.lat != null && p.lng != null);
+          conCoordenadas.forEach(p => {
+            const mins = this.calculateRemainingMinutes(p.fecha_creacion);
+            const color = mins > 8 ? '#16a34a' : mins >= 3 ? '#ca8a04' : mins >= 0 ? '#ea580c' : '#dc2626';
+            const icon = L.divIcon({
+              className: '',
+              html: `<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4);font-size:10px;font-weight:900;">${p.pedido_id}</div>`,
+              iconSize: [26, 26],
+              iconAnchor: [13, 13],
+            });
+            const marker = L.marker([p.lat, p.lng], { icon }).addTo(mapaRep);
+            marker.on('click', () => this.resaltarTarjeta(p.reparto_id));
+            mapaRepMarkers.push(marker);
+          });
+
+          // Vista fija del pueblo — no fitBounds, el zoom lo controla setView en iniciarMapaRepartidor
+        },
+
         // ── Helpers de navegación ────────────────────────────────
         mapsUrl(direccion) {
           return 'https://www.google.com/maps/dir/?api=1&destination='
@@ -1346,7 +1475,8 @@
 
         // ── Acciones API ─────────────────────────────────────────
         async salirYNavegar() {
-          await this.marcarSalida();
+          const ok = await this.marcarSalida();
+          if (ok) this.volverALista();
         },
 
         async marcarSalida() {

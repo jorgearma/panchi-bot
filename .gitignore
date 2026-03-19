@@ -1,7 +1,10 @@
 .env
+*.log
 virtual-panchi/
 notas.txt
 
 __pycache__/
 *.pyc
 *.pyo
+
+panchi-bot.log
