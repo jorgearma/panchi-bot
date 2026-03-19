@@ -38,7 +38,10 @@ def quiniela(token=None):
         try:
             datos_completos_redis = redismanager.get(token)
             if not datos_completos_redis:
-                return render_template("error.html", mensaje="El enlace ha expirado."), 403
+                return render_template("error.html",
+                    titulo='Enlace caducado',
+                    mensaje='Tu enlace ha caducado. Vuelve a WhatsApp y escribe 1 para obtener uno nuevo.'
+                ), 403
         except redis.exceptions.ResponseError as e:
             logger.error("Error al obtener datos de Redis: %s", e)
             return jsonify({"error": "Error al obtener los datos de Redis"}), 400
@@ -69,7 +72,10 @@ def quiniela(token=None):
             return jsonify({"error": "Error en la base de datos. Intente más tarde."}), 500
 
         if last_pedido is None:
-            return render_template("error.html", mensaje="No tienes ningún pedido activo."), 404
+            return render_template("error.html",
+                titulo='Sin pedido activo',
+                mensaje='No tienes ningún pedido activo.'
+            ), 404
 
         estado = last_pedido.Estado
         logger.debug("Estado del pedido: %s, user_id=%s", estado, id_user)
