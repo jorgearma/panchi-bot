@@ -111,6 +111,30 @@ class GestorDashboard:
             Pedido.Estado.in_(_ESTADOS_OPERATIVOS + [EstadoPedido.ENTREGADO.value]),
         ).scalar() or Decimal("0.00")
 
+        # Cancelaciones hoy agrupadas por motivo
+        cancelados_hoy = (
+            s.query(Pedido.cancel_reason, func.count(Pedido.PedidoID))
+            .filter(
+                Pedido.Estado == EstadoPedido.CANCELADO.value,
+                Pedido.FechaActualizacion >= hoy,
+            )
+            .group_by(Pedido.cancel_reason)
+            .all()
+        )
+        cancelaciones_hoy = {(m or 'sin_motivo'): c for m, c in cancelados_hoy}
+
+        # Ingresos por método de cobro hoy (repartos completados)
+        ingresos_metodo = (
+            s.query(Reparto.metodo_cobro, func.sum(Reparto.importe_cobrado))
+            .join(Pedido, Reparto.pedido_id == Pedido.PedidoID)
+            .filter(Pedido.FechaCreacion >= hoy)
+            .group_by(Reparto.metodo_cobro)
+            .all()
+        )
+        ingresos_por_metodo = {
+            (m or 'online'): float(v or 0) for m, v in ingresos_metodo
+        }
+
         return {
             "pedidos_hoy": pedidos_hoy,
             "pedidos_activos": pedidos_activos,
@@ -126,6 +150,8 @@ class GestorDashboard:
                 hoy, EstadoPedido.EN_REPARTO, EstadoPedido.ENTREGADO
             ),
             "ingresos_hoy_eur": float(ingresos_hoy),
+            "cancelaciones_hoy": cancelaciones_hoy,
+            "ingresos_por_metodo": ingresos_por_metodo,
         }
 
     def _tiempo_medio(self, desde: datetime, estado_inicio: EstadoPedido, estado_fin: EstadoPedido):
