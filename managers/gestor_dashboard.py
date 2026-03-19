@@ -123,11 +123,13 @@ class GestorDashboard:
         )
         cancelaciones_hoy = {(m or 'sin_motivo'): c for m, c in cancelados_hoy}
 
-        # Ingresos por método de cobro hoy (repartos completados)
+        # Ingresos por método de cobro hoy (repartos entregados hoy)
         ingresos_metodo = (
             s.query(Reparto.metodo_cobro, func.sum(Reparto.importe_cobrado))
-            .join(Pedido, Reparto.pedido_id == Pedido.PedidoID)
-            .filter(Pedido.FechaCreacion >= hoy)
+            .filter(
+                Reparto.estado == EstadoReparto.ENTREGADO.value,
+                Reparto.hora_entrega_real >= hoy,
+            )
             .group_by(Reparto.metodo_cobro)
             .all()
         )
