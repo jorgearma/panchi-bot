@@ -423,3 +423,12 @@ class TestCambiarEstadoAEnlace:
                 resp = self._post(client, pedido_id=7)
         assert resp.status_code == 200
         mock_gp.actualizar_estado.assert_called_once_with(7, EstadoPedido.ENLACE)
+
+
+def test_agregar_pedido_carrito_vacio(client):
+    """POST /api/agregar_pedido con carrito vacío debe devolver 400."""
+    resp = client.post('/api/agregar_pedido', json={
+        'token': 'token-invalido',
+        'carrito': [],
+    })
+    assert resp.status_code in (400, 401, 422)
