@@ -48,6 +48,10 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
                         guardado = gestor_pedidos.guardar_enlace(datos.id_pedido_actual, enlace)
 
                         if actualizado and guardado:
+                            logger.info(
+                                "PEDIDO_INICIADO pedido_id=%s usuario=%s",
+                                datos.id_pedido_actual, datos.numero_cliente,
+                            )
                             return f"❕ {mensaje_respuesta} ❕\n\n🔗 *Enlace único*: {enlace}"
                         else:
                             gestor_pedidos.actualizar_estado(datos.id_pedido_actual, EstadoPedido.PENDIENTE)
@@ -140,6 +144,7 @@ def confirmar_carrito(
         logger.warning("confirmar_carrito: no se pudieron geocodificar las coordenadas del pedido %s", pedido_id_db)
 
     gestor_pedidos.actualizar_estado(pedido_id_db, EstadoPedido.ENLACE2)
+    logger.info("CARRITO_CONFIRMADO pedido_id=%s", pedido_id_db)
 
     confirmacion_url = f"{public_url}/confirmacion_pago?pedido_id={pedido_id_redis}"
     return True, confirmacion_url
