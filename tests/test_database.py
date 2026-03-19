@@ -9,8 +9,12 @@ def test_conectar_bd1_incluye_audit_log(app):
     assert AuditLog.__tablename__ in database.Base.metadata.tables
 
 
-def test_conectar_bd1_fuente_incluye_auditlog():
-    """Verificar que el código fuente de conectar_bd1 incluye AuditLog en create_all."""
+def test_conectar_bd1_fuente_incluye_audit_log():
+    """Verifica que conectar_bd1() incluye AuditLog en su código fuente.
+
+    Usamos inspect.getsource() porque no hay SQL Server disponible en tests.
+    Este test detecta si alguien elimina el import o el create_all de AuditLog.
+    """
     source = inspect.getsource(database.conectar_bd1)
     assert 'AuditLog' in source, (
         "AuditLog debe estar en el código fuente de conectar_bd1() "
