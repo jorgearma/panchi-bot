@@ -243,7 +243,7 @@
                   <span class="text-gray-600" x-text="p.total.toFixed(2) + '€'"></span>
                 </div>
                 <div class="text-gray-600 truncate mb-1.5" x-text="p.direccion"></div>
-                <button @click="abrirModalRepartidor(p.pedido_id)"
+                <button @click="abrirModalRepartidor(p.pedido_id, p.repartidor_nombre)"
                         class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded px-2 py-1.5 font-medium transition text-xs">
                   Asignar repartidor
                 </button>
@@ -533,10 +533,13 @@
        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
        @click.self="modalRepartidor.visible = false">
     <div class="bg-white rounded-2xl shadow-xl w-96 p-6 fade-in">
-      <h3 class="font-bold text-lg mb-1">Asignar repartidor</h3>
-      <p class="text-gray-500 text-sm mb-4">Pedido #<span x-text="modalRepartidor.pedido_id"></span></p>
+      <h3 class="font-bold text-lg mb-1" x-text="modalRepartidor.repartidor_actual ? 'Reasignar repartidor' : 'Asignar repartidor'"></h3>
+      <p class="text-gray-500 text-sm mb-1">Pedido #<span x-text="modalRepartidor.pedido_id"></span></p>
+      <p x-show="modalRepartidor.repartidor_actual" class="text-amber-600 text-xs mb-3 bg-amber-50 rounded px-2 py-1">
+        ⚠ Repartidor actual: <span class="font-semibold" x-text="modalRepartidor.repartidor_actual"></span>
+      </p>
 
-      <div class="mb-4">
+      <div class="mb-4" :class="modalRepartidor.repartidor_actual ? '' : 'mt-3'">
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Selecciona un repartidor</label>
         <select x-model="modalRepartidor.empleado_id"
                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
@@ -760,7 +763,7 @@
         <template x-if="!panel.pedido?.reparto && panel.pedido?.estado === 'preparado'">
           <div>
             <p class="text-sm text-gray-400 mb-3">Sin repartidor asignado</p>
-            <button @click="abrirModalRepartidor(panel.pedido.pedido_id)"
+            <button @click="abrirModalRepartidor(panel.pedido.pedido_id, panel.pedido?.reparto?.repartidor_nombre)"
                     class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-95">
               🛵 Asignar repartidor
             </button>
@@ -1283,8 +1286,8 @@
           await this.reasignarPicker(picking_id, null);
         },
 
-        async abrirModalRepartidor(pedido_id) {
-          this.modalRepartidor = { visible: true, pedido_id, empleado_id: '' };
+        async abrirModalRepartidor(pedido_id, repartidorActual) {
+          this.modalRepartidor = { visible: true, pedido_id, empleado_id: '', repartidor_actual: repartidorActual || null };
           this.modalError = '';
           const r = await fetch('/dashboard/empleados');
           this.empleadosModal = r.ok ? await r.json() : [];
@@ -1292,6 +1295,12 @@
 
         async confirmarAsignarRepartidor() {
           this.modalError = '';
+          if (this.modalRepartidor.repartidor_actual) {
+            const confirmado = confirm(
+              `Este pedido ya tiene asignado a ${this.modalRepartidor.repartidor_actual}. ¿Quieres reasignarlo?`
+            );
+            if (!confirmado) return;
+          }
           const r = await fetch('/dashboard/reparto/asignar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
