@@ -63,8 +63,7 @@ Cada fase se valida con `pytest` al completo antes de continuar.
 
 | ID | Fichero | Problema | Impacto en producción |
 |----|---------|----------|-----------------------|
-| AUDIT-1 | `database.py` | `AuditLog` se importa y usa en `gestor_pedidos.py` (líneas 258, 306, 413) pero no está en `conectar_bd1()` | En un deploy limpio la tabla no existe → `ProgrammingError` en la primera cancelación o modificación de item desde el dashboard |
-| LEGACY-1 | `blueprints/webhook.py:90` | Ruta `/webhoo/monei` (typo) sigue activa | Eliminar cuando el dashboard de Monei apunte a `/webhook/monei` |
+| AUDIT-1 | `database.py` | `AuditLog` se importa y usa en `gestor_pedidos.py` (líneas 258, 306, 413) pero no está en `conectar_bd1()`. Nota: `scripts/migrar_sprint3.py:61` ya crea la tabla condicionalmente para despliegues existentes — pero `conectar_bd1()` es la ruta autoritativa para un deploy limpio. Fix: añadir `AuditLog` al import y al `create_all` de `conectar_bd1()`. Para datos existentes, ejecutar el migration script. | En un deploy limpio: `ProgrammingError` en la primera cancelación o modificación de item desde el dashboard |
 | TD-13 | `database.py:71,73` | `print()` en lugar de `logger` en `conectar_bd1()` | Logs de BD que no llegan a los ficheros de log en producción |
 
 ### Nota sobre migración de datos
@@ -152,7 +151,13 @@ Criterio: cada flujo se puede recorrer completo con datos reales sin errores ni 
 
 **Solución mínima:** login con PIN por rol, usando sesiones Flask con `werkzeug.security` para verificar el hash (ya disponible, `Empleado.password_hash` ya está en el modelo en `models.py:191`). Tres roles: `manager` (dashboard completo), `picker` (solo picker), `repartidor` (solo repartidor). El modelo `Rol` ya existe — reutilizar.
 
-**Binding sesión-empleado:** tras el login, la sesión almacena `session['empleado_id']`. Los endpoints de picker y repartidor actualmente reciben la identidad por parámetro URL (`?id=<empleado_id>`). Como parte de esta fase, el `empleado_id` se lee exclusivamente de la sesión, eliminando el parámetro `?id=` de las URLs. Esto impide que un empleado autenticado suplante a otro cambiando el parámetro.
+**Binding sesión-empleado:** tras el login, la sesión almacena `session['empleado_id']`. El `empleado_id` se lee exclusivamente de la sesión en todos los blueprints afectados:
+
+- **picker**: rutas `/picker` (línea 25), `/picker/manifest.json` (46), `/picker/mis-pedidos` (66) — actualmente usan `?id=` o `?picker_id=` como parámetro URL
+- **repartidor**: rutas `/repartidor` (26), `/repartidor/manifest.json` (46), `/repartidor/mis-pedidos` (66), `/repartidor/cierre` (130), `/repartidor/cierre/datos` (138) — actualmente usan `?id=` o `?repartidor_id=`
+- **dashboard**: endpoints `/cancelar`, `/eliminar-item`, `/sustituir-item` y asignaciones (líneas 165, 179, 201, 248, 269, 282) — actualmente reciben `empleado_id` del body JSON
+
+El patrón `?id=` queda retirado. Esto impide que un empleado autenticado suplante a otro manipulando parámetros.
 
 ### 4b — Resiliencia
 
@@ -177,6 +182,12 @@ Criterio: cada flujo se puede recorrer completo con datos reales sin errores ni 
 - Verificar que Sentry recibe errores con contexto útil (`pedido_id`, módulo) — ya configurado en Fase de Seguridad
 - Rotación de logs si se escribe a fichero (`logging.handlers.RotatingFileHandler`)
 - Runbook mínimo: cómo arrancar, cómo reiniciar, cómo recuperar manualmente un pedido en estado incorrecto
+
+---
+
+## Checklist pre-producción (fuera de fases, dependiente de acciones externas)
+
+- [ ] **LEGACY-1**: Una vez el dashboard de Monei esté configurado para apuntar a `/webhook/monei`, eliminar la ruta legacy `/webhoo/monei` de `blueprints/webhook.py:90`. Trigger: confirmación de que la URL en Monei ha sido actualizada.
 
 ---
 
