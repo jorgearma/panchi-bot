@@ -67,6 +67,9 @@ class TestConfirmarCarrito:
         cache = make_cache()
         gestor = make_gestor_pedidos(pedido)
 
+        mock_gp = MagicMock()
+        mock_gp.obtener_producto_por_codigo.return_value = {"Precio": 3.5}
+
         success, result = confirmar_carrito(
             pedido_id_redis="uuid-001",
             name="Ana",
@@ -77,6 +80,7 @@ class TestConfirmarCarrito:
             productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=cache,
             gestor_pedidos=gestor,
+            gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
 
@@ -92,6 +96,9 @@ class TestConfirmarCarrito:
         cache.set.side_effect = lambda k, v, ex=None: store.update({k: v})
         gestor = make_gestor_pedidos(pedido)
 
+        mock_gp = MagicMock()
+        mock_gp.obtener_producto_por_codigo.return_value = {"Precio": 3.5}
+
         confirmar_carrito(
             pedido_id_redis="uuid-002",
             name="Juan",
@@ -102,13 +109,14 @@ class TestConfirmarCarrito:
             productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=cache,
             gestor_pedidos=gestor,
+            gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
 
         assert "uuid-002" in store
         payload = json.loads(store["uuid-002"])
         assert payload["name"] == "Juan"
-        assert payload["total"] == round(3.5 * 2, 2)
+        assert payload["total"] == round(3.5 * 2, 2)  # precio de BD mock = 3.5
 
     def test_state_transition_to_enlace2_called(self):
         from controllers.pedido import confirmar_carrito
@@ -126,6 +134,7 @@ class TestConfirmarCarrito:
             productos_recibidos=[],
             cache=make_cache(),
             gestor_pedidos=gestor,
+            gestor_productos=MagicMock(),
             public_url=PUBLIC_URL,
         )
 
@@ -148,6 +157,7 @@ class TestConfirmarCarrito:
             productos_recibidos=[],
             cache=make_cache(),
             gestor_pedidos=gestor,
+            gestor_productos=MagicMock(),
             public_url=PUBLIC_URL,
         )
 
@@ -169,11 +179,154 @@ class TestConfirmarCarrito:
             productos_recibidos=[],
             cache=make_cache(),
             gestor_pedidos=gestor,
+            gestor_productos=MagicMock(),
             public_url=PUBLIC_URL,
         )
 
         assert success is False
         assert "pedido activo" in msg.lower()
+
+    def test_confirmacion_ignora_precio_frontend(self):
+        """El total en Redis usa precio de BD, no precio_unitario del frontend."""
+        from controllers.pedido import confirmar_carrito
+        from decimal import Decimal
+
+        precio_frontend_manipulado = 0.01
+        precio_bd = Decimal("5.00")
+        cantidad = 2
+
+        pedido = make_pedido(EstadoPedido.ENLACE)
+        store = {}
+        cache = MagicMock()
+        cache.set.side_effect = lambda k, v, ex=None: store.update({k: v})
+        gestor = make_gestor_pedidos(pedido)
+        mock_gp = MagicMock()
+        mock_gp.obtener_producto_por_codigo.return_value = {"Precio": precio_bd}
+
+        confirmar_carrito(
+            pedido_id_redis="uuid-precio-test",
+            name="Test",
+            token="tok",
+            user_id=1,
+            numero="+34600000000",
+            direccion="Calle Mayor 1",
+            productos_recibidos=[{
+                "Codigo": "P001",
+                "nombre": "Producto Test",
+                "cantidad": cantidad,
+                "precio_unitario": precio_frontend_manipulado,
+            }],
+            cache=cache,
+            gestor_pedidos=gestor,
+            gestor_productos=mock_gp,
+            public_url=PUBLIC_URL,
+        )
+
+        stored = json.loads(store["uuid-precio-test"])
+        assert stored["total"] == round(float(precio_bd) * cantidad, 2)
+        assert stored["productos"][0]["precio"] == round(float(precio_bd) * cantidad, 2)
+
+    def test_confirmacion_codigo_ausente_devuelve_error(self):
+        """Si un item no tiene 'Codigo', confirmar_carrito devuelve (False, mensaje)."""
+        from controllers.pedido import confirmar_carrito
+
+        pedido = make_pedido(EstadoPedido.ENLACE)
+        gestor = make_gestor_pedidos(pedido)
+        mock_gp = MagicMock()
+
+        success, msg = confirmar_carrito(
+            pedido_id_redis="uuid-sin-codigo",
+            name="Test",
+            token="tok",
+            user_id=1,
+            numero="+34600000000",
+            direccion="Calle Mayor 1",
+            productos_recibidos=[{"nombre": "X", "cantidad": 1}],
+            cache=make_cache(),
+            gestor_pedidos=gestor,
+            gestor_productos=mock_gp,
+            public_url=PUBLIC_URL,
+        )
+
+        assert success is False
+        assert "código" in msg.lower() or "codigo" in msg.lower()
+
+    def test_confirmacion_cantidad_cero_devuelve_error(self):
+        """Si cantidad <= 0, confirmar_carrito devuelve (False, mensaje)."""
+        from controllers.pedido import confirmar_carrito
+
+        pedido = make_pedido(EstadoPedido.ENLACE)
+        gestor = make_gestor_pedidos(pedido)
+        mock_gp = MagicMock()
+
+        success, msg = confirmar_carrito(
+            pedido_id_redis="uuid-cant-cero",
+            name="Test",
+            token="tok",
+            user_id=1,
+            numero="+34600000000",
+            direccion="Calle Mayor 1",
+            productos_recibidos=[{"Codigo": "P001", "nombre": "X", "cantidad": 0}],
+            cache=make_cache(),
+            gestor_pedidos=gestor,
+            gestor_productos=mock_gp,
+            public_url=PUBLIC_URL,
+        )
+
+        assert success is False
+        assert "cantidad" in msg.lower()
+
+    def test_confirmacion_producto_no_encontrado_devuelve_error(self):
+        """Si gestor_productos no encuentra el código, confirmar_carrito devuelve error."""
+        from controllers.pedido import confirmar_carrito
+
+        pedido = make_pedido(EstadoPedido.ENLACE)
+        gestor = make_gestor_pedidos(pedido)
+        mock_gp = MagicMock()
+        mock_gp.obtener_producto_por_codigo.return_value = None
+
+        success, msg = confirmar_carrito(
+            pedido_id_redis="uuid-no-producto",
+            name="Test",
+            token="tok",
+            user_id=1,
+            numero="+34600000000",
+            direccion="Calle Mayor 1",
+            productos_recibidos=[{"Codigo": "INEXISTENTE", "nombre": "X", "cantidad": 1}],
+            cache=make_cache(),
+            gestor_pedidos=gestor,
+            gestor_productos=mock_gp,
+            public_url=PUBLIC_URL,
+        )
+
+        assert success is False
+        assert "INEXISTENTE" in msg or "no encontrado" in msg.lower()
+
+    def test_confirmacion_precio_null_devuelve_error(self):
+        """Si Precio en BD es NULL, confirmar_carrito devuelve (False, mensaje)."""
+        from controllers.pedido import confirmar_carrito
+
+        pedido = make_pedido(EstadoPedido.ENLACE)
+        gestor = make_gestor_pedidos(pedido)
+        mock_gp = MagicMock()
+        mock_gp.obtener_producto_por_codigo.return_value = {"Precio": None}
+
+        success, msg = confirmar_carrito(
+            pedido_id_redis="uuid-null-precio",
+            name="Test",
+            token="tok",
+            user_id=1,
+            numero="+34600000000",
+            direccion="Calle Mayor 1",
+            productos_recibidos=[{"Codigo": "P001", "nombre": "X", "cantidad": 1}],
+            cache=make_cache(),
+            gestor_pedidos=gestor,
+            gestor_productos=mock_gp,
+            public_url=PUBLIC_URL,
+        )
+
+        assert success is False
+        assert "precio" in msg.lower() or "disponible" in msg.lower()
 
 
 # ---------------------------------------------------------------------------
