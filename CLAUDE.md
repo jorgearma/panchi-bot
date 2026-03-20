@@ -229,8 +229,8 @@ CUSTOMER_SUPPORT_PHONE
 **Rama activa:** `refactorizar-estructura`
 **Plan en curso:** `docs/superpowers/plans/2026-03-19-produccion-panchi-bot.md`
 
-Fases completadas: 1 (base), 2 (logs/métricas), 3 (pulido de interfaces)
-Pendiente: Fase 4 — Hardening (Tasks 11-15: auth PIN, tenacity Twilio, env vars validation, docker-compose/health, observabilidad)
+Fases completadas: 1 (base), 2 (logs/métricas), 3 (pulido de interfaces), 4 (hardening — auth PIN, tenacity Twilio, env vars validation, docker-compose/health, observabilidad)
+**Plan completado al 100%.** No quedan tareas pendientes.
 
 ### LEGACY-1 (acción pendiente externa)
 Una vez que el dashboard de Monei esté configurado para apuntar a `/webhook/monei`, eliminar la ruta legacy `/webhoo/monei` de `blueprints/webhook.py:90`. Trigger: confirmación del proveedor de que la URL está actualizada.

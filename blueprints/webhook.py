@@ -12,7 +12,7 @@ import config
 from controllers.registro import manejar_registro
 from controllers.mensajes_registrados import ManejadorMensajesRegistrados
 from utils.text_utils import limpiar_texto
-from services.twilio_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import enviar_mensaje_whatsapp
 from schemas.twilio import WebhookRequest
 from managers.gestor_redis import redismanager
 from services import gestor_usuarios, gestor_pedidos
@@ -111,12 +111,9 @@ def webhook_monei():
         if not hmac.compare_digest(computed, received_signature):
             logger.warning("Monei webhook signature mismatch")
             return jsonify({"error": "Invalid signature"}), 401
-    elif not current_app.debug:
+    else:
         logger.warning("MONEI_WEBHOOK_SECRET not configured — rejecting webhook")
         return jsonify({"error": "Invalid signature"}), 401
-    else:
-        # TODO: configurar MONEI_WEBHOOK_SECRET en producción
-        logger.warning("MONEI_WEBHOOK_SECRET no configurado — omitiendo verificación (modo debug)")
 
     data = request.get_json()
     if data.get('type') == 'webhook.test':
@@ -154,3 +151,103 @@ def webhook_monei():
         logger.info("Pedido %s marcado como pagado", order_id)
 
     return jsonify({'message': 'Webhook recibido correctamente'}), 200
+
+
+@blueprint_webhook.route('/webhook/meta', methods=['GET'])
+def webhook_meta_verify():
+    """Verificación del webhook en el panel de Meta."""
+    mode = request.args.get('hub.mode')
+    token = request.args.get('hub.verify_token')
+    challenge = request.args.get('hub.challenge', '')
+    if mode == 'subscribe' and token == config.META_VERIFY_TOKEN:
+        return challenge, 200
+    logger.warning("Meta webhook verify_token incorrecto — mode=%s", mode)
+    return jsonify({"error": "Forbidden"}), 403
+
+
+@blueprint_webhook.route('/webhook/meta', methods=['POST'])
+def webhook_meta():
+    """Recepción de mensajes desde Meta WhatsApp Cloud API."""
+    raw_body = request.get_data()
+
+    # Verificar firma
+    if not config.META_APP_SECRET:
+        logger.warning("META_APP_SECRET not configured — rejecting webhook")
+        return jsonify({"error": "Invalid signature"}), 401
+
+    sig_header = request.headers.get('X-Hub-Signature-256', '')
+    if not sig_header.startswith('sha256='):
+        logger.warning("Meta webhook sin X-Hub-Signature-256")
+        return jsonify({"error": "Invalid signature"}), 401
+
+    received_sig = sig_header[len('sha256='):]
+    computed = hmac.HMAC(config.META_APP_SECRET.encode(), raw_body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(computed, received_sig):
+        logger.warning("Meta webhook signature mismatch")
+        return jsonify({"error": "Invalid signature"}), 401
+
+    # Parsear payload
+    data = request.get_json()
+    try:
+        messages = data['entry'][0]['changes'][0]['value'].get('messages', [])
+    except (KeyError, IndexError, TypeError):
+        return jsonify({"ok": True}), 200
+
+    if not messages:
+        return jsonify({"ok": True}), 200
+
+    for message in messages:
+        if message.get('type') != 'text':
+            continue
+
+        # Normalizar número al formato interno whatsapp:+XXXXXXXXX
+        numero_cliente = f"whatsapp:+{message['from']}"
+        mensaje_cliente = limpiar_texto(message['text']['body'].lower())
+
+        logger.info("Mensaje Meta recibido de %s: %s", numero_cliente, mensaje_cliente)
+
+        # Rate limiting
+        if redismanager.esta_bloqueado(numero_cliente):
+            continue
+        redismanager.bloquear_usuario(numero_cliente, duracion=4)
+
+        # Routing a lógica de negocio
+        try:
+            usuario = gestor_usuarios.verificar_usuario(numero_cliente)
+        except RetryError as re:
+            logger.error("Error de conexión tras varios intentos: %s", re)
+            enviar_mensaje_whatsapp(
+                "Lo sentimos, se presentó un error en el sistema. Por favor, intente más tarde.",
+                numero_cliente,
+            )
+            continue
+        except SQLAlchemyError as e:
+            logger.error("Error al verificar el usuario: %s", e)
+            enviar_mensaje_whatsapp(
+                "Lo sentimos, se presentó un error en el sistema. Por favor, intente más tarde.",
+                numero_cliente,
+            )
+            continue
+        except Exception as e:
+            logger.exception("Error inesperado:")
+            enviar_mensaje_whatsapp(
+                "Lo sentimos, se presentó un error inesperado. Por favor, intente más tarde.",
+                numero_cliente,
+            )
+            continue
+
+        try:
+            if not usuario:
+                manejar_registro(numero_cliente, mensaje_cliente, redismanager)
+            else:
+                ManejadorMensajesRegistrados.manejar_mensajes_registrados(
+                    numero_cliente, mensaje_cliente
+                )
+        except Exception as e:
+            logger.exception("Error procesando el mensaje del usuario:")
+            enviar_mensaje_whatsapp(
+                "Se presentó un problema al procesar su mensaje. Intente nuevamente.",
+                numero_cliente,
+            )
+
+    return jsonify({"ok": True}), 200
