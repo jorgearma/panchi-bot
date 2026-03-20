@@ -15,10 +15,20 @@ from database import conectar_bd1, close_db
 
 
 def create_app(config: dict = None) -> Flask:
-    _VARS_OBLIGATORIAS = [
-        'SECRET_KEY', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN',
-        'TWILIO_WHATSAPP_NUMBER', 'MONEI_API_KEY', 'MONEI_WEBHOOK_SECRET', 'PUBLIC_URL',
-    ]
+    _VARS_COMUNES = ['SECRET_KEY', 'MONEI_API_KEY', 'MONEI_WEBHOOK_SECRET', 'PUBLIC_URL']
+    _provider = app_config.WHATSAPP_PROVIDER
+    if _provider not in ('twilio', 'meta'):
+        raise EnvironmentError(
+            f"WHATSAPP_PROVIDER '{_provider}' no es válido. Valores aceptados: 'twilio', 'meta'"
+        )
+    if _provider == 'meta':
+        _VARS_OBLIGATORIAS = _VARS_COMUNES + [
+            'META_ACCESS_TOKEN', 'META_PHONE_NUMBER_ID', 'META_APP_SECRET', 'META_VERIFY_TOKEN',
+        ]
+    else:
+        _VARS_OBLIGATORIAS = _VARS_COMUNES + [
+            'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_NUMBER',
+        ]
     if not (config or {}).get('TESTING'):
         faltantes = [v for v in _VARS_OBLIGATORIAS if not os.environ.get(v)]
         if faltantes:

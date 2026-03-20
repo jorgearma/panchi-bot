@@ -6,7 +6,7 @@ from flask import Blueprint, jsonify, render_template, request, session
 
 from blueprints.auth import requiere_rol
 from services import gestor_dashboard, gestor_pedidos
-from services.twilio_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import enviar_mensaje_whatsapp
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +68,28 @@ def monitor_datos():
         metricas_data = gestor_dashboard.metricas()
         alertas_data = gestor_dashboard.alertas()
         eventos_data = gestor_dashboard.eventos(limit=25)
+
+        pedidos_activos_data = gestor_dashboard.pedidos_activos()
+        pedidos_pipeline = [
+            {
+                "pedido_id":         p["pedido_id"],
+                "estado":            p["estado"],
+                "forma_pago":        p["forma_pago"],
+                "n_items":           len(p["items"]),
+                "minutos_en_estado": p["minutos_en_estado"],
+                "total":             p["total"],
+                "cliente_nombre":    p["cliente_nombre"],
+                "direccion_entrega": p["direccion_entrega"],
+            }
+            for p in pedidos_activos_data
+        ]
+
         return _ok({
             **monitor_data,
-            "metricas": metricas_data,
-            "alertas": alertas_data,
-            "eventos": eventos_data,
+            "metricas":         metricas_data,
+            "alertas":          alertas_data,
+            "eventos":          eventos_data,
+            "pedidos_pipeline": pedidos_pipeline,
         })
     except Exception as e:
         logger.error("Error en /dashboard/monitor/datos: %s", e)

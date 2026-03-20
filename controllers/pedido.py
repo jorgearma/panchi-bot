@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from utils.es_pregunta import es_pregunta
 from services import gestor_pedidos
 from services.token_service import generar_enlace
-from services.twilio_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import enviar_mensaje_whatsapp
 from services.maps_service import geocodificar_direccion
 from utils.menu_opciones import menu, mostrar_menu
 from utils.text_utils import limpiar_texto
@@ -76,6 +76,7 @@ def confirmar_carrito(
     productos_recibidos: list,
     cache,
     gestor_pedidos,
+    gestor_productos,
     public_url: str,
 ) -> tuple:
     """
@@ -90,9 +91,34 @@ def confirmar_carrito(
 
     for p in productos_recibidos:
         nombre_producto = p.get("nombre", "Producto desconocido")
-        cantidad = p.get("cantidad", 1)
-        precio_unitario = p.get("precio_unitario", 0.0)
+
         codigo = p.get("Codigo")
+        if not codigo:
+            logger.error("confirmar_carrito: producto sin código identificador")
+            return False, "Producto sin código identificador"
+
+        cantidad = p.get("cantidad", 1)
+        if cantidad <= 0:
+            logger.error(
+                "confirmar_carrito: cantidad inválida %s para código %s", cantidad, codigo
+            )
+            return False, f"Cantidad inválida para el producto {codigo}"
+
+        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
+        if not producto_db:
+            logger.error(
+                "confirmar_carrito: código %s no encontrado o error de BD", codigo
+            )
+            return False, f"Producto con código {codigo} no encontrado"
+
+        precio_db = producto_db.get("Precio")
+        if precio_db is None:
+            logger.error(
+                "confirmar_carrito: precio NULL en BD para código %s", codigo
+            )
+            return False, f"Precio no disponible para el producto {codigo}"
+
+        precio_unitario = float(precio_db)
         precio_total = round(precio_unitario * cantidad, 2)
 
         productos.append({

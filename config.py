@@ -45,3 +45,12 @@ REDIS_DB: int = int(os.environ.get("REDIS_DB", 0))
 
 # Atención al cliente (se muestra al usuario cuando su pedido está activo)
 CUSTOMER_SUPPORT_PHONE: str | None = os.environ.get("CUSTOMER_SUPPORT_PHONE")
+
+# WhatsApp provider ("twilio" o "meta")
+WHATSAPP_PROVIDER: str = os.environ.get("WHATSAPP_PROVIDER", "twilio")
+
+# Meta WhatsApp Cloud API (solo necesario si WHATSAPP_PROVIDER=meta)
+META_ACCESS_TOKEN: str | None = os.environ.get("META_ACCESS_TOKEN")
+META_PHONE_NUMBER_ID: str | None = os.environ.get("META_PHONE_NUMBER_ID")
+META_APP_SECRET: str | None = os.environ.get("META_APP_SECRET")
+META_VERIFY_TOKEN: str | None = os.environ.get("META_VERIFY_TOKEN")

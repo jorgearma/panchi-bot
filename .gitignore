@@ -1,10 +1,39 @@
+# Secrets and local env
 .env
+.env.*
+!.env.example
+
+# Logs
 *.log
-virtual-panchi/
-notas.txt
+*.pid
 
+# Python artifacts
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.pyd
+.python-version
 
-panchi-bot.log
+# Virtual environments
+venv/
+.venv/
+env/
+virtual-panchi/
+
+# Tooling and test caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# IDE and editor
+.idea/
+.vscode/
+
+# Local runtime/cache
+cache/
+.superpowers/
+
+# Project-specific local notes
+notas.txt
