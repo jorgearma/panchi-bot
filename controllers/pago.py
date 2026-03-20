@@ -3,7 +3,7 @@ import logging
 from Monei import ApiException
 
 from states import EstadoPedido
-from services.twilio_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import enviar_mensaje_whatsapp
 
 logger = logging.getLogger(__name__)
 

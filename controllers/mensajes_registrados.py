@@ -1,6 +1,6 @@
 import logging
 import config
-from services.twilio_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import enviar_mensaje_whatsapp
 from services import gestor_pedidos, gestor_usuarios
 from utils.menu_opciones import mostrar_menu
 from controllers.pedido import procesar_pedido
