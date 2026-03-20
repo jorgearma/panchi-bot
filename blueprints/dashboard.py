@@ -69,27 +69,11 @@ def monitor_datos():
         alertas_data = gestor_dashboard.alertas()
         eventos_data = gestor_dashboard.eventos(limit=25)
 
-        pedidos_activos_data = gestor_dashboard.pedidos_activos()
-        pedidos_pipeline = [
-            {
-                "pedido_id":         p["pedido_id"],
-                "estado":            p["estado"],
-                "forma_pago":        p["forma_pago"],
-                "n_items":           len(p["items"]),
-                "minutos_en_estado": p["minutos_en_estado"],
-                "total":             p["total"],
-                "cliente_nombre":    p["cliente_nombre"],
-                "direccion_entrega": p["direccion_entrega"],
-            }
-            for p in pedidos_activos_data
-        ]
-
         return _ok({
             **monitor_data,
-            "metricas":         metricas_data,
-            "alertas":          alertas_data,
-            "eventos":          eventos_data,
-            "pedidos_pipeline": pedidos_pipeline,
+            "metricas": metricas_data,
+            "alertas":  alertas_data,
+            "eventos":  eventos_data,
         })
     except Exception as e:
         logger.error("Error en /dashboard/monitor/datos: %s", e)
