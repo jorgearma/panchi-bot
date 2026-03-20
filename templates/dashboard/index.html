@@ -449,17 +449,22 @@
               <div class="space-y-3">
                 <template x-for="picker in pickersEquipo" :key="'picker-'+picker.empleado_id">
                   <div class="rounded-[26px] border-2 p-4 shadow-sm transition"
-                       :class="picker.pedidos_activos > 0
-                         ? 'border-sky-200 bg-gradient-to-b from-white to-sky-50/60 shadow-sky-100/70'
-                         : 'border-emerald-200 bg-gradient-to-b from-white to-emerald-50/60 shadow-emerald-100/70'">
+                       :class="workerLoadBorder(picker.carga, 'picker')">
                     <div class="flex items-start justify-between gap-3">
                       <div>
                         <p class="font-bold text-slate-900" x-text="picker.nombre"></p>
                         <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Picker</p>
+                        <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                          <span class="rounded-full px-2 py-1 font-bold"
+                                :class="picker.carga.score >= 3 ? 'bg-red-100 text-red-700' : picker.carga.score === 2 ? 'bg-amber-100 text-amber-700' : picker.carga.score === 1 ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-700'"
+                                x-text="picker.carga.label"></span>
+                          <span class="rounded-full bg-white px-2 py-1 font-medium text-slate-500 shadow-sm"
+                                x-text="picker.max_minutos_activo > 0 ? 'máx ' + formatMinutos(picker.max_minutos_activo) : 'sin carga activa'"></span>
+                        </div>
                       </div>
                       <div class="flex items-center gap-2">
                         <div class="min-w-[86px] rounded-2xl px-3 py-2 text-center shadow-sm"
-                             :class="picker.pedidos_activos > 0 ? 'bg-sky-600 text-white' : 'bg-emerald-600 text-white'">
+                             :class="workerLoadTone(picker.carga, 'picker')">
                           <p class="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80"
                              x-text="picker.pedidos_activos > 0 ? 'Activos' : 'Estado'"></p>
                           <p class="mt-1 text-lg font-black leading-none"
@@ -488,6 +493,13 @@
                       </div>
                     </div>
 
+                    <div class="mt-3 flex gap-2" x-show="!isPickerCollapsed(picker.empleado_id)" x-cloak>
+                      <button @click="asignarSiguienteAPicker(picker.empleado_id)"
+                              class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                        Tomar siguiente pendiente
+                      </button>
+                    </div>
+
                     <div class="mt-3 space-y-2" x-show="picker.pickings.length > 0 && !isPickerCollapsed(picker.empleado_id)" x-cloak>
                       <template x-for="pk in picker.pickings" :key="'pk-'+pk.picking_id">
                         <div class="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
@@ -505,6 +517,10 @@
                           <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
                             <span x-text="pk.items_completados + '/' + pk.items_total + ' items'"></span>
                             <span x-text="pk.items_pendientes + ' pend.'"></span>
+                          </div>
+                          <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                            <span x-text="pk.minutos_activos > 0 ? 'activo ' + formatMinutos(pk.minutos_activos) : 'recién asignado'"></span>
+                            <span x-show="pk.iniciado_en" x-text="'inicio ' + horaCorta(pk.iniciado_en)"></span>
                           </div>
                           <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
                             <div class="h-1.5 rounded-full bg-sky-500" :style="'width:' + (pk.items_total ? (pk.items_completados / pk.items_total * 100) : 0) + '%'"></div>
@@ -550,17 +566,22 @@
               <div class="space-y-3">
                 <template x-for="emp in repartidoresEquipo" :key="'rep-'+emp.empleado_id">
                   <div class="rounded-[26px] border-2 p-4 shadow-sm transition"
-                       :class="emp.pedidos_activos.length > 0
-                         ? 'border-orange-200 bg-gradient-to-b from-white to-orange-50/60 shadow-orange-100/70'
-                         : 'border-emerald-200 bg-gradient-to-b from-white to-emerald-50/60 shadow-emerald-100/70'">
+                       :class="workerLoadBorder(emp.carga, 'repartidor')">
                     <div class="flex items-start justify-between gap-3">
                       <div>
                         <p class="font-bold text-slate-900" x-text="emp.nombre"></p>
                         <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Repartidor</p>
+                        <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                          <span class="rounded-full px-2 py-1 font-bold"
+                                :class="emp.carga.score >= 3 ? 'bg-red-100 text-red-700' : emp.carga.score === 2 ? 'bg-amber-100 text-amber-700' : emp.carga.score === 1 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'"
+                                x-text="emp.carga.label"></span>
+                          <span class="rounded-full bg-white px-2 py-1 font-medium text-slate-500 shadow-sm"
+                                x-text="emp.max_minutos_activo > 0 ? 'máx ruta ' + formatMinutos(emp.max_minutos_activo) : 'sin ruta activa'"></span>
+                        </div>
                       </div>
                       <div class="flex items-center gap-2">
                         <div class="min-w-[86px] rounded-2xl px-3 py-2 text-center shadow-sm"
-                             :class="emp.pedidos_activos.length > 0 ? 'bg-orange-500 text-white' : 'bg-emerald-600 text-white'">
+                             :class="workerLoadTone(emp.carga, 'repartidor')">
                           <p class="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80"
                              x-text="emp.pedidos_activos.length > 0 ? 'Activos' : 'Estado'"></p>
                           <p class="mt-1 text-lg font-black leading-none"
@@ -576,6 +597,13 @@
                     <div class="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm" x-show="!isRepartidorCollapsed(emp.empleado_id)" x-cloak>
                       <span x-text="emp.telefono || 'sin tel.'"></span>
                       <span x-text="emp.entregados_hoy + ' hoy'"></span>
+                    </div>
+
+                    <div class="mt-3 flex gap-2" x-show="!isRepartidorCollapsed(emp.empleado_id)" x-cloak>
+                      <button @click="asignarSiguienteARepartidor(emp.empleado_id)"
+                              class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                        Tomar siguiente pendiente
+                      </button>
                     </div>
 
                     <div class="mt-3 space-y-2" x-show="emp.pedidos_activos.length > 0 && !isRepartidorCollapsed(emp.empleado_id)" x-cloak>
@@ -595,6 +623,10 @@
                           <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
                             <span x-text="r.total.toFixed(2) + '€'"></span>
                             <span x-text="r.estado_reparto === 'en_camino' ? 'ya salió' : 'pendiente salida'"></span>
+                          </div>
+                          <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                            <span x-text="r.minutos_activos > 0 ? 'ruta ' + formatMinutos(r.minutos_activos) : 'sin salida marcada'"></span>
+                            <span x-show="r.hora_salida" x-text="'salida ' + horaCorta(r.hora_salida)"></span>
                           </div>
                           <div class="mt-3 flex gap-2">
                             <button @click="abrirModalRepartidor(r.pedido_id, emp.nombre)"
@@ -1236,8 +1268,20 @@
           );
         },
 
+        get sinPickerOrdenados() {
+          return [...this.sinPicker].sort((a, b) =>
+            new Date(a.fecha_creacion || 0).getTime() - new Date(b.fecha_creacion || 0).getTime()
+          );
+        },
+
         get sinRepartidor() {
           return this.repartidores.pedidos_sin_asignar || [];
+        },
+
+        get sinRepartidorOrdenados() {
+          return [...this.sinRepartidor].sort((a, b) =>
+            new Date(a.fecha_creacion || 0).getTime() - new Date(b.fecha_creacion || 0).getTime()
+          );
         },
 
         get pedidosEnCamino() {
@@ -1279,16 +1323,29 @@
             }
 
             const picker = known.get(pk.empleado.id);
-            picker.pickings.push(pk);
+            const minutosActivos = this.workerMinutes(pk.iniciado_en || pk.fecha_creacion);
+            picker.pickings.push({
+              ...pk,
+              minutos_activos: minutosActivos,
+            });
             picker.pedidos_activos += 1;
             picker.items_total += pk.items_total || 0;
             picker.items_completados += pk.items_completados || 0;
             picker.items_pendientes += pk.items_pendientes || 0;
           });
 
-          return [...known.values()].sort((a, b) =>
-            b.pedidos_activos - a.pedidos_activos || a.nombre.localeCompare(b.nombre)
-          );
+          return [...known.values()]
+            .map(picker => ({
+              ...picker,
+              carga: this.workerLoad('picker', picker.pedidos_activos),
+              max_minutos_activo: Math.max(0, ...picker.pickings.map(pk => pk.minutos_activos || 0)),
+            }))
+            .sort((a, b) =>
+              b.carga.score - a.carga.score ||
+              b.max_minutos_activo - a.max_minutos_activo ||
+              b.items_pendientes - a.items_pendientes ||
+              a.nombre.localeCompare(b.nombre)
+            );
         },
 
         get repartidoresEquipo() {
@@ -1297,8 +1354,22 @@
               const rol = String(emp.rol || '').toLowerCase();
               return rol.includes('repart') || emp.pedidos_activos.length > 0;
             })
+            .map(emp => ({
+              ...emp,
+              pedidos_activos: emp.pedidos_activos.map(r => ({
+                ...r,
+                minutos_activos: this.workerMinutes(r.hora_salida),
+              })),
+            }))
+            .map(emp => ({
+              ...emp,
+              carga: this.workerLoad('repartidor', emp.pedidos_activos.length),
+              max_minutos_activo: Math.max(0, ...emp.pedidos_activos.map(r => r.minutos_activos || 0)),
+            }))
             .sort((a, b) =>
-              b.pedidos_activos.length - a.pedidos_activos.length || a.nombre.localeCompare(b.nombre)
+              b.carga.score - a.carga.score ||
+              b.max_minutos_activo - a.max_minutos_activo ||
+              a.nombre.localeCompare(b.nombre)
             );
         },
 
@@ -1438,6 +1509,86 @@
           if (diffSec < 60) return `Actualizado hace ${diffSec}s`;
           const min = Math.round(diffSec / 60);
           return `Actualizado hace ${min} min`;
+        },
+
+        workerMinutes(iso) {
+          if (!iso) return 0;
+          return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+        },
+
+        workerLoad(tipo, activos) {
+          if (activos <= 0) return { label: 'Libre', score: 0, summary: 'Sin carga ahora' };
+          if (tipo === 'picker') {
+            if (activos >= 4) return { label: 'Saturado', score: 3, summary: 'Demasiados pickings a la vez' };
+            if (activos >= 3) return { label: 'Cargado', score: 2, summary: 'Necesita vigilancia' };
+            return { label: 'Normal', score: 1, summary: 'Carga asumible' };
+          }
+          if (activos >= 3) return { label: 'Saturado', score: 3, summary: 'Ruta cargada' };
+          if (activos >= 2) return { label: 'Cargado', score: 2, summary: 'Varias entregas activas' };
+          return { label: 'Normal', score: 1, summary: 'Carga asumible' };
+        },
+
+        workerLoadTone(carga, tipo = 'picker') {
+          if (!carga) return 'bg-slate-600 text-white';
+          if (carga.score >= 3) return 'bg-red-600 text-white';
+          if (carga.score === 2) return 'bg-amber-500 text-white';
+          if (carga.score === 1) return tipo === 'picker' ? 'bg-sky-600 text-white' : 'bg-orange-500 text-white';
+          return 'bg-emerald-600 text-white';
+        },
+
+        workerLoadBorder(carga, tipo) {
+          if (!carga) return 'border-slate-200 bg-white';
+          if (carga.score >= 3) return 'border-red-200 bg-gradient-to-b from-white to-red-50/60 shadow-red-100/70';
+          if (carga.score === 2) return 'border-amber-200 bg-gradient-to-b from-white to-amber-50/60 shadow-amber-100/70';
+          if (carga.score === 1) return tipo === 'picker'
+            ? 'border-sky-200 bg-gradient-to-b from-white to-sky-50/60 shadow-sky-100/70'
+            : 'border-orange-200 bg-gradient-to-b from-white to-orange-50/60 shadow-orange-100/70';
+          return 'border-emerald-200 bg-gradient-to-b from-white to-emerald-50/60 shadow-emerald-100/70';
+        },
+
+        async asignarSiguienteAPicker(empleadoId) {
+          const pendiente = this.sinPickerOrdenados[0];
+          if (!pendiente) {
+            this.mostrarToast('No hay pedidos pendientes de picker', true);
+            return;
+          }
+          const pedidoId = pendiente.pedido_id;
+          if (pendiente.picking_id) {
+            await this.reasignarPicker(pendiente.picking_id, empleadoId);
+            return;
+          }
+          const r = await fetch('/dashboard/picking/asignar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pedido_id: pedidoId, empleado_id: empleadoId }),
+          });
+          const data = await r.json();
+          if (r.ok) {
+            this.mostrarToast(data.mensaje || `Pedido #${pedidoId} asignado`);
+            await this.cargarTodo();
+          } else {
+            this.mostrarToast(data.error || 'No se pudo asignar el picker', true);
+          }
+        },
+
+        async asignarSiguienteARepartidor(empleadoId) {
+          const pendiente = this.sinRepartidorOrdenados[0];
+          if (!pendiente) {
+            this.mostrarToast('No hay pedidos pendientes de repartidor', true);
+            return;
+          }
+          const r = await fetch('/dashboard/reparto/asignar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pedido_id: pendiente.pedido_id, empleado_id: empleadoId }),
+          });
+          const data = await r.json();
+          if (r.ok) {
+            this.mostrarToast(data.mensaje || `Pedido #${pendiente.pedido_id} asignado`);
+            await this.cargarTodo();
+          } else {
+            this.mostrarToast(data.error || 'No se pudo asignar el repartidor', true);
+          }
         },
 
         isPickerCollapsed(empleadoId) {
