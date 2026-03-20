@@ -34,8 +34,14 @@ def monei_body(order_id=1, status="SUCCEEDED"):
     }).encode()
 
 
-def sign_monei(secret: str, body: bytes) -> str:
-    return hmac.HMAC(secret.encode(), body, hashlib.sha256).hexdigest()
+MONEI_TIMESTAMP = "1700000000"
+
+
+def make_monei_signature(secret: str, body: bytes, timestamp: str = MONEI_TIMESTAMP) -> str:
+    """Devuelve el header MONEI-SIGNATURE completo: t=<ts>,v1=<hmac>"""
+    signed_payload = f"{timestamp}.".encode() + body
+    sig = hmac.HMAC(secret.encode(), signed_payload, hashlib.sha256).hexdigest()
+    return f"t={timestamp},v1={sig}"
 
 
 # ─────────────────────────────────────────────
@@ -176,7 +182,7 @@ class TestWebhookMonei:
             "object": {"orderId": "abc-no-es-numero", "status": "SUCCEEDED",
                        "amount": 0, "description": "", "customer": {}, "billingDetails": {}}
         }).encode()
-        sig = sign_monei(MONEI_SECRET, bad_body)
+        sig = make_monei_signature(MONEI_SECRET, bad_body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.MONEI_WEBHOOK_SECRET = MONEI_SECRET
             resp = self._post(client, bad_body, signature=sig)
@@ -185,7 +191,7 @@ class TestWebhookMonei:
     def test_pago_exitoso_actualiza_estado_y_retorna_200(self, client):
         """HMAC correcto + SUCCEEDED → actualiza estado del pedido a PAGADO."""
         body = monei_body(order_id=42)
-        sig = sign_monei(MONEI_SECRET, body)
+        sig = make_monei_signature(MONEI_SECRET, body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.MONEI_WEBHOOK_SECRET = MONEI_SECRET
             with patch("blueprints.webhook.gestor_pedidos") as mock_gp:
@@ -208,7 +214,7 @@ class TestWebhookMonei:
                 "billingDetails": {},
             }
         }).encode()
-        sig = sign_monei(MONEI_SECRET, body)
+        sig = make_monei_signature(MONEI_SECRET, body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.MONEI_WEBHOOK_SECRET = MONEI_SECRET
             with patch("blueprints.webhook.gestor_pedidos") as mock_gp:

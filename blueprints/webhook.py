@@ -111,12 +111,9 @@ def webhook_monei():
         if not hmac.compare_digest(computed, received_signature):
             logger.warning("Monei webhook signature mismatch")
             return jsonify({"error": "Invalid signature"}), 401
-    elif not current_app.debug:
+    else:
         logger.warning("MONEI_WEBHOOK_SECRET not configured — rejecting webhook")
         return jsonify({"error": "Invalid signature"}), 401
-    else:
-        # TODO: configurar MONEI_WEBHOOK_SECRET en producción
-        logger.warning("MONEI_WEBHOOK_SECRET no configurado — omitiendo verificación (modo debug)")
 
     data = request.get_json()
     if data.get('type') == 'webhook.test':
