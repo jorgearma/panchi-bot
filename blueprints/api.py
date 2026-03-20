@@ -33,6 +33,7 @@ def agregar_pedido_confirmacion():
         productos_recibidos=data.get("productos", []),
         cache=cache,
         gestor_pedidos=gestor_pedidos,
+        gestor_productos=gestor_productos,
         public_url=config.PUBLIC_URL or "",
     )
 
