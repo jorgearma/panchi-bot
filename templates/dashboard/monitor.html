@@ -46,6 +46,11 @@
         <span class="w-2 h-2 rounded-full bg-green-400 pulse"></span>
         <span class="text-xs text-gray-500">EN VIVO</span>
       </div>
+      <!-- Badge de alertas -->
+      <template x-if="alertas.length > 0">
+        <span class="bg-orange-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 leading-none min-w-[1.25rem] text-center"
+              x-text="alertas.length"></span>
+      </template>
       <div class="flex items-center gap-1.5" x-show="error" x-cloak>
         <span class="w-2 h-2 rounded-full bg-red-500"></span>
         <span class="text-xs text-red-400">SIN CONEXIÓN</span>
@@ -111,25 +116,29 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════════
-       ALERTS BANNER
+       ALERTS BANNER — errores y warnings en una sola franja
   ═══════════════════════════════════════════════════════════════════ -->
-  <div x-show="alertas.filter(a => a.nivel === 'error').length > 0" x-cloak
-       class="bg-red-950/50 border-b border-red-900/60 px-6 py-2">
+  <div x-show="alertas.length > 0" x-cloak
+       class="border-b border-gray-800 px-6 py-2"
+       :class="alertas.some(a => a.nivel === 'error') ? 'bg-red-950/40' : 'bg-yellow-950/30'">
     <div class="flex items-center gap-3 overflow-x-auto slim-scroll">
-      <span class="text-red-400 text-xs font-bold uppercase tracking-widest shrink-0">🔴 Alertas</span>
-      <template x-for="a in alertas.filter(a => a.nivel === 'error').slice(0,5)" :key="a.pedido_id + a.tipo">
-        <span class="text-xs text-red-300 bg-red-900/50 rounded px-2 py-0.5 shrink-0 whitespace-nowrap"
-              x-text="a.mensaje"></span>
+      <!-- Errores -->
+      <template x-for="a in alertas.filter(a => a.nivel === 'error').slice(0, 4)" :key="'e' + a.pedido_id + a.tipo">
+        <span class="text-xs text-red-300 bg-red-900/50 rounded px-2 py-0.5 shrink-0 whitespace-nowrap flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0"></span>
+          <span x-text="a.mensaje"></span>
+        </span>
       </template>
-    </div>
-  </div>
-  <div x-show="alertas.filter(a => a.nivel === 'warning').length > 0 && alertas.filter(a => a.nivel === 'error').length === 0" x-cloak
-       class="bg-yellow-950/50 border-b border-yellow-900/50 px-6 py-1.5">
-    <div class="flex items-center gap-3 overflow-x-auto slim-scroll">
-      <span class="text-yellow-500 text-xs font-bold uppercase tracking-widest shrink-0">⚠ Avisos</span>
-      <template x-for="a in alertas.filter(a => a.nivel === 'warning').slice(0,4)" :key="a.pedido_id + a.tipo">
-        <span class="text-xs text-yellow-300 bg-yellow-900/40 rounded px-2 py-0.5 shrink-0 whitespace-nowrap"
-              x-text="a.mensaje"></span>
+      <!-- Divisor si hay ambos -->
+      <template x-if="alertas.some(a => a.nivel === 'error') && alertas.some(a => a.nivel === 'warning')">
+        <span class="h-4 w-px bg-gray-700 shrink-0"></span>
+      </template>
+      <!-- Warnings -->
+      <template x-for="a in alertas.filter(a => a.nivel === 'warning').slice(0, 3)" :key="'w' + a.pedido_id + a.tipo">
+        <span class="text-xs text-yellow-300 bg-yellow-900/40 rounded px-2 py-0.5 shrink-0 whitespace-nowrap flex items-center gap-1">
+          <span class="text-yellow-500">⚠</span>
+          <span x-text="a.mensaje"></span>
+        </span>
       </template>
     </div>
   </div>
