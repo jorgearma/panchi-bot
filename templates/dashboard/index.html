@@ -448,16 +448,23 @@
 
               <div class="space-y-3">
                 <template x-for="picker in pickersEquipo" :key="'picker-'+picker.empleado_id">
-                  <div class="soft-card rounded-2xl p-4">
+                  <div class="rounded-[26px] border-2 p-4 shadow-sm transition"
+                       :class="picker.pedidos_activos > 0
+                         ? 'border-sky-200 bg-gradient-to-b from-white to-sky-50/60 shadow-sky-100/70'
+                         : 'border-emerald-200 bg-gradient-to-b from-white to-emerald-50/60 shadow-emerald-100/70'">
                     <div class="flex items-start justify-between gap-3">
                       <div>
                         <p class="font-bold text-slate-900" x-text="picker.nombre"></p>
                         <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Picker</p>
                       </div>
                       <div class="flex items-center gap-2">
-                        <span class="rounded-full px-2.5 py-1 text-[11px] font-bold"
-                              :class="picker.pedidos_activos > 0 ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-700'"
-                              x-text="picker.pedidos_activos > 0 ? picker.pedidos_activos + ' pedidos' : 'Disponible'"></span>
+                        <div class="min-w-[86px] rounded-2xl px-3 py-2 text-center shadow-sm"
+                             :class="picker.pedidos_activos > 0 ? 'bg-sky-600 text-white' : 'bg-emerald-600 text-white'">
+                          <p class="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80"
+                             x-text="picker.pedidos_activos > 0 ? 'Activos' : 'Estado'"></p>
+                          <p class="mt-1 text-lg font-black leading-none"
+                             x-text="picker.pedidos_activos > 0 ? picker.pedidos_activos : 'OK'"></p>
+                        </div>
                         <button @click="togglePickerCollapse(picker.empleado_id)"
                                 class="h-8 w-8 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
                                 :title="isPickerCollapsed(picker.empleado_id) ? 'Expandir picker' : 'Minimizar picker'">
@@ -467,15 +474,15 @@
                     </div>
 
                     <div class="mt-3 grid grid-cols-3 gap-2 text-center" x-show="!isPickerCollapsed(picker.empleado_id)" x-cloak>
-                      <div class="rounded-xl bg-white px-2 py-2">
+                      <div class="rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
                         <p class="text-lg font-extrabold text-slate-900" x-text="picker.items_total"></p>
                         <p class="text-[10px] uppercase tracking-wide text-slate-400">items</p>
                       </div>
-                      <div class="rounded-xl bg-white px-2 py-2">
+                      <div class="rounded-xl border border-emerald-200 bg-emerald-50/70 px-2 py-2 shadow-sm">
                         <p class="text-lg font-extrabold text-emerald-600" x-text="picker.items_completados"></p>
                         <p class="text-[10px] uppercase tracking-wide text-slate-400">hechos</p>
                       </div>
-                      <div class="rounded-xl bg-white px-2 py-2">
+                      <div class="rounded-xl border border-amber-200 bg-amber-50/80 px-2 py-2 shadow-sm">
                         <p class="text-lg font-extrabold text-amber-600" x-text="picker.items_pendientes"></p>
                         <p class="text-[10px] uppercase tracking-wide text-slate-400">pendientes</p>
                       </div>
@@ -483,7 +490,7 @@
 
                     <div class="mt-3 space-y-2" x-show="picker.pickings.length > 0 && !isPickerCollapsed(picker.empleado_id)" x-cloak>
                       <template x-for="pk in picker.pickings" :key="'pk-'+pk.picking_id">
-                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
                           <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                               <button @click="filtrarPorPedido(pk.pedido_id)"
@@ -516,11 +523,11 @@
                       </template>
                     </div>
 
-                    <div x-show="picker.pickings.length === 0 && !isPickerCollapsed(picker.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-800">
+                    <div x-show="picker.pickings.length === 0 && !isPickerCollapsed(picker.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-800 shadow-sm">
                       Sin pickings asignados ahora mismo.
                     </div>
 
-                    <div x-show="isPickerCollapsed(picker.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
+                    <div x-show="isPickerCollapsed(picker.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-500 shadow-sm">
                       <span x-text="picker.pedidos_activos > 0 ? picker.pedidos_activos + ' pedidos activos · ' + picker.items_pendientes + ' items pendientes' : 'Disponible para asignar'"></span>
                     </div>
                   </div>
@@ -542,16 +549,23 @@
 
               <div class="space-y-3">
                 <template x-for="emp in repartidoresEquipo" :key="'rep-'+emp.empleado_id">
-                  <div class="soft-card rounded-2xl p-4">
+                  <div class="rounded-[26px] border-2 p-4 shadow-sm transition"
+                       :class="emp.pedidos_activos.length > 0
+                         ? 'border-orange-200 bg-gradient-to-b from-white to-orange-50/60 shadow-orange-100/70'
+                         : 'border-emerald-200 bg-gradient-to-b from-white to-emerald-50/60 shadow-emerald-100/70'">
                     <div class="flex items-start justify-between gap-3">
                       <div>
                         <p class="font-bold text-slate-900" x-text="emp.nombre"></p>
                         <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Repartidor</p>
                       </div>
                       <div class="flex items-center gap-2">
-                        <span class="rounded-full px-2.5 py-1 text-[11px] font-bold"
-                              :class="emp.pedidos_activos.length > 0 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'"
-                              x-text="emp.pedidos_activos.length > 0 ? emp.pedidos_activos.length + ' pedidos' : 'Disponible'"></span>
+                        <div class="min-w-[86px] rounded-2xl px-3 py-2 text-center shadow-sm"
+                             :class="emp.pedidos_activos.length > 0 ? 'bg-orange-500 text-white' : 'bg-emerald-600 text-white'">
+                          <p class="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80"
+                             x-text="emp.pedidos_activos.length > 0 ? 'Activos' : 'Estado'"></p>
+                          <p class="mt-1 text-lg font-black leading-none"
+                             x-text="emp.pedidos_activos.length > 0 ? emp.pedidos_activos.length : 'OK'"></p>
+                        </div>
                         <button @click="toggleRepartidorCollapse(emp.empleado_id)"
                                 class="h-8 w-8 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
                                 :title="isRepartidorCollapsed(emp.empleado_id) ? 'Expandir repartidor' : 'Minimizar repartidor'">
@@ -559,14 +573,14 @@
                         </button>
                       </div>
                     </div>
-                    <div class="mt-3 flex items-center justify-between text-xs text-slate-500" x-show="!isRepartidorCollapsed(emp.empleado_id)" x-cloak>
+                    <div class="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm" x-show="!isRepartidorCollapsed(emp.empleado_id)" x-cloak>
                       <span x-text="emp.telefono || 'sin tel.'"></span>
                       <span x-text="emp.entregados_hoy + ' hoy'"></span>
                     </div>
 
                     <div class="mt-3 space-y-2" x-show="emp.pedidos_activos.length > 0 && !isRepartidorCollapsed(emp.empleado_id)" x-cloak>
                       <template x-for="r in emp.pedidos_activos" :key="'r-'+r.reparto_id">
-                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
                           <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                               <button @click="filtrarPorPedido(r.pedido_id)"
@@ -602,11 +616,11 @@
                       </template>
                     </div>
 
-                    <div x-show="emp.pedidos_activos.length === 0 && !isRepartidorCollapsed(emp.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-800">
+                    <div x-show="emp.pedidos_activos.length === 0 && !isRepartidorCollapsed(emp.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-800 shadow-sm">
                       Disponible para nuevas asignaciones.
                     </div>
 
-                    <div x-show="isRepartidorCollapsed(emp.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
+                    <div x-show="isRepartidorCollapsed(emp.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-500 shadow-sm">
                       <span x-text="emp.pedidos_activos.length > 0 ? emp.pedidos_activos.length + ' pedidos activos' : 'Disponible para nuevas asignaciones'"></span>
                     </div>
                   </div>
