@@ -37,3 +37,40 @@ def test_metricas_incluye_cancelaciones_e_ingresos_por_metodo(app):
                 pass
             else:
                 raise
+
+
+def test_monitor_datos_incluye_pedidos_pipeline(client, app):
+    """El endpoint /dashboard/monitor/datos expone pedidos_pipeline como lista."""
+    from unittest.mock import patch, MagicMock
+    from services import gestor_dashboard
+
+    pedido_mock = {
+        "pedido_id": 99,
+        "estado": "en-preparacion",
+        "forma_pago": "online",
+        "items": [{"detalle_id": 1}, {"detalle_id": 2}],
+        "minutos_en_estado": 12,
+        "total": 25.50,
+        "cliente_nombre": "Test Cliente",
+        "direccion_entrega": "Calle Test 1",
+    }
+
+    with app.app_context():
+        with patch.object(gestor_dashboard, 'pedidos_activos', return_value=[pedido_mock]), \
+             patch.object(gestor_dashboard, 'monitor_empleados', return_value={"pickers": [], "repartidores": [], "pedidos_sin_picker": [], "pedidos_sin_repartidor": []}), \
+             patch.object(gestor_dashboard, 'metricas', return_value={"pedidos_hoy": 0}), \
+             patch.object(gestor_dashboard, 'alertas', return_value=[]), \
+             patch.object(gestor_dashboard, 'eventos', return_value=[]):
+            with client.session_transaction() as sess:
+                sess['empleado_id'] = 1
+                sess['rol'] = 'admin'
+            resp = client.get('/dashboard/monitor/datos')
+            assert resp.status_code == 200
+            data = resp.get_json()
+            assert 'pedidos_pipeline' in data, "Falta clave pedidos_pipeline"
+            assert isinstance(data['pedidos_pipeline'], list)
+            assert len(data['pedidos_pipeline']) == 1
+            p = data['pedidos_pipeline'][0]
+            for key in ('pedido_id', 'estado', 'forma_pago', 'n_items', 'minutos_en_estado', 'total', 'cliente_nombre', 'direccion_entrega'):
+                assert key in p, f"Falta campo {key} en pedido pipeline"
+            assert p['n_items'] == 2  # len(items)
