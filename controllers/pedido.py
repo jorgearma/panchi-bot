@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from utils.es_pregunta import es_pregunta
 from services import gestor_pedidos
 from services.token_service import generar_enlace
-from services.twilio_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import enviar_mensaje_whatsapp
 from services.maps_service import geocodificar_direccion
 from utils.menu_opciones import menu, mostrar_menu
 from utils.text_utils import limpiar_texto

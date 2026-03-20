@@ -5,7 +5,7 @@ from flask import Blueprint, Response, current_app, jsonify, render_template, re
 
 from blueprints.auth import requiere_rol
 from services import gestor_dashboard
-from services.twilio_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import enviar_mensaje_whatsapp
 
 logger = logging.getLogger(__name__)
 

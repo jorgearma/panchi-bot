@@ -1,6 +1,6 @@
 # /services/registro_usuario.py
 import logging
-from services.twilio_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import enviar_mensaje_whatsapp
 from services.maps_service import validar_direccion
 from managers.estado_usuario import EstadoUsuario
 from states import EstadoRegistro
