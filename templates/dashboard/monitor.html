@@ -96,10 +96,33 @@
         <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">Entregados</div>
         <div class="text-xl font-black leading-tight text-green-400" x-text="metricas.entregados_hoy ?? '—'"></div>
       </div>
-      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
+      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50 relative cursor-default"
+           @mouseenter="mostrarTooltipIngresos = true"
+           @mouseleave="mostrarTooltipIngresos = false">
         <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">Ingresos hoy</div>
         <div class="text-xl font-black leading-tight text-emerald-400"
              x-text="metricas.ingresos_hoy_eur != null ? metricas.ingresos_hoy_eur.toFixed(2) + '€' : '—'"></div>
+        <!-- Tooltip desglose -->
+        <div x-show="mostrarTooltipIngresos" x-cloak
+             class="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-30 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
+          <template x-if="metricas.ingresos_por_metodo">
+            <div class="space-y-1">
+              <template x-for="[metodo, valor] in Object.entries(metricas.ingresos_por_metodo || {})" :key="metodo">
+                <div class="flex items-center justify-between gap-4">
+                  <span class="text-gray-400 capitalize" x-text="metodo"></span>
+                  <span class="text-white font-semibold" x-text="valor.toFixed(2) + '€'"></span>
+                </div>
+              </template>
+              <template x-if="metricas.cancelaciones_hoy && Object.keys(metricas.cancelaciones_hoy).length > 0">
+                <div class="border-t border-gray-700 pt-1 mt-1">
+                  <span class="text-red-400">❌ Cancelaciones: </span>
+                  <span class="text-red-300 font-semibold"
+                        x-text="Object.values(metricas.cancelaciones_hoy || {}).reduce((a,b)=>a+b,0)"></span>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
       </div>
       <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
         <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">T.Preparación</div>
@@ -144,168 +167,9 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════
-       PIPELINE KANBAN
-  ═══════════════════════════════════════════════════════════════════ -->
-  <div class="bg-gray-900 border-b border-gray-800 px-4 py-2" style="height:196px; overflow:hidden;">
-    <div class="grid gap-2 h-full" style="grid-template-columns: 1fr 1.2fr 1fr 1.2fr 0.7fr;">
-
-      <!-- ── COL: PAGADO / CR ───────────────────────────────────── -->
-      <div class="flex flex-col min-h-0 rounded-lg overflow-hidden"
-           :class="esEmbudoPipeline(['pagado','contra-reembolso']) ? 'ring-1 ring-red-700 bg-red-950/30 animate-pulse' : 'bg-gray-800/40'">
-        <div class="px-2 py-1 flex items-center justify-between shrink-0">
-          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Pagado/CR</span>
-          <span class="text-xs font-mono text-gray-500"
-                x-text="pedidosPipeline.filter(p => ['pagado','contra-reembolso'].includes(p.estado)).length"></span>
-        </div>
-        <div class="flex-1 overflow-hidden px-1.5 pb-1.5 space-y-1">
-          <template x-for="p in tarjetasPipeline(['pagado','contra-reembolso'])" :key="p.pedido_id">
-            <div class="rounded bg-gray-800/70 border border-gray-700/50 px-2 flex items-center justify-between gap-1 cursor-default group relative"
-                 :class="(tarjetasPipeline(['pagado','contra-reembolso']).length + overflowPipeline(['pagado','contra-reembolso'])) <= 3 ? 'py-1.5' : 'py-0.5'">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span class="text-xs font-bold text-white shrink-0">#<span x-text="p.pedido_id"></span></span>
-                <span class="text-xs shrink-0" x-text="pagoIconPipeline(p.forma_pago)"></span>
-                <span class="text-xs text-gray-600 shrink-0"><span x-text="p.n_items"></span>u</span>
-              </div>
-              <span class="text-xs font-semibold shrink-0"
-                    :class="timerClassPipeline(p.estado, p.minutos_en_estado)"
-                    x-text="p.minutos_en_estado != null ? p.minutos_en_estado + 'm' : '—'"></span>
-              <!-- Tooltip portátil -->
-              <div class="absolute bottom-full left-0 mb-1 z-20 hidden group-hover:block bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
-                <div class="font-semibold text-white" x-text="p.cliente_nombre"></div>
-                <div class="text-gray-400 mt-0.5" x-text="p.direccion_entrega"></div>
-                <div class="text-gray-500 mt-0.5"><span x-text="p.total ? p.total.toFixed(2) + '€' : ''"></span></div>
-              </div>
-            </div>
-          </template>
-          <template x-if="overflowPipeline(['pagado','contra-reembolso']) > 0">
-            <div class="rounded bg-red-900/50 border border-red-700/50 px-2 py-0.5 text-center">
-              <span class="text-xs font-bold text-red-300">+<span x-text="overflowPipeline(['pagado','contra-reembolso'])"></span> más</span>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- ── COL: EN PREPARACIÓN ───────────────────────────────── -->
-      <div class="flex flex-col min-h-0 rounded-lg overflow-hidden"
-           :class="esEmbudoPipeline(['en-preparacion']) ? 'ring-1 ring-red-700 bg-red-950/30 animate-pulse' : 'bg-gray-800/40'">
-        <div class="px-2 py-1 flex items-center justify-between shrink-0">
-          <span class="text-xs font-bold text-blue-400 uppercase tracking-wide">En prep.</span>
-          <span class="text-xs font-mono text-gray-500"
-                x-text="pedidosPipeline.filter(p => p.estado === 'en-preparacion').length"></span>
-        </div>
-        <div class="flex-1 overflow-hidden px-1.5 pb-1.5 space-y-1">
-          <template x-for="p in tarjetasPipeline(['en-preparacion'])" :key="p.pedido_id">
-            <div class="rounded bg-gray-800/70 border border-gray-700/50 px-2 flex items-center justify-between gap-1 cursor-default group relative"
-                 :class="(tarjetasPipeline(['en-preparacion']).length + overflowPipeline(['en-preparacion'])) <= 3 ? 'py-1.5' : 'py-0.5'">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span class="text-xs font-bold text-white shrink-0">#<span x-text="p.pedido_id"></span></span>
-                <span class="text-xs shrink-0" x-text="pagoIconPipeline(p.forma_pago)"></span>
-                <span class="text-xs text-gray-600 shrink-0"><span x-text="p.n_items"></span>u</span>
-              </div>
-              <span class="text-xs font-semibold shrink-0"
-                    :class="timerClassPipeline(p.estado, p.minutos_en_estado)"
-                    x-text="p.minutos_en_estado != null ? p.minutos_en_estado + 'm' : '—'"></span>
-              <div class="absolute bottom-full left-0 mb-1 z-20 hidden group-hover:block bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
-                <div class="font-semibold text-white" x-text="p.cliente_nombre"></div>
-                <div class="text-gray-400 mt-0.5" x-text="p.direccion_entrega"></div>
-                <div class="text-gray-500 mt-0.5"><span x-text="p.total ? p.total.toFixed(2) + '€' : ''"></span></div>
-              </div>
-            </div>
-          </template>
-          <template x-if="overflowPipeline(['en-preparacion']) > 0">
-            <div class="rounded bg-red-900/50 border border-red-700/50 px-2 py-0.5 text-center">
-              <span class="text-xs font-bold text-red-300">+<span x-text="overflowPipeline(['en-preparacion'])"></span> más</span>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- ── COL: PREPARADO ────────────────────────────────────── -->
-      <div class="flex flex-col min-h-0 rounded-lg overflow-hidden"
-           :class="esEmbudoPipeline(['preparado']) ? 'ring-1 ring-red-700 bg-red-950/30 animate-pulse' : 'bg-gray-800/40'">
-        <div class="px-2 py-1 flex items-center justify-between shrink-0">
-          <span class="text-xs font-bold text-indigo-400 uppercase tracking-wide">Preparado</span>
-          <span class="text-xs font-mono text-gray-500"
-                x-text="pedidosPipeline.filter(p => p.estado === 'preparado').length"></span>
-        </div>
-        <div class="flex-1 overflow-hidden px-1.5 pb-1.5 space-y-1">
-          <template x-for="p in tarjetasPipeline(['preparado'])" :key="p.pedido_id">
-            <div class="rounded bg-gray-800/70 border border-gray-700/50 px-2 flex items-center justify-between gap-1 cursor-default group relative"
-                 :class="(tarjetasPipeline(['preparado']).length + overflowPipeline(['preparado'])) <= 3 ? 'py-1.5' : 'py-0.5'">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span class="text-xs font-bold text-white shrink-0">#<span x-text="p.pedido_id"></span></span>
-                <span class="text-xs shrink-0" x-text="pagoIconPipeline(p.forma_pago)"></span>
-                <span class="text-xs text-gray-600 shrink-0"><span x-text="p.n_items"></span>u</span>
-              </div>
-              <span class="text-xs font-semibold shrink-0"
-                    :class="timerClassPipeline(p.estado, p.minutos_en_estado)"
-                    x-text="p.minutos_en_estado != null ? p.minutos_en_estado + 'm' : '—'"></span>
-              <div class="absolute bottom-full left-0 mb-1 z-20 hidden group-hover:block bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
-                <div class="font-semibold text-white" x-text="p.cliente_nombre"></div>
-                <div class="text-gray-400 mt-0.5" x-text="p.direccion_entrega"></div>
-                <div class="text-gray-500 mt-0.5"><span x-text="p.total ? p.total.toFixed(2) + '€' : ''"></span></div>
-              </div>
-            </div>
-          </template>
-          <template x-if="overflowPipeline(['preparado']) > 0">
-            <div class="rounded bg-red-900/50 border border-red-700/50 px-2 py-0.5 text-center">
-              <span class="text-xs font-bold text-red-300">+<span x-text="overflowPipeline(['preparado'])"></span> más</span>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- ── COL: EN REPARTO ───────────────────────────────────── -->
-      <div class="flex flex-col min-h-0 rounded-lg overflow-hidden"
-           :class="esEmbudoPipeline(['en-reparto']) ? 'ring-1 ring-red-700 bg-red-950/30 animate-pulse' : 'bg-gray-800/40'">
-        <div class="px-2 py-1 flex items-center justify-between shrink-0">
-          <span class="text-xs font-bold text-orange-400 uppercase tracking-wide">En reparto</span>
-          <span class="text-xs font-mono text-gray-500"
-                x-text="pedidosPipeline.filter(p => p.estado === 'en-reparto').length"></span>
-        </div>
-        <div class="flex-1 overflow-hidden px-1.5 pb-1.5 space-y-1">
-          <template x-for="p in tarjetasPipeline(['en-reparto'])" :key="p.pedido_id">
-            <div class="rounded bg-gray-800/70 border border-gray-700/50 px-2 flex items-center justify-between gap-1 cursor-default group relative"
-                 :class="(tarjetasPipeline(['en-reparto']).length + overflowPipeline(['en-reparto'])) <= 3 ? 'py-1.5' : 'py-0.5'">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span class="text-xs font-bold text-white shrink-0">#<span x-text="p.pedido_id"></span></span>
-                <span class="text-xs shrink-0" x-text="pagoIconPipeline(p.forma_pago)"></span>
-                <span class="text-xs text-gray-600 shrink-0"><span x-text="p.n_items"></span>u</span>
-              </div>
-              <span class="text-xs font-semibold shrink-0"
-                    :class="timerClassPipeline(p.estado, p.minutos_en_estado)"
-                    x-text="p.minutos_en_estado != null ? p.minutos_en_estado + 'm' : '—'"></span>
-              <div class="absolute bottom-full left-0 mb-1 z-20 hidden group-hover:block bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
-                <div class="font-semibold text-white" x-text="p.cliente_nombre"></div>
-                <div class="text-gray-400 mt-0.5" x-text="p.direccion_entrega"></div>
-                <div class="text-gray-500 mt-0.5"><span x-text="p.total ? p.total.toFixed(2) + '€' : ''"></span></div>
-              </div>
-            </div>
-          </template>
-          <template x-if="overflowPipeline(['en-reparto']) > 0">
-            <div class="rounded bg-red-900/50 border border-red-700/50 px-2 py-0.5 text-center">
-              <span class="text-xs font-bold text-red-300">+<span x-text="overflowPipeline(['en-reparto'])"></span> más</span>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- ── COL: ENTREGADOS (stats only) ─────────────────────── -->
-      <div class="flex flex-col items-center justify-center rounded-lg bg-gray-800/40 px-2 py-2 text-center">
-        <div class="text-xs font-bold text-green-400 uppercase tracking-wide mb-1">Entregados</div>
-        <div class="text-3xl font-black text-white leading-none" x-text="metricas.entregados_hoy ?? '—'"></div>
-        <div class="text-xs text-gray-500 mt-1">hoy</div>
-        <div class="text-sm font-semibold text-emerald-400 mt-2"
-             x-text="metricas.ingresos_hoy_eur != null ? metricas.ingresos_hoy_eur.toFixed(0) + '€' : ''"></div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════════
        MAIN GRID
   ═══════════════════════════════════════════════════════════════════ -->
-  <div class="grid grid-cols-[1fr_1fr_340px] gap-4 p-4 h-[calc(100vh-390px)] overflow-hidden">
+  <div class="grid grid-cols-[1fr_1fr_340px] gap-4 p-4 h-[calc(100vh-200px)] overflow-hidden">
 
     <!-- ─── COL 1: PICKERS ─────────────────────────────────────── -->
     <div class="flex flex-col gap-3 overflow-y-auto slim-scroll pr-1">
@@ -690,7 +554,8 @@
             <div class="text-center text-gray-700 text-xs py-8">Sin actividad reciente</div>
           </template>
           <template x-for="e in eventos" :key="e.id">
-            <div class="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-800/40 transition fade-in">
+            <div class="flex items-start gap-2 py-1.5 px-2 rounded-lg transition fade-in"
+                 :class="e.estado_nuevo === 'cancelado' ? 'bg-red-950/40 hover:bg-red-950/60' : 'hover:bg-gray-800/40'">
               <span class="text-base shrink-0 mt-0.5" x-text="eventoIcon(e.estado_nuevo)"></span>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1.5 text-xs">
@@ -798,16 +663,9 @@
 
   <script>
     function monitor() {
-      const PIPELINE_UMBRALES = {
-        'pagado':           { w: 10, e: 15 },
-        'contra-reembolso': { w: 10, e: 15 },
-        'en-preparacion':   { w: 20, e: 30 },
-        'preparado':        { w: 10, e: 15 },
-        'en-reparto':       { w: 40, e: 60 },
-      };
       return {
         metricas: {},
-        pedidosPipeline: [],
+        mostrarTooltipIngresos: false,
         pickers: [],
         repartidores: [],
         alertas: [],
@@ -837,7 +695,6 @@
             if (!r.ok) throw new Error(r.status);
             const data = await r.json();
             this.metricas           = data.metricas || {};
-            this.pedidosPipeline    = data.pedidos_pipeline || [];
             this.pickers            = data.pickers || [];
             this.repartidores       = data.repartidores || [];
             this.alertas            = data.alertas || [];
@@ -855,41 +712,6 @@
         },
 
         // ── Helpers ──────────────────────────────────────────────
-
-        // ── Pipeline helpers ─────────────────────────────────────
-        pedidosPorEstadoPipeline(estados) {
-          return this.pedidosPipeline.filter(p => estados.includes(p.estado));
-        },
-
-        tarjetasPipeline(estados) {
-          return this.pedidosPorEstadoPipeline(estados).slice(0, 5);
-        },
-
-        overflowPipeline(estados) {
-          const total = this.pedidosPorEstadoPipeline(estados).length;
-          return total > 5 ? total - 5 : 0;
-        },
-
-        esEmbudoPipeline(estados) {
-          const rojos = this.pedidosPorEstadoPipeline(estados).filter(p =>
-            p.minutos_en_estado != null &&
-            p.minutos_en_estado >= ((PIPELINE_UMBRALES[p.estado] || {}).e || 999)
-          );
-          return rojos.length >= 3;
-        },
-
-        timerClassPipeline(estado, minutos) {
-          if (minutos == null) return 'text-gray-500';
-          const u = PIPELINE_UMBRALES[estado];
-          if (!u) return 'text-gray-500';
-          if (minutos >= u.e) return 'text-red-400 font-bold';
-          if (minutos >= u.w) return 'text-yellow-400';
-          return 'text-green-400';
-        },
-
-        pagoIconPipeline(forma_pago) {
-          return forma_pago === 'online' ? '💳' : '💵';
-        },
 
         abrirHistorial(emp, tipo) {
           const items = emp.historial_hoy || [];
