@@ -73,6 +73,24 @@
       letter-spacing: -0.2px; margin-top: 1px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+
+    /* Search bar y categorías: se pegan al top correcto sin hueco */
+    #search-bar {
+      top: 0;
+    }
+    #category-nav {
+      top: var(--search-height);
+    }
+
+    /* Cart bar: barra flotante con safe area */
+    #cart-bar {
+      bottom: max(16px, env(safe-area-inset-bottom));
+      left: 12px;
+      right: 12px;
+      border-radius: 18px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.22);
+      padding: 10px 10px 10px 14px;
+    }
   </style>
 </head>
 <body>
