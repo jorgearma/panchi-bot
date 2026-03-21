@@ -90,8 +90,33 @@
   ================================================================ -->
   <div x-show="repartidorId && !cargando && vista === 'lista'" x-cloak>
 
+    <!-- ---- Tabs ---- -->
+    <div class="flex border-b-2 border-gray-800 sticky z-20 bg-gray-100"
+         :style="'top:52px'">
+      <button @click="tabActiva = 'mis-entregas'"
+              class="flex-1 text-center py-3 text-sm font-medium transition"
+              :class="tabActiva === 'mis-entregas'
+                ? 'text-orange-400 border-b-2 border-orange-500 -mb-[2px]'
+                : 'text-gray-500'">
+        🛵 Mis entregas
+        <span x-show="pedidosActivos.length > 0"
+              class="ml-1.5 bg-gray-700 text-gray-300 text-xs rounded-full px-2 py-0.5"
+              x-text="pedidosActivos.length"></span>
+      </button>
+      <button @click="tabActiva = 'cola'; cargarCola()"
+              class="flex-1 text-center py-3 text-sm font-medium transition"
+              :class="tabActiva === 'cola'
+                ? 'text-orange-400 border-b-2 border-orange-500 -mb-[2px]'
+                : 'text-gray-500'">
+        📋 Cola
+        <span x-show="colaTotal > 0"
+              class="ml-1.5 bg-red-600 text-white text-xs rounded-full px-2 py-0.5"
+              x-text="colaTotal"></span>
+      </button>
+    </div>
+
     <!-- Sin pedidos -->
-    <div x-show="pedidosActivos.length === 0 && pedidosHistorial.length === 0"
+    <div x-show="tabActiva === 'mis-entregas' && pedidosActivos.length === 0 && pedidosHistorial.length === 0"
          class="flex flex-col items-center justify-center min-h-[65vh] text-center px-6">
       <div class="text-6xl mb-4">✅</div>
       <h2 class="text-xl font-bold text-gray-700 mb-2">Sin entregas pendientes</h2>
@@ -102,7 +127,7 @@
       </button>
     </div>
 
-    <div x-show="pedidosActivos.length > 0 || pedidosHistorial.length > 0" class="p-4 space-y-4">
+    <div x-show="tabActiva === 'mis-entregas' && (pedidosActivos.length > 0 || pedidosHistorial.length > 0)" class="p-4 space-y-4">
 
       <!-- ── MAPA DE ENTREGAS ── -->
       <template x-if="true">
@@ -325,6 +350,59 @@
           </a>
         </div>
       </template>
+
+    </div>
+
+    <!-- ======== SECCIÓN COLA ======== -->
+    <div x-show="tabActiva === 'cola'" x-cloak class="p-4">
+
+      <!-- Cabecera -->
+      <div class="flex justify-between items-center mb-3">
+        <p class="text-sm font-semibold text-green-400"
+           x-text="colaTotal + ' pedido' + (colaTotal !== 1 ? 's' : '') + ' disponible' + (colaTotal !== 1 ? 's' : '')"></p>
+        <button @click="cargarCola()"
+                class="bg-gray-800 text-gray-400 text-xs px-3 py-1.5 rounded-lg active:bg-gray-700 transition">
+          ↻ Actualizar
+        </button>
+      </div>
+
+      <!-- Lista -->
+      <div x-show="cola.length > 0" class="space-y-3">
+        <template x-for="p in cola" :key="p.pedido_id">
+          <div class="bg-gray-800 rounded-2xl p-4 flex justify-between items-center slide-up"
+               :class="p.ya_cogido ? 'opacity-40' : ''">
+            <div>
+              <div class="font-bold text-white text-sm">Pedido #<span x-text="p.pedido_id"></span></div>
+              <div class="text-xs text-gray-400 mt-0.5">📍 <span x-text="p.direccion_entrega"></span></div>
+              <div class="text-xs mt-1" :class="p.ya_cogido ? 'text-red-400' : 'text-gray-500'">
+                <span x-show="!p.ya_cogido"
+                      x-text="'hace ' + (p.segundos_esperando < 60
+                        ? p.segundos_esperando + 's'
+                        : Math.floor(p.segundos_esperando / 60) + 'min') + ' · 📦 ' + p.n_items + ' productos'"></span>
+                <span x-show="p.ya_cogido">Ya cogido por otro repartidor</span>
+              </div>
+            </div>
+            <button @click="cogerReparto(p.pedido_id)"
+                    :disabled="p.ya_cogido || cogiendo !== null"
+                    class="text-sm font-bold px-4 py-2 rounded-xl transition"
+                    style="min-height:56px"
+                    :class="p.ya_cogido
+                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      : 'bg-orange-500 text-white active:bg-orange-600'">
+              <span x-show="!p.ya_cogido && cogiendo !== p.pedido_id">Coger →</span>
+              <span x-show="p.ya_cogido">Cogido</span>
+              <span x-show="cogiendo === p.pedido_id && !p.ya_cogido">...</span>
+            </button>
+          </div>
+        </template>
+      </div>
+
+      <!-- Vacía -->
+      <div x-show="cola.length === 0"
+           class="flex flex-col items-center justify-center py-16 text-center px-6">
+        <div class="text-5xl mb-3">📋</div>
+        <p class="text-gray-500 text-sm">No hay pedidos sin asignar ahora mismo</p>
+      </div>
 
     </div>
   </div>
@@ -1092,6 +1170,10 @@
         vista: 'lista',       // lista | pedido | resumen
         actual: null,
         cargando: false,
+        tabActiva: 'mis-entregas',   // 'mis-entregas' | 'cola'
+        cola: [],
+        colaTotal: 0,
+        cogiendo: null,              // reparto_id en vuelo
         procesando: false,
         historialAbierto: false,
         mostrarNoEntregar: false,
@@ -1229,6 +1311,7 @@
           await this.recargar();
           setInterval(() => {
             if (this.vista === 'lista') this.recargar();
+            if (this.tabActiva === 'cola') this.cargarCola();
           }, 60000);
           setInterval(() => { this.now = new Date(); }, 30000);
         },
@@ -1261,6 +1344,49 @@
           } finally {
             this.cargando = false;
           }
+        },
+
+        async cargarCola() {
+          try {
+            const r = await fetch('/repartidor/cola');
+            if (r.ok) {
+              const data = await r.json();
+              this.cola = data.cola || [];
+              this.colaTotal = data.total || 0;
+            } else {
+              this.conexionOk = false;
+            }
+          } catch (_) {
+            this.conexionOk = false;
+          }
+        },
+
+        async cogerReparto(pedidoId) {
+          if (this.cogiendo !== null) return;
+          this.cogiendo = pedidoId;
+          try {
+            const r = await fetch(`/repartidor/cola/coger/${pedidoId}`, { method: 'POST' });
+            if (r.ok) {
+              this.cola = this.cola.map(p =>
+                p.pedido_id === pedidoId ? { ...p, ya_cogido: true } : p
+              );
+              this.colaTotal = Math.max(0, this.colaTotal - 1);
+              await this.recargar();
+              this.tabActiva = 'mis-entregas';
+            } else {
+              const data = await r.json().catch(() => ({}));
+              if (data.error === 'ya_cogido') {
+                this.cola = this.cola.map(p =>
+                  p.pedido_id === pedidoId ? { ...p, ya_cogido: true } : p
+                );
+              } else {
+                this.conexionOk = false;
+              }
+            }
+          } catch (_) {
+            this.conexionOk = false;
+          }
+          this.cogiendo = null;
         },
 
         abrirPedido(p) {

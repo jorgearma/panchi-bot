@@ -515,12 +515,14 @@ class GestorDashboard:
                             "creada_en": _iso(ahora),
                         })
 
-        # Prepared orders with no delivery driver
-        repartos_asignados_ids = [r.pedido_id for r in s.query(Reparto.pedido_id).all()]
-        for p in s.query(Pedido).filter(
+        # Prepared orders with no delivery driver assigned (Reparto PENDIENTE sin repartidor_id)
+        for r in s.query(Reparto).filter(
+            Reparto.repartidor_id == None,
+            Reparto.estado == EstadoReparto.PENDIENTE.value,
+        ).join(Pedido, Pedido.PedidoID == Reparto.pedido_id).filter(
             Pedido.Estado == EstadoPedido.PREPARADO.value,
-            ~Pedido.PedidoID.in_(repartos_asignados_ids) if repartos_asignados_ids else True,
         ).all():
+            p = r.pedido
             resultado.append({
                 "tipo": "sin_repartidor",
                 "nivel": "error",
@@ -908,24 +910,31 @@ class GestorDashboard:
             for p in sin_picker
         ]
 
-        # Orders ready (preparado) with no rider assigned yet
-        reparto_ids_asignados = [r.pedido_id for r in s.query(Reparto.pedido_id).all()]
-        sin_repartidor = s.query(Pedido).filter(
-            Pedido.Estado == EstadoPedido.PREPARADO.value,
-            ~Pedido.PedidoID.in_(reparto_ids_asignados) if reparto_ids_asignados else True,
-        ).order_by(Pedido.FechaCreacion.asc()).all()
+        # Orders ready (preparado) with no rider assigned yet (Reparto PENDIENTE sin repartidor_id)
+        repartos_pendientes = (
+            s.query(Reparto)
+            .filter(
+                Reparto.repartidor_id == None,
+                Reparto.estado == EstadoReparto.PENDIENTE.value,
+            )
+            .join(Pedido, Pedido.PedidoID == Reparto.pedido_id)
+            .filter(Pedido.Estado == EstadoPedido.PREPARADO.value)
+            .order_by(Reparto.created_at.asc())
+            .all()
+        )
 
         pedidos_sin_repartidor = [
             {
-                "pedido_id": p.PedidoID,
-                "cliente_nombre": p.cliente.nombre if p.cliente else "—",
-                "direccion": p.DireccionEntrega,
-                "total": float(p.Total) if p.Total else 0.0,
-                "forma_pago": p.forma_pago or "online",
-                "fecha_creacion": _iso(p.FechaCreacion),
-                "minutos_espera": int((ahora - p.FechaCreacion).total_seconds() / 60) if p.FechaCreacion else None,
+                "pedido_id": r.pedido.PedidoID,
+                "reparto_id": r.id,
+                "cliente_nombre": r.pedido.cliente.nombre if r.pedido.cliente else "—",
+                "direccion": r.pedido.DireccionEntrega,
+                "total": float(r.pedido.Total) if r.pedido.Total else 0.0,
+                "forma_pago": r.pedido.forma_pago or "online",
+                "fecha_creacion": _iso(r.pedido.FechaCreacion),
+                "minutos_espera": int((ahora - r.pedido.FechaCreacion).total_seconds() / 60) if r.pedido.FechaCreacion else None,
             }
-            for p in sin_repartidor
+            for r in repartos_pendientes
         ]
 
         return {
@@ -1058,9 +1067,11 @@ class GestorDashboard:
             picking.completado_en = datetime.utcnow()
 
             pedido = picking.pedido
+            pedido_id_para_reparto = None  # capturar antes del commit para evitar lazy-load post-expire
             if pedido and transicion_valida_pedido(pedido.Estado, EstadoPedido.PREPARADO.value):
                 estado_anterior = pedido.Estado
                 pedido.Estado = EstadoPedido.PREPARADO.value
+                pedido_id_para_reparto = pedido.PedidoID
                 s.add(HistorialEstadoPedido(
                     pedido_id=pedido.PedidoID,
                     estado_anterior=estado_anterior,
@@ -1070,30 +1081,23 @@ class GestorDashboard:
 
             s.commit()
 
-            # Auto-crear Reparto pendiente para que los repartidores puedan reclamarlo.
-            # NOTA: Bloque separado del commit del picking deliberadamente (desviación del spec).
-            # Si pusiera la creación antes del s.commit() y hubiera una IntegrityError por race
-            # condition con asignar_repartidor(), se haría rollback del picking completo.
-            # Con el bloque separado, un fallo aquí no deshace el picking ya completado.
-            # La race condition con asignar_repartidor() se detecta con el check filter_by()
-            # y si aun así hay conflicto concurrente, se captura como IntegrityError (subclase
-            # de Exception) y se loguea como INFO (es condición esperada, no un error real).
-            if pedido and pedido.Estado == EstadoPedido.PREPARADO.value:
+            if pedido_id_para_reparto:
                 try:
-                    reparto_existente = s.query(Reparto).filter_by(pedido_id=pedido.PedidoID).first()
+                    reparto_existente = s.query(Reparto).filter_by(pedido_id=pedido_id_para_reparto).first()
                     if not reparto_existente:
                         s.add(Reparto(
-                            pedido_id=pedido.PedidoID,
+                            pedido_id=pedido_id_para_reparto,
                             repartidor_id=None,
                             estado=EstadoReparto.PENDIENTE.value,
                         ))
                         s.commit()
+                        logger.info("REPARTO_CREADO pedido=%s", pedido_id_para_reparto)
                 except Exception as _exc:
                     s.rollback()
                     if isinstance(_exc, IntegrityError):
-                        logger.info("Reparto ya creado concurrentemente para pedido %s", pedido.PedidoID)
+                        logger.info("Reparto ya creado concurrentemente para pedido %s", pedido_id_para_reparto)
                     else:
-                        logger.warning("No se pudo crear Reparto para pedido %s: %s", pedido.PedidoID, _exc)
+                        logger.warning("No se pudo crear Reparto para pedido %s: %s", pedido_id_para_reparto, _exc)
 
             # Descontar stock después del commit del picking
             items_para_stock = [
@@ -1568,10 +1572,14 @@ class GestorDashboard:
         }
 
     def repartos_sin_asignar(self) -> list[dict]:
-        """Repartos con estado PENDIENTE y sin repartidor asignado.
-        Solo incluye pedidos en estado PREPARADO.
+        """Pedidos PREPARADO sin repartidor asignado.
+        Incluye tanto pedidos con Reparto PENDIENTE como pedidos sin Reparto todavía.
         """
         s = self.session
+        ahora = datetime.utcnow()
+        resultado = []
+
+        # Pedidos PREPARADO con Reparto PENDIENTE y sin repartidor
         repartos = (
             s.query(Reparto)
             .join(Pedido, Pedido.PedidoID == Reparto.pedido_id)
@@ -1580,54 +1588,96 @@ class GestorDashboard:
                 Reparto.estado == EstadoReparto.PENDIENTE.value,
                 Pedido.Estado == EstadoPedido.PREPARADO.value,
             )
-            .order_by(Reparto.created_at.asc())
             .all()
         )
-        ahora = datetime.utcnow()
-        return [
-            {
-                'reparto_id':         r.id,
+        pedido_ids_con_reparto = set()
+        for r in repartos:
+            pedido_ids_con_reparto.add(r.pedido_id)
+            resultado.append({
                 'pedido_id':          r.pedido_id,
                 'n_items':            len(r.pedido.detalles) if r.pedido else 0,
                 'direccion_entrega':  r.pedido.DireccionEntrega if r.pedido else '—',
-                'segundos_esperando': int((ahora - r.created_at).total_seconds()),
-            }
-            for r in repartos
-        ]
+                'segundos_esperando': int((ahora - r.created_at).total_seconds()) if r.created_at else 0,
+            })
 
-    def reclamar_reparto(self, reparto_id: int, empleado_id: int) -> tuple[bool, str]:
+        # Pedidos PREPARADO sin ningún Reparto (auto-creación no ocurrió o falló)
+        pedidos_sin_reparto = (
+            s.query(Pedido)
+            .outerjoin(Reparto, Reparto.pedido_id == Pedido.PedidoID)
+            .filter(
+                Pedido.Estado == EstadoPedido.PREPARADO.value,
+                Reparto.id == None,
+            )
+            .all()
+        )
+        for p in pedidos_sin_reparto:
+            if p.PedidoID not in pedido_ids_con_reparto:
+                resultado.append({
+                    'pedido_id':          p.PedidoID,
+                    'n_items':            len(p.detalles) if p.detalles else 0,
+                    'direccion_entrega':  p.DireccionEntrega or '—',
+                    'segundos_esperando': int((ahora - p.FechaCreacion).total_seconds()) if p.FechaCreacion else 0,
+                })
+
+        return sorted(resultado, key=lambda x: x['segundos_esperando'], reverse=True)
+
+    def reclamar_reparto(self, pedido_id: int, empleado_id: int) -> tuple[bool, str]:
         """
-        Asigna el reparto al empleado de forma atómica.
+        Asigna el reparto al empleado de forma atómica usando pedido_id.
+        Crea el Reparto si no existe todavía.
         Nota: no transiciona Pedido.Estado a EN_REPARTO — esa responsabilidad
         recae en la ruta de blueprint que llama a este método.
         Returns:
             (True,  'ok')            — asignado correctamente
-            (False, 'no_encontrado') — reparto_id no existe
-            (False, 'ya_cogido')     — otro repartidor se adelantó (rowcount == 0)
+            (False, 'no_encontrado') — pedido_id no existe o no está en PREPARADO
+            (False, 'ya_cogido')     — otro repartidor se adelantó
             (False, 'error')         — error de BD
         """
         s = self.session
         try:
-            reparto = s.query(Reparto).filter_by(id=reparto_id).first()
-            if not reparto:
+            pedido = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido or pedido.Estado != EstadoPedido.PREPARADO.value:
                 return False, 'no_encontrado'
 
-            resultado = (
-                s.query(Reparto)
-                .filter(
-                    Reparto.id == reparto_id,
-                    Reparto.repartidor_id == None,
-                    Reparto.estado == EstadoReparto.PENDIENTE.value,
+            reparto = s.query(Reparto).filter_by(pedido_id=pedido_id).first()
+            if reparto:
+                # Ya existe — intentar asignar atómicamente
+                if reparto.repartidor_id is not None:
+                    return False, 'ya_cogido'
+                resultado = (
+                    s.query(Reparto)
+                    .filter(
+                        Reparto.pedido_id == pedido_id,
+                        Reparto.repartidor_id == None,
+                    )
+                    .update(
+                        {'repartidor_id': empleado_id, 'estado': EstadoReparto.ASIGNADO.value},
+                        synchronize_session=False,
+                    )
                 )
-                .update(
-                    {
-                        'repartidor_id': empleado_id,
-                        'estado': EstadoReparto.ASIGNADO.value,
-                    },
-                    synchronize_session=False,
-                )
-            )
-            s.commit()
+                s.commit()
+                if resultado == 0:
+                    return False, 'ya_cogido'
+            else:
+                # No existe — crear y asignar directamente
+                s.add(Reparto(
+                    pedido_id=pedido_id,
+                    repartidor_id=empleado_id,
+                    estado=EstadoReparto.ASIGNADO.value,
+                ))
+                try:
+                    s.commit()
+                except IntegrityError:
+                    s.rollback()
+                    return False, 'ya_cogido'
+
+            self._actualizar_estado_operativo(empleado_id, 'ocupado')
+            return True, 'ok'
+
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error reclamando reparto pedido %s: %s", pedido_id, e)
+            return False, 'error'
 
             if resultado == 0:
                 return False, 'ya_cogido'
