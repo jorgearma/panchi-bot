@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from models import (
     Empleado, HistorialEstadoPedido, Incidencia, Pedido, PickingItem,
@@ -1069,6 +1069,31 @@ class GestorDashboard:
                 ))
 
             s.commit()
+
+            # Auto-crear Reparto pendiente para que los repartidores puedan reclamarlo.
+            # NOTA: Bloque separado del commit del picking deliberadamente (desviación del spec).
+            # Si pusiera la creación antes del s.commit() y hubiera una IntegrityError por race
+            # condition con asignar_repartidor(), se haría rollback del picking completo.
+            # Con el bloque separado, un fallo aquí no deshace el picking ya completado.
+            # La race condition con asignar_repartidor() se detecta con el check filter_by()
+            # y si aun así hay conflicto concurrente, se captura como IntegrityError (subclase
+            # de Exception) y se loguea como INFO (es condición esperada, no un error real).
+            if pedido and pedido.Estado == EstadoPedido.PREPARADO.value:
+                try:
+                    reparto_existente = s.query(Reparto).filter_by(pedido_id=pedido.PedidoID).first()
+                    if not reparto_existente:
+                        s.add(Reparto(
+                            pedido_id=pedido.PedidoID,
+                            repartidor_id=None,
+                            estado=EstadoReparto.PENDIENTE.value,
+                        ))
+                        s.commit()
+                except Exception as _exc:
+                    s.rollback()
+                    if isinstance(_exc, IntegrityError):
+                        logger.info("Reparto ya creado concurrentemente para pedido %s", pedido.PedidoID)
+                    else:
+                        logger.warning("No se pudo crear Reparto para pedido %s: %s", pedido.PedidoID, _exc)
 
             # Descontar stock después del commit del picking
             items_para_stock = [
