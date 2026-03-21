@@ -90,16 +90,28 @@
     <!-- CTA principal — App operativa -->
     <a :href="appUrl"
        :class="appGradient"
-       class="block rounded-xl p-4 flex items-center justify-between active:opacity-90 transition">
-      <div>
-        <p class="text-xs uppercase tracking-wide" :class="appSubtitleColor">Mi app</p>
-        <p class="text-white font-bold text-base mt-1" x-text="appLabel"></p>
-        <p class="text-xs mt-1" :class="appSubtitleColor"
-           x-text="pedidosAsignados === 0 ? '0 asignados ahora' : pedidosAsignados + ' asignado' + (pedidosAsignados > 1 ? 's' : '')"></p>
+       class="block rounded-xl p-4 active:opacity-90 transition">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wide" :class="appSubtitleColor">Mi app</p>
+          <p class="text-white font-bold text-base mt-1" x-text="appLabel"></p>
+          <p class="text-xs mt-1" :class="appSubtitleColor"
+             x-text="pedidosAsignados === 0 ? '0 asignados ahora' : pedidosAsignados + ' asignado' + (pedidosAsignados > 1 ? 's' : '')"></p>
+        </div>
+        <span class="bg-white text-sm font-bold px-3 py-2 rounded-lg" :class="appBtnColor">
+          Entrar →
+        </span>
       </div>
-      <span class="bg-white text-sm font-bold px-3 py-2 rounded-lg" :class="appBtnColor">
-        Entrar →
-      </span>
+      <!-- Cambiar rol — solo visible si polivalente -->
+      <template x-if="capacidades.length > 1">
+        <div class="border-t border-white/10 mt-3 pt-3 text-center">
+          <button @click.prevent="cambiarRol()"
+                  class="text-xs active:opacity-70 transition"
+                  :class="rol === 'repartidor' ? 'text-orange-200' : 'text-blue-200'">
+            ⇄ Cambiar a <span x-text="rolOpuesto"></span>
+          </button>
+        </div>
+      </template>
     </a>
 
     <!-- Stats del día -->
@@ -150,6 +162,36 @@
       </div>
     </div>
 
+    <!-- Modal bloqueo de cambio de rol -->
+    <div x-show="mostrarModalBloqueo" x-cloak
+         class="fixed inset-0 bg-black/70 z-50 flex items-end justify-center p-4">
+      <div class="bg-gray-900 rounded-2xl w-full max-w-md p-5 border border-red-900">
+        <p class="text-red-400 font-bold text-sm mb-2">🔒 No puedes cambiar de rol ahora</p>
+        <p class="text-gray-400 text-xs mb-3">
+          Tienes tareas activas. Termínalas primero:
+        </p>
+        <div class="space-y-2 mb-4">
+          <template x-for="p in pedidosBloqueantes" :key="p.id">
+            <div class="bg-gray-800 rounded-lg px-3 py-2 flex justify-between">
+              <span class="text-sm text-red-300 font-medium" x-text="p.tipo + ' #' + p.id"></span>
+              <span class="text-xs text-gray-500" x-text="p.estado"></span>
+            </div>
+          </template>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <a :href="appUrl"
+             class="bg-blue-700 text-white text-sm font-semibold rounded-xl py-2.5 text-center active:opacity-90">
+            Ir a terminarlos
+          </a>
+          <button @click="mostrarModalBloqueo = false"
+                  class="bg-gray-700 text-gray-300 text-sm rounded-xl py-2.5 active:bg-gray-600">
+            Cancelar
+          </button>
+        </div>
+        <p class="text-center text-gray-600 text-xs mt-3">El manager puede transferir los pedidos desde el dashboard</p>
+      </div>
+    </div>
+
   </main>
 
   <!-- ======== ALPINE COMPONENT ======== -->
@@ -162,6 +204,9 @@
       turno:           null,
       metricas:        {},
       pedidosAsignados: 0,
+      capacidades:         [],
+      mostrarModalBloqueo: false,
+      pedidosBloqueantes:  [],
 
       // -- computed --
       get saludo() {
@@ -193,10 +238,12 @@
       get appBtnColor()     { return this.rol === 'repartidor' ? 'text-orange-600' : 'text-blue-600'; },
       get metricaLabel1()   { return this.rol === 'repartidor' ? 'Entregas' : 'Pedidos'; },
       get metricaLabel3()   { return this.rol === 'repartidor' ? 'Fallidas' : 'Incidencias'; },
+      get rolOpuesto()    { return this.rol === 'picker' ? 'Repartidor' : 'Picker'; },
+      get rolOpuestoSlug(){ return this.rol === 'picker' ? 'repartidor' : 'picker'; },
 
       // -- methods --
       async init() {
-        await Promise.all([this.cargarPerfil(), this.cargarTurno(), this.cargarMetricas()]);
+        await Promise.all([this.cargarPerfil(), this.cargarTurno(), this.cargarMetricas(), this.cargarCapacidades()]);
       },
 
       async cargarPerfil() {
@@ -222,6 +269,39 @@
             this.pedidosAsignados = d.pedidos_activos || 0;
           }
         } catch (_) {}
+      },
+
+      async cargarCapacidades() {
+        try {
+          const r = await fetch('/empleado/capacidades');
+          if (r.ok) {
+            const d = await r.json();
+            this.capacidades = d.capacidades || [];
+          }
+        } catch (_) {}
+      },
+
+      async cambiarRol() {
+        const nuevoRol = this.rolOpuestoSlug;
+        try {
+          const r = await fetch('/empleado/cambiar-rol', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rol: nuevoRol }),
+          });
+          if (r.ok) {
+            window.location.reload();
+          } else if (r.status === 409) {
+            const d = await r.json();
+            this.pedidosBloqueantes = d.pedidos_activos || [];
+            this.mostrarModalBloqueo = true;
+          } else {
+            const d = await r.json();
+            alert(d.error || 'Error al cambiar rol');
+          }
+        } catch (_) {
+          alert('Error de conexión');
+        }
       },
 
       async cambiarEstado(nuevoEstado) {
