@@ -62,12 +62,15 @@ def agregar_pedido():
     if not carrito:
         return jsonify({"error": "El carrito está vacío"}), 400
 
+    notas = data.get("notas", "")
+
     success, result = iniciar_pago(
         user_id=id_usuario,
         productos_recibidos=carrito,
         nombre_cliente=data.get("name"),
         numero_cliente=data.get("numero"),
         direccion_cliente=data.get("direccion"),
+        notas=notas,
         cache=cache,
         gestor_pedidos=gestor_pedidos,
         gestor_productos=gestor_productos,
@@ -120,12 +123,15 @@ def agregar_pedido_efectivo():
     if not id_usuario:
         return jsonify({"error": "ID de usuario no proporcionado"}), 400
 
+    notas = data.get("notas", "")
+
     success, result = iniciar_pago_efectivo(
         user_id=id_usuario,
         productos_recibidos=data.get("productos", []),
         nombre_cliente=data.get("name"),
         numero_cliente=data.get("numero"),
         direccion_cliente=data.get("direccion"),
+        notas=notas,
         cache=cache,
         gestor_pedidos=gestor_pedidos,
         gestor_productos=gestor_productos,
