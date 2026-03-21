@@ -78,7 +78,83 @@
   <!-- ======== VISTA LISTA ======== -->
   <div x-show="pickerId && !cargando && vistaActual === 'lista'" x-cloak>
 
-    <div x-show="pedidos.length === 0"
+    <!-- ---- Tabs ---- -->
+    <div class="flex border-b-2 border-gray-800 sticky z-20 bg-gray-100"
+         :style="isOnline ? 'top:52px' : 'top:82px'">
+      <button @click="tabActiva = 'mis-pedidos'"
+              class="flex-1 text-center py-3 text-sm font-medium transition"
+              :class="tabActiva === 'mis-pedidos'
+                ? 'text-blue-400 border-b-2 border-blue-500 -mb-[2px]'
+                : 'text-gray-500'">
+        📦 Mis pedidos
+        <span x-show="pedidos.length > 0"
+              class="ml-1.5 bg-gray-700 text-gray-300 text-xs rounded-full px-2 py-0.5"
+              x-text="pedidos.length"></span>
+      </button>
+      <button @click="tabActiva = 'cola'"
+              class="flex-1 text-center py-3 text-sm font-medium transition"
+              :class="tabActiva === 'cola'
+                ? 'text-blue-400 border-b-2 border-blue-500 -mb-[2px]'
+                : 'text-gray-500'">
+        📋 Cola
+        <span x-show="colaTotal > 0"
+              class="ml-1.5 bg-red-600 text-white text-xs rounded-full px-2 py-0.5"
+              x-text="colaTotal"></span>
+      </button>
+    </div>
+
+    <!-- ---- Sección Cola ---- -->
+    <div x-show="tabActiva === 'cola'" x-cloak class="p-4">
+
+      <!-- Cabecera -->
+      <div class="flex justify-between items-center mb-3">
+        <p class="text-sm font-semibold text-green-400"
+           x-text="colaTotal + ' pedido' + (colaTotal !== 1 ? 's' : '') + ' disponible' + (colaTotal !== 1 ? 's' : '')"></p>
+        <button @click="cargarCola()"
+                class="bg-gray-800 text-gray-400 text-xs px-3 py-1.5 rounded-lg active:bg-gray-700 transition">
+          ↻ Actualizar
+        </button>
+      </div>
+
+      <!-- Lista -->
+      <div x-show="cola.length > 0" class="space-y-3">
+        <template x-for="p in cola" :key="p.picking_id">
+          <div class="bg-gray-800 rounded-2xl p-4 flex justify-between items-center slide-up"
+               :class="p.ya_cogido ? 'opacity-40' : ''">
+            <div>
+              <div class="font-bold text-white text-sm">Pedido #<span x-text="p.pedido_id"></span></div>
+              <div class="text-xs mt-1" :class="p.ya_cogido ? 'text-red-400' : 'text-gray-500'">
+                <span x-show="!p.ya_cogido"
+                      x-text="'hace ' + (p.segundos_esperando < 60
+                        ? p.segundos_esperando + 's'
+                        : Math.floor(p.segundos_esperando / 60) + 'min') + ' · 🛒 ' + p.n_items + ' productos'"></span>
+                <span x-show="p.ya_cogido">Ya cogido por otro picker</span>
+              </div>
+            </div>
+            <button @click="cogerPedido(p.picking_id)"
+                    :disabled="p.ya_cogido || cogiendo !== null"
+                    class="text-sm font-bold px-4 py-2 rounded-xl transition tap-xl"
+                    :class="p.ya_cogido
+                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white active:bg-blue-700'">
+              <span x-show="!p.ya_cogido && cogiendo !== p.picking_id">Coger →</span>
+              <span x-show="p.ya_cogido">Cogido</span>
+              <span x-show="cogiendo === p.picking_id && !p.ya_cogido">...</span>
+            </button>
+          </div>
+        </template>
+      </div>
+
+      <!-- Vacía -->
+      <div x-show="cola.length === 0"
+           class="flex flex-col items-center justify-center py-16 text-center px-6">
+        <div class="text-5xl mb-3">📋</div>
+        <p class="text-gray-500 text-sm">No hay pedidos sin asignar ahora mismo</p>
+      </div>
+
+    </div>
+
+    <div x-show="tabActiva === 'mis-pedidos' && pedidos.length === 0"
          class="flex flex-col items-center justify-center min-h-[65vh] text-center px-6">
       <div class="text-6xl mb-4">✅</div>
       <h2 class="text-xl font-bold text-gray-700 mb-2">Sin pedidos asignados</h2>
@@ -89,7 +165,7 @@
       </button>
     </div>
 
-    <div x-show="pedidos.length > 0" class="p-4 space-y-3">
+    <div x-show="tabActiva === 'mis-pedidos' && pedidos.length > 0" class="p-4 space-y-3">
       <template x-for="p in pedidos" :key="p.picking_id">
         <div @click="abrirTicket(p)"
              class="bg-white rounded-2xl shadow-sm border active:scale-95 transition-transform cursor-pointer slide-up"
@@ -603,6 +679,12 @@
         _searchTimer:      null,
         confirmarFinalizar: false,
 
+        // ---- Cola de pedidos sin asignar ----
+        cola:          [],
+        colaTotal:     0,
+        cogiendo:      null,   // picking_id en proceso de reclamación
+        tabActiva:     'mis-pedidos',  // 'mis-pedidos' | 'cola'
+
         // ---- Modales ----
         modalCantidad: {
           visible:  false,
@@ -655,9 +737,12 @@
           this.isOnline = navigator.onLine;
           window.addEventListener('online',  () => { this.isOnline = true;  this._flushQueue(); });
           window.addEventListener('offline', () => { this.isOnline = false; });
-          await this.recargar();
+          await Promise.all([this.recargar(), this.cargarCola()]);
           setInterval(() => {
-            if (this.vistaActual === 'lista') this.recargar();
+            if (this.vistaActual === 'lista') {
+              this.recargar();
+              this.cargarCola();
+            }
           }, 60000);
         },
 
@@ -683,6 +768,41 @@
             this.mostrarToast('Error al cargar pedidos', true);
           } finally {
             this.cargando = false;
+          }
+        },
+
+        async cargarCola() {
+          try {
+            const r = await fetch('/picker/cola');
+            if (r.ok) {
+              const d = await r.json();
+              this.cola      = d.cola  || [];
+              this.colaTotal = d.total || 0;
+            }
+          } catch (_) {
+            this.mostrarToast('Error al cargar la cola', true);
+          }
+        },
+
+        async cogerPedido(pickingId) {
+          if (this.cogiendo) return;
+          this.cogiendo = pickingId;
+          try {
+            const r = await fetch(`/picker/cola/coger/${pickingId}`, { method: 'POST' });
+            if (r.ok) {
+              this.cola      = this.cola.filter(p => p.picking_id !== pickingId);
+              this.colaTotal = Math.max(0, this.colaTotal - 1);
+              await this.recargar();
+              this.tabActiva = 'mis-pedidos';
+            } else if (r.status === 409) {
+              this.cola = this.cola.map(p =>
+                p.picking_id === pickingId ? { ...p, ya_cogido: true } : p
+              );
+            }
+          } catch (_) {
+            this.mostrarToast('Error al coger el pedido', true);
+          } finally {
+            this.cogiendo = null;
           }
         },
 
