@@ -1,8 +1,10 @@
 import logging
 
-from flask import Blueprint, jsonify, render_template, request, session
+from flask import Blueprint, jsonify, redirect, render_template, request, session
 
-from blueprints.auth import requiere_rol
+from blueprints.auth import requiere_autenticacion, requiere_rol
+from database import get_db
+from models import Empleado as _Empleado
 from services import gestor_empleado
 
 logger = logging.getLogger(__name__)
@@ -16,7 +18,13 @@ _ROLES_HUB = ('picker', 'repartidor', 'manager', 'admin')
 @requiere_rol(*_ROLES_HUB)
 def index():
     empleado_id = session.get('empleado_id')
-    rol         = session.get('rol')
+    rol = session.get('rol')
+    # Redirigir a check-in si polivalente y sin rol_activo en BD
+    try:
+        if gestor_empleado.es_polivalente(empleado_id) and not gestor_empleado.tiene_rol_activo(empleado_id):
+            return redirect('/empleado/checkin')
+    except Exception:
+        pass  # Si falla la BD, mostrar el hub igualmente
     return render_template('empleado/index.html', empleado_id=empleado_id, rol=rol)
 
 
@@ -71,3 +79,68 @@ def metricas():
     except Exception as e:
         logger.error("Error en /empleado/metricas: %s", e)
         return jsonify({'error': 'Error interno'}), 500
+
+
+@blueprint_empleado.route('/empleado/capacidades')
+@requiere_rol(*_ROLES_HUB)
+def capacidades():
+    empleado_id = session.get('empleado_id')
+    try:
+        caps = gestor_empleado.capacidades(empleado_id)
+        emp = get_db().query(_Empleado).filter_by(EmpleadoID=empleado_id).first()
+        rol_activo = emp.rol_activo if emp else None
+        return jsonify({'capacidades': caps, 'rol_activo': rol_activo})
+    except Exception as e:
+        logger.error("Error en /empleado/capacidades: %s", e)
+        return jsonify({'capacidades': [], 'rol_activo': None})
+
+
+@blueprint_empleado.route('/empleado/carga-operativa')
+@requiere_rol(*_ROLES_HUB)
+def carga_operativa():
+    try:
+        return jsonify(gestor_empleado.carga_operativa())
+    except Exception as e:
+        logger.error("Error en /empleado/carga-operativa: %s", e)
+        return jsonify({'picker': {'pendientes': 0, 'en_proceso': 0},
+                        'repartidor': {'listos_para_entregar': 0, 'en_camino': 0}})
+
+
+@blueprint_empleado.route('/empleado/cambiar-rol', methods=['POST'])
+@requiere_rol(*_ROLES_HUB)
+def cambiar_rol():
+    data = request.get_json(silent=True) or {}
+    nuevo_rol = (data.get('rol') or '').strip()
+    if not nuevo_rol:
+        return jsonify({'error': 'Falta campo: rol'}), 400
+
+    empleado_id = session.get('empleado_id')
+    ok, msg, bloqueantes = gestor_empleado.cambiar_rol(empleado_id, nuevo_rol)
+
+    if not ok:
+        if bloqueantes:
+            return jsonify({'error': msg, 'pedidos_activos': bloqueantes}), 409
+        return jsonify({'error': msg}), 403
+
+    session['rol'] = nuevo_rol
+    return jsonify({'ok': True, 'rol': nuevo_rol})
+
+
+@blueprint_empleado.route('/empleado/checkin')
+@requiere_autenticacion
+def checkin():
+    empleado_id = session.get('empleado_id')
+    try:
+        caps = gestor_empleado.capacidades(empleado_id)
+        if len(caps) == 1:
+            return redirect('/empleado')
+        carga = gestor_empleado.carga_operativa()
+        turno = gestor_empleado.turno_hoy(empleado_id)
+        return render_template('empleado/checkin.html',
+                                capacidades=caps,
+                                carga=carga,
+                                turno=turno,
+                                empleado_id=empleado_id)
+    except Exception as e:
+        logger.error("Error en /empleado/checkin: %s", e)
+        return redirect('/empleado')
