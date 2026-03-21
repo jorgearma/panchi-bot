@@ -2,10 +2,16 @@ import json
 import logging
 from datetime import datetime
 from decimal import Decimal
-from models import AuditLog, Pedido, PedidoDetalle, PickingItem, Producto, HistorialEstadoPedido, Pago
+from models import (
+    AuditLog, Pedido, PedidoDetalle, PickingItem, PickingPedido, Producto,
+    HistorialEstadoPedido, Pago,
+)
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
-from states import EstadoPedido, ESTADOS_TERMINALES_PEDIDO, transicion_valida_pedido
+from states import (
+    EstadoPedido, EstadoPicking, ESTADOS_TERMINALES_PEDIDO,
+    transicion_valida_pedido,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +152,43 @@ class GestorPedidos:
                 estado_anterior=estado_anterior,
                 estado_nuevo=nuevo_estado,
             ))
+            self._asegurar_picking_si_procede(pedido, nuevo_estado)
             self.session.commit()
             return True
         except SQLAlchemyError as error:
             self.session.rollback()
             logger.error("Error al actualizar el estado del pedido %s: %s", pedido_id, error)
             raise
+
+    def _asegurar_picking_si_procede(self, pedido, nuevo_estado) -> None:
+        """Crea un PickingPedido pendiente al entrar en la cola operativa inicial."""
+        if nuevo_estado not in {
+            EstadoPedido.PAGADO,
+            EstadoPedido.CONTRA_REEMBOLSO,
+        }:
+            return
+
+        picking_existente = (
+            self.session.query(PickingPedido)
+            .filter_by(pedido_id=pedido.PedidoID)
+            .first()
+        )
+        if picking_existente:
+            return
+
+        picking = PickingPedido(
+            pedido_id=pedido.PedidoID,
+            estado=EstadoPicking.PENDIENTE.value,
+        )
+        self.session.add(picking)
+        self.session.flush()
+
+        for detalle in pedido.detalles:
+            self.session.add(PickingItem(
+                picking_id=picking.id,
+                pedido_detalle_id=detalle.DetalleID,
+                estado=EstadoPicking.PENDIENTE.value,
+            ))
     
     def guardar_forma_pago(self, pedido_id, forma_pago: str):
         pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
@@ -449,6 +486,5 @@ class GestorPedidos:
         except SQLAlchemyError as error:
             logger.error("Error al recuperar el pedido con ID %s: %s", pedido_id, error)
             raise
-
 
 
