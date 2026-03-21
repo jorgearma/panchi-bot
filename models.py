@@ -82,6 +82,7 @@ class Pedido(Base):
     cancel_reason = Column(String(50), nullable=True)
     cancelled_by = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
     cancelled_at = Column(DateTime, nullable=True)
+    Notas = Column(String(300), nullable=True)
 
     cliente = relationship("Usuario", back_populates="pedidos")
     detalles = relationship("PedidoDetalle", back_populates="pedido", cascade="all, delete-orphan")
