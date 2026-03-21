@@ -47,9 +47,12 @@
 
     <!-- Tarjeta de pedido -->
     <div class="conf-card">
-      <div class="conf-card__head">
-        <span class="conf-card__title">Tu pedido</span>
-        <span class="conf-card__id">#{{ pedidoID }}</span>
+      <div class="conf-card__order-id">
+        <div class="conf-card__order-id-left">
+          <span class="conf-card__order-id-label">Nº de pedido · guárdalo para consultas</span>
+          <span class="conf-card__order-id-num">#{{ pedidoID }}</span>
+        </div>
+        <span class="conf-card__order-id-icon">📋</span>
       </div>
 
       <ul id="productos" class="conf-items">
@@ -58,9 +61,12 @@
             data-codigo="{{ producto.codigo }}"
             data-unit="{{ (producto.precio / producto.cantidad) | round(2) }}">
           <div class="conf-item__qty">{{ producto.cantidad }}</div>
-          <span class="conf-item__name">{{ producto.nombre }}</span>
+          <div class="conf-item__info">
+            <span class="conf-item__name">{{ producto.nombre }}</span>
+            <span class="conf-item__unit">{{ (producto.precio / producto.cantidad) | round(2) }} € / ud</span>
+          </div>
           <span class="conf-item__price">{{ producto.precio }} €</span>
-          <button class="conf-item__remove" onclick="quitarUnidad(this)" title="Quitar una unidad">−</button>
+          <button class="conf-item__remove" onclick="quitarUnidad(this)" title="Quitar una unidad">×</button>
         </li>
         {% endfor %}
       </ul>
@@ -94,7 +100,7 @@
         <span class="conf-bar__btn-arrow">›</span>
       </button>
       <button class="conf-bar__cash" onclick="abrirModal('modal-efectivo')">
-        <span class="conf-bar__btn-icon">🪙</span>
+        <span class="conf-bar__btn-icon">💵</span>
         <span class="conf-bar__btn-title">Pagar al recibir el pedido</span>
         <span class="conf-bar__btn-arrow">›</span>
       </button>
@@ -127,7 +133,7 @@
   <div id="modal-efectivo" class="conf-modal" style="display:none;" onclick="cerrarModalOverlay(event, 'modal-efectivo')">
     <div class="conf-sheet">
       <div class="conf-sheet__handle"></div>
-      <div class="conf-sheet__icon conf-sheet__icon--cash">🪙</div>
+      <div class="conf-sheet__icon conf-sheet__icon--cash">💵</div>
       <h2 class="conf-sheet__title">¿Confirmas el pedido?</h2>
       <p class="conf-sheet__sub">Pagarás al repartidor en la puerta. Puedes pagar en efectivo o con tarjeta.</p>
       <div class="conf-sheet__summary">
@@ -216,7 +222,7 @@
     /* ── Body ── */
     .conf-body {
       padding: 10px;
-      padding-bottom: 115px; /* espacio para action bar fija */
+      padding-bottom: 135px; /* espacio para action bar fija */
       display: flex; flex-direction: column; gap: 8px;
     }
 
@@ -237,6 +243,21 @@
       font-family: 'Manrope', sans-serif;
       font-weight: 800; font-size: 14px;
     }
+    .conf-card__order-id {
+      background: #FFF8F5; border-bottom: 1px solid #FFD5C2;
+      padding: 10px 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .conf-card__order-id-left { display: flex; flex-direction: column; gap: 2px; }
+    .conf-card__order-id-label {
+      font-size: 10px; font-weight: 600; color: var(--primary);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .conf-card__order-id-num {
+      font-family: 'Manrope', sans-serif; font-weight: 900; font-size: 22px;
+      color: var(--text); letter-spacing: 1px;
+    }
+    .conf-card__order-id-icon { font-size: 22px; opacity: 0.5; }
     .conf-card__id {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: 20px; padding: 2px 8px;
@@ -252,24 +273,29 @@
       display: flex; align-items: center; gap: 8px;
       background: var(--bg); border-radius: 8px;
       padding: 8px 9px; border: 1px solid var(--border);
+      min-height: 48px;
     }
     .conf-item__qty {
-      width: 28px; height: 28px; border-radius: 7px;
+      width: 30px; height: 30px; border-radius: 7px;
       background: var(--primary); color: #fff;
       display: flex; align-items: center; justify-content: center;
-      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 13px;
+      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 14px;
       flex-shrink: 0;
     }
-    .conf-item__name { flex: 1; font-weight: 600; font-size: 13px; }
-    .conf-item__price { font-weight: 700; font-size: 13px; white-space: nowrap; }
+    .conf-item__info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+    .conf-item__name { font-weight: 600; font-size: 14px; }
+    .conf-item__unit { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .conf-item__price { font-weight: 700; font-size: 14px; white-space: nowrap; margin-right: 6px; }
     .conf-item__remove {
-      width: 24px; height: 24px;
-      background: #FEE2E2; color: var(--danger);
-      border: none; border-radius: 6px;
-      font-size: 16px; font-weight: 800;
+      width: 20px; height: 20px;
+      background: #DC2626; color: #fff;
+      border: none; border-radius: 5px;
+      font-size: 12px; font-weight: 800;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; flex-shrink: 0; line-height: 1;
+      transition: opacity 0.1s;
     }
+    .conf-item__remove:active { opacity: 0.7; }
 
     /* ── Notas ── */
     .conf-notes {
@@ -367,14 +393,17 @@
       border-radius: 14px; padding: 13px 12px;
       display: flex; align-items: center; gap: 10px;
       cursor: pointer; border: none;
+      transition: filter 0.15s;
     }
+    .conf-bar__online:active { filter: brightness(0.88); }
+    .conf-bar__cash:active   { filter: brightness(0.88); }
     .conf-bar__online {
-      background: var(--primary);
-      box-shadow: 0 4px 14px rgba(255,107,53,0.4);
+      background: linear-gradient(160deg, #FF8255 0%, #FF5500 100%);
+      box-shadow: 0 4px 16px rgba(255,107,53,0.45);
     }
     .conf-bar__cash {
-      background: var(--success);
-      box-shadow: 0 4px 14px rgba(34,197,94,0.35);
+      background: linear-gradient(160deg, #34D470 0%, #16A34A 100%);
+      box-shadow: 0 4px 16px rgba(34,197,94,0.4);
     }
     .conf-bar__btn-icon { font-size: 20px; flex-shrink: 0; }
     .conf-bar__btn-title {
