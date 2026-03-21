@@ -1542,6 +1542,79 @@ class GestorDashboard:
             "detalle": [_detalle(r) for r in repartos],
         }
 
+    def repartos_sin_asignar(self) -> list[dict]:
+        """Repartos con estado PENDIENTE y sin repartidor asignado.
+        Solo incluye pedidos en estado PREPARADO.
+        """
+        s = self.session
+        repartos = (
+            s.query(Reparto)
+            .join(Pedido, Pedido.PedidoID == Reparto.pedido_id)
+            .filter(
+                Reparto.repartidor_id == None,
+                Reparto.estado == EstadoReparto.PENDIENTE.value,
+                Pedido.Estado == EstadoPedido.PREPARADO.value,
+            )
+            .order_by(Reparto.created_at.asc())
+            .all()
+        )
+        ahora = datetime.utcnow()
+        return [
+            {
+                'reparto_id':         r.id,
+                'pedido_id':          r.pedido_id,
+                'n_items':            len(r.pedido.detalles) if r.pedido else 0,
+                'direccion_entrega':  r.pedido.DireccionEntrega if r.pedido else '—',
+                'segundos_esperando': int((ahora - r.created_at).total_seconds()),
+            }
+            for r in repartos
+        ]
+
+    def reclamar_reparto(self, reparto_id: int, empleado_id: int) -> tuple[bool, str]:
+        """
+        Asigna el reparto al empleado de forma atómica.
+        Nota: no transiciona Pedido.Estado a EN_REPARTO — esa responsabilidad
+        recae en la ruta de blueprint que llama a este método.
+        Returns:
+            (True,  'ok')            — asignado correctamente
+            (False, 'no_encontrado') — reparto_id no existe
+            (False, 'ya_cogido')     — otro repartidor se adelantó (rowcount == 0)
+            (False, 'error')         — error de BD
+        """
+        s = self.session
+        try:
+            reparto = s.query(Reparto).filter_by(id=reparto_id).first()
+            if not reparto:
+                return False, 'no_encontrado'
+
+            resultado = (
+                s.query(Reparto)
+                .filter(
+                    Reparto.id == reparto_id,
+                    Reparto.repartidor_id == None,
+                    Reparto.estado == EstadoReparto.PENDIENTE.value,
+                )
+                .update(
+                    {
+                        'repartidor_id': empleado_id,
+                        'estado': EstadoReparto.ASIGNADO.value,
+                    },
+                    synchronize_session=False,
+                )
+            )
+            s.commit()
+
+            if resultado == 0:
+                return False, 'ya_cogido'
+
+            self._actualizar_estado_operativo(empleado_id, 'ocupado')
+            return True, 'ok'
+
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error reclamando reparto %s: %s", reparto_id, e)
+            return False, 'error'
+
     def pickings_sin_asignar(self) -> list[dict]:
         """Pedidos con PickingPedido creado pero sin picker asignado.
         Solo incluye pedidos en estado activo (Pagado, contra_reembolso, en_preparacion).
