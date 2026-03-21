@@ -72,6 +72,7 @@ def create_app(config: dict = None) -> Flask:
     from blueprints.picker import blueprint_picker
     from blueprints.repartidor import blueprint_repartidor
     from blueprints.productos import blueprint_productos
+    from blueprints.empleado import blueprint_empleado
 
     app.register_blueprint(blueprint_auth)
     app.register_blueprint(blueprint_webhook)
@@ -81,6 +82,7 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(blueprint_picker)
     app.register_blueprint(blueprint_repartidor)
     app.register_blueprint(blueprint_productos)
+    app.register_blueprint(blueprint_empleado)
 
     @app.route('/health')
     def health():

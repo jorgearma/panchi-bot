@@ -147,4 +147,7 @@ def mostrar_confirmacion_depago():
         productos=pedido["productos"],
         pedidoID=pedido["pedidoID"],
         public_url=config.PUBLIC_URL or "",
+        store_phone=config.STORE_PHONE or "",
+        store_address=config.STORE_ADDRESS or "",
+        redis_id=pedido_id,
     )

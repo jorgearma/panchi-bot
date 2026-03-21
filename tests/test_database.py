@@ -20,3 +20,20 @@ def test_conectar_bd1_fuente_incluye_audit_log():
         "AuditLog debe estar en el código fuente de conectar_bd1() "
         "para que la tabla se cree en deploys limpios"
     )
+
+
+def test_empleado_tiene_estado_operativo():
+    """El modelo Empleado debe tener el campo estado_operativo."""
+    import inspect
+    from models import Empleado
+    src = inspect.getsource(Empleado)
+    assert 'estado_operativo' in src, "Falta columna estado_operativo en Empleado"
+
+
+def test_modelo_turno_existe():
+    """El modelo Turno debe existir con los campos requeridos."""
+    import inspect
+    from models import Turno
+    src = inspect.getsource(Turno)
+    for campo in ('empleado_id', 'fecha', 'hora_inicio', 'hora_fin'):
+        assert campo in src, f"Falta campo {campo} en Turno"

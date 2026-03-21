@@ -3,66 +3,592 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pedido confirmado — Panchi Bot</title>
+  <title>Seguimiento de pedido — Panchi Bot</title>
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ── Cabecera ── */
+    .conf-header {
+      background: linear-gradient(135deg, #FF6B35 0%, #FF4500 100%);
+      padding: 16px 0 20px;
+      position: relative; overflow: hidden;
+      border-radius: 0 0 24px 24px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .conf-header::before {
+      content: ''; position: absolute;
+      width: 160px; height: 160px; border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      top: -40px; right: -30px;
+    }
+    .conf-header::after {
+      content: ''; position: absolute;
+      width: 90px; height: 90px; border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+      bottom: -20px; left: 10px;
+    }
+    .conf-header__row1 {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 14px; position: relative; z-index: 1;
+    }
+    .conf-header__name {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 900; font-size: 19px; color: #fff; letter-spacing: -0.3px;
+    }
+    .conf-header__badge {
+      background: var(--success); color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 5px 11px; border-radius: 20px;
+      box-shadow: 0 2px 10px rgba(34,197,94,0.45); white-space: nowrap;
+    }
+    .conf-header__addr {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 12px; padding: 9px 12px;
+      margin: 0 14px; position: relative; z-index: 1;
+    }
+    .conf-header__addr-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .conf-header__addr-text { display: flex; flex-direction: column; min-width: 0; }
+    .conf-header__addr-label {
+      font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.65);
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .conf-header__addr-street {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 800; font-size: 13px; color: #fff;
+      letter-spacing: -0.2px; margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ── Animaciones preparing ── */
+    @keyframes icon-rock {
+      0%, 100% { transform: rotate(0deg); }
+      25%       { transform: rotate(-8deg); }
+      75%       { transform: rotate(8deg); }
+    }
+    @keyframes steam-rise {
+      0%   { transform: translateY(0) scaleX(1); opacity: 0.6; }
+      100% { transform: translateY(-18px) scaleX(1.4); opacity: 0; }
+    }
+    @keyframes dot-blink {
+      0%, 80%, 100% { opacity: 0; }
+      40%            { opacity: 1; }
+    }
+    .status-icon-wrap {
+      position: relative; display: inline-flex;
+      flex-direction: column; align-items: center; margin-bottom: 6px;
+    }
+    .status-steam {
+      position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 6px;
+    }
+    .status-steam span {
+      width: 4px; height: 10px; border-radius: 2px;
+      background: var(--primary); opacity: 0;
+      animation: steam-rise 1.6s ease-out infinite;
+    }
+    .status-steam span:nth-child(2) { animation-delay: 0.4s; }
+    .status-steam span:nth-child(3) { animation-delay: 0.8s; }
+    [data-status="receiving"] #status-icon {
+      display: inline-block;
+      animation: icon-rock 2s ease-in-out infinite;
+    }
+    .status-dots span {
+      animation: dot-blink 1.4s ease-in-out infinite;
+    }
+    .status-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .status-dots span:nth-child(3) { animation-delay: 0.4s; }
+    /* Detener animaciones en otros estados */
+    :not([data-status="receiving"]) .status-steam,
+    :not([data-status="receiving"]) .status-dots { display: none; }
+    :not([data-status="receiving"]) #status-icon { animation: none; }
+
+    /* ── Loader bar ── */
+    @keyframes shimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(250%); }
+    }
+    .status-loader {
+      width: 140px; height: 4px;
+      background: var(--border); border-radius: 99px;
+      overflow: hidden; margin: 8px auto 0;
+    }
+    .status-loader__bar {
+      width: 40%; height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      animation: shimmer 1.6s ease-in-out infinite;
+    }
+    /* Ocultar en estados terminales */
+    .status-hero[data-status="delivered"] .status-loader,
+    .status-hero[data-status="cancelled"] .status-loader,
+    .status-hero[data-status="refunded"]  .status-loader { display: none; }
+
+    /* ── Status hero ── */
+    .status-hero {
+      background: var(--surface);
+      padding: 10px 16px 10px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .status-hero[data-status="delivered"] { background: #f0fdf4; border-bottom-color: #bbf7d0; }
+    .status-hero[data-status="cancelled"] { background: #fef2f2; border-bottom-color: #fecaca; }
+    .status-hero[data-status="refunded"]  { background: #f9fafb; border-bottom-color: var(--border); }
+
+    #status-icon  { display: none; }
+    #status-title {
+      font-size: 16px; font-weight: 900; color: var(--text);
+      font-family: 'Manrope', sans-serif;
+      letter-spacing: -0.4px;
+    }
+    .status-hero[data-status="delivered"] #status-title { color: #15803d; }
+    .status-hero[data-status="cancelled"] #status-title { color: var(--danger); }
+    #status-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .order-ref__label {
+      font-size: 10px; font-weight: 600; color: var(--primary);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .order-ref__num {
+      font-family: 'Manrope', sans-serif; font-weight: 900;
+      font-size: 18px; color: var(--text); letter-spacing: 1px;
+    }
+    .order-ref {
+      display: inline-flex; flex-direction: column; align-items: center;
+      margin-top: 6px; background: #FFF8F5;
+      border: 1.5px solid #FFD5C2; border-radius: 10px;
+      padding: 4px 14px;
+    }
+
+    /* ── Timeline ── */
+    .tracker-section {
+      background: var(--surface);
+      padding: 16px 16px 4px;
+      margin-top: 10px;
+    }
+    .tl-item { display: flex; align-items: flex-start; gap: 12px; }
+    .tl-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+    .tl-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+      background: var(--border); color: var(--text-muted);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .tl-dot.done    { background: var(--success); color: #fff; }
+    .tl-dot.active  { background: var(--primary); color: #fff; box-shadow: 0 0 0 4px rgba(255,107,53,.18); }
+    .tl-line { width: 2px; height: 26px; margin: 3px 0; background: var(--border); transition: background 0.3s; }
+    .tl-line.done { background: var(--success); }
+    .tl-body { padding-bottom: 18px; }
+    .tl-label {
+      font-size: 14px; font-weight: 600; color: var(--text-muted);
+      padding-top: 4px; transition: color 0.3s;
+    }
+    .tl-label.active  { color: var(--primary); }
+    .tl-label.done    { color: var(--text); }
+    .tl-time { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Tarjeta repartidor ── */
+    .rep-card {
+      margin: 10px 16px 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+    }
+    .rep-pending {
+      margin: 10px 16px 0;
+      background: #FFF8F5; border: 1px solid #FFD5C2;
+      border-radius: var(--radius); padding: 12px 14px;
+      font-size: 13px; color: #92400e; text-align: center;
+    }
+    .rep-avatar {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .rep-info { flex: 1; min-width: 0; }
+    .rep-name { font-size: 14px; font-weight: 700; color: var(--text); }
+    .rep-role { font-size: 12px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wa-btn {
+      background: #25D366; color: #fff; border: none;
+      border-radius: var(--radius-sm); padding: 9px 11px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; text-decoration: none;
+    }
+    .wa-btn svg { width: 22px; height: 22px; fill: #fff; }
+
+    /* ── Secciones ── */
+    .section-title {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .06em;
+      padding: 14px 16px 8px;
+    }
+
+    /* ── Items pedido ── */
+    .items-card {
+      background: var(--surface); margin: 0 16px;
+      border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+    .conf-items {
+      list-style: none; margin: 0; padding: 8px;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .conf-item {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg); border-radius: 8px;
+      padding: 8px 9px; border: 1px solid var(--border);
+      min-height: 48px;
+    }
+    .conf-item__qty {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 14px;
+      flex-shrink: 0;
+    }
+    .conf-item__info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+    .conf-item__name { font-weight: 600; font-size: 14px; }
+    .conf-item__unit { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .conf-item__price { font-weight: 700; font-size: 14px; white-space: nowrap; }
+    .item-total-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px; border-top: 2px dashed var(--border); margin: 0 4px;
+      border-top: 2px solid var(--border);
+      font-weight: 700; font-size: 15px;
+    }
+    .item-total-val { color: var(--primary); }
+
+    /* ── Info almacén ── */
+    .store-card {
+      background: var(--surface); margin: 0 16px;
+      border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+    .store-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px; border-bottom: 1px solid var(--border);
+      font-size: 13px; color: var(--text-muted);
+    }
+    .store-row:last-child { border-bottom: none; }
+
+    /* ── Refresh bar ── */
+    .refresh-bar {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 12px 16px 20px; font-size: 11px; color: var(--text-muted);
+    }
+    .refresh-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--primary); animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .hidden { display: none !important; }
+
+    /* ── Items colapsables ── */
+    .section-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 16px 8px;
+    }
+    .section-header .section-title {
+      padding: 0;
+      font-family: 'Manrope', sans-serif;
+      font-size: 16px; font-weight: 900;
+      color: var(--text); text-transform: none; letter-spacing: -0.3px;
+    }
+    .section-header .section-title span {
+      color: var(--primary);
+    }
+    .toggle-btn {
+      background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: 20px; cursor: pointer;
+      font-size: 12px; font-weight: 700; color: var(--primary);
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px;
+    }
+    .toggle-icon { font-size: 11px; transition: transform 0.2s; }
+    .toggle-icon.open { transform: rotate(180deg); }
+  </style>
 </head>
 <body>
 
-  <div class="success-banner">
-    <h2>✅ ¡Pedido confirmado!</h2>
-    <p>Estamos preparando tu pedido ahora mismo.</p>
-  </div>
-
-  <header class="page-header">
-    <div class="header-avatar">{{ name.split()[0] }}</div>
-    <div class="header-address">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2.5"
-           stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-        <circle cx="12" cy="10" r="3"/>
-      </svg>
-      <span>{{ calle }}</span>
+  <!-- Cabecera -->
+  <header class="conf-header">
+    <div class="conf-header__row1">
+      <span class="conf-header__name">Hola, {{ name.split()[0] }} 👋</span>
+      <span class="conf-header__badge">✓ Envío gratis</span>
     </div>
-    <span class="header-badge">Envío gratis</span>
+    <div class="conf-header__addr">
+      <div class="conf-header__addr-icon">📍</div>
+      <div class="conf-header__addr-text">
+        <span class="conf-header__addr-label">Dirección de entrega</span>
+        <span class="conf-header__addr-street">{{ calle }}</span>
+      </div>
+    </div>
   </header>
 
-  <div class="page-content">
-
-    <div class="order-card">
-      <div class="order-card-header">
-        <span class="order-card-title">Resumen del pedido</span>
-        <span class="order-id">#{{ pedidoID }}</span>
-      </div>
-
-      <ul style="list-style:none; margin:0; padding:0;">
-        {% for producto in productos %}
-        <li class="order-item">
-          <div class="order-item-left">
-            <span class="order-item-name">{{ producto.nombre }}</span>
-            <span class="order-item-qty">x{{ producto.cantidad }}</span>
-          </div>
-          <span class="order-item-price">{{ producto.precio }} €</span>
-        </li>
-        {% endfor %}
-      </ul>
-
-      <div class="order-total">
-        <span>Total</span>
-        <span>{{ total }} €</span>
+  <!-- Status hero (actualizado por JS) -->
+  <div class="status-hero" id="status-hero" data-status="receiving">
+    <div class="status-icon-wrap">
+      <div id="status-icon"></div>
+      <div class="status-steam">
+        <span></span><span></span><span></span>
       </div>
     </div>
-
-    <div class="info-row">
-      ⏱ Tiempo estimado de entrega: <strong>~15 minutos</strong>
+    <div id="status-title">Pedido recibido, preparando<span class="status-dots"><span>.</span><span>.</span><span>.</span></span></div>
+    <div class="status-loader"><div class="status-loader__bar"></div></div>
+    <div id="status-sub" class="status-sub"></div>
+    <div class="order-ref">
+      <span class="order-ref__label">Nº de pedido</span>
+      <span class="order-ref__num">#{{ pedidoID }}</span>
     </div>
-
-    <div class="info-row">
-      📍 Entrega en: <strong>{{ direccion }}</strong>
-    </div>
-
   </div>
+
+  <!-- Timeline (actualizado por JS) -->
+  <div class="tracker-section" id="tracker-section">
+    <!-- Paso 1: Recibido -->
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" id="dot-1">○</div>
+        <div class="tl-line" id="line-1"></div>
+      </div>
+      <div class="tl-body">
+        <div class="tl-label" id="label-1">Pedido recibido</div>
+        <div class="tl-time" id="time-1"></div>
+      </div>
+    </div>
+    <!-- Paso 2: Preparando -->
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" id="dot-2">○</div>
+        <div class="tl-line" id="line-2"></div>
+      </div>
+      <div class="tl-body">
+        <div class="tl-label" id="label-2">Preparando en almacén</div>
+        <div class="tl-time" id="time-2"></div>
+      </div>
+    </div>
+    <!-- Paso 3: En camino -->
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" id="dot-3">○</div>
+        <div class="tl-line" id="line-3"></div>
+      </div>
+      <div class="tl-body">
+        <div class="tl-label" id="label-3">En camino</div>
+        <div class="tl-time" id="time-3"></div>
+      </div>
+    </div>
+    <!-- Paso 4: Entregado -->
+    <div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot" id="dot-4">○</div>
+      </div>
+      <div class="tl-body">
+        <div class="tl-label" id="label-4">Entregado</div>
+        <div class="tl-time" id="time-4"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tarjeta repartidor (actualizada por JS) -->
+  <div id="rep-pending" class="rep-pending">
+    🏍 Se asignará un repartidor cuando el pedido esté listo
+  </div>
+  <div id="rep-card" class="rep-card hidden">
+    <div class="rep-avatar">👤</div>
+    <div class="rep-info">
+      <div class="rep-name" id="rep-name"></div>
+      <div class="rep-role" id="rep-role"></div>
+    </div>
+    <a id="rep-wa" class="wa-btn" href="#" target="_blank" title="Contactar por WhatsApp">
+      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.126.554 4.118 1.523 5.847L.057 23.882a.5.5 0 00.611.611l6.063-1.463A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.9a9.884 9.884 0 01-5.031-1.378l-.36-.214-3.733.901.924-3.713-.234-.375A9.855 9.855 0 012.1 12C2.1 6.533 6.533 2.1 12 2.1c5.467 0 9.9 4.433 9.9 9.9 0 5.467-4.433 9.9-9.9 9.9z"/></svg>
+    </a>
+  </div>
+
+  <!-- Items del pedido (estáticos, colapsables) -->
+  <div class="section-header">
+    <span class="section-title">Tu pedido · <span>{{ total }} €</span></span>
+    <button class="toggle-btn" onclick="toggleItems()" id="items-toggle">
+      Ver <span class="toggle-icon" id="items-icon">▼</span>
+    </button>
+  </div>
+  <div class="items-card hidden" id="items-card">
+    <ul class="conf-items">
+      {% for producto in productos %}
+      <li class="conf-item">
+        <div class="conf-item__qty">{{ producto.cantidad }}</div>
+        <div class="conf-item__info">
+          <span class="conf-item__name">{{ producto.nombre }}</span>
+          <span class="conf-item__unit">{{ "%.2f"|format(producto.precio / producto.cantidad) }} € / ud</span>
+        </div>
+        <span class="conf-item__price">{{ producto.precio }} €</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="item-total-row">
+      <span>Total</span>
+      <span class="item-total-val">{{ total }} €</span>
+    </div>
+  </div>
+
+  <!-- Info almacén -->
+  {% if store_phone or store_address %}
+  <div class="section-title">Almacén</div>
+  <div class="store-card">
+    {% if store_phone %}
+    <div class="store-row">📞 {{ store_phone }}</div>
+    {% endif %}
+    {% if store_address %}
+    <div class="store-row">📍 {{ store_address }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Refresh bar -->
+  <div class="refresh-bar" id="refresh-bar">
+    <div class="refresh-dot"></div>
+    <span id="refresh-label">Actualizando…</span>
+  </div>
+
+  <script>
+    const ORDER_REDIS_ID = "{{ redis_id }}";
+    const PEDIDO_ID = {{ pedidoID | int }};
+    const REFRESH_INTERVAL = 15;
+    // Estados en minúsculas — valores reales de EstadoPedido en BD (states.py)
+    const TERMINAL_STATES = ["entregado", "cancelado", "reembolsado"];
+
+    const STATE_CONFIG = {
+      "pagado":           { icon: "", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
+      "confirmando-pago": { icon: "", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
+      "contra_reembolso": { icon: "", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
+      "en_preparacion":   { icon: "", title: "Preparando en almacén",         sub: "~15 min estimados",      status: "preparing", step: 2 },
+      "preparado":        { icon: "", title: "Listo, asignando repartidor",   sub: "",                      status: "ready",     step: 2 },
+      "en_reparto":       { icon: "", title: "¡Tu pedido viene de camino!",   sub: "",                      status: "on_the_way",step: 3 },
+      "entregado":        { icon: "", title: "¡Pedido entregado!",            sub: "Gracias por tu pedido", status: "delivered", step: 4 },
+      "cancelado":        { icon: "", title: "Pedido cancelado",              sub: "Contacta con el almacén si tienes dudas", status: "cancelled", step: null },
+      "reembolsado":      { icon: "", title: "Pedido reembolsado",            sub: "El importe será devuelto en breve",        status: "refunded",  step: null },
+    };
+    const DEFAULT_CONFIG = { icon: "", title: "Procesando tu pedido…", sub: "", status: "receiving", step: 1 };
+
+    function applyStatus(data) {
+      const cfg = STATE_CONFIG[data.estado] || DEFAULT_CONFIG;
+
+      // Hero
+      const hero = document.getElementById("status-hero");
+      document.getElementById("status-icon").textContent  = cfg.icon;
+      document.getElementById("status-title").textContent = cfg.title;
+      document.getElementById("status-sub").textContent   = cfg.sub;
+      hero.setAttribute("data-status", cfg.status);
+
+      // Timeline
+      const tracker = document.getElementById("tracker-section");
+      if (cfg.step === null) {
+        tracker.classList.add("hidden");
+      } else {
+        tracker.classList.remove("hidden");
+        for (let i = 1; i <= 4; i++) {
+          const dot   = document.getElementById("dot-" + i);
+          const line  = document.getElementById("line-" + i);
+          const label = document.getElementById("label-" + i);
+          dot.className   = "tl-dot";
+          label.className = "tl-label";
+          if (line) line.className = "tl-line";
+
+          if (i < cfg.step) {
+            dot.className   += " done"; dot.textContent = "✓";
+            label.className += " done";
+            if (line) line.className += " done";
+          } else if (i === cfg.step) {
+            dot.className   += " active"; dot.textContent = "●";
+            label.className += " active";
+          } else {
+            dot.textContent = "○";
+          }
+        }
+      }
+
+      // Reparto / repartidor
+      const repPending = document.getElementById("rep-pending");
+      const repCard    = document.getElementById("rep-card");
+
+      if (data.reparto && data.reparto.repartidor_nombre) {
+        repPending.classList.add("hidden");
+        repCard.classList.remove("hidden");
+        document.getElementById("rep-name").textContent = data.reparto.repartidor_nombre;
+        document.getElementById("rep-role").textContent = "🏍 En camino a " + data.reparto.calle_destino;
+        const waLink = document.getElementById("rep-wa");
+        if (data.reparto.repartidor_telefono) {
+          // Prefijo España +34; ajustar si se opera en otro país
+          waLink.href = "https://wa.me/34" + data.reparto.repartidor_telefono.replace(/\D/g, "");
+          waLink.classList.remove("hidden");
+        } else {
+          waLink.classList.add("hidden");
+        }
+        if (data.reparto.hora_estimada_entrega) {
+          document.getElementById("status-sub").textContent = "Entrega estimada a las " + data.reparto.hora_estimada_entrega;
+        }
+      } else {
+        if (cfg.step !== null && cfg.step < 3) {
+          repPending.classList.remove("hidden");
+        } else {
+          repPending.classList.add("hidden");
+        }
+        repCard.classList.add("hidden");
+      }
+
+      // Detener polling en estados terminales
+      if (TERMINAL_STATES.includes(data.estado)) {
+        stopPolling();
+      }
+    }
+
+    // ── Polling ──
+    let countdown = REFRESH_INTERVAL;
+    let timer = null;
+
+    function poll() {
+      fetch("/api/seguimiento/" + ORDER_REDIS_ID)
+        .then(function(r) { if (r.ok) return r.json(); })
+        .then(function(data) { if (data) applyStatus(data); })
+        .catch(function() { /* error de red: reintentar en el siguiente ciclo */ });
+    }
+
+    function tick() {
+      countdown--;
+      const label = document.getElementById("refresh-label");
+      if (label) label.textContent = countdown > 0
+        ? "Actualizando en " + countdown + "s…"
+        : "Actualizando…";
+      if (countdown <= 0) {
+        countdown = REFRESH_INTERVAL;
+        poll();
+      }
+    }
+
+    function stopPolling() {
+      if (timer) { clearInterval(timer); timer = null; }
+      const bar = document.getElementById("refresh-bar");
+      if (bar) bar.classList.add("hidden");
+    }
+
+    // ── Items toggle ──
+    function toggleItems() {
+      const card = document.getElementById("items-card");
+      const icon = document.getElementById("items-icon");
+      const btn  = document.getElementById("items-toggle");
+      const open = card.classList.toggle("hidden") === false;
+      icon.classList.toggle("open", open);
+      btn.childNodes[0].textContent = open ? "Ocultar " : "Ver ";
+    }
+
+    // Arrancar: primera consulta inmediata + intervalo
+    poll();
+    timer = setInterval(tick, 1000);
+  </script>
 
 </body>
 </html>

@@ -19,6 +19,7 @@ def iniciar_pago(
     gestor_productos,
     monei,
     public_url: str,
+    notas: str = "",
 ) -> tuple:
     """
     Validates cart prices against DB, creates a Monei payment, and transitions
@@ -61,6 +62,9 @@ def iniciar_pago(
     redis_id = pedido_activo.redisID
 
     gestor_pedidos.agregar_productos_a_pedido(pedido_activo_id, productos_validos)
+
+    if notas:
+        pedido_activo.Notas = notas
 
     amount_in_cents = int(round(total_calculado * 100))
 
@@ -118,6 +122,7 @@ def iniciar_pago_efectivo(
     gestor_pedidos,
     gestor_productos,
     public_url: str,
+    notas: str = "",
 ) -> tuple:
     """
     Confirma el pedido con pago en efectivo a la entrega.
@@ -158,6 +163,10 @@ def iniciar_pago_efectivo(
     redis_id = pedido_activo.redisID
 
     gestor_pedidos.agregar_productos_a_pedido(pedido_id, productos_validos)
+
+    if notas:
+        pedido_activo.Notas = notas
+
     gestor_pedidos.guardar_forma_pago(pedido_id, "efectivo")
     gestor_pedidos.actualizar_estado(pedido_id, EstadoPedido.CONTRA_REEMBOLSO)
 

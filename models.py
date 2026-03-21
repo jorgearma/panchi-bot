@@ -1,5 +1,5 @@
 import json
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean, Text, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean, Text, Float, Date, Time
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -82,6 +82,7 @@ class Pedido(Base):
     cancel_reason = Column(String(50), nullable=True)
     cancelled_by = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
     cancelled_at = Column(DateTime, nullable=True)
+    Notas = Column(String(300), nullable=True)
 
     cliente = relationship("Usuario", back_populates="pedidos")
     detalles = relationship("PedidoDetalle", back_populates="pedido", cascade="all, delete-orphan")
@@ -188,6 +189,12 @@ class Empleado(Base):
     Puesto = Column(String(100), nullable=False)                       # legacy — usar rol_id en código nuevo
     Salario = Column(DECIMAL(10, 2), nullable=False, default=0.00)
     activo = Column(Boolean, nullable=False, default=True)
+    estado_operativo = Column(
+        String(20),
+        nullable=False,
+        default='desconectado',
+        server_default='desconectado',
+    )
     password_hash = Column(String(255), nullable=True)                 # para login en dashboard
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
@@ -196,6 +203,7 @@ class Empleado(Base):
     pickings = relationship("PickingPedido", back_populates="empleado")
     repartos = relationship("Reparto", back_populates="repartidor")
     incidencias_asignadas = relationship("Incidencia", back_populates="asignado", foreign_keys="Incidencia.asignado_a")
+    turnos = relationship('Turno', back_populates='empleado', order_by='Turno.fecha')
 
 
 # ---------------------------------------------------------------------------
@@ -292,3 +300,22 @@ class Incidencia(Base):
     pedido = relationship("Pedido", back_populates="incidencias")
     cliente = relationship("Usuario", back_populates="incidencias")
     asignado = relationship("Empleado", back_populates="incidencias_asignadas", foreign_keys=[asignado_a])
+
+
+# ---------------------------------------------------------------------------
+# Turnos
+# ---------------------------------------------------------------------------
+
+class Turno(Base):
+    """Turno de trabajo de un empleado en una fecha concreta."""
+    __tablename__ = 'turnos'
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    empleado_id = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=False)
+    fecha       = Column(Date, nullable=False)
+    hora_inicio = Column(Time, nullable=False)
+    hora_fin    = Column(Time, nullable=False)
+    notas       = Column(String(255), nullable=True)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+    empleado = relationship('Empleado', back_populates='turnos')

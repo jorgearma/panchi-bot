@@ -508,6 +508,105 @@ class TestIniciarPago:
         assert success is False
         assert "redirección" in msg.lower()
 
+    def test_notas_se_asigna_al_pedido(self):
+        """iniciar_pago debe asignar notas al objeto pedido."""
+        from controllers.pago import iniciar_pago
+
+        pedido = make_pedido(EstadoPedido.ENLACE2)
+        gestor = make_gestor_pedidos(pedido)
+
+        iniciar_pago(
+            user_id=10,
+            productos_recibidos=PRODUCTOS_VALIDOS_PAGO,
+            nombre_cliente="Maria",
+            numero_cliente="+34600000005",
+            direccion_cliente="C/ Test 3",
+            notas="No tocar el timbre",
+            cache=make_cache(),
+            gestor_pedidos=gestor,
+            gestor_productos=self._make_gestor_productos(),
+            monei=self._make_monei("https://monei.com/pay/123"),
+            public_url=PUBLIC_URL,
+        )
+
+        assert pedido.Notas == "No tocar el timbre"
+
+    def test_notas_vacio_por_defecto(self):
+        """iniciar_pago sin notas no debe fallar (backward compat)."""
+        from controllers.pago import iniciar_pago
+
+        pedido = make_pedido(EstadoPedido.ENLACE2)
+        gestor = make_gestor_pedidos(pedido)
+
+        success, _ = iniciar_pago(
+            user_id=10,
+            productos_recibidos=PRODUCTOS_VALIDOS_PAGO,
+            nombre_cliente="Maria",
+            numero_cliente="+34600000005",
+            direccion_cliente="C/ Test 3",
+            cache=make_cache(),
+            gestor_pedidos=gestor,
+            gestor_productos=self._make_gestor_productos(),
+            monei=self._make_monei(),
+            public_url=PUBLIC_URL,
+        )
+
+        assert success is True
+
+
+# ---------------------------------------------------------------------------
+# iniciar_pago_efectivo
+# ---------------------------------------------------------------------------
+
+class TestIniciarPagoEfectivo:
+    def _make_gestor_productos(self, precio: float = 3.5) -> MagicMock:
+        gp = MagicMock()
+        gp.obtener_producto_por_codigo.return_value = {"Precio": precio}
+        return gp
+
+    def test_notas_se_asigna_al_pedido(self):
+        from controllers.pago import iniciar_pago_efectivo
+
+        pedido = make_pedido(EstadoPedido.ENLACE2)
+        gestor = make_gestor_pedidos(pedido)
+
+        with patch("controllers.pago.enviar_mensaje_whatsapp"):
+            iniciar_pago_efectivo(
+                user_id=10,
+                productos_recibidos=PRODUCTOS_VALIDOS_PAGO,
+                nombre_cliente="Maria",
+                numero_cliente="+34600000005",
+                direccion_cliente="C/ Test 3",
+                notas="Dejar en portería",
+                cache=make_cache(),
+                gestor_pedidos=gestor,
+                gestor_productos=self._make_gestor_productos(),
+                public_url=PUBLIC_URL,
+            )
+
+        assert pedido.Notas == "Dejar en portería"
+
+    def test_notas_vacio_por_defecto(self):
+        from controllers.pago import iniciar_pago_efectivo
+
+        pedido = make_pedido(EstadoPedido.ENLACE2)
+        gestor = make_gestor_pedidos(pedido)
+
+        with patch("controllers.pago.enviar_mensaje_whatsapp"):
+            success, _ = iniciar_pago_efectivo(
+                user_id=10,
+                productos_recibidos=PRODUCTOS_VALIDOS_PAGO,
+                nombre_cliente="Maria",
+                numero_cliente="+34600000005",
+                direccion_cliente="C/ Test 3",
+                cache=make_cache(),
+                gestor_pedidos=gestor,
+                gestor_productos=self._make_gestor_productos(),
+                public_url=PUBLIC_URL,
+            )
+
+        assert success is True
+
 
 # ---------------------------------------------------------------------------
 # POST /api/cambiar_estado_a_enlace

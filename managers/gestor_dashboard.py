@@ -69,6 +69,24 @@ class GestorDashboard:
         from database import get_db
         return get_db()
 
+    _ESTADOS_PROTEGIDOS = frozenset({'en_pausa', 'desconectado'})
+
+    def _actualizar_estado_operativo(self, empleado_id: int, nuevo_estado: str) -> None:
+        """Actualiza estado_operativo solo si el estado actual no está protegido.
+
+        Los estados en_pausa y desconectado son manuales — el sistema no los sobreescribe.
+        Llamar DESPUÉS del commit de la operación principal, dentro del mismo request.
+        """
+        if not empleado_id:
+            return
+        try:
+            empleado = self.session.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+            if empleado and empleado.estado_operativo not in self._ESTADOS_PROTEGIDOS:
+                empleado.estado_operativo = nuevo_estado
+                self.session.commit()
+        except Exception as e:
+            logger.warning("No se pudo actualizar estado_operativo de empleado %s: %s", empleado_id, e)
+
     # -------------------------------------------------------------------------
     # Read methods
     # -------------------------------------------------------------------------
@@ -732,6 +750,7 @@ class GestorDashboard:
                     "nombre": f"{e.Nombre} {e.Apellido}",
                     "telefono": e.Telefono,
                     "estado": estado,
+                    "estado_operativo": e.estado_operativo,
                     "pedidos_activos": n_activos,
                     "completados_hoy": len(completados_hoy),
                     "pickings_activos": pickings_activos_data,
@@ -835,6 +854,7 @@ class GestorDashboard:
                     "nombre": f"{e.Nombre} {e.Apellido}",
                     "telefono": e.Telefono,
                     "estado": estado,
+                    "estado_operativo": e.estado_operativo,
                     "pedidos_activos": n_activos,
                     "entregados_hoy": len(entregados_hoy),
                     "entregas_activas": entregas_activas,
@@ -967,6 +987,7 @@ class GestorDashboard:
                 ))
 
             s.commit()
+            self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, "Picker asignado correctamente"
         except SQLAlchemyError as e:
             s.rollback()
@@ -1064,6 +1085,20 @@ class GestorDashboard:
                 from managers.gestor_productos import ProductoManager
                 ProductoManager().descontar_stock_picking(items_para_stock)
 
+            # Auto-actualizar estado: volver a disponible si no quedan pickings activos
+            _picker_id = picking.empleado_id
+            if _picker_id:
+                _pickings_activos = s.query(PickingPedido).filter(
+                    PickingPedido.empleado_id == _picker_id,
+                    PickingPedido.estado.in_([
+                        EstadoPicking.PENDIENTE.value,
+                        EstadoPicking.EN_PROCESO.value,
+                        EstadoPicking.CON_INCIDENCIAS.value,
+                    ]),
+                ).count()
+                if _pickings_activos == 0:
+                    self._actualizar_estado_operativo(_picker_id, 'disponible')
+
             telefono = pedido.TelefonoEntrega if pedido else None
             return True, "Picking completado", telefono
         except SQLAlchemyError as e:
@@ -1096,6 +1131,7 @@ class GestorDashboard:
                 ))
 
             s.commit()
+            self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, "Repartidor asignado correctamente"
         except SQLAlchemyError as e:
             s.rollback()
@@ -1367,6 +1403,20 @@ class GestorDashboard:
                 ))
 
             s.commit()
+
+            # Auto-actualizar estado: volver a disponible si no quedan repartos activos
+            _repartidor_id = reparto.repartidor_id
+            if _repartidor_id:
+                _repartos_activos = s.query(Reparto).filter(
+                    Reparto.repartidor_id == _repartidor_id,
+                    Reparto.estado.in_([
+                        EstadoReparto.ASIGNADO.value,
+                        EstadoReparto.EN_CAMINO.value,
+                    ]),
+                ).count()
+                if _repartos_activos == 0:
+                    self._actualizar_estado_operativo(_repartidor_id, 'disponible')
+
             telefono = pedido.TelefonoEntrega if pedido else None
             return True, "Pedido marcado como entregado", telefono
         except SQLAlchemyError as e:
