@@ -156,3 +156,79 @@ class TestGestorDashboardCola:
                 assert msg == 'ya_cogido'
             finally:
                 patcher.stop()
+
+# ---------------------------------------------------------------------------
+# TestBlueprintPickerCola
+# ---------------------------------------------------------------------------
+
+class TestBlueprintPickerCola:
+
+    def test_cola_sin_sesion_rechazado(self, client):
+        resp = client.get('/picker/cola')
+        # Redirige al login si no hay sesión
+        assert resp.status_code in (302, 401, 403)
+
+    def test_cola_devuelve_json(self, client, app):
+        from unittest.mock import patch
+        from services import gestor_dashboard
+
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 1
+            sess['rol'] = 'picker'
+
+        with patch.object(gestor_dashboard, 'pickings_sin_asignar', return_value=[
+            {'picking_id': 5, 'pedido_id': 200, 'n_items': 3, 'segundos_esperando': 120}
+        ]):
+            resp = client.get('/picker/cola')
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'cola' in data
+        assert 'total' in data
+        assert data['total'] == 1
+        assert data['cola'][0]['picking_id'] == 5
+
+    def test_coger_ok(self, client, app):
+        from unittest.mock import patch
+        from services import gestor_dashboard
+
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 3
+            sess['rol'] = 'picker'
+
+        with patch.object(gestor_dashboard, 'reclamar_picking', return_value=(True, 'ok')) as mock_rec:
+            resp = client.post('/picker/cola/coger/7')
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['ok'] is True
+        assert data['picking_id'] == 7
+        mock_rec.assert_called_once_with(7, 3)
+
+    def test_coger_409_ya_cogido(self, client, app):
+        from unittest.mock import patch
+        from services import gestor_dashboard
+
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 3
+            sess['rol'] = 'picker'
+
+        with patch.object(gestor_dashboard, 'reclamar_picking', return_value=(False, 'ya_cogido')):
+            resp = client.post('/picker/cola/coger/7')
+
+        assert resp.status_code == 409
+        assert resp.get_json()['error'] == 'ya_cogido'
+
+    def test_coger_404_no_encontrado(self, client, app):
+        from unittest.mock import patch
+        from services import gestor_dashboard
+
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 3
+            sess['rol'] = 'picker'
+
+        with patch.object(gestor_dashboard, 'reclamar_picking', return_value=(False, 'no_encontrado')):
+            resp = client.post('/picker/cola/coger/999')
+
+        assert resp.status_code == 404
+        assert resp.get_json()['error'] == 'no_encontrado'
