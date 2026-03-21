@@ -23,3 +23,6 @@ def get_monei():
 
 
 cache = redismanager
+
+from managers.gestor_empleado import GestorEmpleado as _GestorEmpleado
+gestor_empleado = _GestorEmpleado()

@@ -46,6 +46,10 @@ REDIS_DB: int = int(os.environ.get("REDIS_DB", 0))
 # Atención al cliente (se muestra al usuario cuando su pedido está activo)
 CUSTOMER_SUPPORT_PHONE: str | None = os.environ.get("CUSTOMER_SUPPORT_PHONE")
 
+# Almacén — se muestran al cliente en la página de seguimiento
+STORE_PHONE: str = os.environ.get("STORE_PHONE", "")
+STORE_ADDRESS: str = os.environ.get("STORE_ADDRESS", "")
+
 # WhatsApp provider ("twilio" o "meta")
 WHATSAPP_PROVIDER: str = os.environ.get("WHATSAPP_PROVIDER", "twilio")
 

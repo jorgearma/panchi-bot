@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmar pedido — Panchi Bot</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header class="page-header">
+    <div class="header-avatar">{{ name.split()[0] }}</div>
+    <div class="header-address">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+      <span>{{ calle }}</span>
+    </div>
+    <span class="header-badge">Envío gratis</span>
+  </header>
+
+  <div class="page-content pb-action-bar">
+
+    <div class="order-card">
+      <div class="order-card-header">
+        <span class="order-card-title">Tu pedido</span>
+        <span class="order-id">#{{ pedidoID }}</span>
+      </div>
+
+      <ul id="productos" style="list-style:none; margin:0; padding:0;">
+        {% for producto in productos %}
+        <li class="order-item"
+            data-codigo="{{ producto.codigo }}"
+            data-unit="{{ (producto.precio / producto.cantidad) | round(2) }}">
+          <div class="order-item-left">
+            <span class="order-item-name">{{ producto.nombre }}</span>
+            <span class="order-item-qty">× {{ producto.cantidad }} ud</span>
+          </div>
+          <span class="order-item-price">{{ producto.precio }} €</span>
+          <button class="remove-btn" onclick="quitarUnidad(this)" title="Quitar una unidad">×</button>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <div class="order-total">
+        <span>Total</span>
+        <span id="order-total-val">{{ total }} €</span>
+      </div>
+    </div>
+
+    <div class="info-row">
+      ⏱ Tiempo estimado de entrega: <strong>~15 minutos</strong>
+    </div>
+
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-back" onclick="handleBack()">← Volver</button>
+    <div class="pay-options">
+      <button class="btn btn-confirm" id="pagarOnline">💳 Pagar online</button>
+      <button class="btn btn-cash"    id="pagarEfectivo">💵 Pagar en casa</button>
+    </div>
+  </div>
+
+  <style>
+    .pay-options {
+      display: flex;
+      gap: 0.5rem;
+      flex: 1;
+    }
+    .pay-options .btn {
+      flex: 1;
+    }
+    .btn-cash {
+      background: #4caf50;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-cash:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+
+  <script>
+    // --- Quitar una unidad ---
+    function quitarUnidad(btn) {
+      const li      = btn.closest('li');
+      const qtyEl   = li.querySelector('.order-item-qty');
+      const priceEl = li.querySelector('.order-item-price');
+      const unit    = parseFloat(li.dataset.unit);
+
+      let qty = parseInt(qtyEl.textContent.replace(/\D/g, ''), 10);
+
+      if (qty <= 1) {
+        li.remove();
+      } else {
+        qty--;
+        qtyEl.textContent   = '× ' + qty + ' ud';
+        priceEl.textContent = (unit * qty).toFixed(2) + ' €';
+      }
+
+      recalcularTotal();
+    }
+
+    function recalcularTotal() {
+      let total = 0;
+      document.querySelectorAll('#productos li').forEach(li => {
+        const txt = li.querySelector('.order-item-price').textContent;
+        total += parseFloat(txt.replace('€', '').trim());
+      });
+      document.getElementById('order-total-val').textContent = total.toFixed(2) + ' €';
+    }
+
+    // --- Volver al menú (siempre resetea el estado antes de navegar) ---
+    async function handleBack() {
+      const updatedQty = {};
+      document.querySelectorAll('#productos li').forEach(li => {
+        const nombre = li.querySelector('.order-item-name').textContent.trim();
+        const qty    = parseInt(li.querySelector('.order-item-qty').textContent.replace(/\D/g, ''), 10);
+        if (qty > 0) updatedQty[nombre] = qty;
+      });
+      sessionStorage.setItem('cart_{{ token }}', JSON.stringify(updatedQty));
+
+      try {
+        await fetch('/api/volver_al_menu', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ token: '{{ token }}', userID: '{{ userID }}' })
+        });
+      } catch (e) {
+        console.warn('No se pudo restablecer el estado del pedido:', e);
+      }
+      window.location.href = '/menu/{{ token }}';
+    }
+
+    // --- Construir el objeto de pedido desde el DOM ---
+    function buildOrder() {
+      const items = document.querySelectorAll('#productos li');
+      if (items.length === 0) return null;
+
+      const productos = Array.from(items).map(li => ({
+        codigo:   li.getAttribute('data-codigo'),
+        nombre:   li.querySelector('.order-item-name').textContent.trim(),
+        cantidad: parseInt(li.querySelector('.order-item-qty').textContent.replace(/\D/g, ''), 10),
+        precio:   parseFloat(li.querySelector('.order-item-price').textContent.replace('€', '').trim()),
+      }));
+
+      return {
+        name:      '{{ name }}',
+        direccion: '{{ direccion }}',
+        userID:    '{{ userID }}',
+        numero:    '{{ numero }}',
+        token:     '{{ token }}',
+        productos,
+        total: parseFloat(document.getElementById('order-total-val').textContent.replace('€', '').trim()),
+      };
+    }
+
+    // --- Enviar el pedido al endpoint indicado ---
+    async function submitOrder(endpoint) {
+      const order = buildOrder();
+      if (!order) {
+        alert('No hay productos en el pedido. Añade algo antes de confirmar.');
+        return;
+      }
+
+      const btnOnline   = document.getElementById('pagarOnline');
+      const btnEfectivo = document.getElementById('pagarEfectivo');
+      btnOnline.disabled   = true;
+      btnEfectivo.disabled = true;
+
+      try {
+        const response = await fetch('{{ public_url }}' + endpoint, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(order),
+        });
+        const result = await response.json();
+        if (result.redirect_url) {
+          sessionStorage.removeItem('cart_{{ token }}');
+          window.location.href = result.redirect_url;
+        } else {
+          alert(result.message || 'Pedido enviado correctamente.');
+        }
+      } catch (err) {
+        console.error('Error de conexión:', err);
+        alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+        btnOnline.disabled   = false;
+        btnEfectivo.disabled = false;
+      }
+    }
+
+    document.getElementById('pagarOnline').addEventListener('click', () => {
+      submitOrder('/api/agregar_pedido');
+    });
+
+    document.getElementById('pagarEfectivo').addEventListener('click', () => {
+      submitOrder('/api/agregar_pedido_efectivo');
+    });
+  </script>
+</body>
+</html>

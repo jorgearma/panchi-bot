@@ -9,6 +9,8 @@ from services import gestor_pedidos, gestor_productos, get_monei, cache
 from states import EstadoPedido
 from controllers.pedido import confirmar_carrito
 from controllers.pago import iniciar_pago, iniciar_pago_efectivo
+from models import Pedido
+from database import get_db
 
 blueprint_api = Blueprint('api', __name__)
 
@@ -60,12 +62,15 @@ def agregar_pedido():
     if not carrito:
         return jsonify({"error": "El carrito está vacío"}), 400
 
+    notas = data.get("notas", "")
+
     success, result = iniciar_pago(
         user_id=id_usuario,
         productos_recibidos=carrito,
         nombre_cliente=data.get("name"),
         numero_cliente=data.get("numero"),
         direccion_cliente=data.get("direccion"),
+        notas=notas,
         cache=cache,
         gestor_pedidos=gestor_pedidos,
         gestor_productos=gestor_productos,
@@ -118,12 +123,15 @@ def agregar_pedido_efectivo():
     if not id_usuario:
         return jsonify({"error": "ID de usuario no proporcionado"}), 400
 
+    notas = data.get("notas", "")
+
     success, result = iniciar_pago_efectivo(
         user_id=id_usuario,
         productos_recibidos=data.get("productos", []),
         nombre_cliente=data.get("name"),
         numero_cliente=data.get("numero"),
         direccion_cliente=data.get("direccion"),
+        notas=notas,
         cache=cache,
         gestor_pedidos=gestor_pedidos,
         gestor_productos=gestor_productos,
@@ -184,3 +192,34 @@ def obtener_productos():
         return jsonify(menu)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@blueprint_api.route('/api/seguimiento/<redis_id>', methods=['GET'])
+def seguimiento_pedido(redis_id):
+    pedido = get_db().query(Pedido).filter_by(redisID=redis_id).first()
+    if not pedido:
+        return jsonify({"error": "Pedido no encontrado"}), 404
+
+    reparto_data = None
+    if pedido.reparto:
+        r = pedido.reparto
+        repartidor_nombre = None
+        repartidor_telefono = None
+        if r.repartidor:
+            repartidor_nombre = f"{r.repartidor.Nombre} {r.repartidor.Apellido}"
+            repartidor_telefono = r.repartidor.Telefono
+        reparto_data = {
+            "estado": r.estado,
+            "hora_salida": r.hora_salida.strftime("%H:%M") if r.hora_salida else None,
+            "hora_estimada_entrega": r.hora_estimada_entrega.strftime("%H:%M") if r.hora_estimada_entrega else None,
+            "repartidor_nombre": repartidor_nombre,
+            "repartidor_telefono": repartidor_telefono,
+            "calle_destino": pedido.DireccionEntrega,
+        }
+
+    logger.debug("Seguimiento pedido redis_id=%s: estado=%s", redis_id, pedido.Estado)
+    return jsonify({
+        "estado": pedido.Estado,
+        "forma_pago": pedido.forma_pago,
+        "reparto": reparto_data,
+    })

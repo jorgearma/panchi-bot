@@ -5,128 +5,520 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Confirmar pedido — Panchi Bot</title>
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-  <header class="page-header">
-    <div class="header-avatar">{{ name.split()[0] }}</div>
-    <div class="header-address">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2.5"
-           stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-        <circle cx="12" cy="10" r="3"/>
-      </svg>
-      <span>{{ calle }}</span>
+  <!-- ── CABECERA ── -->
+  <header class="conf-header">
+    <div class="conf-header__row1">
+      <span class="conf-header__name">Hola, {{ name.split()[0] }} 👋</span>
+      <span class="conf-header__badge">✓ Envío gratis</span>
     </div>
-    <span class="header-badge">Envío gratis</span>
+    <div class="conf-header__addr">
+      <div class="conf-header__addr-icon">📍</div>
+      <div class="conf-header__addr-text">
+        <span class="conf-header__addr-label">Dirección de entrega</span>
+        <span class="conf-header__addr-street">{{ calle }}</span>
+      </div>
+    </div>
   </header>
 
-  <div class="page-content pb-action-bar">
+  <!-- ── CONTENIDO (con padding-bottom para la action bar fija) ── -->
+  <div class="conf-body">
 
-    <div class="order-card">
-      <div class="order-card-header">
-        <span class="order-card-title">Tu pedido</span>
-        <span class="order-id">#{{ pedidoID }}</span>
+    <!-- Tiempo estimado animado -->
+    <div class="conf-time">
+      <div class="conf-time__left">
+        <div class="conf-time__pulse">
+          <div class="conf-time__core">⏱</div>
+        </div>
+        <div class="conf-time__text">
+          <span class="conf-time__label">Tiempo estimado de entrega</span>
+          <span class="conf-time__val">~15 minutos</span>
+        </div>
+      </div>
+      <div class="conf-time__dots">
+        <div class="conf-time__dot"></div>
+        <div class="conf-time__dot"></div>
+        <div class="conf-time__dot"></div>
+      </div>
+    </div>
+
+    <!-- Tarjeta de pedido -->
+    <div class="conf-card">
+      <div class="conf-card__order-id">
+        <div class="conf-card__order-id-left">
+          <span class="conf-card__order-id-label">Nº de pedido · guárdalo para consultas</span>
+          <span class="conf-card__order-id-num">#{{ pedidoID }}</span>
+        </div>
+        <span class="conf-card__order-id-icon">📋</span>
       </div>
 
-      <ul id="productos" style="list-style:none; margin:0; padding:0;">
+      <ul id="productos" class="conf-items">
         {% for producto in productos %}
-        <li class="order-item"
+        <li class="conf-item"
             data-codigo="{{ producto.codigo }}"
             data-unit="{{ (producto.precio / producto.cantidad) | round(2) }}">
-          <div class="order-item-left">
-            <span class="order-item-name">{{ producto.nombre }}</span>
-            <span class="order-item-qty">× {{ producto.cantidad }} ud</span>
+          <div class="conf-item__qty">{{ producto.cantidad }}</div>
+          <div class="conf-item__info">
+            <span class="conf-item__name">{{ producto.nombre }}</span>
+            <span class="conf-item__unit">{{ (producto.precio / producto.cantidad) | round(2) }} € / ud</span>
           </div>
-          <span class="order-item-price">{{ producto.precio }} €</span>
-          <button class="remove-btn" onclick="quitarUnidad(this)" title="Quitar una unidad">×</button>
+          <span class="conf-item__price">{{ producto.precio }} €</span>
+          <button class="conf-item__remove" onclick="quitarUnidad(this)" title="Quitar una unidad">×</button>
         </li>
         {% endfor %}
       </ul>
 
-      <div class="order-total">
-        <span>Total</span>
-        <span id="order-total-val">{{ total }} €</span>
+      <!-- Campo de notas -->
+      <div class="conf-notes">
+        <div class="conf-notes__label">✏️ Indicaciones de entrega (opcional)</div>
+        <textarea
+          id="notas"
+          class="conf-notes__area"
+          maxlength="300"
+          placeholder="Ej: no tocar el timbre, dejar en portería…"></textarea>
+      </div>
+
+      <!-- Total -->
+      <div class="conf-total">
+        <span class="conf-total__label">Total</span>
+        <span id="order-total-val" class="conf-total__val">{{ total }} €</span>
       </div>
     </div>
 
-    <div class="info-row">
-      ⏱ Tiempo estimado de entrega: <strong>~15 minutos</strong>
-    </div>
 
+  </div><!-- /conf-body -->
+
+  <!-- ── ACTION BAR fija ── -->
+  <div class="conf-bar">
+    <div class="conf-bar__btns">
+      <button class="conf-bar__online" onclick="abrirModal('modal-online')">
+        <span class="conf-bar__btn-icon">💳</span>
+        <span class="conf-bar__btn-title">Pagar con tarjeta online</span>
+        <span class="conf-bar__btn-arrow">›</span>
+      </button>
+      <button class="conf-bar__cash" onclick="abrirModal('modal-efectivo')">
+        <span class="conf-bar__btn-icon">💵</span>
+        <span class="conf-bar__btn-title">Pagar al recibir el pedido</span>
+        <span class="conf-bar__btn-arrow">›</span>
+      </button>
+    </div>
+    <button class="conf-bar__back" onclick="handleBack()">← Volver al menú</button>
   </div>
 
-  <div class="action-bar">
-    <button class="btn btn-back" onclick="handleBack()">← Volver</button>
-    <div class="pay-options">
-      <button class="btn btn-confirm" id="pagarOnline">💳 Pagar online</button>
-      <button class="btn btn-cash"    id="pagarEfectivo">💵 Pagar en casa</button>
+  <!-- ── MODAL ONLINE ── -->
+  <div id="modal-online" class="conf-modal" style="display:none;" onclick="cerrarModalOverlay(event, 'modal-online')">
+    <div class="conf-sheet">
+      <div class="conf-sheet__handle"></div>
+      <div class="conf-sheet__icon conf-sheet__icon--online">💳</div>
+      <h2 class="conf-sheet__title">¿Confirmas el pago online?</h2>
+      <p class="conf-sheet__sub">Serás redirigido a la pasarela de pago segura. El pedido se registra al completar el pago.</p>
+      <div class="conf-sheet__summary">
+        <span class="conf-sheet__summary-label">Total a pagar</span>
+        <span class="conf-sheet__summary-total" id="modal-online-total">{{ total }} €</span>
+      </div>
+      <div class="conf-sheet__actions">
+        <button id="btn-confirmar-online" class="conf-sheet__confirm conf-sheet__confirm--online"
+                onclick="confirmarPago('modal-online', '/api/agregar_pedido', 'btn-confirmar-online')">
+          Sí, pagar con tarjeta →
+        </button>
+        <button class="conf-sheet__cancel" onclick="cerrarModal('modal-online')">Cancelar, volver al pedido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL EFECTIVO ── -->
+  <div id="modal-efectivo" class="conf-modal" style="display:none;" onclick="cerrarModalOverlay(event, 'modal-efectivo')">
+    <div class="conf-sheet">
+      <div class="conf-sheet__handle"></div>
+      <div class="conf-sheet__icon conf-sheet__icon--cash">💵</div>
+      <h2 class="conf-sheet__title">¿Confirmas el pedido?</h2>
+      <p class="conf-sheet__sub">Pagarás al repartidor en la puerta. Puedes pagar en efectivo o con tarjeta.</p>
+      <div class="conf-sheet__summary">
+        <span class="conf-sheet__summary-label">Total a pagar</span>
+        <span class="conf-sheet__summary-total" id="modal-efectivo-total">{{ total }} €</span>
+      </div>
+      <div class="conf-sheet__actions">
+        <button id="btn-confirmar-efectivo" class="conf-sheet__confirm conf-sheet__confirm--cash"
+                onclick="confirmarPago('modal-efectivo', '/api/agregar_pedido_efectivo', 'btn-confirmar-efectivo')">
+          Sí, confirmar pedido →
+        </button>
+        <button class="conf-sheet__cancel" onclick="cerrarModal('modal-efectivo')">Cancelar, volver al pedido</button>
+      </div>
     </div>
   </div>
 
   <style>
-    .pay-options {
+    /* ── Cabecera ── */
+    .conf-header {
+      background: linear-gradient(135deg, #FF6B35 0%, #FF4500 100%);
+      padding: 16px 0 20px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 0 0 24px 24px;
       display: flex;
-      gap: 0.5rem;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .conf-header::before {
+      content: ''; position: absolute;
+      width: 160px; height: 160px; border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      top: -40px; right: -30px;
+    }
+    .conf-header::after {
+      content: ''; position: absolute;
+      width: 90px; height: 90px; border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+      bottom: -20px; left: 10px;
+    }
+    .conf-header__row1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 14px;
+      position: relative; z-index: 1;
+    }
+    .conf-header__name {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 900; font-size: 19px; color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .conf-header__badge {
+      background: var(--success);
+      color: #fff; font-size: 11px; font-weight: 700;
+      padding: 5px 11px; border-radius: 20px;
+      box-shadow: 0 2px 10px rgba(34,197,94,0.45);
+      white-space: nowrap;
+    }
+    .conf-header__addr {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 12px; padding: 9px 12px;
+      margin: 0 14px;
+      position: relative; z-index: 1;
+    }
+    .conf-header__addr-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .conf-header__addr-text { display: flex; flex-direction: column; min-width: 0; }
+    .conf-header__addr-label {
+      font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.65);
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .conf-header__addr-street {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 800; font-size: 13px; color: #fff;
+      letter-spacing: -0.2px; margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ── Body ── */
+    .conf-body {
+      padding: 10px;
+      padding-bottom: 135px; /* espacio para action bar fija */
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* ── Tarjeta ── */
+    .conf-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .conf-card__head {
+      padding: 10px 12px 8px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .conf-card__title {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 800; font-size: 14px;
+    }
+    .conf-card__order-id {
+      background: #FFF8F5; border-bottom: 1px solid #FFD5C2;
+      padding: 10px 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .conf-card__order-id-left { display: flex; flex-direction: column; gap: 2px; }
+    .conf-card__order-id-label {
+      font-size: 10px; font-weight: 600; color: var(--primary);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .conf-card__order-id-num {
+      font-family: 'Manrope', sans-serif; font-weight: 900; font-size: 22px;
+      color: var(--text); letter-spacing: 1px;
+    }
+    .conf-card__order-id-icon { font-size: 22px; opacity: 0.5; }
+    .conf-card__id {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2px 8px;
+      font-size: 12px; color: var(--text-muted);
+    }
+
+    /* ── Items ── */
+    .conf-items {
+      list-style: none; margin: 0; padding: 8px;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .conf-item {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg); border-radius: 8px;
+      padding: 8px 9px; border: 1px solid var(--border);
+      min-height: 48px;
+    }
+    .conf-item__qty {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 14px;
+      flex-shrink: 0;
+    }
+    .conf-item__info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+    .conf-item__name { font-weight: 600; font-size: 14px; }
+    .conf-item__unit { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .conf-item__price { font-weight: 700; font-size: 14px; white-space: nowrap; margin-right: 6px; }
+    .conf-item__remove {
+      width: 20px; height: 20px;
+      background: #DC2626; color: #fff;
+      border: none; border-radius: 5px;
+      font-size: 12px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; line-height: 1;
+      transition: opacity 0.1s;
+    }
+    .conf-item__remove:active { opacity: 0.7; }
+
+    /* ── Notas ── */
+    .conf-notes {
+      margin: 0 8px 8px;
+      border: 1.5px solid #FFD5C2;
+      border-radius: 8px; overflow: hidden;
+    }
+    .conf-notes__label {
+      background: #FFF8F5; padding: 6px 10px;
+      font-size: 11px; font-weight: 700; color: var(--primary);
+      border-bottom: 1px solid #FFE0D0;
+    }
+    .conf-notes__area {
+      display: block; width: 100%; box-sizing: border-box;
+      padding: 8px 10px; border: none; outline: none;
+      font-family: 'Inter', sans-serif; font-size: 16px;
+      color: var(--text); background: transparent;
+      resize: none; min-height: 52px;
+    }
+    .conf-notes__area::placeholder { color: #bbb; }
+
+    /* ── Total ── */
+    .conf-total {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px;
+      border-top: 2px dashed var(--border);
+      margin: 0 4px;
+    }
+    .conf-total__label { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+    .conf-total__val   { font-family: 'Manrope', sans-serif; font-weight: 900; font-size: 16px; }
+
+    /* ── Tiempo estimado ── */
+    .conf-time {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .conf-time__left { display: flex; align-items: center; gap: 12px; }
+    .conf-time__pulse {
+      width: 40px; height: 40px;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .conf-time__pulse::before,
+    .conf-time__pulse::after {
+      content: ''; position: absolute;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,107,53,0.15);
+      animation: ring-out 2s ease-out infinite;
+    }
+    .conf-time__pulse::after { animation-delay: 0.8s; }
+    @keyframes ring-out {
+      0%   { transform: scale(0.5); opacity: 0.8; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    .conf-time__core {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; position: relative; z-index: 1;
+    }
+    .conf-time__text { display: flex; flex-direction: column; }
+    .conf-time__label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+    .conf-time__val   { font-family: 'Manrope', sans-serif; font-weight: 900; font-size: 14px; letter-spacing: -0.3px; }
+    .conf-time__dots  { display: flex; align-items: center; gap: 4px; }
+    .conf-time__dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--primary); opacity: 0.3;
+      animation: dot-beat 1.4s ease-in-out infinite;
+    }
+    .conf-time__dot:nth-child(2) { animation-delay: 0.2s; }
+    .conf-time__dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-beat {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.3; }
+      40%            { transform: scale(1.2); opacity: 1; }
+    }
+
+    /* ── Action bar ── */
+    .conf-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 10px 12px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+      z-index: 100;
+    }
+    .conf-bar__btns {
+      display: flex; gap: 8px;
+    }
+    .conf-bar__online,
+    .conf-bar__cash {
       flex: 1;
+      border-radius: 14px; padding: 13px 12px;
+      display: flex; align-items: center; gap: 10px;
+      cursor: pointer; border: none;
+      transition: filter 0.15s;
     }
-    .pay-options .btn {
+    .conf-bar__online:active { filter: brightness(0.88); }
+    .conf-bar__cash:active   { filter: brightness(0.88); }
+    .conf-bar__online {
+      background: linear-gradient(160deg, #FF8255 0%, #FF5500 100%);
+      box-shadow: 0 4px 16px rgba(255,107,53,0.45);
+    }
+    .conf-bar__cash {
+      background: linear-gradient(160deg, #34D470 0%, #16A34A 100%);
+      box-shadow: 0 4px 16px rgba(34,197,94,0.4);
+    }
+    .conf-bar__btn-icon { font-size: 20px; flex-shrink: 0; }
+    .conf-bar__btn-title {
       flex: 1;
+      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 12px;
+      color: #fff; text-align: left;
     }
-    .btn-cash {
-      background: #4caf50;
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 0.75rem 1rem;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
+    .conf-bar__btn-arrow { font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.7); }
+    .conf-bar__back {
+      background: none; border: none;
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      cursor: pointer; text-align: center; padding: 2px;
+      text-decoration: none;
     }
-    .btn-cash:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+
+    /* ── Modal overlay ── */
+    .conf-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(2px);
+      display: flex; align-items: flex-end;
+      z-index: 200;
+    }
+    .conf-sheet {
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      width: 100%; padding: 0 16px 20px;
+    }
+    .conf-sheet__handle {
+      width: 36px; height: 4px; border-radius: 2px;
+      background: var(--border); margin: 12px auto 16px;
+    }
+    .conf-sheet__icon {
+      width: 54px; height: 54px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin: 0 auto 10px;
+    }
+    .conf-sheet__icon--online { background: #FFF0EB; }
+    .conf-sheet__icon--cash   { background: #F0FDF4; }
+    .conf-sheet__title {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 900; font-size: 17px;
+      text-align: center; margin: 0 0 6px;
+      letter-spacing: -0.3px;
+    }
+    .conf-sheet__sub {
+      font-size: 13px; color: var(--text-muted);
+      text-align: center; margin: 0 0 12px; line-height: 1.5;
+    }
+    .conf-sheet__summary {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px 14px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+    .conf-sheet__summary-label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+    .conf-sheet__summary-total {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 900; font-size: 20px; color: var(--primary);
+    }
+    .conf-sheet__actions { display: flex; flex-direction: column; gap: 8px; }
+    .conf-sheet__confirm {
+      border-radius: 12px; padding: 13px;
+      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 14px;
+      text-align: center; color: #fff; border: none; cursor: pointer;
+    }
+    .conf-sheet__confirm--online { background: var(--primary); box-shadow: 0 4px 12px rgba(255,107,53,0.35); }
+    .conf-sheet__confirm--cash   { background: var(--success); box-shadow: 0 4px 12px rgba(34,197,94,0.35); }
+    .conf-sheet__confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+    .conf-sheet__cancel {
+      background: none; border: none;
+      font-size: 13px; font-weight: 600; color: var(--text-muted);
+      text-decoration: underline; cursor: pointer; padding: 4px;
+      text-align: center;
     }
   </style>
 
   <script>
-    // --- Quitar una unidad ---
+    // ── Quitar una unidad ──
     function quitarUnidad(btn) {
       const li      = btn.closest('li');
-      const qtyEl   = li.querySelector('.order-item-qty');
-      const priceEl = li.querySelector('.order-item-price');
+      const qtyEl   = li.querySelector('.conf-item__qty');
+      const priceEl = li.querySelector('.conf-item__price');
       const unit    = parseFloat(li.dataset.unit);
 
-      let qty = parseInt(qtyEl.textContent.replace(/\D/g, ''), 10);
+      let qty = parseInt(qtyEl.textContent, 10);
 
       if (qty <= 1) {
         li.remove();
       } else {
         qty--;
-        qtyEl.textContent   = '× ' + qty + ' ud';
+        qtyEl.textContent   = qty;
         priceEl.textContent = (unit * qty).toFixed(2) + ' €';
       }
-
       recalcularTotal();
     }
 
     function recalcularTotal() {
       let total = 0;
       document.querySelectorAll('#productos li').forEach(li => {
-        const txt = li.querySelector('.order-item-price').textContent;
+        const txt = li.querySelector('.conf-item__price').textContent;
         total += parseFloat(txt.replace('€', '').trim());
       });
-      document.getElementById('order-total-val').textContent = total.toFixed(2) + ' €';
+      const fmt = total.toFixed(2) + ' €';
+      document.getElementById('order-total-val').textContent = fmt;
+      document.getElementById('modal-online-total').textContent  = fmt;
+      document.getElementById('modal-efectivo-total').textContent = fmt;
     }
 
-    // --- Volver al menú (siempre resetea el estado antes de navegar) ---
+    // ── Volver al menú ──
     async function handleBack() {
       const updatedQty = {};
       document.querySelectorAll('#productos li').forEach(li => {
-        const nombre = li.querySelector('.order-item-name').textContent.trim();
-        const qty    = parseInt(li.querySelector('.order-item-qty').textContent.replace(/\D/g, ''), 10);
+        const nombre = li.querySelector('.conf-item__name').textContent.trim();
+        const qty    = parseInt(li.querySelector('.conf-item__qty').textContent, 10);
         if (qty > 0) updatedQty[nombre] = qty;
       });
       sessionStorage.setItem('cart_{{ token }}', JSON.stringify(updatedQty));
@@ -135,7 +527,7 @@
         await fetch('/api/volver_al_menu', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ token: '{{ token }}', userID: '{{ userID }}' })
+          body:    JSON.stringify({ token: '{{ token }}', userID: '{{ userID }}' }),
         });
       } catch (e) {
         console.warn('No se pudo restablecer el estado del pedido:', e);
@@ -143,16 +535,16 @@
       window.location.href = '/menu/{{ token }}';
     }
 
-    // --- Construir el objeto de pedido desde el DOM ---
+    // ── Construir objeto de pedido desde el DOM ──
     function buildOrder() {
       const items = document.querySelectorAll('#productos li');
       if (items.length === 0) return null;
 
       const productos = Array.from(items).map(li => ({
         codigo:   li.getAttribute('data-codigo'),
-        nombre:   li.querySelector('.order-item-name').textContent.trim(),
-        cantidad: parseInt(li.querySelector('.order-item-qty').textContent.replace(/\D/g, ''), 10),
-        precio:   parseFloat(li.querySelector('.order-item-price').textContent.replace('€', '').trim()),
+        nombre:   li.querySelector('.conf-item__name').textContent.trim(),
+        cantidad: parseInt(li.querySelector('.conf-item__qty').textContent, 10),
+        precio:   parseFloat(li.querySelector('.conf-item__price').textContent.replace('€', '').trim()),
       }));
 
       return {
@@ -161,23 +553,38 @@
         userID:    '{{ userID }}',
         numero:    '{{ numero }}',
         token:     '{{ token }}',
+        notas:     document.getElementById('notas').value.trim(),
         productos,
         total: parseFloat(document.getElementById('order-total-val').textContent.replace('€', '').trim()),
       };
     }
 
-    // --- Enviar el pedido al endpoint indicado ---
-    async function submitOrder(endpoint) {
+    // ── Modales ──
+    function abrirModal(modalId) {
       const order = buildOrder();
       if (!order) {
         alert('No hay productos en el pedido. Añade algo antes de confirmar.');
         return;
       }
+      document.getElementById(modalId).style.display = 'flex';
+    }
 
-      const btnOnline   = document.getElementById('pagarOnline');
-      const btnEfectivo = document.getElementById('pagarEfectivo');
-      btnOnline.disabled   = true;
-      btnEfectivo.disabled = true;
+    function cerrarModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    function cerrarModalOverlay(event, modalId) {
+      // Cerrar si se pulsa el overlay (no el sheet)
+      if (event.target.id === modalId) cerrarModal(modalId);
+    }
+
+    // ── Confirmar pago ──
+    async function confirmarPago(modalId, endpoint, btnId) {
+      const order = buildOrder();
+      if (!order) return;
+
+      const confirmBtn = document.getElementById(btnId);
+      confirmBtn.disabled = true;
 
       try {
         const response = await fetch('{{ public_url }}' + endpoint, {
@@ -191,22 +598,15 @@
           window.location.href = result.redirect_url;
         } else {
           alert(result.message || 'Pedido enviado correctamente.');
+          cerrarModal(modalId);
         }
       } catch (err) {
         console.error('Error de conexión:', err);
         alert('No se pudo conectar con el servidor. Inténtalo de nuevo.');
-        btnOnline.disabled   = false;
-        btnEfectivo.disabled = false;
+        confirmBtn.disabled = false;
       }
     }
-
-    document.getElementById('pagarOnline').addEventListener('click', () => {
-      submitOrder('/api/agregar_pedido');
-    });
-
-    document.getElementById('pagarEfectivo').addEventListener('click', () => {
-      submitOrder('/api/agregar_pedido_efectivo');
-    });
   </script>
+
 </body>
 </html>

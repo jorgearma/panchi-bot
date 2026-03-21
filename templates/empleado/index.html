@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Panchi — Mi zona</title>
+  <meta name="theme-color" content="#111827">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Mi zona">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    button { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body class="bg-gray-900 min-h-screen"
+      x-data="empleadoHub({{ empleado_id or 'null' }}, '{{ rol or '' }}')"
+      x-init="init()">
+
+  <!-- ======== HEADER ======== -->
+  <header class="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+    <div>
+      <p class="text-xs text-gray-500" x-text="fechaHoy"></p>
+      <p class="text-white font-bold text-base leading-tight" x-text="saludo"></p>
+      <p class="text-gray-400 text-xs" x-text="nombreCompleto + ' · ' + rolLabel"></p>
+    </div>
+    <form action="/auth/logout" method="post">
+      <button type="submit"
+              class="bg-gray-800 text-gray-400 text-xs px-3 py-1.5 rounded-lg active:bg-gray-700 transition">
+        Salir
+      </button>
+    </form>
+  </header>
+
+  <!-- ======== CONTENIDO ======== -->
+  <main class="max-w-md mx-auto px-4 py-4 space-y-3">
+
+    <!-- Estado operativo -->
+    <div :class="estadoBg" class="rounded-xl p-3 border flex items-center justify-between">
+      <div>
+        <p class="text-xs text-gray-400 uppercase tracking-wide">Mi estado</p>
+        <p class="font-bold text-sm mt-0.5" :class="estadoColor">
+          <span>● </span><span x-text="estadoLabel"></span>
+        </p>
+        <p x-show="perfil.estado_operativo === 'ocupado'"
+           class="text-xs text-gray-500 mt-0.5" x-cloak>Asignado por el sistema</p>
+      </div>
+      <div class="flex gap-2">
+        <button @click="cambiarEstado('en_pausa')"
+                :disabled="perfil.estado_operativo === 'ocupado'"
+                :class="perfil.estado_operativo === 'ocupado' ? 'opacity-40 cursor-not-allowed' : 'active:bg-gray-600'"
+                class="bg-gray-700 text-gray-300 text-xs px-3 py-1.5 rounded-lg transition">
+          ⏸ Pausa
+        </button>
+        <button @click="cambiarEstado('desconectado')"
+                :disabled="perfil.estado_operativo === 'ocupado'"
+                :class="perfil.estado_operativo === 'ocupado' ? 'opacity-40 cursor-not-allowed' : 'active:bg-gray-600'"
+                class="bg-gray-700 text-red-400 text-xs px-3 py-1.5 rounded-lg transition">
+          ⏹ Salir
+        </button>
+      </div>
+    </div>
+
+    <!-- Turno de hoy -->
+    <div class="bg-blue-950 rounded-xl p-3 border border-blue-900">
+      <template x-if="turno">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-blue-300 uppercase tracking-wide">Turno hoy</p>
+            <p class="text-white font-semibold text-sm mt-0.5"
+               x-text="turno.hora_inicio + ' – ' + turno.hora_fin"></p>
+            <p class="text-gray-400 text-xs mt-0.5" x-text="turno.notas || ''"></p>
+          </div>
+        </div>
+      </template>
+      <template x-if="!turno">
+        <div class="flex items-center gap-3">
+          <span class="text-xl">🗓️</span>
+          <div>
+            <p class="text-gray-400 text-sm">Sin turno registrado</p>
+            <p class="text-gray-600 text-xs mt-0.5">El manager lo añadirá pronto</p>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- CTA principal — App operativa -->
+    <a :href="appUrl"
+       :class="appGradient"
+       class="block rounded-xl p-4 flex items-center justify-between active:opacity-90 transition">
+      <div>
+        <p class="text-xs uppercase tracking-wide" :class="appSubtitleColor">Mi app</p>
+        <p class="text-white font-bold text-base mt-1" x-text="appLabel"></p>
+        <p class="text-xs mt-1" :class="appSubtitleColor"
+           x-text="pedidosAsignados === 0 ? '0 asignados ahora' : pedidosAsignados + ' asignado' + (pedidosAsignados > 1 ? 's' : '')"></p>
+      </div>
+      <span class="bg-white text-sm font-bold px-3 py-2 rounded-lg" :class="appBtnColor">
+        Entrar →
+      </span>
+    </a>
+
+    <!-- Stats del día -->
+    <div>
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Hoy</p>
+      <div class="grid grid-cols-3 gap-2">
+        <div class="bg-gray-800 rounded-xl p-3 text-center">
+          <p class="text-xl font-bold text-blue-400" x-text="metricas.pedidos_completados ?? '—'"></p>
+          <p class="text-xs text-gray-500 mt-1" x-text="metricaLabel1"></p>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-3 text-center">
+          <p class="text-xl font-bold text-green-400"
+             x-text="metricas.tiempo_medio_min ? metricas.tiempo_medio_min + 'm' : '—'"></p>
+          <p class="text-xs text-gray-500 mt-1">T. medio</p>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-3 text-center">
+          <p class="text-xl font-bold text-amber-400" x-text="metricas.incidencias_hoy ?? '—'"></p>
+          <p class="text-xs text-gray-500 mt-1" x-text="metricaLabel3"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accesos secundarios -->
+    <div>
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Más</p>
+      <div class="grid grid-cols-3 gap-2">
+        <button class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition">
+          <p class="text-xl">📊</p>
+          <p class="text-xs text-gray-400 mt-1">Desempeño</p>
+        </button>
+        <button class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition">
+          <p class="text-xl">🗓️</p>
+          <p class="text-xs text-gray-400 mt-1">Turnos</p>
+        </button>
+        <template x-if="rol === 'repartidor'">
+          <a href="/repartidor/cierre"
+             class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition block">
+            <p class="text-xl">🔒</p>
+            <p class="text-xs text-gray-400 mt-1">Cierre</p>
+          </a>
+        </template>
+        <template x-if="rol !== 'repartidor'">
+          <button class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition">
+            <p class="text-xl">ℹ️</p>
+            <p class="text-xs text-gray-400 mt-1">Empresa</p>
+          </button>
+        </template>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ======== ALPINE COMPONENT ======== -->
+  <script>
+  function empleadoHub(empleadoId, rol) {
+    return {
+      empleadoId,
+      rol,
+      perfil:          { estado_operativo: 'desconectado' },
+      turno:           null,
+      metricas:        {},
+      pedidosAsignados: 0,
+
+      // -- computed --
+      get saludo() {
+        const h = new Date().getHours();
+        if (h < 13) return 'Buenos días ☀️';
+        if (h < 20) return 'Buenas tardes 🌤️';
+        return 'Buenas noches 🌙';
+      },
+      get fechaHoy() {
+        return new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+      },
+      get nombreCompleto() { return this.perfil.nombre || ''; },
+      get rolLabel() {
+        return { picker: 'Picker', repartidor: 'Repartidor', manager: 'Manager', admin: 'Admin' }[this.rol] || this.rol;
+      },
+      get estadoLabel() {
+        return { disponible: 'Disponible', ocupado: 'Ocupado', en_pausa: 'En pausa', desconectado: 'Desconectado' }[this.perfil.estado_operativo] || this.perfil.estado_operativo;
+      },
+      get estadoColor() {
+        return { disponible: 'text-green-400', ocupado: 'text-amber-400', en_pausa: 'text-purple-400', desconectado: 'text-gray-400' }[this.perfil.estado_operativo] || 'text-gray-400';
+      },
+      get estadoBg() {
+        return { disponible: 'bg-green-950 border-green-900', ocupado: 'bg-amber-950 border-amber-900', en_pausa: 'bg-purple-950 border-purple-900', desconectado: 'bg-gray-800 border-gray-700' }[this.perfil.estado_operativo] || 'bg-gray-800 border-gray-700';
+      },
+      get appUrl()          { return this.rol === 'repartidor' ? '/repartidor' : '/picker'; },
+      get appLabel()        { return this.rol === 'repartidor' ? '🛵 App Reparto' : '🛒 App Picking'; },
+      get appGradient()     { return this.rol === 'repartidor' ? 'bg-gradient-to-r from-orange-600 to-orange-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'; },
+      get appSubtitleColor(){ return this.rol === 'repartidor' ? 'text-orange-200' : 'text-blue-200'; },
+      get appBtnColor()     { return this.rol === 'repartidor' ? 'text-orange-600' : 'text-blue-600'; },
+      get metricaLabel1()   { return this.rol === 'repartidor' ? 'Entregas' : 'Pedidos'; },
+      get metricaLabel3()   { return this.rol === 'repartidor' ? 'Fallidas' : 'Incidencias'; },
+
+      // -- methods --
+      async init() {
+        await Promise.all([this.cargarPerfil(), this.cargarTurno(), this.cargarMetricas()]);
+      },
+
+      async cargarPerfil() {
+        try {
+          const r = await fetch('/empleado/perfil');
+          if (r.ok) this.perfil = await r.json();
+        } catch (_) {}
+      },
+
+      async cargarTurno() {
+        try {
+          const r = await fetch('/empleado/turno-hoy');
+          if (r.ok) this.turno = await r.json();
+        } catch (_) {}
+      },
+
+      async cargarMetricas() {
+        try {
+          const r = await fetch('/empleado/metricas');
+          if (r.ok) {
+            const d = await r.json();
+            this.metricas = d;
+            this.pedidosAsignados = d.pedidos_activos || 0;
+          }
+        } catch (_) {}
+      },
+
+      async cambiarEstado(nuevoEstado) {
+        if (this.perfil.estado_operativo === 'ocupado') return;
+        try {
+          const r = await fetch('/empleado/estado', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: nuevoEstado }),
+          });
+          if (r.ok) this.perfil.estado_operativo = nuevoEstado;
+        } catch (_) {}
+      },
+    };
+  }
+  </script>
+
+</body>
+</html>
