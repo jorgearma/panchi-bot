@@ -27,6 +27,24 @@
   <!-- ── CONTENIDO (con padding-bottom para la action bar fija) ── -->
   <div class="conf-body">
 
+    <!-- Tiempo estimado animado -->
+    <div class="conf-time">
+      <div class="conf-time__left">
+        <div class="conf-time__pulse">
+          <div class="conf-time__core">⏱</div>
+        </div>
+        <div class="conf-time__text">
+          <span class="conf-time__label">Tiempo estimado de entrega</span>
+          <span class="conf-time__val">~15 minutos</span>
+        </div>
+      </div>
+      <div class="conf-time__dots">
+        <div class="conf-time__dot"></div>
+        <div class="conf-time__dot"></div>
+        <div class="conf-time__dot"></div>
+      </div>
+    </div>
+
     <!-- Tarjeta de pedido -->
     <div class="conf-card">
       <div class="conf-card__head">
@@ -64,45 +82,24 @@
       </div>
     </div>
 
-    <!-- Tiempo estimado animado -->
-    <div class="conf-time">
-      <div class="conf-time__left">
-        <div class="conf-time__pulse">
-          <div class="conf-time__core">⏱</div>
-        </div>
-        <div class="conf-time__text">
-          <span class="conf-time__label">Tiempo estimado de entrega</span>
-          <span class="conf-time__val">~15 minutos</span>
-        </div>
-      </div>
-      <div class="conf-time__dots">
-        <div class="conf-time__dot"></div>
-        <div class="conf-time__dot"></div>
-        <div class="conf-time__dot"></div>
-      </div>
-    </div>
 
   </div><!-- /conf-body -->
 
   <!-- ── ACTION BAR fija ── -->
   <div class="conf-bar">
-    <button class="conf-bar__back" onclick="handleBack()">← Volver</button>
-    <button class="conf-bar__online" onclick="abrirModal('modal-online')">
-      <div class="conf-bar__btn-icon">💳</div>
-      <div class="conf-bar__btn-text">
-        <span class="conf-bar__btn-title">Online</span>
-        <span class="conf-bar__btn-sub">Pago seguro</span>
-      </div>
-      <span class="conf-bar__btn-arrow">›</span>
-    </button>
-    <button class="conf-bar__cash" onclick="abrirModal('modal-efectivo')">
-      <div class="conf-bar__btn-icon">🪙</div>
-      <div class="conf-bar__btn-text">
-        <span class="conf-bar__btn-title">Al recibir</span>
-        <span class="conf-bar__btn-sub">Efectivo o tarjeta</span>
-      </div>
-      <span class="conf-bar__btn-arrow">›</span>
-    </button>
+    <div class="conf-bar__btns">
+      <button class="conf-bar__online" onclick="abrirModal('modal-online')">
+        <span class="conf-bar__btn-icon">💳</span>
+        <span class="conf-bar__btn-title">Pagar con tarjeta online</span>
+        <span class="conf-bar__btn-arrow">›</span>
+      </button>
+      <button class="conf-bar__cash" onclick="abrirModal('modal-efectivo')">
+        <span class="conf-bar__btn-icon">🪙</span>
+        <span class="conf-bar__btn-title">Pagar al recibir el pedido</span>
+        <span class="conf-bar__btn-arrow">›</span>
+      </button>
+    </div>
+    <button class="conf-bar__back" onclick="handleBack()">← Volver al menú</button>
   </div>
 
   <!-- ── MODAL ONLINE ── -->
@@ -219,7 +216,7 @@
     /* ── Body ── */
     .conf-body {
       padding: 10px;
-      padding-bottom: 90px; /* espacio para action bar fija */
+      padding-bottom: 115px; /* espacio para action bar fija */
       display: flex; flex-direction: column; gap: 8px;
     }
 
@@ -288,7 +285,7 @@
     .conf-notes__area {
       display: block; width: 100%; box-sizing: border-box;
       padding: 8px 10px; border: none; outline: none;
-      font-family: 'Inter', sans-serif; font-size: 13px;
+      font-family: 'Inter', sans-serif; font-size: 16px;
       color: var(--text); background: transparent;
       resize: none; min-height: 52px;
     }
@@ -357,42 +354,41 @@
       position: fixed; bottom: 0; left: 0; right: 0;
       background: var(--surface);
       border-top: 1px solid var(--border);
-      padding: 10px 12px;
-      display: flex; gap: 7px;
+      padding: 10px 12px 12px;
+      display: flex; flex-direction: column; gap: 6px;
       z-index: 100;
     }
-    .conf-bar__back {
-      background: var(--bg); border: 1.5px solid var(--border);
-      border-radius: 10px; padding: 8px 10px;
-      font-size: 12px; font-weight: 600; color: var(--text-muted);
-      cursor: pointer; white-space: nowrap;
+    .conf-bar__btns {
+      display: flex; gap: 8px;
     }
     .conf-bar__online,
     .conf-bar__cash {
       flex: 1;
-      border-radius: 12px; padding: 8px 10px;
-      display: flex; align-items: center; gap: 8px;
+      border-radius: 14px; padding: 13px 12px;
+      display: flex; align-items: center; gap: 10px;
       cursor: pointer; border: none;
     }
     .conf-bar__online {
       background: var(--primary);
-      box-shadow: 0 3px 10px rgba(255,107,53,0.35);
+      box-shadow: 0 4px 14px rgba(255,107,53,0.4);
     }
     .conf-bar__cash {
-      background: #F0FDF4;
-      border: 2px solid var(--success) !important;
+      background: var(--success);
+      box-shadow: 0 4px 14px rgba(34,197,94,0.35);
     }
-    .conf-bar__btn-icon { font-size: 18px; flex-shrink: 0; }
-    .conf-bar__btn-text { flex: 1; display: flex; flex-direction: column; align-items: flex-start; }
-    .conf-bar__btn-title { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 12px; }
-    .conf-bar__btn-sub   { font-size: 10px; font-weight: 500; }
-    .conf-bar__online .conf-bar__btn-title,
-    .conf-bar__online .conf-bar__btn-sub   { color: #fff; }
-    .conf-bar__cash .conf-bar__btn-title   { color: var(--text); }
-    .conf-bar__cash .conf-bar__btn-sub     { color: #15803d; }
-    .conf-bar__btn-arrow { font-size: 18px; font-weight: 700; }
-    .conf-bar__online .conf-bar__btn-arrow { color: rgba(255,255,255,0.7); }
-    .conf-bar__cash   .conf-bar__btn-arrow { color: #15803d; }
+    .conf-bar__btn-icon { font-size: 20px; flex-shrink: 0; }
+    .conf-bar__btn-title {
+      flex: 1;
+      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 12px;
+      color: #fff; text-align: left;
+    }
+    .conf-bar__btn-arrow { font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.7); }
+    .conf-bar__back {
+      background: none; border: none;
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      cursor: pointer; text-align: center; padding: 2px;
+      text-decoration: none;
+    }
 
     /* ── Modal overlay ── */
     .conf-modal {
