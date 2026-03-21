@@ -242,3 +242,26 @@ class TestAuthRedireccionEmpleado:
                                    content_type='application/json')
         assert resp.status_code == 200
         assert resp.get_json()['redirect'] == '/dashboard'
+
+
+class TestModelosNuevos:
+    """Verifica que EmpleadoCapacidad y rol_activo existen en models.py."""
+
+    def test_empleado_capacidad_modelo_existe(self):
+        import inspect
+        import models
+        src = inspect.getsource(models)
+        assert 'EmpleadoCapacidad' in src
+        assert 'empleado_capacidades' in src
+
+    def test_empleado_tiene_rol_activo(self):
+        import inspect
+        import models
+        src = inspect.getsource(models)
+        assert 'rol_activo' in src
+
+    def test_auditlog_pedido_id_nullable(self):
+        """AuditLog.pedido_id debe ser nullable para eventos sin pedido."""
+        from models import AuditLog
+        col = AuditLog.__table__.columns['pedido_id']
+        assert col.nullable is True, "pedido_id debe ser nullable=True"

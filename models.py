@@ -137,7 +137,7 @@ class AuditLog(Base):
     __tablename__ = 'audit_log'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    pedido_id = Column(Integer, ForeignKey('pedidos.PedidoID'), nullable=False)
+    pedido_id = Column(Integer, ForeignKey('pedidos.PedidoID'), nullable=True)
     empleado_id = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
     accion = Column(String(50), nullable=False)   # cancelar_pedido, eliminar_item, sustituir_item
     detalles = Column(Text, nullable=True)         # JSON con valores anteriores/nuevos
@@ -199,11 +199,30 @@ class Empleado(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
 
+    rol_activo = Column(String(20), nullable=True)     # picker | repartidor | NULL
+
     rol = relationship("Rol", back_populates="empleados")
     pickings = relationship("PickingPedido", back_populates="empleado")
     repartos = relationship("Reparto", back_populates="repartidor")
     incidencias_asignadas = relationship("Incidencia", back_populates="asignado", foreign_keys="Incidencia.asignado_a")
     turnos = relationship('Turno', back_populates='empleado', order_by='Turno.fecha')
+    capacidades = relationship('EmpleadoCapacidad', back_populates='empleado',
+                               cascade='all, delete-orphan')
+
+
+class EmpleadoCapacidad(Base):
+    """Roles operativos que puede desempeñar un empleado (picker, repartidor)."""
+    __tablename__ = 'empleado_capacidades'
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    empleado_id = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=False)
+    rol         = Column(String(20), nullable=False)   # 'picker' | 'repartidor'
+
+    empleado = relationship('Empleado', back_populates='capacidades')
+
+    __table_args__ = (
+        __import__('sqlalchemy').UniqueConstraint('empleado_id', 'rol', name='uq_empleado_rol'),
+    )
 
 
 # ---------------------------------------------------------------------------
