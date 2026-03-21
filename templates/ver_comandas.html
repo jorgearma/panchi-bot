@@ -234,16 +234,30 @@
       background: var(--surface); margin: 0 16px;
       border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
     }
-    .item-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 10px;
+    .conf-items {
+      list-style: none; margin: 0; padding: 8px;
+      display: flex; flex-direction: column; gap: 5px;
     }
-    .item-row:last-child { border-bottom: none; }
-    .item-left { flex: 1; }
-    .item-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .conf-item {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg); border-radius: 8px;
+      padding: 8px 9px; border: 1px solid var(--border);
+      min-height: 48px;
+    }
+    .conf-item__qty {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 14px;
+      flex-shrink: 0;
+    }
+    .conf-item__info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+    .conf-item__name { font-weight: 600; font-size: 14px; }
+    .conf-item__unit { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .conf-item__price { font-weight: 700; font-size: 14px; white-space: nowrap; }
     .item-total-row {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 16px; background: var(--bg);
+      padding: 10px 12px; border-top: 2px dashed var(--border); margin: 0 4px;
       border-top: 2px solid var(--border);
       font-weight: 700; font-size: 15px;
     }
@@ -403,15 +417,18 @@
     </button>
   </div>
   <div class="items-card hidden" id="items-card">
-    {% for producto in productos %}
-    <div class="item-row">
-      <div class="item-left">
-        <div class="item-name">{{ producto.nombre }}</div>
-        <span class="order-item-qty">x{{ producto.cantidad }}</span>
-      </div>
-      <span class="order-item-price">{{ producto.precio }} €</span>
-    </div>
-    {% endfor %}
+    <ul class="conf-items">
+      {% for producto in productos %}
+      <li class="conf-item">
+        <div class="conf-item__qty">{{ producto.cantidad }}</div>
+        <div class="conf-item__info">
+          <span class="conf-item__name">{{ producto.nombre }}</span>
+          <span class="conf-item__unit">{{ "%.2f"|format(producto.precio / producto.cantidad) }} € / ud</span>
+        </div>
+        <span class="conf-item__price">{{ producto.precio }} €</span>
+      </li>
+      {% endfor %}
+    </ul>
     <div class="item-total-row">
       <span>Total</span>
       <span class="item-total-val">{{ total }} €</span>
