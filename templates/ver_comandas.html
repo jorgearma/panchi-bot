@@ -109,10 +109,30 @@
     :not([data-status="receiving"]) .status-dots { display: none; }
     :not([data-status="receiving"]) #status-icon { animation: none; }
 
+    /* ── Loader bar ── */
+    @keyframes shimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(250%); }
+    }
+    .status-loader {
+      width: 140px; height: 4px;
+      background: var(--border); border-radius: 99px;
+      overflow: hidden; margin: 8px auto 0;
+    }
+    .status-loader__bar {
+      width: 40%; height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      animation: shimmer 1.6s ease-in-out infinite;
+    }
+    /* Ocultar en estados terminales */
+    .status-hero[data-status="delivered"] .status-loader,
+    .status-hero[data-status="cancelled"] .status-loader,
+    .status-hero[data-status="refunded"]  .status-loader { display: none; }
+
     /* ── Status hero ── */
     .status-hero {
       background: var(--surface);
-      padding: 20px 16px 16px;
+      padding: 10px 16px 10px;
       text-align: center;
       border-bottom: 1px solid var(--border);
     }
@@ -120,19 +140,28 @@
     .status-hero[data-status="cancelled"] { background: #fef2f2; border-bottom-color: #fecaca; }
     .status-hero[data-status="refunded"]  { background: #f9fafb; border-bottom-color: var(--border); }
 
-    #status-icon  { font-size: 40px; margin-bottom: 8px; }
+    #status-icon  { display: none; }
     #status-title {
-      font-size: 17px; font-weight: 700; color: var(--text);
+      font-size: 16px; font-weight: 900; color: var(--text);
       font-family: 'Manrope', sans-serif;
+      letter-spacing: -0.4px;
     }
     .status-hero[data-status="delivered"] #status-title { color: #15803d; }
     .status-hero[data-status="cancelled"] #status-title { color: var(--danger); }
-    #status-sub   { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    #status-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .order-ref__label {
+      font-size: 10px; font-weight: 600; color: var(--primary);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .order-ref__num {
+      font-family: 'Manrope', sans-serif; font-weight: 900;
+      font-size: 18px; color: var(--text); letter-spacing: 1px;
+    }
     .order-ref {
-      display: inline-block; margin-top: 8px;
-      background: var(--bg); border-radius: 20px;
-      padding: 3px 12px; font-size: 12px; color: var(--text-muted);
-      border: 1px solid var(--border);
+      display: inline-flex; flex-direction: column; align-items: center;
+      margin-top: 6px; background: #FFF8F5;
+      border: 1.5px solid #FFD5C2; border-radius: 10px;
+      padding: 4px 14px;
     }
 
     /* ── Timeline ── */
@@ -250,13 +279,23 @@
       display: flex; justify-content: space-between; align-items: center;
       padding: 14px 16px 8px;
     }
-    .section-header .section-title { padding: 0; }
-    .toggle-btn {
-      background: none; border: none; cursor: pointer;
-      font-size: 11px; font-weight: 600; color: var(--primary);
-      display: flex; align-items: center; gap: 4px; padding: 0;
+    .section-header .section-title {
+      padding: 0;
+      font-family: 'Manrope', sans-serif;
+      font-size: 16px; font-weight: 900;
+      color: var(--text); text-transform: none; letter-spacing: -0.3px;
     }
-    .toggle-icon { font-size: 10px; transition: transform 0.2s; }
+    .section-header .section-title span {
+      color: var(--primary);
+    }
+    .toggle-btn {
+      background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: 20px; cursor: pointer;
+      font-size: 12px; font-weight: 700; color: var(--primary);
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px;
+    }
+    .toggle-icon { font-size: 11px; transition: transform 0.2s; }
     .toggle-icon.open { transform: rotate(180deg); }
   </style>
 </head>
@@ -280,14 +319,18 @@
   <!-- Status hero (actualizado por JS) -->
   <div class="status-hero" id="status-hero" data-status="receiving">
     <div class="status-icon-wrap">
-      <div id="status-icon">📦</div>
+      <div id="status-icon"></div>
       <div class="status-steam">
         <span></span><span></span><span></span>
       </div>
     </div>
     <div id="status-title">Pedido recibido, preparando<span class="status-dots"><span>.</span><span>.</span><span>.</span></span></div>
+    <div class="status-loader"><div class="status-loader__bar"></div></div>
     <div id="status-sub" class="status-sub"></div>
-    <div class="order-ref">Pedido #{{ pedidoID }}</div>
+    <div class="order-ref">
+      <span class="order-ref__label">Nº de pedido</span>
+      <span class="order-ref__num">#{{ pedidoID }}</span>
+    </div>
   </div>
 
   <!-- Timeline (actualizado por JS) -->
@@ -354,7 +397,7 @@
 
   <!-- Items del pedido (estáticos, colapsables) -->
   <div class="section-header">
-    <span class="section-title">Tu pedido · {{ total }} €</span>
+    <span class="section-title">Tu pedido · <span>{{ total }} €</span></span>
     <button class="toggle-btn" onclick="toggleItems()" id="items-toggle">
       Ver <span class="toggle-icon" id="items-icon">▼</span>
     </button>
@@ -402,17 +445,17 @@
     const TERMINAL_STATES = ["entregado", "cancelado", "reembolsado"];
 
     const STATE_CONFIG = {
-      "pagado":           { icon: "📦", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
-      "confirmando-pago": { icon: "📦", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
-      "contra_reembolso": { icon: "📦", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
-      "en_preparacion":   { icon: "📦", title: "Preparando en almacén",         sub: "~15 min estimados",      status: "preparing", step: 2 },
-      "preparado":        { icon: "📦", title: "Listo, asignando repartidor",   sub: "",                      status: "ready",     step: 2 },
-      "en_reparto":       { icon: "🏍", title: "¡Tu pedido viene de camino!",   sub: "",                      status: "on_the_way",step: 3 },
-      "entregado":        { icon: "✅", title: "¡Pedido entregado!",            sub: "Gracias por tu pedido", status: "delivered", step: 4 },
-      "cancelado":        { icon: "❌", title: "Pedido cancelado",              sub: "Contacta con el almacén si tienes dudas", status: "cancelled", step: null },
-      "reembolsado":      { icon: "💸", title: "Pedido reembolsado",            sub: "El importe será devuelto en breve",        status: "refunded",  step: null },
+      "pagado":           { icon: "", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
+      "confirmando-pago": { icon: "", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
+      "contra_reembolso": { icon: "", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
+      "en_preparacion":   { icon: "", title: "Preparando en almacén",         sub: "~15 min estimados",      status: "preparing", step: 2 },
+      "preparado":        { icon: "", title: "Listo, asignando repartidor",   sub: "",                      status: "ready",     step: 2 },
+      "en_reparto":       { icon: "", title: "¡Tu pedido viene de camino!",   sub: "",                      status: "on_the_way",step: 3 },
+      "entregado":        { icon: "", title: "¡Pedido entregado!",            sub: "Gracias por tu pedido", status: "delivered", step: 4 },
+      "cancelado":        { icon: "", title: "Pedido cancelado",              sub: "Contacta con el almacén si tienes dudas", status: "cancelled", step: null },
+      "reembolsado":      { icon: "", title: "Pedido reembolsado",            sub: "El importe será devuelto en breve",        status: "refunded",  step: null },
     };
-    const DEFAULT_CONFIG = { icon: "📦", title: "Procesando tu pedido…", sub: "", status: "receiving", step: 1 };
+    const DEFAULT_CONFIG = { icon: "", title: "Procesando tu pedido…", sub: "", status: "receiving", step: 1 };
 
     function applyStatus(data) {
       const cfg = STATE_CONFIG[data.estado] || DEFAULT_CONFIG;
