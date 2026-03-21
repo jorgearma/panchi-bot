@@ -59,10 +59,10 @@ def login():
     logger.info("AUTH_OK empleado_id=%s rol=%s", empleado.EmpleadoID, rol_nombre)
 
     destinos = {
-        'manager': '/dashboard',
-        'admin': '/dashboard',
-        'picker': '/picker',
-        'repartidor': '/repartidor',
+        'manager':    '/dashboard',
+        'admin':      '/dashboard',
+        'picker':     '/empleado',
+        'repartidor': '/empleado',
     }
     destino = destinos.get(rol_nombre, '/dashboard')
     if request.is_json:
