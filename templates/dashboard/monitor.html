@@ -22,9 +22,10 @@
     .fade-in { animation: fade-in .35s ease-out; }
 
     /* Scrollbar slim */
-    .slim-scroll::-webkit-scrollbar { width: 4px; }
+    .slim-scroll::-webkit-scrollbar { width: 3px; height: 3px; }
     .slim-scroll::-webkit-scrollbar-track { background: transparent; }
-    .slim-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+    .slim-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+    .slim-scroll::-webkit-scrollbar-thumb:hover { background: #4b5563; }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen"
@@ -142,24 +143,23 @@
        ALERTS BANNER — errores y warnings en una sola franja
   ═══════════════════════════════════════════════════════════════════ -->
   <div x-show="alertas.length > 0" x-cloak
-       class="border-b border-gray-800 px-6 py-2"
-       :class="alertas.some(a => a.nivel === 'error') ? 'bg-red-950/40' : 'bg-yellow-950/30'">
-    <div class="flex items-center gap-3 overflow-x-auto slim-scroll">
+       class="border-b border-gray-800/60 bg-gray-900 px-4 py-1">
+    <div class="flex items-center gap-2 overflow-x-auto slim-scroll">
       <!-- Errores -->
       <template x-for="a in alertas.filter(a => a.nivel === 'error').slice(0, 4)" :key="'e' + a.pedido_id + a.tipo">
-        <span class="text-xs text-red-300 bg-red-900/50 rounded px-2 py-0.5 shrink-0 whitespace-nowrap flex items-center gap-1">
-          <span class="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0"></span>
+        <span class="text-xs text-red-400 bg-red-950/50 border border-red-900/40 rounded px-1.5 py-0.5 shrink-0 whitespace-nowrap flex items-center gap-1">
+          <span class="w-1 h-1 rounded-full bg-red-500 shrink-0"></span>
           <span x-text="a.mensaje"></span>
         </span>
       </template>
       <!-- Divisor si hay ambos -->
       <template x-if="alertas.some(a => a.nivel === 'error') && alertas.some(a => a.nivel === 'warning')">
-        <span class="h-4 w-px bg-gray-700 shrink-0"></span>
+        <span class="h-3 w-px bg-gray-700 shrink-0"></span>
       </template>
       <!-- Warnings -->
       <template x-for="a in alertas.filter(a => a.nivel === 'warning').slice(0, 3)" :key="'w' + a.pedido_id + a.tipo">
-        <span class="text-xs text-yellow-300 bg-yellow-900/40 rounded px-2 py-0.5 shrink-0 whitespace-nowrap flex items-center gap-1">
-          <span class="text-yellow-500">⚠</span>
+        <span class="text-xs text-yellow-500 bg-yellow-950/30 border border-yellow-900/30 rounded px-1.5 py-0.5 shrink-0 whitespace-nowrap flex items-center gap-1">
+          <span class="text-yellow-600">⚠</span>
           <span x-text="a.mensaje"></span>
         </span>
       </template>
