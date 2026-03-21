@@ -21,7 +21,7 @@ No se añaden tablas ni columnas. Se reutiliza `PickingPedido`:
 
 Un pedido "sin asignar" puede ser:
 - `tipo: sin_picker` — ya tiene fila en `PickingPedido` pero sin picker asignado
-- `tipo: sin_asignar` — pagado pero sin fila en `PickingPedido` todavía (creados por el webhook de pago)
+- `tipo: sin_asignar` — pagado pero sin fila en `PickingPedido` todavía
 
 **Scope de esta feature:** solo `sin_picker` (ya tienen fila). Los `sin_asignar` requieren crear la fila primero — se deja para fase futura.
 
@@ -32,14 +32,19 @@ Un pedido "sin asignar" puede ser:
 ```
 GET /picker/cola
     → GestorDashboard.pickings_sin_asignar()
-    → SELECT * FROM picking_pedido WHERE empleado_id IS NULL AND estado = 'pendiente'
+    → SELECT pp.* FROM picking_pedido pp
+        JOIN pedidos p ON p.PedidoID = pp.pedido_id
+        WHERE pp.empleado_id IS NULL
+          AND pp.estado = 'pendiente'
+          AND p.Estado IN ('Pagado', 'contra_reembolso', 'en_preparacion')
     → [{picking_id, pedido_id, n_items, segundos_esperando}]
 
 POST /picker/cola/coger/<picking_id>
     → GestorDashboard.reclamar_picking(picking_id, empleado_id)
-    → UPDATE picking_pedido SET empleado_id=? WHERE id=? AND empleado_id IS NULL
+    → 1. Consulta previa por id solo → (False, 'no_encontrado') si no existe
+    → 2. UPDATE atómico WHERE id=? AND empleado_id IS NULL AND estado='pendiente'
     → 0 rows → (False, 'ya_cogido') → 409
-    → 1 row → (True, picking)     → 200
+    → 1 row  → (True, 'ok')        → 200
 ```
 
 ---
@@ -48,15 +53,27 @@ POST /picker/cola/coger/<picking_id>
 
 ### `GestorDashboard.pickings_sin_asignar() -> list[dict]`
 
+Filtra por `PickingPedido.empleado_id IS NULL` y `estado='pendiente'`, y además hace join con `Pedido` para excluir pickings de pedidos ya cancelados o reembolsados.
+
 ```python
 def pickings_sin_asignar(self) -> list[dict]:
-    """Pedidos con PickingPedido creado pero sin picker asignado."""
+    """Pedidos con PickingPedido creado pero sin picker asignado.
+    Solo incluye pedidos en estado activo (Pagado, contra_reembolso, en_preparacion).
+    """
+    from models import Pedido as _Pedido
     s = self.session
+    estados_activos = [
+        EstadoPedido.PAGADO.value,
+        EstadoPedido.CONTRA_REEMBOLSO.value,
+        EstadoPedido.EN_PREPARACION.value,
+    ]
     pickings = (
         s.query(PickingPedido)
+        .join(_Pedido, _Pedido.PedidoID == PickingPedido.pedido_id)
         .filter(
             PickingPedido.empleado_id == None,
             PickingPedido.estado == EstadoPicking.PENDIENTE.value,
+            _Pedido.Estado.in_(estados_activos),
         )
         .order_by(PickingPedido.created_at.asc())
         .all()
@@ -75,14 +92,28 @@ def pickings_sin_asignar(self) -> list[dict]:
 
 ### `GestorDashboard.reclamar_picking(picking_id, empleado_id) -> tuple[bool, str]`
 
+Primero verifica existencia, luego hace el UPDATE atómico. El `s.commit()` dentro del método sigue el patrón establecido en este manager (ver `completar_picking`, `marcar_entregado`).
+
+Tras reclamar con éxito, llama a `_actualizar_estado_operativo(empleado_id)` para mantener consistencia con el panel de monitor.
+
 ```python
 def reclamar_picking(self, picking_id: int, empleado_id: int) -> tuple[bool, str]:
     """
     Asigna el picking al empleado de forma atómica.
-    Returns: (True, 'ok') | (False, 'ya_cogido') | (False, 'no_encontrado')
+    Returns:
+        (True,  'ok')           — asignado correctamente
+        (False, 'no_encontrado') — picking_id no existe
+        (False, 'ya_cogido')    — empleado_id IS NOT NULL o estado != pendiente
+        (False, 'error')        — error de BD
     """
     s = self.session
     try:
+        # 1. Verificar existencia antes del UPDATE para dar error preciso
+        picking = s.query(PickingPedido).filter_by(id=picking_id).first()
+        if not picking:
+            return False, 'no_encontrado'
+
+        # 2. UPDATE atómico — solo actualiza si sigue libre
         resultado = (
             s.query(PickingPedido)
             .filter(
@@ -93,9 +124,14 @@ def reclamar_picking(self, picking_id: int, empleado_id: int) -> tuple[bool, str
             .update({'empleado_id': empleado_id}, synchronize_session=False)
         )
         s.commit()
+
         if resultado == 0:
             return False, 'ya_cogido'
+
+        # 3. Actualizar estado operativo del picker (igual que en completar_picking)
+        self._actualizar_estado_operativo(empleado_id)
         return True, 'ok'
+
     except SQLAlchemyError as e:
         s.rollback()
         logger.error("Error reclamando picking %s: %s", picking_id, e)
@@ -111,6 +147,7 @@ Añadir a `blueprints/picker.py`:
 ### `GET /picker/cola`
 
 - Auth: `@requiere_rol('picker', 'manager', 'admin')`
+- No body
 - Llama a `gestor_dashboard.pickings_sin_asignar()`
 - Response 200: `{"cola": [...], "total": N}`
 - Response 500: `{"error": "Error interno"}`
@@ -118,8 +155,10 @@ Añadir a `blueprints/picker.py`:
 ### `POST /picker/cola/coger/<int:picking_id>`
 
 - Auth: `@requiere_rol('picker', 'manager', 'admin')`
-- Llama a `gestor_dashboard.reclamar_picking(picking_id, session['empleado_id'])`
+- No body — `picking_id` viene de la URL, `empleado_id` de `session['empleado_id']`
+- Sin CSRF adicional — el blueprint no tiene middleware CSRF, igual que todos los demás endpoints POST de `/picker`
 - Response 200: `{"ok": true, "picking_id": N}`
+- Response 404: `{"error": "no_encontrado"}`
 - Response 409: `{"error": "ya_cogido"}`
 - Response 400: `{"error": "error"}` (error de BD)
 
@@ -134,6 +173,7 @@ Añadir a `blueprints/picker.py`:
 cola:          [],   // lista de pickings sin asignar
 colaTotal:     0,
 cogiendo:      null, // picking_id en proceso de reclamación
+tabActiva:     'mis-pedidos',  // 'mis-pedidos' | 'cola'
 ```
 
 **Nuevo método `cargarCola()`:**
@@ -178,13 +218,15 @@ async init() {
 },
 ```
 
+**Polling:** `cargarCola()` se añade al ciclo de polling existente junto a `cargarMisPedidos()`, para que la cola se refresque automáticamente al mismo ritmo. No es polling independiente — reutiliza el intervalo ya configurado.
+
 ### Cambios en HTML
 
 - Nueva tab "📋 Cola" con badge rojo junto a "📦 Mis pedidos"
-- Sección de cola visible solo cuando la tab está activa
-- Cada fila: `Pedido #N · hace Xm · 🛒 N productos · [Coger →]`
+- Las secciones se muestran/ocultan según `tabActiva`
+- Cada fila cola: `Pedido #N · hace Xm · 🛒 N productos · [Coger →]`
 - Estado `ya_cogido`: fila deshabilitada en rojo, botón = "Cogido"
-- Estado vacío: mensaje "No hay pedidos sin asignar ahora mismo"
+- Estado vacío: "No hay pedidos sin asignar ahora mismo"
 - Botón "↻ Actualizar" que llama a `cargarCola()`
 
 ---
@@ -199,26 +241,30 @@ SET empleado_id = ?
 WHERE id = ? AND empleado_id IS NULL AND estado = 'pendiente'
 ```
 
-Si `rowcount == 0` → ya fue reclamado → 409. No se necesitan locks adicionales.
+Si `rowcount == 0` → el picking ya no estaba libre → 409. No se necesitan locks adicionales a nivel de aplicación.
 
 ---
 
 ## Testing
 
 - `TestGestorDashboardCola::test_pickings_sin_asignar_devuelve_lista`
+- `TestGestorDashboardCola::test_pickings_sin_asignar_excluye_pedido_cancelado`
 - `TestGestorDashboardCola::test_pickings_sin_asignar_vacio`
 - `TestGestorDashboardCola::test_reclamar_picking_ok`
 - `TestGestorDashboardCola::test_reclamar_picking_ya_cogido` (mock UPDATE retorna 0)
+- `TestGestorDashboardCola::test_reclamar_picking_no_encontrado`
 - `TestBlueprintPickerCola::test_cola_sin_sesion_rechazado`
 - `TestBlueprintPickerCola::test_cola_devuelve_json`
 - `TestBlueprintPickerCola::test_coger_ok`
 - `TestBlueprintPickerCola::test_coger_409_ya_cogido`
+- `TestBlueprintPickerCola::test_coger_404_no_encontrado`
 
 ---
 
 ## Out of Scope
 
-- Pedidos `tipo: sin_asignar` (sin fila en `PickingPedido` — requieren creación previa)
-- Polling automático / WebSocket en tiempo real
+- Pedidos `tipo: sin_asignar` (sin fila en `PickingPedido`)
+- Polling independiente para la cola (se reutiliza el ciclo existente)
+- WebSocket / push en tiempo real
 - Límite de pedidos simultáneos por picker
 - Notificación al manager cuando un picker se auto-asigna
