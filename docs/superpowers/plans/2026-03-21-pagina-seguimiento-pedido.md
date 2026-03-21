@@ -1,3 +1,333 @@
+# Página de seguimiento de pedido — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Reemplazar la página estática `/pago_confirmado` por un tracker en tiempo real con timeline de estados, tarjeta de repartidor con WhatsApp y auto-refresco cada 15 segundos.
+
+**Architecture:** Nuevo endpoint `GET /api/seguimiento/<id>` en `blueprints/api.py` devuelve estado y datos del reparto desde SQL. El template `ver_comandas.html` se reescribe completamente: renderiza los items estáticamente desde Redis y actualiza solo el bloque de estado/repartidor con polling JS cada 15s. Dos variables de entorno nuevas (`STORE_PHONE`, `STORE_ADDRESS`) exponen los datos del almacén.
+
+**Tech Stack:** Flask, SQLAlchemy, Jinja2, JavaScript (vanilla fetch + setInterval), CSS tokens existentes en `static/css/styles.css`
+
+**Spec:** `docs/superpowers/specs/2026-03-21-pagina-seguimiento-pedido-design.md`
+
+---
+
+## Mapa de archivos
+
+| Archivo | Acción | Qué hace |
+|---|---|---|
+| `config.py` | Modificar | Añadir `STORE_PHONE`, `STORE_ADDRESS` |
+| `blueprints/api.py` | Modificar | Nuevo endpoint `GET /api/seguimiento/<id>` |
+| `blueprints/menu.py` | Modificar | Pasar `store_phone`, `store_address` al template |
+| `templates/ver_comandas.html` | Reescritura | Tracker completo con polling JS |
+| `.env.example` | Modificar | Documentar las dos nuevas variables |
+| `tests/test_seguimiento.py` | Crear | Tests del endpoint de seguimiento |
+
+---
+
+## Task 1: Variables de entorno del almacén
+
+**Files:**
+- Modify: `config.py`
+- Modify: `.env.example`
+
+- [ ] **Step 1: Añadir las dos variables a `config.py`**
+
+Al final del fichero, tras la línea de `CUSTOMER_SUPPORT_PHONE`:
+
+```python
+# Almacén — se muestran al cliente en la página de seguimiento
+STORE_PHONE: str = os.environ.get("STORE_PHONE", "")
+STORE_ADDRESS: str = os.environ.get("STORE_ADDRESS", "")
+```
+
+- [ ] **Step 2: Documentar en `.env.example`**
+
+Añadir al final del fichero (o junto a `CUSTOMER_SUPPORT_PHONE` si ya existe esa sección):
+
+```bash
+# Almacén (mostrado al cliente en la página de seguimiento)
+STORE_PHONE=612345678
+STORE_ADDRESS=C/ Ejemplo 12, Madrid
+```
+
+- [ ] **Step 3: Verificar que el módulo carga sin errores**
+
+```bash
+python -c "import config; print(config.STORE_PHONE, config.STORE_ADDRESS)"
+```
+
+Salida esperada: dos cadenas (vacías si no hay `.env` configurado, sin excepción).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add config.py .env.example
+git commit -m "feat: añadir STORE_PHONE y STORE_ADDRESS a config"
+```
+
+---
+
+## Task 2: Endpoint `GET /api/seguimiento/<pedido_db_id>`
+
+**Files:**
+- Modify: `blueprints/api.py`
+- Create: `tests/test_seguimiento.py`
+
+### Contexto del endpoint
+
+El endpoint consulta `Pedido` por `PedidoID` y, si existe reparto, extrae nombre/teléfono del repartidor y la hora estimada. Devuelve solo datos necesarios para el tracker — sin datos personales del cliente.
+
+- [ ] **Step 1: Escribir los tests (fichero nuevo)**
+
+Crear `tests/test_seguimiento.py`:
+
+```python
+"""
+Tests para GET /api/seguimiento/<pedido_db_id>
+"""
+import pytest
+from unittest.mock import MagicMock, patch, PropertyMock
+from datetime import datetime
+
+
+def make_pedido(estado, forma_pago="online", con_reparto=False, con_repartidor=False):
+    pedido = MagicMock()
+    pedido.PedidoID = 2045
+    pedido.Estado = estado
+    pedido.forma_pago = forma_pago
+    pedido.DireccionEntrega = "Calle Mayor 5, Madrid"
+
+    if con_reparto:
+        reparto = MagicMock()
+        reparto.estado = "en_camino"
+        reparto.hora_salida = datetime(2026, 3, 21, 14, 52)
+        reparto.hora_estimada_entrega = datetime(2026, 3, 21, 15, 5)
+        if con_repartidor:
+            repartidor = MagicMock()
+            repartidor.Nombre = "Carlos"
+            repartidor.Apellido = "Moreno"
+            repartidor.Telefono = "612345678"
+            reparto.repartidor = repartidor
+        else:
+            reparto.repartidor = None
+        pedido.reparto = reparto
+    else:
+        pedido.reparto = None
+
+    return pedido
+
+
+class TestSeguimientoEndpoint:
+
+    def test_pedido_no_encontrado_devuelve_404(self, client):
+        with patch("blueprints.api.gestor_pedidos") as mock_gp:
+            mock_gp.obtener_pedido.return_value = None
+            resp = client.get("/api/seguimiento/9999")
+        assert resp.status_code == 404
+        assert "error" in resp.get_json()
+
+    def test_pedido_sin_reparto(self, client):
+        pedido = make_pedido("EN_PREPARACION", con_reparto=False)
+        with patch("blueprints.api.gestor_pedidos") as mock_gp:
+            mock_gp.obtener_pedido.return_value = pedido
+            resp = client.get("/api/seguimiento/2045")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["estado"] == "EN_PREPARACION"
+        assert data["reparto"] is None
+
+    def test_pedido_en_reparto_con_repartidor(self, client):
+        pedido = make_pedido("EN_REPARTO", con_reparto=True, con_repartidor=True)
+        with patch("blueprints.api.gestor_pedidos") as mock_gp:
+            mock_gp.obtener_pedido.return_value = pedido
+            resp = client.get("/api/seguimiento/2045")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["estado"] == "EN_REPARTO"
+        reparto = data["reparto"]
+        assert reparto["repartidor_nombre"] == "Carlos Moreno"
+        assert reparto["repartidor_telefono"] == "612345678"
+        assert reparto["hora_estimada_entrega"] == "15:05"
+        assert reparto["hora_salida"] == "14:52"
+        assert reparto["calle_destino"] == "Calle Mayor 5, Madrid"
+
+    def test_pedido_con_reparto_sin_repartidor_asignado(self, client):
+        pedido = make_pedido("PREPARADO", con_reparto=True, con_repartidor=False)
+        with patch("blueprints.api.gestor_pedidos") as mock_gp:
+            mock_gp.obtener_pedido.return_value = pedido
+            resp = client.get("/api/seguimiento/2045")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        reparto = data["reparto"]
+        assert reparto["repartidor_nombre"] is None
+        assert reparto["repartidor_telefono"] is None
+
+    def test_pedido_entregado(self, client):
+        pedido = make_pedido("ENTREGADO", con_reparto=True, con_repartidor=True)
+        with patch("blueprints.api.gestor_pedidos") as mock_gp:
+            mock_gp.obtener_pedido.return_value = pedido
+            resp = client.get("/api/seguimiento/2045")
+        assert resp.status_code == 200
+        assert resp.get_json()["estado"] == "ENTREGADO"
+
+    def test_respuesta_incluye_forma_pago(self, client):
+        pedido = make_pedido("EN_PREPARACION", forma_pago="efectivo")
+        with patch("blueprints.api.gestor_pedidos") as mock_gp:
+            mock_gp.obtener_pedido.return_value = pedido
+            resp = client.get("/api/seguimiento/2045")
+        assert resp.get_json()["forma_pago"] == "efectivo"
+```
+
+- [ ] **Step 2: Ejecutar tests — verificar que FALLAN**
+
+```bash
+pytest tests/test_seguimiento.py -v
+```
+
+Salida esperada: todos fallan con `404` (ruta no existe aún).
+
+- [ ] **Step 3: Implementar el endpoint en `blueprints/api.py`**
+
+Añadir al final del fichero (antes del EOF, tras el último route):
+
+```python
+@blueprint_api.route('/api/seguimiento/<int:pedido_db_id>', methods=['GET'])
+def seguimiento_pedido(pedido_db_id):
+    pedido = gestor_pedidos.obtener_pedido(pedido_db_id)
+    if not pedido:
+        return jsonify({"error": "Pedido no encontrado"}), 404
+
+    reparto_data = None
+    if pedido.reparto:
+        r = pedido.reparto
+        repartidor_nombre = None
+        repartidor_telefono = None
+        if r.repartidor:
+            repartidor_nombre = f"{r.repartidor.Nombre} {r.repartidor.Apellido}"
+            repartidor_telefono = r.repartidor.Telefono
+        reparto_data = {
+            "estado": r.estado,
+            "hora_salida": r.hora_salida.strftime("%H:%M") if r.hora_salida else None,
+            "hora_estimada_entrega": r.hora_estimada_entrega.strftime("%H:%M") if r.hora_estimada_entrega else None,
+            "repartidor_nombre": repartidor_nombre,
+            "repartidor_telefono": repartidor_telefono,
+            "calle_destino": pedido.DireccionEntrega,
+        }
+
+    logger.debug("Seguimiento pedido %s: estado=%s", pedido_db_id, pedido.Estado)
+    return jsonify({
+        "estado": pedido.Estado,
+        "forma_pago": pedido.forma_pago,
+        "reparto": reparto_data,
+    })
+```
+
+- [ ] **Step 4: Ejecutar tests — verificar que PASAN**
+
+```bash
+pytest tests/test_seguimiento.py -v
+```
+
+Salida esperada: todos los tests en verde.
+
+- [ ] **Step 5: Ejecutar suite completa — sin regresiones**
+
+```bash
+pytest -v --tb=short
+```
+
+Los 3 tests pre-existentes de `TestWebhookMonei` pueden fallar — son conocidos. El resto debe pasar.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add blueprints/api.py tests/test_seguimiento.py
+git commit -m "feat: añadir endpoint GET /api/seguimiento/<id>"
+```
+
+---
+
+## Task 3: Pasar datos del almacén al template
+
+**Files:**
+- Modify: `blueprints/menu.py`
+
+- [ ] **Step 1: Añadir `store_phone` y `store_address` al `render_template` de `/pago_confirmado`**
+
+En `blueprints/menu.py`, localizar la función `mostrar_confirmacion_depago` (línea ~138). Añadir los dos nuevos parámetros al `render_template`:
+
+```python
+# Añadir import al inicio del fichero si no está ya:
+import config
+
+# En render_template, añadir tras public_url=...:
+        store_phone=config.STORE_PHONE or "",
+        store_address=config.STORE_ADDRESS or "",
+```
+
+El bloque completo queda:
+
+```python
+return render_template(
+    "ver_comandas.html",
+    name=pedido["name"],
+    userID=pedido["userID"],
+    token=pedido["token"],
+    numero=pedido["numero"],
+    direccion=pedido["direccion"],
+    calle=_extraer_calle(pedido["direccion"]),
+    total=pedido["total"],
+    productos=pedido["productos"],
+    pedidoID=pedido["pedidoID"],
+    public_url=config.PUBLIC_URL or "",
+    store_phone=config.STORE_PHONE or "",
+    store_address=config.STORE_ADDRESS or "",
+)
+```
+
+- [ ] **Step 2: Verificar que el módulo importa sin errores**
+
+```bash
+python -c "from blueprints.menu import blueprint_menu; print('OK')"
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add blueprints/menu.py
+git commit -m "feat: pasar store_phone y store_address al template de seguimiento"
+```
+
+---
+
+## Task 4: Reescribir `templates/ver_comandas.html`
+
+**Files:**
+- Rewrite: `templates/ver_comandas.html`
+
+Este es el cambio visual principal. El template usa los tokens de `static/css/styles.css` (ya incluido) y añade estilos propios en un `<style>` inline para no contaminar el CSS global.
+
+### Lógica de estados en Jinja2
+
+El template recibe el estado inicial en el render, y el JS actualiza el DOM cuando el polling devuelve un estado nuevo. Para el render inicial, el estado viene del JSON de Redis — que puede no tener `Estado` si es un pedido recién creado. El JS siempre consulta el endpoint para obtener el estado real de BD.
+
+### Tabla de estados → clases CSS y textos
+
+| `estado` JS | `data-status` | Hero icon | Hero title |
+|---|---|---|---|
+| `PAGADO`, `CONFIRMANDO_PAGO`, `CONTRA_REEMBOLSO` | `receiving` | 📦 | Pedido recibido, preparando… |
+| `EN_PREPARACION` | `preparing` | 📦 | Preparando en almacén |
+| `PREPARADO` | `ready` | 📦 | Listo, asignando repartidor |
+| `EN_REPARTO` | `on_the_way` | 🏍 | ¡Tu pedido viene de camino! |
+| `ENTREGADO` | `delivered` | ✅ | ¡Pedido entregado! |
+| `CANCELADO` | `cancelled` | ❌ | Pedido cancelado |
+| `REEMBOLSADO` | `refunded` | 💸 | Pedido reembolsado |
+| (cualquier otro) | `receiving` | 📦 | Procesando tu pedido… |
+
+- [ ] **Step 1: Reemplazar `templates/ver_comandas.html` con el nuevo template**
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -142,20 +472,6 @@
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     .hidden { display: none !important; }
-
-    /* ── Items colapsables ── */
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 14px 16px 8px;
-    }
-    .section-header .section-title { padding: 0; }
-    .toggle-btn {
-      background: none; border: none; cursor: pointer;
-      font-size: 11px; font-weight: 600; color: var(--primary);
-      display: flex; align-items: center; gap: 4px; padding: 0;
-    }
-    .toggle-icon { font-size: 10px; transition: transform 0.2s; }
-    .toggle-icon.open { transform: rotate(180deg); }
   </style>
 </head>
 <body>
@@ -245,14 +561,9 @@
     </a>
   </div>
 
-  <!-- Items del pedido (estáticos, colapsables) -->
-  <div class="section-header">
-    <span class="section-title">Tu pedido · {{ total }} €</span>
-    <button class="toggle-btn" onclick="toggleItems()" id="items-toggle">
-      Ver <span class="toggle-icon" id="items-icon">▼</span>
-    </button>
-  </div>
-  <div class="items-card hidden" id="items-card">
+  <!-- Items del pedido (estáticos) -->
+  <div class="section-title">Tu pedido</div>
+  <div class="items-card">
     {% for producto in productos %}
     <div class="item-row">
       <div class="item-left">
@@ -288,22 +599,21 @@
   </div>
 
   <script>
-    const ORDER_REDIS_ID = "{{ redis_id }}";
-    const PEDIDO_ID = {{ pedidoID | int }};
+    const PEDIDO_ID = {{ pedidoID }};
     const REFRESH_INTERVAL = 15;
-    // Estados en minúsculas — valores reales de EstadoPedido en BD (states.py)
-    const TERMINAL_STATES = ["entregado", "cancelado", "reembolsado"];
+    const TERMINAL_STATES = ["ENTREGADO", "CANCELADO", "REEMBOLSADO"];
 
+    // Configuración de estados: icono, título, subtítulo, data-status, paso activo (1-4 o null)
     const STATE_CONFIG = {
-      "pagado":           { icon: "📦", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
-      "confirmando-pago": { icon: "📦", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
-      "contra_reembolso": { icon: "📦", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
-      "en_preparacion":   { icon: "📦", title: "Preparando en almacén",         sub: "~15 min estimados",      status: "preparing", step: 2 },
-      "preparado":        { icon: "📦", title: "Listo, asignando repartidor",   sub: "",                      status: "ready",     step: 2 },
-      "en_reparto":       { icon: "🏍", title: "¡Tu pedido viene de camino!",   sub: "",                      status: "on_the_way",step: 3 },
-      "entregado":        { icon: "✅", title: "¡Pedido entregado!",            sub: "Gracias por tu pedido", status: "delivered", step: 4 },
-      "cancelado":        { icon: "❌", title: "Pedido cancelado",              sub: "Contacta con el almacén si tienes dudas", status: "cancelled", step: null },
-      "reembolsado":      { icon: "💸", title: "Pedido reembolsado",            sub: "El importe será devuelto en breve",        status: "refunded",  step: null },
+      "PAGADO":             { icon: "📦", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
+      "CONFIRMANDO_PAGO":   { icon: "📦", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
+      "CONTRA_REEMBOLSO":   { icon: "📦", title: "Pedido recibido, preparando…", sub: "", status: "receiving",  step: 1 },
+      "EN_PREPARACION":     { icon: "📦", title: "Preparando en almacén",         sub: "~15 min estimados",      status: "preparing", step: 2 },
+      "PREPARADO":          { icon: "📦", title: "Listo, asignando repartidor",   sub: "",                      status: "ready",     step: 2 },
+      "EN_REPARTO":         { icon: "🏍", title: "¡Tu pedido viene de camino!",   sub: "",                      status: "on_the_way",step: 3 },
+      "ENTREGADO":          { icon: "✅", title: "¡Pedido entregado!",            sub: "Gracias por tu pedido", status: "delivered", step: 4 },
+      "CANCELADO":          { icon: "❌", title: "Pedido cancelado",              sub: "Contacta con el almacén si tienes dudas", status: "cancelled", step: null },
+      "REEMBOLSADO":        { icon: "💸", title: "Pedido reembolsado",            sub: "El importe será devuelto en breve",        status: "refunded",  step: null },
     };
     const DEFAULT_CONFIG = { icon: "📦", title: "Procesando tu pedido…", sub: "", status: "receiving", step: 1 };
 
@@ -355,7 +665,6 @@
         document.getElementById("rep-role").textContent = "🏍 En camino a " + data.reparto.calle_destino;
         const waLink = document.getElementById("rep-wa");
         if (data.reparto.repartidor_telefono) {
-          // Prefijo España +34; ajustar si se opera en otro país
           waLink.href = "https://wa.me/34" + data.reparto.repartidor_telefono.replace(/\D/g, "");
           waLink.classList.remove("hidden");
         } else {
@@ -384,7 +693,7 @@
     let timer = null;
 
     function poll() {
-      fetch("/api/seguimiento/" + ORDER_REDIS_ID)
+      fetch("/api/seguimiento/" + PEDIDO_ID)
         .then(function(r) { if (r.ok) return r.json(); })
         .then(function(data) { if (data) applyStatus(data); })
         .catch(function() { /* error de red: reintentar en el siguiente ciclo */ });
@@ -408,16 +717,6 @@
       if (bar) bar.classList.add("hidden");
     }
 
-    // ── Items toggle ──
-    function toggleItems() {
-      const card = document.getElementById("items-card");
-      const icon = document.getElementById("items-icon");
-      const btn  = document.getElementById("items-toggle");
-      const open = card.classList.toggle("hidden") === false;
-      icon.classList.toggle("open", open);
-      btn.childNodes[0].textContent = open ? "Ocultar " : "Ver ";
-    }
-
     // Arrancar: primera consulta inmediata + intervalo
     poll();
     timer = setInterval(tick, 1000);
@@ -425,3 +724,39 @@
 
 </body>
 </html>
+```
+
+- [ ] **Step 2: Verificar visualmente con el servidor de desarrollo**
+
+```bash
+python main.py
+```
+
+Abrir una URL de prueba (necesita un pedidoID válido en BD). Si no hay BD disponible, verificar al menos que la página carga sin error 500 con un ID inexistente (`/pago_confirmado?pedido_id=test` debería devolver 404 del template, que es el comportamiento actual cuando el Redis key no existe).
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add templates/ver_comandas.html
+git commit -m "feat: reescribir ver_comandas.html como tracker de pedido en tiempo real"
+```
+
+---
+
+## Task 5: Verificación final y tests
+
+- [ ] **Step 1: Ejecutar suite completa**
+
+```bash
+pytest -v --tb=short
+```
+
+Los únicos fallos permitidos son los 3 pre-existentes de `TestWebhookMonei`.
+
+- [ ] **Step 2: Commit final si todo está limpio**
+
+```bash
+git add -A
+git status  # verificar que no hay ficheros indeseados
+git commit -m "feat: página de seguimiento de pedido completa"
+```
