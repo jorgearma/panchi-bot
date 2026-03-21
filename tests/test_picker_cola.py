@@ -70,9 +70,9 @@ class TestGestorDashboardCola:
             finally:
                 patcher.stop()
 
-    def test_pickings_sin_asignar_excluye_pedido_cancelado(self, app):
-        """Verifica que el query filtra por estados_activos — no hay modo de testear
-        el filtro sin BD, pero sí que el método llama a .join() y .filter()."""
+    def test_pickings_sin_asignar_llama_join_y_filter(self, app):
+        """Verifica que el query hace JOIN con Pedido y aplica .filter() —
+        no hay modo de comprobar los valores del filtro sin BD real."""
         with app.app_context():
             patcher, mock_sess = _mock_session(self.gd)
             try:
@@ -111,10 +111,9 @@ class TestGestorDashboardCola:
 
                 with patch.object(self.gd, '_actualizar_estado_operativo') as mock_aso:
                     ok, msg = self.gd.reclamar_picking(7, empleado_id=3)
-
-                assert ok is True
-                assert msg == 'ok'
-                mock_aso.assert_called_once_with(3, 'ocupado')
+                    assert ok is True
+                    assert msg == 'ok'
+                    mock_aso.assert_called_once_with(3, 'ocupado')
             finally:
                 patcher.stop()
 

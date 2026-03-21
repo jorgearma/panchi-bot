@@ -1546,7 +1546,6 @@ class GestorDashboard:
         """Pedidos con PickingPedido creado pero sin picker asignado.
         Solo incluye pedidos en estado activo (Pagado, contra_reembolso, en_preparacion).
         """
-        from models import Pedido as _Pedido
         s = self.session
         estados_activos = [
             EstadoPedido.PAGADO.value,
@@ -1555,11 +1554,11 @@ class GestorDashboard:
         ]
         pickings = (
             s.query(PickingPedido)
-            .join(_Pedido, _Pedido.PedidoID == PickingPedido.pedido_id)
+            .join(Pedido, Pedido.PedidoID == PickingPedido.pedido_id)
             .filter(
                 PickingPedido.empleado_id == None,
                 PickingPedido.estado == EstadoPicking.PENDIENTE.value,
-                _Pedido.Estado.in_(estados_activos),
+                Pedido.Estado.in_(estados_activos),
             )
             .order_by(PickingPedido.created_at.asc())
             .all()
@@ -1577,7 +1576,8 @@ class GestorDashboard:
 
     def reclamar_picking(self, picking_id: int, empleado_id: int) -> tuple[bool, str]:
         """
-        Asigna el picking al empleado de forma atómica.
+        Asigna el picking al empleado de forma atómica y avanza el estado a EN_PROCESO.
+        Nota: no transiciona el estado del Pedido padre — eso lo hace asignar_picker.
         Returns:
             (True,  'ok')            — asignado correctamente
             (False, 'no_encontrado') — picking_id no existe
@@ -1599,7 +1599,14 @@ class GestorDashboard:
                     PickingPedido.empleado_id == None,
                     PickingPedido.estado == EstadoPicking.PENDIENTE.value,
                 )
-                .update({'empleado_id': empleado_id}, synchronize_session=False)
+                .update(
+                    {
+                        'empleado_id': empleado_id,
+                        'estado': EstadoPicking.EN_PROCESO.value,
+                        'iniciado_en': datetime.utcnow(),
+                    },
+                    synchronize_session=False,
+                )
             )
             s.commit()
 
