@@ -58,6 +58,30 @@ class TestActualizarEstadoValido:
             result = gestor.actualizar_estado(42, EstadoPedido.PAGADO)
         assert result is True
 
+    def test_confirmando_pago_a_pagado_crea_picking_pendiente(self, gestor):
+        pedido = make_pedido(EstadoPedido.CONFIRMANDO_PAGO)
+        detalle = MagicMock()
+        detalle.DetalleID = 9
+        pedido.detalles = [detalle]
+
+        session = MagicMock()
+        pedido_query = MagicMock()
+        pedido_query.filter_by.return_value.first.return_value = pedido
+        picking_query = MagicMock()
+        picking_query.filter_by.return_value.first.return_value = None
+        session.query.side_effect = [pedido_query, picking_query]
+
+        with patch.object(type(gestor), "session", new_callable=lambda: property(lambda self: session)):
+            result = gestor.actualizar_estado(42, EstadoPedido.PAGADO)
+
+        assert result is True
+        assert session.add.call_count >= 3
+        creado = [call.args[0] for call in session.add.call_args_list]
+        assert any(obj.__class__.__name__ == "PickingPedido" for obj in creado)
+        assert any(obj.__class__.__name__ == "PickingItem" for obj in creado)
+        session.flush.assert_called_once()
+        session.commit.assert_called_once()
+
     def test_enlace_a_pendiente_rollback_error(self, gestor):
         pedido = make_pedido(EstadoPedido.ENLACE)
         with patch.object(type(gestor), "session", new_callable=lambda: property(lambda self: _mock_session(pedido))):
