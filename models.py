@@ -1,5 +1,5 @@
 import json
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean, Text, Float, Date, Time
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean, Text, Float, Date, Time, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -221,7 +221,7 @@ class EmpleadoCapacidad(Base):
     empleado = relationship('Empleado', back_populates='capacidades')
 
     __table_args__ = (
-        __import__('sqlalchemy').UniqueConstraint('empleado_id', 'rol', name='uq_empleado_rol'),
+        UniqueConstraint('empleado_id', 'rol', name='uq_empleado_rol'),
     )
 
 
