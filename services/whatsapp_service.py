@@ -41,7 +41,7 @@ def _enviar_twilio(mensaje: str, destinatario: str) -> None:
 )
 def _enviar_meta(mensaje: str, destinatario: str) -> None:
     numero = destinatario.replace("whatsapp:+", "")
-    url = f"https://graph.facebook.com/v19.0/{config.META_PHONE_NUMBER_ID}/messages"
+    url = f"https://graph.facebook.com/v21.0/{config.META_PHONE_NUMBER_ID}/messages"
     payload = {
         "messaging_product": "whatsapp",
         "to": numero,
@@ -54,6 +54,8 @@ def _enviar_meta(mensaje: str, destinatario: str) -> None:
         headers={"Authorization": f"Bearer {config.META_ACCESS_TOKEN}"},
         timeout=10,
     )
+    if not resp.ok:
+        logger.error("Meta API error %s: %s", resp.status_code, resp.text)
     resp.raise_for_status()
     logger.info("Mensaje enviado (Meta) a %s", destinatario)
 
