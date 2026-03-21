@@ -554,3 +554,15 @@ class TestBlueprintEmpleadoNuevos:
     def test_checkin_sin_sesion_redirige(self, client):
         resp = client.get('/empleado/checkin')
         assert resp.status_code in (302, 401)
+
+    def test_checkin_con_sesion_ok(self, client, app):
+        self._set_session(client)
+        with app.app_context():
+            mock_carga = {'picker': {'pendientes': 0, 'en_proceso': 0},
+                          'repartidor': {'listos_para_entregar': 0, 'en_camino': 0}}
+            with patch('blueprints.empleado.gestor_empleado') as ge_mock:
+                ge_mock.capacidades.return_value = ['picker', 'repartidor']
+                ge_mock.carga_operativa.return_value = mock_carga
+                ge_mock.turno_hoy.return_value = None
+                resp = client.get('/empleado/checkin')
+        assert resp.status_code == 200
