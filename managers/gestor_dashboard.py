@@ -1541,3 +1541,76 @@ class GestorDashboard:
             "total_tarjeta_registrado":  total_tarjeta,
             "detalle": [_detalle(r) for r in repartos],
         }
+
+    def pickings_sin_asignar(self) -> list[dict]:
+        """Pedidos con PickingPedido creado pero sin picker asignado.
+        Solo incluye pedidos en estado activo (Pagado, contra_reembolso, en_preparacion).
+        """
+        from models import Pedido as _Pedido
+        s = self.session
+        estados_activos = [
+            EstadoPedido.PAGADO.value,
+            EstadoPedido.CONTRA_REEMBOLSO.value,
+            EstadoPedido.EN_PREPARACION.value,
+        ]
+        pickings = (
+            s.query(PickingPedido)
+            .join(_Pedido, _Pedido.PedidoID == PickingPedido.pedido_id)
+            .filter(
+                PickingPedido.empleado_id == None,
+                PickingPedido.estado == EstadoPicking.PENDIENTE.value,
+                _Pedido.Estado.in_(estados_activos),
+            )
+            .order_by(PickingPedido.created_at.asc())
+            .all()
+        )
+        ahora = datetime.utcnow()
+        return [
+            {
+                'picking_id':         p.id,
+                'pedido_id':          p.pedido_id,
+                'n_items':            len(p.items),
+                'segundos_esperando': int((ahora - p.created_at).total_seconds()),
+            }
+            for p in pickings
+        ]
+
+    def reclamar_picking(self, picking_id: int, empleado_id: int) -> tuple[bool, str]:
+        """
+        Asigna el picking al empleado de forma atómica.
+        Returns:
+            (True,  'ok')            — asignado correctamente
+            (False, 'no_encontrado') — picking_id no existe
+            (False, 'ya_cogido')     — otro picker se adelantó (rowcount == 0)
+            (False, 'error')         — error de BD
+        """
+        s = self.session
+        try:
+            # 1. Verificar existencia antes del UPDATE para dar error preciso
+            picking = s.query(PickingPedido).filter_by(id=picking_id).first()
+            if not picking:
+                return False, 'no_encontrado'
+
+            # 2. UPDATE atómico — solo actualiza si sigue libre
+            resultado = (
+                s.query(PickingPedido)
+                .filter(
+                    PickingPedido.id == picking_id,
+                    PickingPedido.empleado_id == None,
+                    PickingPedido.estado == EstadoPicking.PENDIENTE.value,
+                )
+                .update({'empleado_id': empleado_id}, synchronize_session=False)
+            )
+            s.commit()
+
+            if resultado == 0:
+                return False, 'ya_cogido'
+
+            # 3. Actualizar estado operativo del picker
+            self._actualizar_estado_operativo(empleado_id, 'ocupado')
+            return True, 'ok'
+
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error reclamando picking %s: %s", picking_id, e)
+            return False, 'error'
