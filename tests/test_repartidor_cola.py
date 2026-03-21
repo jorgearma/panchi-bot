@@ -175,3 +175,154 @@ class TestReclamarReparto:
                 mock_sess.rollback.assert_called_once()
             finally:
                 patcher.stop()
+
+
+class TestCompletarPickingCreaReparto:
+
+    def setup_method(self):
+        from services import gestor_dashboard
+        self.gd = gestor_dashboard
+
+    def test_crea_reparto_si_no_existe(self, app):
+        """Tras completar picking y pasar a PREPARADO, se crea Reparto PENDIENTE."""
+        with app.app_context():
+            patcher, mock_sess = _mock_session(self.gd)
+            try:
+                from states import EstadoPicking, EstadoPedido, EstadoReparto
+
+                mock_picking = MagicMock()
+                mock_picking.id = 1
+                mock_picking.empleado_id = 3
+                mock_picking.estado = EstadoPicking.EN_PROCESO.value
+                mock_picking.items = []
+
+                mock_pedido = MagicMock()
+                mock_pedido.PedidoID = 10
+                mock_pedido.Estado = EstadoPedido.EN_PREPARACION.value
+                mock_pedido.TelefonoEntrega = None
+                mock_picking.pedido = mock_pedido
+
+                # Primera query: picking by id
+                mock_q_picking = MagicMock()
+                mock_q_picking.filter_by.return_value = mock_q_picking
+                mock_q_picking.first.return_value = mock_picking
+
+                # Segunda query: Reparto existente (None = no existe)
+                mock_q_reparto = MagicMock()
+                mock_q_reparto.filter_by.return_value = mock_q_reparto
+                mock_q_reparto.first.return_value = None
+
+                # Tercera query: pickings activos del picker
+                mock_q_activos = MagicMock()
+                mock_q_activos.filter.return_value = mock_q_activos
+                mock_q_activos.count.return_value = 0
+
+                mock_sess.query.side_effect = [mock_q_picking, mock_q_reparto, mock_q_activos]
+
+                with patch.object(self.gd, '_actualizar_estado_operativo'):
+                    ok, msg, _ = self.gd.completar_picking(1, picker_id=3)
+
+                assert ok is True
+                # Verificar que se llamó s.add() con un Reparto (instancia real, no mock)
+                from models import Reparto
+                add_calls = mock_sess.add.call_args_list
+                reparto_adds = [c for c in add_calls if isinstance(c.args[0], Reparto)]
+                assert len(reparto_adds) == 1
+            finally:
+                patcher.stop()
+
+    def test_integrity_error_no_falla_picking(self, app):
+        """Si hay IntegrityError al crear el Reparto (race condition), el picking sigue ok."""
+        with app.app_context():
+            patcher, mock_sess = _mock_session(self.gd)
+            try:
+                from states import EstadoPicking, EstadoPedido
+                from sqlalchemy.exc import IntegrityError
+
+                mock_picking = MagicMock()
+                mock_picking.id = 1
+                mock_picking.empleado_id = 3
+                mock_picking.items = []
+
+                mock_pedido = MagicMock()
+                mock_pedido.PedidoID = 10
+                mock_pedido.Estado = EstadoPedido.EN_PREPARACION.value
+                mock_pedido.TelefonoEntrega = None
+                mock_picking.pedido = mock_pedido
+
+                mock_q_picking = MagicMock()
+                mock_q_picking.filter_by.return_value = mock_q_picking
+                mock_q_picking.first.return_value = mock_picking
+
+                # Reparto no existe — pero el commit de creación lanzará IntegrityError
+                mock_q_reparto = MagicMock()
+                mock_q_reparto.filter_by.return_value = mock_q_reparto
+                mock_q_reparto.first.return_value = None
+
+                mock_q_activos = MagicMock()
+                mock_q_activos.filter.return_value = mock_q_activos
+                mock_q_activos.count.return_value = 0
+
+                mock_sess.query.side_effect = [mock_q_picking, mock_q_reparto, mock_q_activos]
+
+                # Simular que el segundo commit (creación de Reparto) lanza IntegrityError
+                call_count = {'n': 0}
+                def commit_side_effect():
+                    call_count['n'] += 1
+                    if call_count['n'] == 2:
+                        raise IntegrityError("INSERT", {}, Exception("UNIQUE constraint"))
+                mock_sess.commit.side_effect = commit_side_effect
+
+                with patch.object(self.gd, '_actualizar_estado_operativo'):
+                    ok, msg, _ = self.gd.completar_picking(1, picker_id=3)
+
+                # El picking debe reportar éxito a pesar del error en el Reparto
+                assert ok is True
+            finally:
+                patcher.stop()
+
+    def test_no_duplica_reparto_existente(self, app):
+        """Si ya existe Reparto, completar_picking no crea otro."""
+        with app.app_context():
+            patcher, mock_sess = _mock_session(self.gd)
+            try:
+                from states import EstadoPicking, EstadoPedido, EstadoReparto
+                from models import Reparto
+
+                mock_picking = MagicMock()
+                mock_picking.id = 1
+                mock_picking.empleado_id = 3
+                mock_picking.items = []
+
+                mock_pedido = MagicMock()
+                mock_pedido.PedidoID = 10
+                mock_pedido.Estado = EstadoPedido.EN_PREPARACION.value
+                mock_pedido.TelefonoEntrega = None
+                mock_picking.pedido = mock_pedido
+
+                mock_q_picking = MagicMock()
+                mock_q_picking.filter_by.return_value = mock_q_picking
+                mock_q_picking.first.return_value = mock_picking
+
+                # Reparto ya existe
+                mock_reparto_existente = MagicMock(spec=Reparto)
+                mock_q_reparto = MagicMock()
+                mock_q_reparto.filter_by.return_value = mock_q_reparto
+                mock_q_reparto.first.return_value = mock_reparto_existente
+
+                mock_q_activos = MagicMock()
+                mock_q_activos.filter.return_value = mock_q_activos
+                mock_q_activos.count.return_value = 0
+
+                mock_sess.query.side_effect = [mock_q_picking, mock_q_reparto, mock_q_activos]
+
+                with patch.object(self.gd, '_actualizar_estado_operativo'):
+                    ok, msg, _ = self.gd.completar_picking(1, picker_id=3)
+
+                assert ok is True
+                from models import Reparto
+                add_calls = mock_sess.add.call_args_list
+                reparto_adds = [c for c in add_calls if isinstance(c.args[0], Reparto)]
+                assert len(reparto_adds) == 0  # No se añade uno nuevo
+            finally:
+                patcher.stop()
