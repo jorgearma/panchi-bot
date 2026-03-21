@@ -126,3 +126,32 @@ def finalizar_picking(picking_id: int):
         return jsonify({"error": msg}), 400
     _notificar(telefono, "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦")
     return jsonify({"ok": True, "mensaje": msg})
+
+
+@blueprint_picker.route("/picker/cola")
+@requiere_rol('picker', 'manager', 'admin')
+def cola():
+    try:
+        lista = gestor_dashboard.pickings_sin_asignar()
+        return jsonify({"cola": lista, "total": len(lista)})
+    except Exception as e:
+        logger.error("Error en /picker/cola: %s", e)
+        return jsonify({"error": "Error interno"}), 500
+
+
+@blueprint_picker.route("/picker/cola/coger/<int:picking_id>", methods=["POST"])
+@requiere_rol('picker', 'manager', 'admin')
+def coger_picking(picking_id: int):
+    empleado_id = session.get('empleado_id')
+    try:
+        ok, motivo = gestor_dashboard.reclamar_picking(picking_id, empleado_id)
+    except Exception as e:
+        logger.error("Error en /picker/cola/coger/%s: %s", picking_id, e)
+        return jsonify({"error": "Error interno"}), 500
+    if ok:
+        return jsonify({"ok": True, "picking_id": picking_id})
+    if motivo == 'no_encontrado':
+        return jsonify({"error": motivo}), 404
+    if motivo == 'ya_cogido':
+        return jsonify({"error": motivo}), 409
+    return jsonify({"error": motivo}), 400
