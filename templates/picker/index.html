@@ -291,7 +291,8 @@
                   <span class="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
                     Pedido #<span x-text="p.pedido_id"></span>
                   </span>
-                  <div class="text-lg font-black text-slate-900 leading-tight truncate"
+                  <div class="text-lg font-black leading-tight truncate"
+                       :class="colorTiempoDesde(p.iniciado_en)"
                        x-text="p.iniciado_en ? formatMinutosDesde(p.iniciado_en) : 'Recién asignado'"></div>
                 </div>
               </div>
@@ -1187,6 +1188,16 @@
           const horas = Math.floor(diffMin / 60);
           const mins = diffMin % 60;
           return mins === 0 ? `${horas} h` : `${horas} h ${mins} min`;
+        },
+
+        colorTiempoDesde(ts) {
+          if (!ts) return 'text-slate-900';
+          const fecha = new Date(ts);
+          if (Number.isNaN(fecha.getTime())) return 'text-slate-900';
+          const diffMin = Math.max(0, Math.floor((Date.now() - fecha.getTime()) / 60000));
+          if (diffMin <= 5) return 'text-emerald-600';
+          if (diffMin <= 8) return 'text-amber-500';
+          return 'text-red-600';
         },
       };
     }
