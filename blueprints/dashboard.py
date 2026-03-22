@@ -241,6 +241,61 @@ def turnos_historial():
         return _err("Error interno", 500)
 
 
+@blueprint_dashboard.route("/dashboard/rendimiento")
+@requiere_rol('manager', 'admin')
+def rendimiento():
+    return render_template("dashboard/rendimiento.html")
+
+
+@blueprint_dashboard.route("/dashboard/rendimiento-datos")
+@requiere_rol('manager', 'admin')
+def rendimiento_datos():
+    try:
+        periodo = request.args.get("periodo", "hoy")
+        rol     = request.args.get("rol") or None
+        return _ok(gestor_dashboard.rendimiento_resumen(periodo=periodo, rol=rol))
+    except Exception as e:
+        logger.error("Error en /dashboard/rendimiento-datos: %s", e)
+        return _err("Error interno", 500)
+
+
+@blueprint_dashboard.route("/dashboard/rendimiento/<int:empleado_id>")
+@requiere_rol('manager', 'admin')
+def rendimiento_empleado(empleado_id):
+    try:
+        periodo = request.args.get("periodo", "semana")
+        data = gestor_dashboard.rendimiento_empleado(empleado_id, periodo=periodo)
+        if data is None:
+            return _err("Empleado no encontrado", 404)
+        return _ok(data)
+    except Exception as e:
+        logger.error("Error en /dashboard/rendimiento/%s: %s", empleado_id, e)
+        return _err("Error interno", 500)
+
+
+# ---------------------------------------------------------------------------
+# Estadísticas e Histórico
+# ---------------------------------------------------------------------------
+
+@blueprint_dashboard.route("/dashboard/estadisticas")
+@requiere_rol('manager', 'admin')
+def estadisticas():
+    return render_template("dashboard/estadisticas.html")
+
+
+@blueprint_dashboard.route("/dashboard/estadisticas-datos")
+@requiere_rol('manager', 'admin')
+def estadisticas_datos():
+    desde        = request.args.get('desde') or None
+    hasta        = request.args.get('hasta') or None
+    granularidad = request.args.get('granularidad', 'dia')
+    try:
+        return _ok(gestor_dashboard.estadisticas(desde=desde, hasta=hasta, granularidad=granularidad))
+    except Exception as e:
+        logger.error("Error en /dashboard/estadisticas-datos: %s", e)
+        return _err("Error interno", 500)
+
+
 # ---------------------------------------------------------------------------
 # Write endpoints
 # ---------------------------------------------------------------------------
