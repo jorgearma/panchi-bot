@@ -1679,17 +1679,6 @@ class GestorDashboard:
             logger.error("Error reclamando reparto pedido %s: %s", pedido_id, e)
             return False, 'error'
 
-            if resultado == 0:
-                return False, 'ya_cogido'
-
-            self._actualizar_estado_operativo(empleado_id, 'ocupado')
-            return True, 'ok'
-
-        except SQLAlchemyError as e:
-            s.rollback()
-            logger.error("Error reclamando reparto %s: %s", reparto_id, e)
-            return False, 'error'
-
     def pickings_sin_asignar(self) -> list[dict]:
         """Pedidos con PickingPedido creado pero sin picker asignado.
         Solo incluye pedidos en estado activo (Pagado, contra_reembolso, en_preparacion).
@@ -1724,8 +1713,8 @@ class GestorDashboard:
 
     def reclamar_picking(self, picking_id: int, empleado_id: int) -> tuple[bool, str]:
         """
-        Asigna el picking al empleado de forma atómica y avanza el estado a EN_PROCESO.
-        Nota: no transiciona el estado del Pedido padre — eso lo hace asignar_picker.
+        Asigna el picking al empleado de forma atómica, avanza el estado a EN_PROCESO
+        y transiciona el Pedido padre a EN_PREPARACION.
         Returns:
             (True,  'ok')            — asignado correctamente
             (False, 'no_encontrado') — picking_id no existe
@@ -1738,6 +1727,8 @@ class GestorDashboard:
             picking = s.query(PickingPedido).filter_by(id=picking_id).first()
             if not picking:
                 return False, 'no_encontrado'
+
+            pedido_id_para_transicion = picking.pedido_id
 
             # 2. UPDATE atómico — solo actualiza si sigue libre
             resultado = (
@@ -1761,7 +1752,20 @@ class GestorDashboard:
             if resultado == 0:
                 return False, 'ya_cogido'
 
-            # 3. Actualizar estado operativo del picker
+            # 3. Transicionar el Pedido a EN_PREPARACION
+            pedido = s.query(Pedido).filter_by(PedidoID=pedido_id_para_transicion).first()
+            if pedido and transicion_valida_pedido(pedido.Estado, EstadoPedido.EN_PREPARACION.value):
+                estado_anterior = pedido.Estado
+                pedido.Estado = EstadoPedido.EN_PREPARACION.value
+                s.add(HistorialEstadoPedido(
+                    pedido_id=pedido.PedidoID,
+                    estado_anterior=estado_anterior,
+                    estado_nuevo=EstadoPedido.EN_PREPARACION.value,
+                    notas=f"Picking iniciado — picker #{empleado_id}",
+                ))
+                s.commit()
+
+            # 4. Actualizar estado operativo del picker
             self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, 'ok'
 

@@ -96,9 +96,11 @@ class TestGestorDashboardCola:
             try:
                 mock_picking = MagicMock()
                 mock_picking.id = 7
+                mock_picking.pedido_id = 10
 
-                # Primera query: existencia check
-                # Segunda query: UPDATE atómico
+                # Primera query: existencia check (PickingPedido)
+                # Segunda query: UPDATE atómico (PickingPedido)
+                # Tercera query: Pedido para transicionar a EN_PREPARACION
                 mock_q_exist = MagicMock()
                 mock_q_exist.filter_by.return_value = mock_q_exist
                 mock_q_exist.first.return_value = mock_picking
@@ -107,7 +109,14 @@ class TestGestorDashboardCola:
                 mock_q_update.filter.return_value = mock_q_update
                 mock_q_update.update.return_value = 1   # 1 row updated
 
-                mock_sess.query.side_effect = [mock_q_exist, mock_q_update]
+                mock_pedido = MagicMock()
+                mock_pedido.PedidoID = 10
+                mock_pedido.Estado = 'pagado'
+                mock_q_pedido = MagicMock()
+                mock_q_pedido.filter_by.return_value = mock_q_pedido
+                mock_q_pedido.first.return_value = mock_pedido
+
+                mock_sess.query.side_effect = [mock_q_exist, mock_q_update, mock_q_pedido]
 
                 with patch.object(self.gd, '_actualizar_estado_operativo') as mock_aso:
                     ok, msg = self.gd.reclamar_picking(7, empleado_id=3)
