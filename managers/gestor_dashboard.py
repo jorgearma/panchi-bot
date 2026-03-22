@@ -1815,6 +1815,12 @@ class GestorDashboard:
         from sqlalchemy import or_
         from models import Usuario
 
+        estados_finales = [
+            EstadoPedido.ENTREGADO.value,
+            EstadoPedido.CANCELADO.value,
+            EstadoPedido.REEMBOLSADO.value,
+        ]
+
         per_page = min(per_page, 100)
         s = self.session
 
@@ -1836,6 +1842,8 @@ class GestorDashboard:
 
         if estado:
             query = query.filter(Pedido.Estado == estado)
+        else:
+            query = query.filter(Pedido.Estado.in_(estados_finales))
 
         if forma_pago:
             query = query.filter(Pedido.forma_pago == forma_pago)

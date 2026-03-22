@@ -108,16 +108,9 @@
           class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
         >
           <option value="">Todos</option>
-          <option value="PENDIENTE">Pendiente</option>
-          <option value="CONFIRMANDO_PAGO">Confirmando pago</option>
-          <option value="PAGADO">Pagado</option>
-          <option value="CONTRA_REEMBOLSO">Contrarrembolso</option>
-          <option value="EN_PREPARACION">En preparación</option>
-          <option value="PREPARADO">Preparado</option>
-          <option value="EN_REPARTO">En reparto</option>
-          <option value="ENTREGADO">Entregado</option>
-          <option value="CANCELADO">Cancelado</option>
-          <option value="REEMBOLSADO">Reembolsado</option>
+          <option value="entregado">Entregado</option>
+          <option value="cancelado">Cancelado</option>
+          <option value="reembolsado">Reembolsado</option>
         </select>
       </div>
 
@@ -484,24 +477,29 @@ function historialApp() {
     },
 
     _estadoConf: {
-      'PENDIENTE':        ['bg-slate-100 text-slate-600',    'Pendiente'],
-      'ENLACE':           ['bg-slate-100 text-slate-600',    'Enlace'],
-      'ENLACE2':          ['bg-slate-100 text-slate-600',    'Enlace 2'],
-      'CONFIRMANDO_PAGO': ['bg-yellow-100 text-yellow-700',  'Confirmando'],
-      'PAGADO':           ['bg-emerald-100 text-emerald-700','Pagado'],
-      'CONTRA_REEMBOLSO': ['bg-violet-100 text-violet-700',  'Contrarremb.'],
-      'EN_PREPARACION':   ['bg-blue-100 text-blue-700',      'Preparando'],
-      'PREPARADO':        ['bg-indigo-100 text-indigo-700',  'Preparado'],
-      'EN_REPARTO':       ['bg-orange-100 text-orange-700',  'En reparto'],
-      'ENTREGADO':        ['bg-emerald-100 text-emerald-800','Entregado'],
-      'CANCELADO':        ['bg-red-100 text-red-700',        'Cancelado'],
-      'REEMBOLSADO':      ['bg-slate-100 text-slate-500',    'Reembolsado'],
+      'pendiente':         ['bg-slate-100 text-slate-600',    'Pendiente'],
+      'enlace':            ['bg-slate-100 text-slate-600',    'Enlace'],
+      'enlace2':           ['bg-slate-100 text-slate-600',    'Enlace 2'],
+      'confirmando_pago':  ['bg-yellow-100 text-yellow-700',  'Confirmando'],
+      'pagado':            ['bg-emerald-100 text-emerald-700','Pagado'],
+      'contra_reembolso':  ['bg-violet-100 text-violet-700',  'Contrarremb.'],
+      'en_preparacion':    ['bg-blue-100 text-blue-700',      'Preparando'],
+      'preparado':         ['bg-indigo-100 text-indigo-700',  'Preparado'],
+      'en_reparto':        ['bg-orange-100 text-orange-700',  'En reparto'],
+      'entregado':         ['bg-emerald-100 text-emerald-800','Entregado'],
+      'cancelado':         ['bg-red-100 text-red-700',        'Cancelado'],
+      'reembolsado':       ['bg-violet-100 text-violet-700',  'Reembolsado'],
+    },
+    normalizarEstado(estado) {
+      return (estado || '').toString().trim().toLowerCase();
     },
     estadoClases(estado) {
-      return (this._estadoConf[estado] || ['bg-slate-100 text-slate-500', estado])[0];
+      const key = this.normalizarEstado(estado);
+      return (this._estadoConf[key] || ['bg-slate-100 text-slate-500', estado])[0];
     },
     estadoEtiqueta(estado) {
-      return (this._estadoConf[estado] || ['bg-slate-100 text-slate-500', estado])[1];
+      const key = this.normalizarEstado(estado);
+      return (this._estadoConf[key] || ['bg-slate-100 text-slate-500', estado])[1];
     },
   };
 }

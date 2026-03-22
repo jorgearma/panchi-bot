@@ -26,26 +26,27 @@
 #}
 {% macro status_badge(estado) %}
   {% set _conf = {
-    'PENDIENTE':         ('bg-slate-100 text-slate-600',    'Pendiente'),
-    'ENLACE':            ('bg-slate-100 text-slate-600',    'Enlace'),
-    'ENLACE2':           ('bg-slate-100 text-slate-600',    'Enlace 2'),
-    'CONFIRMANDO_PAGO':  ('bg-yellow-100 text-yellow-700',  'Confirmando'),
-    'PAGADO':            ('bg-emerald-100 text-emerald-700','Pagado'),
-    'CONTRA_REEMBOLSO':  ('bg-violet-100 text-violet-700',  'Contrarremb.'),
-    'EN_PREPARACION':    ('bg-blue-100 text-blue-700',      'Preparando'),
-    'PREPARADO':         ('bg-indigo-100 text-indigo-700',  'Preparado'),
-    'EN_REPARTO':        ('bg-orange-100 text-orange-700',  'En reparto'),
-    'ENTREGADO':         ('bg-emerald-100 text-emerald-800','Entregado'),
-    'CANCELADO':         ('bg-red-100 text-red-700',        'Cancelado'),
-    'REEMBOLSADO':       ('bg-slate-100 text-slate-500',    'Reembolsado'),
+    'pendiente':         ('bg-slate-100 text-slate-600',    'Pendiente'),
+    'enlace':            ('bg-slate-100 text-slate-600',    'Enlace'),
+    'enlace2':           ('bg-slate-100 text-slate-600',    'Enlace 2'),
+    'confirmando_pago':  ('bg-yellow-100 text-yellow-700',  'Confirmando'),
+    'pagado':            ('bg-emerald-100 text-emerald-700','Pagado'),
+    'contra_reembolso':  ('bg-violet-100 text-violet-700',  'Contrarremb.'),
+    'en_preparacion':    ('bg-blue-100 text-blue-700',      'Preparando'),
+    'preparado':         ('bg-indigo-100 text-indigo-700',  'Preparado'),
+    'en_reparto':        ('bg-orange-100 text-orange-700',  'En reparto'),
+    'entregado':         ('bg-emerald-100 text-emerald-800','Entregado'),
+    'cancelado':         ('bg-red-100 text-red-700',        'Cancelado'),
+    'reembolsado':       ('bg-violet-100 text-violet-700',  'Reembolsado'),
     'disponible':        ('bg-emerald-100 text-emerald-700','Disponible'),
     'ocupado':           ('bg-blue-100 text-blue-700',      'Ocupado'),
     'en_pausa':          ('bg-yellow-100 text-yellow-700',  'En pausa'),
     'desconectado':      ('bg-slate-100 text-slate-500',    'Desconectado'),
   } %}
   {# Jinja2 no soporta multi-target {% set a, b = tuple %} — desempaquetar manualmente #}
+  {% set _estado_key = (estado|string).strip().lower() %}
   {% set _default = ('bg-slate-100 text-slate-500', estado) %}
-  {% set _tuple = _conf.get(estado, _default) %}
+  {% set _tuple = _conf.get(_estado_key, _default) %}
   {% set _clases = _tuple[0] %}
   {% set _etiqueta = _tuple[1] %}
   <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ _clases }}">
