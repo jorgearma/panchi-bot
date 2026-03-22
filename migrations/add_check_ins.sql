@@ -9,6 +9,8 @@ CREATE TABLE check_ins (
     CONSTRAINT uq_checkin_empleado_fecha UNIQUE (empleado_id, fecha)
 );
 
+GO
+
 CREATE TABLE tramos_turno (
     id           INT IDENTITY(1,1) PRIMARY KEY,
     check_in_id  INT NOT NULL REFERENCES check_ins(id),

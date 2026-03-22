@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from models import Empleado, Turno, PickingPedido, Reparto
+from models import Empleado, Turno, PickingPedido, Reparto, CheckIn, TramoTurno
 from states import EstadoPicking, EstadoReparto
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,18 @@ class GestorEmpleado:
             if not empleado:
                 return False, "Empleado no encontrado"
             empleado.estado_operativo = nuevo_estado
+            # Hook fichaje: pausar cierra tramo activo
+            if nuevo_estado == 'en_pausa':
+                check_in = self._checkin_abierto_hoy(empleado_id)
+                if check_in:
+                    self._cerrar_tramo_activo(check_in, datetime.utcnow())
+            # Hook fichaje: desconectarse cierra tramo y check-in
+            elif nuevo_estado == 'desconectado':
+                check_in = self._checkin_abierto_hoy(empleado_id)
+                if check_in:
+                    ahora = datetime.utcnow()
+                    self._cerrar_tramo_activo(check_in, ahora)
+                    check_in.fin = ahora
             s.commit()
             logger.info("ESTADO_EMPLEADO empleado_id=%s estado=%s", empleado_id, nuevo_estado)
             return True, f"Estado actualizado a '{nuevo_estado}'"
@@ -148,6 +160,12 @@ class GestorEmpleado:
                 accion='cambio_rol',
                 detalles=_json.dumps({'de': rol_anterior, 'a': nuevo_rol}),
             ))
+            # Hook fichaje: cierra tramo anterior y abre uno nuevo
+            check_in = self._checkin_abierto_hoy(empleado_id)
+            if check_in:
+                ahora = datetime.utcnow()
+                self._cerrar_tramo_activo(check_in, ahora)
+                self._abrir_tramo(check_in, nuevo_rol, ahora)
             s.commit()
             logger.info("CAMBIO_ROL empleado_id=%s de=%s a=%s", empleado_id, rol_anterior, nuevo_rol)
             return True, f"Rol cambiado a '{nuevo_rol}'", []
@@ -155,6 +173,114 @@ class GestorEmpleado:
             s.rollback()
             logger.error("Error cambiando rol empleado %s: %s", empleado_id, e)
             return False, 'Error de base de datos', []
+
+    # -------------------------------------------------------------------------
+    # Fichaje / Check-in
+    # -------------------------------------------------------------------------
+
+    def _checkin_abierto_hoy(self, empleado_id: int):
+        """Devuelve el CheckIn abierto de hoy o None."""
+        hoy = datetime.utcnow().date()
+        return self.session.query(CheckIn).filter(
+            CheckIn.empleado_id == empleado_id,
+            CheckIn.fecha == hoy,
+            CheckIn.fin == None,
+        ).first()
+
+    def _cerrar_tramo_activo(self, check_in, ahora: datetime):
+        """Cierra el TramoTurno sin fin de este check-in. Safe si no hay ninguno."""
+        tramo = self.session.query(TramoTurno).filter(
+            TramoTurno.check_in_id == check_in.id,
+            TramoTurno.fin == None,
+        ).first()
+        if tramo:
+            tramo.fin = ahora
+
+    def _abrir_tramo(self, check_in, rol: str, ahora: datetime):
+        """Crea un nuevo TramoTurno abierto."""
+        tramo = TramoTurno(check_in_id=check_in.id, rol=rol, inicio=ahora)
+        self.session.add(tramo)
+
+    def iniciar_turno(self, empleado_id: int) -> CheckIn:
+        """Crea un CheckIn para hoy. Lanza ValueError('ya_abierto') si ya existe uno."""
+        s = self.session
+        ahora = datetime.utcnow()
+        hoy = ahora.date()
+
+        existente = s.query(CheckIn).filter(
+            CheckIn.empleado_id == empleado_id,
+            CheckIn.fecha == hoy,
+        ).first()
+        if existente:
+            raise ValueError('ya_abierto')
+
+        empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+        check_in = CheckIn(empleado_id=empleado_id, fecha=hoy, inicio=ahora)
+        s.add(check_in)
+        try:
+            s.flush()
+            if empleado and empleado.rol_activo:
+                self._abrir_tramo(check_in, empleado.rol_activo, ahora)
+                if empleado.estado_operativo in ('desconectado', 'en_pausa'):
+                    empleado.estado_operativo = 'disponible'
+            s.commit()
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error en iniciar_turno empleado %s: %s", empleado_id, e)
+            raise
+        logger.info("CHECKIN empleado_id=%s inicio=%s", empleado_id, ahora.isoformat())
+        return check_in
+
+    def cerrar_turno(self, empleado_id: int) -> dict:
+        """Cierra el CheckIn activo de hoy. Lanza ValueError('no_abierto') si no hay ninguno."""
+        s = self.session
+        ahora = datetime.utcnow()
+
+        check_in = self._checkin_abierto_hoy(empleado_id)
+        if not check_in:
+            raise ValueError('no_abierto')
+
+        try:
+            self._cerrar_tramo_activo(check_in, ahora)
+            check_in.fin = ahora
+            s.commit()
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error en cerrar_turno empleado %s: %s", empleado_id, e)
+            raise
+        logger.info("CHECKOUT empleado_id=%s fin=%s", empleado_id, ahora.isoformat())
+        return self._resumen_checkin(check_in, ahora)
+
+    def checkin_hoy(self, empleado_id: int) -> dict:
+        """Estado del check-in de hoy (abierto o cerrado). Nunca lanza."""
+        hoy = datetime.utcnow().date()
+        check_in = self.session.query(CheckIn).filter(
+            CheckIn.empleado_id == empleado_id,
+            CheckIn.fecha == hoy,
+        ).first()
+        if not check_in:
+            return {'activo': False}
+        ahora = datetime.utcnow()
+        return self._resumen_checkin(check_in, ahora)
+
+    def _resumen_checkin(self, check_in, ahora: datetime) -> dict:
+        """Calcula duración total y por rol. Tramos abiertos usan ahora como fin provisional."""
+        fin_efectivo = check_in.fin or ahora
+        total_min = int((fin_efectivo - check_in.inicio).total_seconds() / 60)
+
+        tramos_resumen = []
+        for t in check_in.tramos:
+            t_fin = t.fin or ahora
+            minutos = int((t_fin - t.inicio).total_seconds() / 60)
+            tramos_resumen.append({'rol': t.rol, 'minutos': minutos})
+
+        return {
+            'activo':            check_in.fin is None,
+            'inicio':            check_in.inicio.isoformat(),
+            'fin':               check_in.fin.isoformat() if check_in.fin else None,
+            'duracion_total_min': total_min,
+            'tramos':            tramos_resumen,
+        }
 
     def carga_operativa(self) -> dict:
         """Nº de pedidos en cada cola para la pantalla de check-in."""
