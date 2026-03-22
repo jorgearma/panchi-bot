@@ -1956,3 +1956,174 @@ class GestorDashboard:
             "picking": picking,
             "reparto": reparto,
         }
+
+    def turnos_hoy(self) -> dict:
+        """Estado de asistencia del día actual.
+
+        Devuelve todos los empleados activos con su check-in de hoy (si lo hay),
+        el tiempo acumulado, y el estado operativo actual.
+
+        Returns:
+            {
+                empleados: [{
+                    id, nombre, rol, rol_activo, estado_operativo,
+                    check_in_inicio, check_in_fin, minutos_activo,
+                    activo (bool), minutos_tarde,
+                }],
+                resumen: { con_checkin, en_pausa, desconectados, total }
+            }
+        """
+        from models import CheckIn
+
+        hoy = datetime.utcnow().date()
+        ahora = datetime.utcnow()
+        s = self.session
+
+        empleados = (
+            s.query(Empleado)
+            .filter_by(activo=True)
+            .order_by(Empleado.Nombre)
+            .all()
+        )
+
+        # Build dict empleado_id → best check-in of the day
+        # Prefer open check-ins; among same type, prefer the most recent
+        checkins_hoy = {}
+        for ci in s.query(CheckIn).filter(CheckIn.fecha == hoy).all():
+            prev = checkins_hoy.get(ci.empleado_id)
+            if prev is None:
+                checkins_hoy[ci.empleado_id] = ci
+            elif ci.fin is None and prev.fin is not None:
+                # Open beats closed
+                checkins_hoy[ci.empleado_id] = ci
+            elif ci.fin is None and prev.fin is None:
+                # Both open — keep later
+                if ci.inicio > prev.inicio:
+                    checkins_hoy[ci.empleado_id] = ci
+            elif prev.fin is not None and ci.fin is not None:
+                # Both closed — keep later
+                if ci.inicio > prev.inicio:
+                    checkins_hoy[ci.empleado_id] = ci
+
+        resultado = []
+        for emp in empleados:
+            ci = checkins_hoy.get(emp.EmpleadoID)
+            minutos_activo = None
+            if ci:
+                fin_efectivo = ci.fin or ahora
+                minutos_activo = int((fin_efectivo - ci.inicio).total_seconds() / 60)
+
+            resultado.append({
+                'id':               emp.EmpleadoID,
+                'nombre':           f'{emp.Nombre} {emp.Apellido}',
+                'rol':              emp.rol.nombre if emp.rol else None,
+                'rol_activo':       emp.rol_activo,
+                'estado_operativo': emp.estado_operativo,
+                'check_in_inicio':  _iso(ci.inicio) if ci else None,
+                'check_in_fin':     _iso(ci.fin) if ci else None,
+                'minutos_activo':   minutos_activo,
+                'activo':           ci is not None and ci.fin is None,
+                'minutos_tarde':    ci.minutos_tarde if ci else None,
+            })
+
+        n_con_checkin   = sum(1 for e in resultado if e['activo'])
+        n_pausa         = sum(1 for e in resultado if e['estado_operativo'] == 'en_pausa')
+        n_desconectados = sum(1 for e in resultado if e['estado_operativo'] == 'desconectado')
+
+        return {
+            'empleados': resultado,
+            'resumen': {
+                'con_checkin':   n_con_checkin,
+                'en_pausa':      n_pausa,
+                'desconectados': n_desconectados,
+                'total':         len(resultado),
+            },
+        }
+
+    def turnos_historial(
+        self,
+        desde: str = None,
+        hasta: str = None,
+        empleado_id: int = None,
+        rol: str = None,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> dict:
+        """Historial paginado de check-ins con filtros.
+
+        Args:
+            desde:       fecha ISO 'YYYY-MM-DD' (inclusive)
+            hasta:       fecha ISO 'YYYY-MM-DD' (inclusive)
+            empleado_id: filtrar por empleado concreto
+            rol:         filtrar por nombre de rol (Rol.nombre)
+            page:        página 1-based
+            per_page:    resultados por página (máx 100)
+
+        Returns:
+            { turnos: list[dict], total: int, page: int, pages: int }
+        """
+        from math import ceil
+        from models import CheckIn, Rol as RolModel
+
+        per_page = min(per_page, 100)
+        s = self.session
+
+        query = (
+            s.query(CheckIn)
+            .join(Empleado, CheckIn.empleado_id == Empleado.EmpleadoID)
+        )
+
+        if desde:
+            try:
+                query = query.filter(CheckIn.fecha >= datetime.strptime(desde, '%Y-%m-%d').date())
+            except ValueError:
+                pass
+
+        if hasta:
+            try:
+                query = query.filter(CheckIn.fecha <= datetime.strptime(hasta, '%Y-%m-%d').date())
+            except ValueError:
+                pass
+
+        if empleado_id:
+            query = query.filter(CheckIn.empleado_id == empleado_id)
+
+        if rol:
+            query = (
+                query
+                .join(RolModel, Empleado.rol_id == RolModel.id)
+                .filter(RolModel.nombre == rol)
+            )
+
+        total = query.count()
+        pages = ceil(total / per_page) if total else 1
+
+        checkins = (
+            query
+            .order_by(CheckIn.fecha.desc(), CheckIn.inicio.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+
+        resultado = []
+        for ci in checkins:
+            emp = ci.empleado
+            horas_trabajadas = None
+            if ci.inicio and ci.fin:
+                horas_trabajadas = round((ci.fin - ci.inicio).total_seconds() / 3600, 1)
+
+            resultado.append({
+                'check_in_id':      ci.id,
+                'empleado_id':      emp.EmpleadoID,
+                'empleado_nombre':  f'{emp.Nombre} {emp.Apellido}',
+                'rol':              emp.rol.nombre if emp.rol else None,
+                'fecha':            ci.fecha.isoformat() if ci.fecha else None,
+                'inicio':           _iso(ci.inicio),
+                'fin':              _iso(ci.fin),
+                'horas_trabajadas': horas_trabajadas,
+                'minutos_tarde':    ci.minutos_tarde,
+                'activo':           ci.fin is None,
+            })
+
+        return {'turnos': resultado, 'total': total, 'page': page, 'pages': pages}

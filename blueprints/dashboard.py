@@ -206,6 +206,41 @@ def detalle_pedido(pedido_id):
         return _err("Error interno", 500)
 
 
+@blueprint_dashboard.route("/dashboard/turnos")
+@requiere_rol('manager', 'admin')
+def turnos():
+    return render_template("dashboard/turnos.html")
+
+
+@blueprint_dashboard.route("/dashboard/turnos/hoy")
+@requiere_rol('manager', 'admin')
+def turnos_hoy():
+    try:
+        return _ok(gestor_dashboard.turnos_hoy())
+    except Exception as e:
+        logger.error("Error en /dashboard/turnos/hoy: %s", e)
+        return _err("Error interno", 500)
+
+
+@blueprint_dashboard.route("/dashboard/turnos/historial")
+@requiere_rol('manager', 'admin')
+def turnos_historial():
+    try:
+        desde       = request.args.get("desde")
+        hasta       = request.args.get("hasta")
+        empleado_id = request.args.get("empleado_id", type=int)
+        rol         = request.args.get("rol")
+        page        = max(int(request.args.get("page", 1)), 1)
+        per_page    = int(request.args.get("per_page", 25))
+        return _ok(gestor_dashboard.turnos_historial(
+            desde=desde, hasta=hasta, empleado_id=empleado_id,
+            rol=rol, page=page, per_page=per_page,
+        ))
+    except Exception as e:
+        logger.error("Error en /dashboard/turnos/historial: %s", e)
+        return _err("Error interno", 500)
+
+
 # ---------------------------------------------------------------------------
 # Write endpoints
 # ---------------------------------------------------------------------------
