@@ -183,6 +183,19 @@ class GestorEmpleado:
             return {'picker': {'pendientes': 0, 'en_proceso': 0},
                     'repartidor': {'listos_para_entregar': 0, 'en_camino': 0}}
 
+    def _colas_globales(self) -> dict:
+        s = self.session
+        from sqlalchemy import func
+        sin_picker = s.query(func.count(PickingPedido.id)).filter(
+            PickingPedido.empleado_id == None,
+            PickingPedido.estado == EstadoPicking.PENDIENTE.value,
+        ).scalar() or 0
+        sin_repartidor = s.query(func.count(Reparto.id)).filter(
+            Reparto.repartidor_id == None,
+            Reparto.estado == EstadoReparto.PENDIENTE.value,
+        ).scalar() or 0
+        return {'sin_picker': sin_picker, 'sin_repartidor': sin_repartidor}
+
     def metricas_hoy(self, empleado_id: int, rol: str) -> dict:
         """KPIs personales del día: pedidos_completados, tiempo_medio_min, incidencias_hoy."""
         from sqlalchemy import func
@@ -216,6 +229,7 @@ class GestorEmpleado:
                 'pedidos_completados': len(completados),
                 'tiempo_medio_min':    tiempo_medio,
                 'incidencias_hoy':     incidencias,
+                **self._colas_globales(),
             }
 
         else:  # repartidor
@@ -242,4 +256,5 @@ class GestorEmpleado:
                 'pedidos_completados': len(entregados),
                 'tiempo_medio_min':    tiempo_medio,
                 'incidencias_hoy':     fallidos,
+                **self._colas_globales(),
             }
