@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Turnos y Asistencia — Panchi Ops</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    [x-cloak] { display: none !important; }
+    :root {
+      --bg: #edf2f7;
+      --panel: rgba(255, 255, 255, 0.86);
+      --panel-strong: #ffffff;
+      --line: rgba(148, 163, 184, 0.22);
+      --ink: #0f172a;
+      --muted: #64748b;
+      --brand: #0f4c81;
+      --brand-soft: #dbeafe;
+    }
+    body {
+      font-family: "Manrope", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(14, 116, 144, 0.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 24%),
+        linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+    .glass-panel {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+    .fade-in { animation: fadeIn .25s ease-in; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body class="min-h-screen">
+
+{% from 'macros/ui.html' import status_badge, empty_state, loading_skeleton, error_banner %}
+
+<!-- ── HEADER ─────────────────────────────────────────────────────────────── -->
+<header class="sticky top-0 z-30 px-4 pt-4 pb-2">
+  <div class="mx-auto max-w-7xl glass-panel rounded-2xl px-5 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">🍕</span>
+      <span class="font-extrabold text-lg tracking-tight" style="color:var(--brand)">Panchi Ops</span>
+      <span class="hidden sm:inline text-slate-300">|</span>
+      <span class="hidden sm:inline text-sm font-semibold text-slate-500">Turnos y Asistencia</span>
+    </div>
+    {% include 'dashboard/_nav.html' %}
+  </div>
+</header>
+
+<!-- ── MAIN ───────────────────────────────────────────────────────────────── -->
+<main
+  class="mx-auto max-w-7xl px-4 py-6"
+  x-data="turnosApp()"
+>
+
+  <!-- ── TABS ──────────────────────────────────────────────────────────────── -->
+  <div class="flex items-center gap-1 mb-5 border-b border-slate-200">
+    <button
+      @click="tab = 'hoy'"
+      :class="tab === 'hoy'
+        ? 'border-b-2 border-blue-600 text-blue-700 font-semibold'
+        : 'text-slate-500 hover:text-slate-700'"
+      class="px-4 py-2.5 text-sm transition -mb-px"
+    >
+      Hoy
+    </button>
+    <button
+      @click="tab = 'historial'; if (!historialCargado) cargarHistorial()"
+      :class="tab === 'historial'
+        ? 'border-b-2 border-blue-600 text-blue-700 font-semibold'
+        : 'text-slate-500 hover:text-slate-700'"
+      class="px-4 py-2.5 text-sm transition -mb-px"
+    >
+      Historial
+    </button>
+  </div>
+
+  <!-- ── TAB HOY ────────────────────────────────────────────────────────────── -->
+  <div x-show="tab === 'hoy'">
+
+    <!-- Error banner -->
+    {{ error_banner() }}
+
+    <!-- Summary bar -->
+    <div class="glass-panel rounded-2xl px-5 py-3 mb-5 flex flex-wrap gap-5 items-center" x-show="!cargandoHoy && resumen">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+        <span class="text-sm font-semibold text-slate-700">
+          <span x-text="resumen ? resumen.con_checkin : 0"></span> activos
+        </span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span>
+        <span class="text-sm font-semibold text-slate-700">
+          <span x-text="resumen ? resumen.en_pausa : 0"></span> en pausa
+        </span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>
+        <span class="text-sm font-semibold text-slate-700">
+          <span x-text="resumen ? resumen.desconectados : 0"></span> desconectados
+        </span>
+      </div>
+      <div class="ml-auto text-xs text-slate-400">
+        Actualiza en <span x-text="segundosParaActualizar"></span>s
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div x-show="cargandoHoy" x-cloak>
+      {{ loading_skeleton(rows=6, cols=4) }}
+    </div>
+
+    <!-- Empty state -->
+    <div x-show="!cargandoHoy && empleados.length === 0" x-cloak>
+      {{ empty_state('👥', 'Sin empleados activos', 'No hay empleados registrados en el sistema.') }}
+    </div>
+
+    <!-- Employee cards grid -->
+    <div
+      x-show="!cargandoHoy && empleados.length > 0"
+      x-cloak
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+    >
+      <template x-for="emp in empleados" :key="emp.id">
+        <div class="glass-panel rounded-2xl px-4 py-4 flex flex-col gap-3 fade-in">
+
+          <!-- Avatar + nombre -->
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0"
+              :class="emp.activo ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'"
+              x-text="emp.nombre.charAt(0).toUpperCase()"
+            ></div>
+            <div class="min-w-0">
+              <p class="font-bold text-slate-800 text-sm truncate" x-text="emp.nombre"></p>
+              <p class="text-xs text-slate-400 truncate" x-text="emp.rol || '—'"></p>
+            </div>
+          </div>
+
+          <!-- Estado operativo badge -->
+          <div class="flex items-center gap-2">
+            <span
+              class="w-2 h-2 rounded-full flex-shrink-0"
+              :class="{
+                'bg-emerald-500': emp.estado_operativo === 'disponible',
+                'bg-blue-500':    emp.estado_operativo === 'ocupado',
+                'bg-yellow-400':  emp.estado_operativo === 'en_pausa',
+                'bg-slate-300':   emp.estado_operativo === 'desconectado',
+              }"
+            ></span>
+            <span
+              class="text-xs font-semibold capitalize"
+              :class="{
+                'text-emerald-700': emp.estado_operativo === 'disponible',
+                'text-blue-700':    emp.estado_operativo === 'ocupado',
+                'text-yellow-700':  emp.estado_operativo === 'en_pausa',
+                'text-slate-400':   emp.estado_operativo === 'desconectado',
+              }"
+              x-text="emp.estado_operativo.replace('_', ' ')"
+            ></span>
+            <span x-show="emp.rol_activo" class="ml-auto text-xs bg-slate-100 text-slate-500 rounded px-1.5 py-0.5 font-medium" x-text="emp.rol_activo"></span>
+          </div>
+
+          <!-- Tiempo activo -->
+          <div class="rounded-xl bg-slate-50 px-3 py-2">
+            <template x-if="emp.activo">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">Tiempo activo</span>
+                <span
+                  class="text-sm font-bold text-slate-800 font-mono"
+                  x-text="formatMinutos(emp.minutos_activo + ticksSinceLoad)"
+                ></span>
+              </div>
+            </template>
+            <template x-if="!emp.activo && emp.check_in_inicio">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">Trabajó</span>
+                <span class="text-sm font-semibold text-slate-600" x-text="formatMinutos(emp.minutos_activo)"></span>
+              </div>
+            </template>
+            <template x-if="!emp.activo && !emp.check_in_inicio">
+              <p class="text-xs text-slate-400 italic">Sin turno hoy</p>
+            </template>
+          </div>
+
+          <!-- Hora check-in -->
+          <div x-show="emp.check_in_inicio" class="text-xs text-slate-400">
+            Entrada: <span class="font-semibold text-slate-600" x-text="formatHora(emp.check_in_inicio)"></span>
+            <template x-if="emp.minutos_tarde && emp.minutos_tarde > 0">
+              <span class="ml-1 text-amber-600 font-semibold" x-text="'+' + emp.minutos_tarde + 'min'"></span>
+            </template>
+          </div>
+
+        </div>
+      </template>
+    </div>
+
+  </div>
+
+  <!-- ── TAB HISTORIAL ──────────────────────────────────────────────────────── -->
+  <div x-show="tab === 'historial'" x-cloak>
+
+    <!-- Filter bar -->
+    <div class="glass-panel rounded-2xl px-5 py-4 mb-5">
+      <div class="flex flex-wrap gap-3 items-end">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Desde</label>
+          <input
+            type="date"
+            x-model="histFiltros.desde"
+            @change="histPagina = 1; cargarHistorial()"
+            class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Hasta</label>
+          <input
+            type="date"
+            x-model="histFiltros.hasta"
+            @change="histPagina = 1; cargarHistorial()"
+            class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Rol</label>
+          <select
+            x-model="histFiltros.rol"
+            @change="histPagina = 1; cargarHistorial()"
+            class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          >
+            <option value="">Todos</option>
+            <option value="picker">Picker</option>
+            <option value="repartidor">Repartidor</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <button
+          @click="histFiltros = {desde:'',hasta:'',rol:''}; histPagina=1; cargarHistorial()"
+          class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 transition"
+        >
+          Limpiar
+        </button>
+
+      </div>
+      <div class="mt-3 text-xs text-slate-500 font-medium" x-show="!cargandoHistorial">
+        <span x-text="histTotal"></span> registros encontrados
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div x-show="cargandoHistorial" x-cloak>
+      {{ loading_skeleton(rows=8, cols=5) }}
+    </div>
+
+    <!-- Empty state -->
+    <div x-show="!cargandoHistorial && turnos.length === 0" x-cloak>
+      {{ empty_state('📅', 'Sin registros', 'No hay turnos para el período seleccionado.') }}
+    </div>
+
+    <!-- Table -->
+    <div x-show="!cargandoHistorial && turnos.length > 0" x-cloak>
+      <div class="glass-panel rounded-2xl overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50/60">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Empleado</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Rol</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Fecha</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Entrada</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Salida</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Horas</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Tarde</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="t in turnos" :key="t.check_in_id">
+              <tr class="border-b border-slate-100 hover:bg-slate-50/50 transition-colors fade-in">
+                <td class="px-4 py-3 font-semibold text-slate-800" x-text="t.empleado_nombre"></td>
+                <td class="px-4 py-3 text-slate-500 capitalize" x-text="t.rol || '—'"></td>
+                <td class="px-4 py-3 text-slate-600 text-xs font-mono" x-text="t.fecha"></td>
+                <td class="px-4 py-3 text-slate-600 text-xs font-mono" x-text="formatHora(t.inicio)"></td>
+                <td class="px-4 py-3 text-xs">
+                  <template x-if="t.activo">
+                    <span class="inline-flex items-center gap-1 text-emerald-600 font-semibold">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+                      Activo
+                    </span>
+                  </template>
+                  <template x-if="!t.activo">
+                    <span class="text-slate-600 font-mono" x-text="formatHora(t.fin)"></span>
+                  </template>
+                </td>
+                <td class="px-4 py-3 text-right font-semibold text-slate-700"
+                    x-text="t.horas_trabajadas !== null ? t.horas_trabajadas + 'h' : '—'"></td>
+                <td class="px-4 py-3 text-right text-xs"
+                    :class="t.minutos_tarde > 0 ? 'text-amber-600 font-semibold' : 'text-slate-400'"
+                    x-text="t.minutos_tarde > 0 ? '+' + t.minutos_tarde + 'min' : '—'"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between px-4 py-3 border-t border-slate-100" x-show="histPages > 1">
+          <button
+            @click="histPagina = histPagina - 1; cargarHistorial()"
+            :disabled="histPagina <= 1"
+            class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition"
+          >
+            ← Anterior
+          </button>
+          <span class="text-sm text-slate-500">
+            Página <span class="font-semibold text-slate-800" x-text="histPagina"></span>
+            de <span x-text="histPages"></span>
+          </span>
+          <button
+            @click="histPagina = histPagina + 1; cargarHistorial()"
+            :disabled="histPagina >= histPages"
+            class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition"
+          >
+            Siguiente →
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+function turnosApp() {
+  return {
+    tab: 'hoy',
+
+    // ── Hoy ──
+    empleados: [],
+    resumen: null,
+    cargandoHoy: false,
+    error: null,
+    segundosParaActualizar: 30,
+    ticksSinceLoad: 0,
+    _pollTimer: null,
+    _tickTimer: null,
+
+    // ── Historial ──
+    turnos: [],
+    histTotal: 0,
+    histPagina: 1,
+    histPages: 1,
+    cargandoHistorial: false,
+    historialCargado: false,
+    histFiltros: { desde: '', hasta: '', rol: '' },
+
+    init() {
+      this.cargarHoy();
+      this._pollTimer = setInterval(() => {
+        this.segundosParaActualizar--;
+        if (this.segundosParaActualizar <= 0) {
+          this.cargarHoy();
+        }
+      }, 1000);
+      this._tickTimer = setInterval(() => {
+        this.ticksSinceLoad++;
+      }, 60000);
+    },
+
+    async cargarHoy() {
+      this.cargandoHoy = true;
+      this.error = null;
+      try {
+        const resp = await fetch('/dashboard/turnos/hoy');
+        if (!resp.ok) throw new Error('Error ' + resp.status);
+        const data = await resp.json();
+        this.empleados = data.empleados;
+        this.resumen   = data.resumen;
+        this.ticksSinceLoad = 0;
+        this.segundosParaActualizar = 30;
+      } catch (e) {
+        this.error = 'No se pudo cargar los turnos de hoy. ' + e.message;
+      } finally {
+        this.cargandoHoy = false;
+      }
+    },
+
+    async cargarHistorial() {
+      this.cargandoHistorial = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.histFiltros.desde) params.set('desde',    this.histFiltros.desde);
+        if (this.histFiltros.hasta) params.set('hasta',    this.histFiltros.hasta);
+        if (this.histFiltros.rol)   params.set('rol',      this.histFiltros.rol);
+        params.set('page',     this.histPagina);
+        params.set('per_page', 25);
+
+        const resp = await fetch('/dashboard/turnos/historial?' + params.toString());
+        if (!resp.ok) throw new Error('Error ' + resp.status);
+        const data = await resp.json();
+        this.turnos         = data.turnos;
+        this.histTotal      = data.total;
+        this.histPagina     = data.page;
+        this.histPages      = data.pages;
+        this.historialCargado = true;
+      } catch (e) {
+        this.error = 'No se pudo cargar el historial. ' + e.message;
+      } finally {
+        this.cargandoHistorial = false;
+      }
+    },
+
+    formatMinutos(min) {
+      if (min === null || min === undefined) return '—';
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      if (h > 0) return `${h}h ${String(m).padStart(2,'0')}min`;
+      return `${m}min`;
+    },
+
+    formatHora(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    },
+  };
+}
+</script>
+
+</body>
+</html>
