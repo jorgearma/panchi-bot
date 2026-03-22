@@ -2127,3 +2127,424 @@ class GestorDashboard:
             })
 
         return {'turnos': resultado, 'total': total, 'page': page, 'pages': pages}
+
+    def rendimiento_resumen(self, periodo: str = 'hoy', rol: str = None) -> dict:
+        """Ranking de rendimiento de empleados para el período dado.
+
+        Agrega MetricaDiariaEmpleado por (empleado_id, rol).
+
+        Args:
+            periodo: 'hoy' | 'semana' | 'mes'
+            rol:     'picker' | 'repartidor' | None (todos)
+
+        Returns:
+            { empleados: [{ id, nombre, rol_sistema, rol_operativo,
+                            pedidos, tiempo_medio_min, incidencias, tasa_pct }] }
+        """
+        from models import MetricaDiariaEmpleado
+
+        hoy = datetime.utcnow().date()
+        if periodo == 'semana':
+            desde = hoy - timedelta(days=6)
+        elif periodo == 'mes':
+            desde = hoy - timedelta(days=29)
+        else:
+            desde = hoy
+
+        s = self.session
+
+        query = (
+            s.query(
+                MetricaDiariaEmpleado.empleado_id,
+                MetricaDiariaEmpleado.rol,
+                func.sum(MetricaDiariaEmpleado.pedidos_completados).label('pedidos'),
+                func.avg(MetricaDiariaEmpleado.tiempo_medio_operacion_min).label('tiempo_medio'),
+                func.sum(MetricaDiariaEmpleado.incidencias).label('incidencias'),
+            )
+            .filter(MetricaDiariaEmpleado.fecha >= desde)
+            .group_by(MetricaDiariaEmpleado.empleado_id, MetricaDiariaEmpleado.rol)
+        )
+
+        if rol:
+            query = query.filter(MetricaDiariaEmpleado.rol == rol)
+
+        rows = query.all()
+
+        # Build employee name cache
+        ids = list({r.empleado_id for r in rows})
+        empleados_map = {}
+        if ids:
+            for emp in s.query(Empleado).filter(Empleado.EmpleadoID.in_(ids)).all():
+                empleados_map[emp.EmpleadoID] = emp
+
+        resultado = []
+        for r in rows:
+            pedidos = int(r.pedidos or 0)
+            incidencias = int(r.incidencias or 0)
+            tasa = round(pedidos / (pedidos + incidencias) * 100) if (pedidos + incidencias) > 0 else None
+            emp = empleados_map.get(r.empleado_id)
+            resultado.append({
+                'id':               r.empleado_id,
+                'nombre':           f'{emp.Nombre} {emp.Apellido}' if emp else f'#{r.empleado_id}',
+                'rol_sistema':      emp.rol.nombre if emp and emp.rol else None,
+                'rol_operativo':    r.rol,
+                'pedidos':          pedidos,
+                'tiempo_medio_min': round(r.tiempo_medio) if r.tiempo_medio else None,
+                'incidencias':      incidencias,
+                'tasa_pct':         tasa,
+            })
+
+        resultado.sort(key=lambda e: e['pedidos'], reverse=True)
+        return {'empleados': resultado}
+
+    def rendimiento_empleado(self, empleado_id: int, periodo: str = 'semana') -> dict | None:
+        """Detalle de rendimiento individual.
+
+        Args:
+            empleado_id: ID del empleado.
+            periodo:     'hoy' | 'semana' | 'mes'
+
+        Returns None si el empleado no existe.
+
+        Returns:
+            {
+                nombre, rol_sistema,
+                kpis: { pedidos, tiempo_medio_min, mejor_tiempo_min, incidencias },
+                pedidos_por_dia: [{ fecha, pedidos }],
+                turnos_recientes: [{ fecha, inicio, fin, horas }],
+                ultimos_pedidos: [{ tipo, pedido_id, fecha, duracion_min }],
+            }
+        """
+        from models import MetricaDiariaEmpleado, CheckIn
+
+        s = self.session
+        emp = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+        if not emp:
+            return None
+
+        hoy = datetime.utcnow().date()
+        if periodo == 'semana':
+            desde = hoy - timedelta(days=6)
+        elif periodo == 'mes':
+            desde = hoy - timedelta(days=29)
+        else:
+            desde = hoy
+
+        # ── KPIs — aggregate from MetricaDiariaEmpleado for the period ──
+        agg = (
+            s.query(
+                func.sum(MetricaDiariaEmpleado.pedidos_completados),
+                func.avg(MetricaDiariaEmpleado.tiempo_medio_operacion_min),
+                func.min(MetricaDiariaEmpleado.tiempo_medio_operacion_min),
+                func.sum(MetricaDiariaEmpleado.incidencias),
+            )
+            .filter(
+                MetricaDiariaEmpleado.empleado_id == empleado_id,
+                MetricaDiariaEmpleado.fecha >= desde,
+            )
+            .first()
+        )
+        pedidos_total     = int(agg[0] or 0)
+        tiempo_medio_avg  = round(agg[1]) if agg[1] else None
+        mejor_tiempo      = round(agg[2]) if agg[2] else None
+        incidencias_total = int(agg[3] or 0)
+
+        # ── pedidos_por_dia — last 7 days for the chart ──
+        siete_dias = hoy - timedelta(days=6)
+        filas_dia = (
+            s.query(
+                MetricaDiariaEmpleado.fecha,
+                func.sum(MetricaDiariaEmpleado.pedidos_completados).label('pedidos'),
+            )
+            .filter(
+                MetricaDiariaEmpleado.empleado_id == empleado_id,
+                MetricaDiariaEmpleado.fecha >= siete_dias,
+            )
+            .group_by(MetricaDiariaEmpleado.fecha)
+            .all()
+        )
+        datos_dia = {r.fecha: int(r.pedidos) for r in filas_dia}
+        pedidos_por_dia = []
+        for i in range(7):
+            dia = siete_dias + timedelta(days=i)
+            pedidos_por_dia.append({
+                'fecha': dia.isoformat(),
+                'pedidos': datos_dia.get(dia, 0),
+            })
+
+        # ── turnos_recientes — last 5 check-ins ──
+        checkins = (
+            s.query(CheckIn)
+            .filter_by(empleado_id=empleado_id)
+            .order_by(CheckIn.fecha.desc(), CheckIn.inicio.desc())
+            .limit(5)
+            .all()
+        )
+        turnos_recientes = []
+        for ci in checkins:
+            horas = None
+            if ci.inicio and ci.fin:
+                horas = round((ci.fin - ci.inicio).total_seconds() / 3600, 1)
+            turnos_recientes.append({
+                'fecha':  ci.fecha.isoformat() if ci.fecha else None,
+                'inicio': _iso(ci.inicio),
+                'fin':    _iso(ci.fin),
+                'horas':  horas,
+            })
+
+        # ── ultimos_pedidos — last 10 completed pickings + entregas in period ──
+        desde_dt = datetime(desde.year, desde.month, desde.day)
+        pickings = (
+            s.query(PickingPedido)
+            .filter(
+                PickingPedido.empleado_id == empleado_id,
+                PickingPedido.estado == 'completado',
+                PickingPedido.completado_en >= desde_dt,
+            )
+            .order_by(PickingPedido.completado_en.desc())
+            .limit(10)
+            .all()
+        )
+        repartos = (
+            s.query(Reparto)
+            .filter(
+                Reparto.repartidor_id == empleado_id,
+                Reparto.estado == 'entregado',
+                Reparto.hora_entrega_real >= desde_dt,
+            )
+            .order_by(Reparto.hora_entrega_real.desc())
+            .limit(10)
+            .all()
+        )
+
+        ultimos_pedidos = []
+        for pk in pickings:
+            dur = None
+            if pk.iniciado_en and pk.completado_en:
+                dur = int((pk.completado_en - pk.iniciado_en).total_seconds() / 60)
+            ultimos_pedidos.append({
+                'tipo': 'picking',
+                'pedido_id': pk.pedido_id,
+                'fecha': _iso(pk.completado_en),
+                'duracion_min': dur,
+            })
+        for rp in repartos:
+            dur = None
+            if rp.hora_salida and rp.hora_entrega_real:
+                dur = int((rp.hora_entrega_real - rp.hora_salida).total_seconds() / 60)
+            ultimos_pedidos.append({
+                'tipo': 'reparto',
+                'pedido_id': rp.pedido_id,
+                'fecha': _iso(rp.hora_entrega_real),
+                'duracion_min': dur,
+            })
+
+        ultimos_pedidos.sort(key=lambda x: x['fecha'] or '', reverse=True)
+        ultimos_pedidos = ultimos_pedidos[:10]
+
+        return {
+            'nombre':      f'{emp.Nombre} {emp.Apellido}',
+            'rol_sistema': emp.rol.nombre if emp.rol else None,
+            'kpis': {
+                'pedidos':          pedidos_total,
+                'tiempo_medio_min': tiempo_medio_avg,
+                'mejor_tiempo_min': mejor_tiempo,
+                'incidencias':      incidencias_total,
+            },
+            'pedidos_por_dia':  pedidos_por_dia,
+            'turnos_recientes': turnos_recientes,
+            'ultimos_pedidos':  ultimos_pedidos,
+        }
+
+    def estadisticas(self, desde: str = None, hasta: str = None, granularidad: str = 'dia') -> dict:
+        """Estadísticas de ventas y operación para el período dado.
+
+        Args:
+            desde:        Fecha ISO YYYY-MM-DD (default: hace 6 días)
+            hasta:        Fecha ISO YYYY-MM-DD (default: hoy)
+            granularidad: 'dia' | 'semana'
+
+        Returns:
+            {
+              kpis: {ingresos, pedidos, entregados, cancelados,
+                     tasa_cancelacion_pct, t_prep_min, t_entrega_min},
+              serie_pedidos_ingresos: [{fecha, pedidos, ingresos}],
+              distribucion_estados:   {estado: count, ...},
+              forma_pago:             {online, efectivo, tarjeta},
+              serie_tiempos:          [{fecha, t_prep, t_entrega}],
+            }
+        """
+        hoy = datetime.utcnow().date()
+        fecha_desde = datetime.strptime(desde, '%Y-%m-%d').date() if desde else hoy - timedelta(days=6)
+        fecha_hasta = datetime.strptime(hasta, '%Y-%m-%d').date() if hasta else hoy
+
+        if granularidad not in ('dia', 'semana'):
+            granularidad = 'dia'
+
+        dt_desde = datetime.combine(fecha_desde, datetime.min.time())
+        dt_hasta = datetime.combine(fecha_hasta, datetime.max.time())
+
+        s = self.session
+        pedidos = (
+            s.query(Pedido)
+            .filter(Pedido.FechaCreacion >= dt_desde, Pedido.FechaCreacion <= dt_hasta)
+            .all()
+        )
+
+        # ── KPIs ─────────────────────────────────────────────────────────────
+        total_pedidos = len(pedidos)
+        entregados   = [p for p in pedidos if p.Estado == EstadoPedido.ENTREGADO.value]
+        cancelados   = [p for p in pedidos if p.Estado in (
+            EstadoPedido.CANCELADO.value, EstadoPedido.REEMBOLSADO.value
+        )]
+        ingresos      = sum(float(p.Total or 0) for p in entregados)
+        tasa_cancelacion = (
+            round(len(cancelados) / total_pedidos * 100, 1) if total_pedidos > 0 else None
+        )
+
+        # ── Tiempos via HistorialEstadoPedido ─────────────────────────────────
+        pedido_ids = [p.PedidoID for p in pedidos]
+        t_prep_sum = t_prep_cnt = t_entrega_sum = t_entrega_cnt = 0
+        tiempos_por_dia: dict[str, dict] = {}
+
+        if pedido_ids:
+            historial = (
+                s.query(HistorialEstadoPedido)
+                .filter(
+                    HistorialEstadoPedido.pedido_id.in_(pedido_ids),
+                    HistorialEstadoPedido.estado_nuevo.in_([
+                        EstadoPedido.EN_PREPARACION.value,
+                        EstadoPedido.PREPARADO.value,
+                        EstadoPedido.EN_REPARTO.value,
+                        EstadoPedido.ENTREGADO.value,
+                    ])
+                )
+                .all()
+            )
+            hist_by_pedido: dict[int, dict] = {}
+            for h in sorted(historial, key=lambda x: x.cambiado_en):
+                ts = hist_by_pedido.setdefault(h.pedido_id, {})
+                ts.setdefault(h.estado_nuevo, h.cambiado_en)
+
+            EN_PREP = EstadoPedido.EN_PREPARACION.value
+            PREP    = EstadoPedido.PREPARADO.value
+            EN_REP  = EstadoPedido.EN_REPARTO.value
+            ENTR    = EstadoPedido.ENTREGADO.value
+
+            for ts in hist_by_pedido.values():
+                if EN_PREP in ts and PREP in ts:
+                    mins = (ts[PREP] - ts[EN_PREP]).total_seconds() / 60
+                    if mins >= 0:
+                        t_prep_sum += mins
+                        t_prep_cnt += 1
+                        dk = ts[PREP].date().isoformat()
+                        b = tiempos_por_dia.setdefault(dk, {'ps': 0, 'pc': 0, 'es': 0, 'ec': 0})
+                        b['ps'] += mins
+                        b['pc'] += 1
+                if EN_REP in ts and ENTR in ts:
+                    mins = (ts[ENTR] - ts[EN_REP]).total_seconds() / 60
+                    if mins >= 0:
+                        t_entrega_sum += mins
+                        t_entrega_cnt += 1
+                        dk = ts[ENTR].date().isoformat()
+                        b = tiempos_por_dia.setdefault(dk, {'ps': 0, 'pc': 0, 'es': 0, 'ec': 0})
+                        b['es'] += mins
+                        b['ec'] += 1
+
+        t_prep_min    = round(t_prep_sum    / t_prep_cnt,    1) if t_prep_cnt    > 0 else None
+        t_entrega_min = round(t_entrega_sum / t_entrega_cnt, 1) if t_entrega_cnt > 0 else None
+
+        # ── Distribución estados ──────────────────────────────────────────────
+        _ESTADOS_DIST = [
+            EstadoPedido.EN_PREPARACION.value, EstadoPedido.PREPARADO.value,
+            EstadoPedido.EN_REPARTO.value,     EstadoPedido.ENTREGADO.value,
+            EstadoPedido.CANCELADO.value,      EstadoPedido.REEMBOLSADO.value,
+        ]
+        distribucion_estados = {e: 0 for e in _ESTADOS_DIST}
+        for p in pedidos:
+            if p.Estado in distribucion_estados:
+                distribucion_estados[p.Estado] += 1
+
+        # ── Forma de pago ─────────────────────────────────────────────────────
+        forma_pago = {'online': 0, 'efectivo': 0, 'tarjeta': 0}
+        for p in pedidos:
+            if p.forma_pago in forma_pago:
+                forma_pago[p.forma_pago] += 1
+
+        # ── Pedidos por fecha para series (day-level) ─────────────────────────
+        pedidos_por_dia: dict[str, dict] = {}
+        for p in pedidos:
+            if p.FechaCreacion:
+                dk = p.FechaCreacion.date().isoformat()
+                b = pedidos_por_dia.setdefault(dk, {'pedidos': 0, 'ingresos': 0.0})
+                b['pedidos'] += 1
+                if p.Estado == EstadoPedido.ENTREGADO.value:
+                    b['ingresos'] += float(p.Total or 0)
+
+        # ── Build output series (apply granularidad) ──────────────────────────
+        def _gen_keys():
+            """Generate ordered unique series keys (always advances by 1 day)."""
+            seen: set = set()
+            d = fecha_desde
+            while d <= fecha_hasta:
+                if granularidad == 'semana':
+                    iso = d.isocalendar()
+                    key = f"{iso[0]}-W{iso[1]:02d}"
+                    if key not in seen:
+                        seen.add(key)
+                        yield key
+                else:
+                    yield d.isoformat()
+                d += timedelta(days=1)
+
+        def _dias_in_key(key: str):
+            """Return day ISOs that belong to a series key."""
+            result = []
+            d = fecha_desde
+            while d <= fecha_hasta:
+                if granularidad == 'semana':
+                    iso = d.isocalendar()
+                    if f"{iso[0]}-W{iso[1]:02d}" == key:
+                        result.append(d.isoformat())
+                else:
+                    if d.isoformat() == key:
+                        result.append(d.isoformat())
+                d += timedelta(days=1)
+            return result
+
+        serie_pedidos_ingresos = []
+        serie_tiempos = []
+        for key in _gen_keys():
+            dias = _dias_in_key(key)
+            p_total = sum(pedidos_por_dia.get(dk, {}).get('pedidos',  0)   for dk in dias)
+            i_total = sum(pedidos_por_dia.get(dk, {}).get('ingresos', 0.0) for dk in dias)
+            ps = sum(tiempos_por_dia.get(dk, {}).get('ps', 0) for dk in dias)
+            pc = sum(tiempos_por_dia.get(dk, {}).get('pc', 0) for dk in dias)
+            es = sum(tiempos_por_dia.get(dk, {}).get('es', 0) for dk in dias)
+            ec = sum(tiempos_por_dia.get(dk, {}).get('ec', 0) for dk in dias)
+            serie_pedidos_ingresos.append({
+                'fecha':    key,
+                'pedidos':  p_total,
+                'ingresos': round(i_total, 2),
+            })
+            serie_tiempos.append({
+                'fecha':     key,
+                't_prep':    round(ps / pc, 1) if pc > 0 else None,
+                't_entrega': round(es / ec, 1) if ec > 0 else None,
+            })
+
+        return {
+            'kpis': {
+                'ingresos':             round(ingresos, 2),
+                'pedidos':              total_pedidos,
+                'entregados':           len(entregados),
+                'cancelados':           len(cancelados),
+                'tasa_cancelacion_pct': tasa_cancelacion,
+                't_prep_min':           t_prep_min,
+                't_entrega_min':        t_entrega_min,
+            },
+            'serie_pedidos_ingresos': serie_pedidos_ingresos,
+            'distribucion_estados':   distribucion_estados,
+            'forma_pago':             forma_pago,
+            'serie_tiempos':          serie_tiempos,
+        }
