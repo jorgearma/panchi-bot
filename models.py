@@ -206,6 +206,8 @@ class Empleado(Base):
     repartos = relationship("Reparto", back_populates="repartidor")
     incidencias_asignadas = relationship("Incidencia", back_populates="asignado", foreign_keys="Incidencia.asignado_a")
     turnos = relationship('Turno', back_populates='empleado', order_by='Turno.fecha')
+    check_ins = relationship('CheckIn', back_populates='empleado',
+                             order_by='CheckIn.fecha')
     capacidades = relationship('EmpleadoCapacidad', back_populates='empleado',
                                cascade='all, delete-orphan')
 
@@ -338,3 +340,40 @@ class Turno(Base):
     created_at  = Column(DateTime, default=datetime.utcnow)
 
     empleado = relationship('Empleado', back_populates='turnos')
+
+
+# ---------------------------------------------------------------------------
+# Fichaje / Check-in
+# ---------------------------------------------------------------------------
+
+class CheckIn(Base):
+    """Turno real fichado por el empleado. Uno por empleado por día."""
+    __tablename__ = 'check_ins'
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    empleado_id = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=False)
+    fecha       = Column(Date, nullable=False)
+    inicio      = Column(DateTime, nullable=False)
+    fin         = Column(DateTime, nullable=True)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+    empleado = relationship('Empleado', back_populates='check_ins')
+    tramos   = relationship('TramoTurno', back_populates='check_in',
+                            cascade='all, delete-orphan', order_by='TramoTurno.inicio')
+
+    __table_args__ = (
+        UniqueConstraint('empleado_id', 'fecha', name='uq_checkin_empleado_fecha'),
+    )
+
+
+class TramoTurno(Base):
+    """Segmento de tiempo trabajado en un rol concreto dentro de un check-in."""
+    __tablename__ = 'tramos_turno'
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    check_in_id = Column(Integer, ForeignKey('check_ins.id'), nullable=False)
+    rol         = Column(String(20), nullable=False)   # picker | repartidor
+    inicio      = Column(DateTime, nullable=False)
+    fin         = Column(DateTime, nullable=True)
+
+    check_in = relationship('CheckIn', back_populates='tramos')
