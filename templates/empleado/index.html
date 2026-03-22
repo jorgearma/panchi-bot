@@ -21,14 +21,11 @@
       x-init="init()">
 
   <!-- ======== HEADER ======== -->
-  <header class="sticky top-0 z-30 border-b border-gray-800 bg-gray-900/95 px-4 py-3 backdrop-blur">
+  <header class="border-b border-gray-800 bg-gray-900 px-4 py-3">
     <div class="max-w-md mx-auto flex items-center justify-between gap-3">
-      <div class="flex items-center gap-2 min-w-0">
-        <p class="min-w-0 truncate text-sm font-bold text-white" x-text="nombreCompleto"></p>
-        <span class="rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400"
-              x-text="rolLabel"></span>
-      </div>
-      <p class="text-[11px] uppercase tracking-[0.18em] text-gray-500 flex-shrink-0" x-text="fechaHoy"></p>
+      <p class="min-w-0 truncate text-sm font-bold text-white" x-text="nombreCompleto"></p>
+      <span class="rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400 flex-shrink-0"
+            x-text="rolLabel"></span>
     </div>
   </header>
 
@@ -63,32 +60,6 @@
             ⏹ Cerrar turno
           </button>
         </div>
-      </div>
-    </div>
-
-    <!-- Mi turno de hoy -->
-    <div x-show="fichajeResumen && (fichajeResumen.activo || fichajeResumen.fin)" x-cloak>
-      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Mi turno de hoy</p>
-      <div class="bg-gray-800 rounded-xl p-3 space-y-2">
-        <!-- Cabecera: horas y duración total -->
-        <div class="flex items-center justify-between">
-          <p class="text-sm font-semibold text-white"
-             x-text="formatHoraISO(fichajeResumen?.inicio) + (fichajeResumen?.fin ? ' → ' + formatHoraISO(fichajeResumen.fin) : ' → ahora')"></p>
-          <span class="text-xs text-gray-400"
-                x-text="formatMinutos(fichajeResumen?.duracion_total_min)"></span>
-        </div>
-        <!-- Tramos por rol -->
-        <template x-for="t in (fichajeResumen?.tramos || [])" :key="t.rol">
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-300">
-              <span x-text="t.rol === 'picker' ? '📦 Picker' : '🛵 Repartidor'"></span>
-            </span>
-            <span class="text-gray-400" x-text="formatMinutos(t.minutos)"></span>
-          </div>
-        </template>
-        <!-- Indicador turno activo -->
-        <div x-show="fichajeResumen?.activo"
-             class="text-[11px] text-green-400 font-medium">● En curso</div>
       </div>
     </div>
 
@@ -185,6 +156,23 @@
           <p class="text-xl font-bold text-amber-400" x-text="metricas.incidencias_hoy ?? '—'"></p>
           <p class="text-xs text-gray-500 mt-1" x-text="metricaLabel3"></p>
         </div>
+      </div>
+      <!-- Mi turno de hoy -->
+      <div x-show="fichajeResumen && (fichajeResumen.activo || fichajeResumen.fin)" x-cloak
+           class="mt-2 bg-gray-800 rounded-xl p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-semibold text-white"
+             x-text="formatHoraISO(fichajeResumen?.inicio) + (fichajeResumen?.fin ? ' → ' + formatHoraISO(fichajeResumen.fin) : ' → ahora')"></p>
+          <span class="text-xs text-gray-400"
+                x-text="formatMinutos(fichajeResumen?.duracion_total_min)"></span>
+        </div>
+        <template x-for="t in (fichajeResumen?.tramos || [])" :key="t.rol">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-300" x-text="t.rol === 'picker' ? '📦 Picker' : '🛵 Repartidor'"></span>
+            <span class="text-gray-400" x-text="formatMinutos(t.minutos)"></span>
+          </div>
+        </template>
+        <div x-show="fichajeResumen?.activo" class="text-[11px] text-green-400 font-medium">● En curso</div>
       </div>
     </div>
 

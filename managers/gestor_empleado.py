@@ -207,11 +207,7 @@ class GestorEmpleado:
         ahora = datetime.utcnow()
         hoy = ahora.date()
 
-        existente = s.query(CheckIn).filter(
-            CheckIn.empleado_id == empleado_id,
-            CheckIn.fecha == hoy,
-        ).first()
-        if existente:
+        if self._checkin_abierto_hoy(empleado_id):
             raise ValueError('ya_abierto')
 
         empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
@@ -252,12 +248,16 @@ class GestorEmpleado:
         return self._resumen_checkin(check_in, ahora)
 
     def checkin_hoy(self, empleado_id: int) -> dict:
-        """Estado del check-in de hoy (abierto o cerrado). Nunca lanza."""
+        """Turno activo ahora mismo, o el más reciente de hoy si no hay ninguno abierto."""
         hoy = datetime.utcnow().date()
-        check_in = self.session.query(CheckIn).filter(
-            CheckIn.empleado_id == empleado_id,
-            CheckIn.fecha == hoy,
-        ).first()
+        # Primero buscar turno abierto
+        check_in = self._checkin_abierto_hoy(empleado_id)
+        if not check_in:
+            # Si no hay abierto, mostrar el más reciente del día
+            check_in = self.session.query(CheckIn).filter(
+                CheckIn.empleado_id == empleado_id,
+                CheckIn.fecha == hoy,
+            ).order_by(CheckIn.inicio.desc()).first()
         if not check_in:
             return {'activo': False}
         ahora = datetime.utcnow()

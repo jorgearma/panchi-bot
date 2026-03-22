@@ -347,7 +347,7 @@ class Turno(Base):
 # ---------------------------------------------------------------------------
 
 class CheckIn(Base):
-    """Turno real fichado por el empleado. Uno por empleado por día."""
+    """Turno real fichado por el empleado. Puede haber varios por día."""
     __tablename__ = 'check_ins'
 
     id          = Column(Integer, primary_key=True, autoincrement=True)
@@ -360,10 +360,6 @@ class CheckIn(Base):
     empleado = relationship('Empleado', back_populates='check_ins')
     tramos   = relationship('TramoTurno', back_populates='check_in',
                             cascade='all, delete-orphan', order_by='TramoTurno.inicio')
-
-    __table_args__ = (
-        UniqueConstraint('empleado_id', 'fecha', name='uq_checkin_empleado_fecha'),
-    )
 
 
 class TramoTurno(Base):
