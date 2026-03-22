@@ -1,0 +1,132 @@
+{#
+  templates/macros/ui.html
+  Macros reutilizables para el dashboard admin.
+
+  Uso:
+    {% from 'macros/ui.html' import status_badge, empty_state, loading_skeleton, error_banner %}
+
+  error_banner depende de Alpine.js:
+    - el componente padre debe tener `error` (string | null) en x-data
+    - el componente padre debe tener un método `cargar()` para reintentar
+#}
+
+
+{# ─── STATUS BADGE ─────────────────────────────────────────────────────────
+   Pinta una pastilla de color según el estado de un pedido o de un empleado.
+
+   Uso: {{ status_badge('EN_PREPARACION') }}
+        {{ status_badge(pedido.estado) }}
+        {{ status_badge(empleado.estado_operativo) }}
+
+   El mapa cubre EstadoPedido y estados operativos de empleado.
+   EstadoPicking (EN_PROCESO, COMPLETADO, CON_INCIDENCIAS) y EstadoReparto
+   (ASIGNADO, EN_CAMINO, NO_ENTREGADO) no están mapeados — el fallback los
+   renderiza en gris con el valor raw. Extender el mapa cuando se construyan
+   las vistas de picking/reparto.
+#}
+{% macro status_badge(estado) %}
+  {% set _conf = {
+    'PENDIENTE':         ('bg-slate-100 text-slate-600',    'Pendiente'),
+    'ENLACE':            ('bg-slate-100 text-slate-600',    'Enlace'),
+    'ENLACE2':           ('bg-slate-100 text-slate-600',    'Enlace 2'),
+    'CONFIRMANDO_PAGO':  ('bg-yellow-100 text-yellow-700',  'Confirmando'),
+    'PAGADO':            ('bg-emerald-100 text-emerald-700','Pagado'),
+    'CONTRA_REEMBOLSO':  ('bg-violet-100 text-violet-700',  'Contrarremb.'),
+    'EN_PREPARACION':    ('bg-blue-100 text-blue-700',      'Preparando'),
+    'PREPARADO':         ('bg-indigo-100 text-indigo-700',  'Preparado'),
+    'EN_REPARTO':        ('bg-orange-100 text-orange-700',  'En reparto'),
+    'ENTREGADO':         ('bg-emerald-100 text-emerald-800','Entregado'),
+    'CANCELADO':         ('bg-red-100 text-red-700',        'Cancelado'),
+    'REEMBOLSADO':       ('bg-slate-100 text-slate-500',    'Reembolsado'),
+    'disponible':        ('bg-emerald-100 text-emerald-700','Disponible'),
+    'ocupado':           ('bg-blue-100 text-blue-700',      'Ocupado'),
+    'en_pausa':          ('bg-yellow-100 text-yellow-700',  'En pausa'),
+    'desconectado':      ('bg-slate-100 text-slate-500',    'Desconectado'),
+  } %}
+  {# Jinja2 no soporta multi-target {% set a, b = tuple %} — desempaquetar manualmente #}
+  {% set _default = ('bg-slate-100 text-slate-500', estado) %}
+  {% set _tuple = _conf.get(estado, _default) %}
+  {% set _clases = _tuple[0] %}
+  {% set _etiqueta = _tuple[1] %}
+  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ _clases }}">
+    {{ _etiqueta }}
+  </span>
+{% endmacro %}
+
+
+{# ─── EMPTY STATE ──────────────────────────────────────────────────────────
+   Pantalla vacía centrada. Usar cuando una tabla o lista no tiene resultados.
+
+   Parámetros:
+     icon        — emoji o símbolo grande (ej. '📭')
+     title       — título corto (ej. 'Sin pedidos')
+     message     — descripción explicativa
+     action_text — texto del botón de acción (opcional)
+     action_url  — URL del botón de acción (opcional)
+
+   Uso: {{ empty_state('📭', 'Sin pedidos', 'No hay pedidos para este período.') }}
+        {{ empty_state('📭', 'Sin pedidos', 'Prueba otro filtro.', 'Ver todos', '/dashboard/historial') }}
+#}
+{% macro empty_state(icon, title, message, action_text='', action_url='') %}
+  <div class="flex flex-col items-center justify-center py-16 text-center">
+    <div class="mb-4 text-5xl leading-none">{{ icon }}</div>
+    <p class="text-base font-semibold text-slate-700">{{ title }}</p>
+    <p class="mt-1 max-w-xs text-sm text-slate-500">{{ message }}</p>
+    {% if action_text and action_url %}
+      <a href="{{ action_url }}"
+         class="mt-5 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
+        {{ action_text }}
+      </a>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+
+{# ─── LOADING SKELETON ────────────────────────────────────────────────────
+   Filas grises animadas para el estado de carga de tablas.
+   Nunca mostrar un spinner solo — el skeleton da contexto visual.
+
+   Parámetros:
+     rows — número de filas skeleton (default 5)
+     cols — número de columnas por fila (default 5)
+
+   Uso: {{ loading_skeleton() }}
+        {{ loading_skeleton(rows=3, cols=4) }}
+#}
+{% macro loading_skeleton(rows=5, cols=5) %}
+  <div class="animate-pulse">
+    {% for _r in range(rows) %}
+      <div class="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+        {% for _c in range(cols) %}
+          <div class="h-4 flex-1 rounded bg-slate-200"></div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+
+{# ─── ERROR BANNER ────────────────────────────────────────────────────────
+   Banner rojo controlado por Alpine.js.
+
+   Requisitos del componente padre (x-data):
+     - `error`   → string con el mensaje, o null cuando no hay error
+     - `cargar()` → método que lanza/relanza la petición
+
+   El banner es invisible mientras `error` sea null/falsy.
+   El botón "Reintentar" limpia el error y llama a cargar().
+
+   Uso: {{ error_banner() }}
+        (colócalo justo después de la FilterBar o antes de la tabla)
+#}
+{% macro error_banner() %}
+  <div x-show="error" x-cloak
+       class="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <span class="text-base leading-none">⚠️</span>
+    <span class="flex-1" x-text="error"></span>
+    <button @click="error = null; cargar()"
+            class="font-semibold underline underline-offset-2 hover:no-underline">
+      Reintentar
+    </button>
+  </div>
+{% endmacro %}
