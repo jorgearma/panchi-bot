@@ -18,6 +18,17 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
+    :root {
+      --picker-ink: #172033;
+      --picker-panel: #ffffff;
+      --picker-soft: #f5f7fb;
+      --picker-line: #d9e2f1;
+      --picker-brand: #2563eb;
+      --picker-brand-dark: #173b8f;
+      --picker-accent: #0f766e;
+      --picker-warm: #f59e0b;
+      --picker-danger: #dc2626;
+    }
     .slide-up {
       animation: slideUp .2s ease-out;
     }
@@ -27,12 +38,45 @@
     }
     button { -webkit-tap-highlight-color: transparent; }
     .tap-xl { min-height: 56px; }
+    .picker-shell {
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 30%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 26%),
+        linear-gradient(180deg, #eef4ff 0%, #f7f8fc 34%, #eef2f7 100%);
+      color: var(--picker-ink);
+    }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(217, 226, 241, 0.9);
+      box-shadow: 0 18px 50px rgba(23, 32, 51, 0.08);
+    }
+    .section-card {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(217, 226, 241, 0.95);
+      box-shadow: 0 18px 40px rgba(23, 32, 51, 0.08);
+    }
+    .metric-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,247,252,0.96));
+      border: 1px solid rgba(217, 226, 241, 0.9);
+      box-shadow: 0 14px 30px rgba(23, 32, 51, 0.06);
+    }
+    .queue-card {
+      background: linear-gradient(135deg, rgba(23, 32, 51, 0.98), rgba(37, 99, 235, 0.92));
+      box-shadow: 0 18px 34px rgba(23, 32, 51, 0.24);
+    }
+    .order-card {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,255,0.98));
+      box-shadow: 0 20px 38px rgba(23, 32, 51, 0.10);
+    }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen" x-data="picker({{ picker_id or 'null' }})" x-init="init()">
+<body class="picker-shell min-h-screen" x-data="picker({{ picker_id or 'null' }})" x-init="init()">
 
   <!-- ======== HEADER ======== -->
-  <header class="bg-gray-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow">
+  <header class="bg-slate-950/90 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-lg backdrop-blur">
     <div class="flex items-center gap-2">
       <button x-show="vistaActual === 'ticket'"
               @click="volverALista()"
@@ -76,71 +120,212 @@
   </div>
 
   <!-- ======== VISTA LISTA ======== -->
-  <div x-show="pickerId && !cargando && vistaActual === 'lista'" x-cloak>
+  <div x-show="pickerId && !cargando && vistaActual === 'lista'" x-cloak class="px-3 pb-8 sm:px-4">
 
-    <div x-show="pedidos.length === 0"
-         class="flex flex-col items-center justify-center min-h-[65vh] text-center px-6">
+    <!-- ---- Tabs ---- -->
+    <div class="pt-3">
+      <div class="glass-panel rounded-[28px] p-2">
+        <div class="grid grid-cols-2 gap-2">
+          <button @click="tabActiva = 'mis-pedidos'"
+                  class="rounded-2xl px-4 py-3 text-left transition"
+                  :class="tabActiva === 'mis-pedidos'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-200'
+                    : 'bg-white/60 text-slate-600'">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold">📦 Mis pedidos</span>
+              <span class="rounded-full px-2.5 py-1 text-xs font-bold"
+                    :class="tabActiva === 'mis-pedidos' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    x-text="pedidos.length"></span>
+            </div>
+            <p class="mt-1 text-[11px]"
+               :class="tabActiva === 'mis-pedidos' ? 'text-blue-100' : 'text-slate-400'">
+              Tus pedidos activos y su avance
+            </p>
+          </button>
+          <button @click="tabActiva = 'cola'"
+                  class="rounded-2xl px-4 py-3 text-left transition"
+                  :class="tabActiva === 'cola'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-200'
+                    : 'bg-white/60 text-slate-600'">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold">📋 Cola</span>
+              <span class="rounded-full px-2.5 py-1 text-xs font-bold"
+                    :class="tabActiva === 'cola' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    x-text="colaTotal"></span>
+            </div>
+            <p class="mt-1 text-[11px]"
+               :class="tabActiva === 'cola' ? 'text-emerald-100' : 'text-slate-400'">
+              Pedidos disponibles para coger
+            </p>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <div class="metric-card rounded-3xl px-4 py-4">
+        <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">Asignados</p>
+        <div class="mt-2 flex items-end justify-between gap-3">
+          <p class="text-3xl font-black text-slate-900" x-text="pedidos.length"></p>
+          <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">En trabajo</span>
+        </div>
+      </div>
+      <div class="metric-card rounded-3xl px-4 py-4">
+        <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">Cola libre</p>
+        <div class="mt-2 flex items-end justify-between gap-3">
+          <p class="text-3xl font-black text-slate-900" x-text="colaTotal"></p>
+          <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Disponible</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- Sección Cola ---- -->
+    <div x-show="tabActiva === 'cola'" x-cloak class="mt-4">
+
+      <!-- Cabecera -->
+      <div class="section-card rounded-[30px] p-4 mb-4">
+        <div class="flex justify-between items-start gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Cola activa</p>
+            <p class="mt-1 text-sm text-slate-500"
+               x-text="colaTotal + ' pedido' + (colaTotal !== 1 ? 's' : '') + ' disponible' + (colaTotal !== 1 ? 's' : '')"></p>
+          </div>
+          <button @click="cargarCola()"
+                  class="rounded-2xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition active:scale-95">
+            ↻ Actualizar
+          </button>
+        </div>
+        <div class="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Coge rápido los pedidos más antiguos para mantener la cola limpia y el reparto fluido.
+        </div>
+      </div>
+
+      <!-- Lista -->
+      <div x-show="cola.length > 0" class="space-y-4">
+        <template x-for="p in cola" :key="p.picking_id">
+          <div class="queue-card rounded-[30px] p-4 text-white slide-up"
+               :class="p.ya_cogido ? 'opacity-45 saturate-50' : ''">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-100">
+                    Disponible
+                  </span>
+                  <span x-show="p.ya_cogido"
+                        class="rounded-full bg-red-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-100">
+                    Bloqueado
+                  </span>
+                </div>
+                <div class="mt-3 text-2xl font-black">Pedido #<span x-text="p.pedido_id"></span></div>
+                <p class="mt-2 text-sm text-slate-200"
+                   x-show="!p.ya_cogido"
+                   x-text="'Esperando desde hace ' + (p.segundos_esperando < 60
+                     ? p.segundos_esperando + ' segundos'
+                     : Math.floor(p.segundos_esperando / 60) + ' min')"></p>
+                <p class="mt-2 text-sm text-red-100" x-show="p.ya_cogido">Ya cogido por otro picker</p>
+              </div>
+              <button @click="cogerPedido(p.picking_id)"
+                      :disabled="p.ya_cogido || cogiendo !== null"
+                      class="tap-xl rounded-2xl px-5 py-3 text-sm font-bold transition"
+                      :class="p.ya_cogido
+                        ? 'bg-white/10 text-slate-300 cursor-not-allowed'
+                        : 'bg-white text-slate-900 active:scale-95'">
+                <span x-show="!p.ya_cogido && cogiendo !== p.picking_id">Coger pedido</span>
+                <span x-show="p.ya_cogido">Cogido</span>
+                <span x-show="cogiendo === p.picking_id && !p.ya_cogido">...</span>
+              </button>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div class="rounded-2xl bg-white/10 px-4 py-3">
+                <p class="text-[11px] uppercase tracking-[0.16em] text-slate-300">Tiempo</p>
+                <p class="mt-1 text-lg font-bold"
+                   x-text="p.segundos_esperando < 60 ? p.segundos_esperando + ' s' : Math.floor(p.segundos_esperando / 60) + ' min'"></p>
+              </div>
+              <div class="rounded-2xl bg-white/10 px-4 py-3">
+                <p class="text-[11px] uppercase tracking-[0.16em] text-slate-300">Productos</p>
+                <p class="mt-1 text-lg font-bold" x-text="p.n_items"></p>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Vacía -->
+      <div x-show="cola.length === 0"
+           class="section-card flex flex-col items-center justify-center rounded-[32px] py-16 text-center px-6">
+        <div class="text-5xl mb-3">📋</div>
+        <p class="text-lg font-bold text-slate-800">La cola está limpia</p>
+        <p class="mt-2 text-sm text-slate-500">No hay pedidos sin asignar ahora mismo.</p>
+      </div>
+    </div>
+
+    <div x-show="tabActiva === 'mis-pedidos' && pedidos.length === 0"
+         class="section-card mt-4 flex flex-col items-center justify-center min-h-[65vh] rounded-[32px] text-center px-6">
       <div class="text-6xl mb-4">✅</div>
-      <h2 class="text-xl font-bold text-gray-700 mb-2">Sin pedidos asignados</h2>
-      <p class="text-gray-400 text-sm">No tienes pedidos pendientes ahora mismo.</p>
+      <h2 class="text-xl font-bold text-slate-800 mb-2">Sin pedidos asignados</h2>
+      <p class="text-slate-500 text-sm">No tienes pedidos pendientes ahora mismo.</p>
       <button @click="recargar()"
-              class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium active:bg-blue-700 transition tap-xl">
+              class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-2xl font-medium active:bg-blue-700 transition tap-xl">
         Actualizar
       </button>
     </div>
 
-    <div x-show="pedidos.length > 0" class="p-4 space-y-3">
+    <div x-show="tabActiva === 'mis-pedidos' && pedidos.length > 0" class="mt-4 space-y-3">
       <template x-for="p in pedidos" :key="p.picking_id">
         <div @click="abrirTicket(p)"
-             class="bg-white rounded-2xl shadow-sm border active:scale-95 transition-transform cursor-pointer slide-up"
-             :class="p.picking_completo ? 'border-green-400' : 'border-gray-100'">
+             class="order-card overflow-hidden rounded-[30px] border active:scale-[0.985] transition-transform cursor-pointer slide-up"
+             :class="p.picking_completo ? 'border-green-300' : 'border-white/70'">
 
           <!-- Banner de picking completo -->
           <div x-show="p.picking_completo"
-               class="bg-green-500 text-white text-sm font-bold px-4 py-2.5 rounded-t-2xl flex items-center gap-2">
+               class="bg-green-500 text-white text-sm font-bold px-5 py-3 flex items-center gap-2">
             <span>✅</span>
             <span>Picking completo — listo para repartir</span>
           </div>
 
           <div class="p-4">
-            <div class="flex items-start justify-between mb-2">
-              <div>
-                <span class="text-2xl font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
-                <div class="text-gray-500 text-sm mt-0.5" x-text="p.cliente_nombre"></div>
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
+                    Pedido #<span x-text="p.pedido_id"></span>
+                  </span>
+                  <div class="text-lg font-black leading-tight truncate"
+                       :class="colorTiempoDesde(p.iniciado_en)"
+                       x-text="p.iniciado_en ? formatMinutosDesde(p.iniciado_en) : 'Recién asignado'"></div>
+                </div>
               </div>
-              <div class="text-right">
-                <span class="text-lg font-semibold text-gray-800" x-text="p.total.toFixed(2) + '€'"></span>
-                <div class="mt-1">
+              <div class="text-right flex-shrink-0">
+                <span class="text-xl font-black text-slate-900" x-text="p.total.toFixed(2) + '€'"></span>
+                <div class="mt-1.5">
                   <span x-show="p.picking_completo"
-                        class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                        class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">
                     ✓ Listo
                   </span>
-                  <span x-show="!p.picking_completo"
-                        class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium"
-                        x-text="p.items_pendientes + ' pendientes'"></span>
                 </div>
               </div>
             </div>
-            <div class="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
-              <span>📍</span>
-              <span x-text="p.direccion_entrega"></span>
-            </div>
-            <div>
-              <div class="flex justify-between text-xs text-gray-400 mb-1">
+
+            <div class="mt-4">
+              <div class="flex justify-between text-xs text-slate-400 mb-2">
                 <span x-text="(p.items_listos ?? (p.items_total - p.items_pendientes)) + ' de ' + p.items_total + ' productos'"></span>
                 <span x-text="Math.round((p.items_listos ?? (p.items_total - p.items_pendientes)) / p.items_total * 100) + '%'"></span>
               </div>
-              <div class="w-full bg-gray-100 rounded-full h-2">
-                <div class="h-2 rounded-full transition-all"
+              <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                <div class="h-3 rounded-full transition-all"
                      :class="p.picking_completo ? 'bg-green-500' : 'bg-blue-500'"
                      :style="'width:' + (p.items_total > 0 ? ((p.items_listos ?? (p.items_total - p.items_pendientes)) / p.items_total * 100) : 0) + '%'"></div>
               </div>
             </div>
           </div>
-          <div class="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between">
-            <span class="text-xs text-gray-400"
-                  x-text="p.iniciado_en ? 'Iniciado ' + formatHora(p.iniciado_en) : 'Recién asignado'"></span>
-            <span class="text-blue-600 text-sm font-medium">Ver ticket →</span>
+
+          <div class="border-t border-slate-100 px-5 py-3 flex items-center justify-between gap-3 bg-white/70">
+            <div class="flex items-center gap-2 min-w-0 text-xs text-slate-400">
+              <span x-text="p.iniciado_en ? 'Iniciado ' + formatHora(p.iniciado_en) : 'Recién asignado'"></span>
+              <span x-show="p.cliente_nombre" class="truncate" x-text="p.cliente_nombre"></span>
+            </div>
+            <span class="text-blue-600 text-sm font-semibold">Abrir ticket →</span>
           </div>
         </div>
       </template>
@@ -603,6 +788,12 @@
         _searchTimer:      null,
         confirmarFinalizar: false,
 
+        // ---- Cola de pedidos sin asignar ----
+        cola:          [],
+        colaTotal:     0,
+        cogiendo:      null,   // picking_id en proceso de reclamación
+        tabActiva:     'mis-pedidos',  // 'mis-pedidos' | 'cola'
+
         // ---- Modales ----
         modalCantidad: {
           visible:  false,
@@ -655,9 +846,12 @@
           this.isOnline = navigator.onLine;
           window.addEventListener('online',  () => { this.isOnline = true;  this._flushQueue(); });
           window.addEventListener('offline', () => { this.isOnline = false; });
-          await this.recargar();
+          await Promise.all([this.recargar(), this.cargarCola()]);
           setInterval(() => {
-            if (this.vistaActual === 'lista') this.recargar();
+            if (this.vistaActual === 'lista') {
+              this.recargar();
+              this.cargarCola();
+            }
           }, 60000);
         },
 
@@ -683,6 +877,40 @@
             this.mostrarToast('Error al cargar pedidos', true);
           } finally {
             this.cargando = false;
+          }
+        },
+
+        async cargarCola() {
+          try {
+            const r = await fetch('/picker/cola');
+            if (r.ok) {
+              const d = await r.json();
+              this.cola      = d.cola  || [];
+              this.colaTotal = d.total || 0;
+            }
+          } catch (_) {
+            this.mostrarToast('Error al cargar la cola', true);
+          }
+        },
+
+        async cogerPedido(pickingId) {
+          if (this.cogiendo) return;
+          this.cogiendo = pickingId;
+          try {
+            const r = await fetch(`/picker/cola/coger/${pickingId}`, { method: 'POST' });
+            if (r.ok) {
+              this.cola      = this.cola.filter(p => p.picking_id !== pickingId);
+              this.colaTotal = Math.max(0, this.colaTotal - 1);
+              await this.recargar();
+            } else if (r.status === 409) {
+              this.cola = this.cola.map(p =>
+                p.picking_id === pickingId ? { ...p, ya_cogido: true } : p
+              );
+            }
+          } catch (_) {
+            this.mostrarToast('Error al coger el pedido', true);
+          } finally {
+            this.cogiendo = null;
           }
         },
 
@@ -946,6 +1174,29 @@
         formatHora(ts) {
           if (!ts) return '';
           return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        },
+
+        formatMinutosDesde(ts) {
+          if (!ts) return '';
+          const fecha = new Date(ts);
+          if (Number.isNaN(fecha.getTime())) return '';
+          const diffMin = Math.max(0, Math.floor((Date.now() - fecha.getTime()) / 60000));
+          if (diffMin < 1) return '< 1 min';
+          if (diffMin === 1) return '1 min';
+          if (diffMin < 60) return `${diffMin} min`;
+          const horas = Math.floor(diffMin / 60);
+          const mins = diffMin % 60;
+          return mins === 0 ? `${horas} h` : `${horas} h ${mins} min`;
+        },
+
+        colorTiempoDesde(ts) {
+          if (!ts) return 'text-slate-900';
+          const fecha = new Date(ts);
+          if (Number.isNaN(fecha.getTime())) return 'text-slate-900';
+          const diffMin = Math.max(0, Math.floor((Date.now() - fecha.getTime()) / 60000));
+          if (diffMin <= 5) return 'text-emerald-600';
+          if (diffMin <= 8) return 'text-amber-500';
+          return 'text-red-600';
         },
       };
     }

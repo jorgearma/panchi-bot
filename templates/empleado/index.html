@@ -21,46 +21,135 @@
       x-init="init()">
 
   <!-- ======== HEADER ======== -->
-  <header class="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-    <div>
-      <p class="text-xs text-gray-500" x-text="fechaHoy"></p>
-      <p class="text-white font-bold text-base leading-tight" x-text="saludo"></p>
-      <p class="text-gray-400 text-xs" x-text="nombreCompleto + ' · ' + rolLabel"></p>
+  <header class="border-b border-gray-800 bg-gray-900 px-4 py-3">
+    <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+      <p class="min-w-0 truncate text-sm font-bold text-white" x-text="nombreCompleto"></p>
+      <span class="rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400 flex-shrink-0"
+            x-text="rolLabel"></span>
     </div>
-    <form action="/auth/logout" method="post">
-      <button type="submit"
-              class="bg-gray-800 text-gray-400 text-xs px-3 py-1.5 rounded-lg active:bg-gray-700 transition">
-        Salir
-      </button>
-    </form>
   </header>
 
   <!-- ======== CONTENIDO ======== -->
   <main class="max-w-md mx-auto px-4 py-4 space-y-3">
 
-    <!-- Estado operativo -->
-    <div :class="estadoBg" class="rounded-xl p-3 border flex items-center justify-between">
-      <div>
-        <p class="text-xs text-gray-400 uppercase tracking-wide">Mi estado</p>
-        <p class="font-bold text-sm mt-0.5" :class="estadoColor">
-          <span>● </span><span x-text="estadoLabel"></span>
-        </p>
-        <p x-show="perfil.estado_operativo === 'ocupado'"
-           class="text-xs text-gray-500 mt-0.5" x-cloak>Asignado por el sistema</p>
+    <!-- Estado operativo + fichaje -->
+    <div :class="estadoBg" class="rounded-xl p-3 border">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs text-gray-400 uppercase tracking-wide">Mi estado</p>
+          <p class="font-bold text-sm mt-0.5" :class="estadoColor">
+            <span>● </span><span x-text="estadoLabel"></span>
+            <span x-show="fichajeActivo && fichajeInicio" x-cloak
+                  class="font-normal text-gray-400 ml-1"
+                  x-text="'desde las ' + formatHoraISO(fichajeInicio)"></span>
+          </p>
+          <p x-show="perfil.estado_operativo === 'ocupado'"
+             class="text-xs text-gray-500 mt-0.5" x-cloak>Asignado por el sistema</p>
+        </div>
+        <div class="flex gap-2">
+          <!-- Sin turno abierto: botón iniciar -->
+          <button x-show="!fichajeActivo"
+                  @click="iniciarTurno()"
+                  class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg transition active:bg-green-700 font-semibold">
+            ▶ Iniciar turno
+          </button>
+          <!-- Con turno abierto: cerrar -->
+          <button x-show="fichajeActivo"
+                  @click="cerrarTurno()"
+                  class="bg-gray-700 text-red-400 text-xs px-3 py-1.5 rounded-lg transition active:bg-gray-600">
+            ⏹ Cerrar turno
+          </button>
+        </div>
       </div>
-      <div class="flex gap-2">
-        <button @click="cambiarEstado('en_pausa')"
-                :disabled="perfil.estado_operativo === 'ocupado'"
-                :class="perfil.estado_operativo === 'ocupado' ? 'opacity-40 cursor-not-allowed' : 'active:bg-gray-600'"
-                class="bg-gray-700 text-gray-300 text-xs px-3 py-1.5 rounded-lg transition">
-          ⏸ Pausa
-        </button>
-        <button @click="cambiarEstado('desconectado')"
-                :disabled="perfil.estado_operativo === 'ocupado'"
-                :class="perfil.estado_operativo === 'ocupado' ? 'opacity-40 cursor-not-allowed' : 'active:bg-gray-600'"
-                class="bg-gray-700 text-red-400 text-xs px-3 py-1.5 rounded-lg transition">
-          ⏹ Salir
-        </button>
+    </div>
+
+    <!-- Colas globales -->
+    <div>
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Colas ahora</p>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="bg-gray-800 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-gray-500">Sin picker</p>
+            <p class="text-xl font-bold mt-0.5"
+               :class="metricas.sin_picker > 0 ? 'text-amber-400' : 'text-gray-600'"
+               x-text="metricas.sin_picker ?? '—'"></p>
+          </div>
+          <span class="text-2xl">📦</span>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-gray-500">Sin repartidor</p>
+            <p class="text-xl font-bold mt-0.5"
+               :class="metricas.sin_repartidor > 0 ? 'text-orange-400' : 'text-gray-600'"
+               x-text="metricas.sin_repartidor ?? '—'"></p>
+          </div>
+          <span class="text-2xl">🛵</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA principal — App operativa -->
+    <a :href="appUrl"
+       :class="appGradient"
+       class="block rounded-xl p-4 active:opacity-90 transition">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wide" :class="appSubtitleColor">Mi app</p>
+          <p class="text-white font-bold text-base mt-1" x-text="appLabel"></p>
+          <p class="text-xs mt-1" :class="appSubtitleColor"
+             x-text="pedidosAsignados === 0 ? '0 asignados ahora' : pedidosAsignados + ' asignado' + (pedidosAsignados > 1 ? 's' : '')"></p>
+        </div>
+        <span class="bg-white text-sm font-bold px-3 py-2 rounded-lg" :class="appBtnColor">
+          Entrar →
+        </span>
+      </div>
+    </a>
+
+    <!-- Cambiar rol — solo visible si polivalente -->
+    <template x-if="capacidades.length > 1">
+      <button @click="cambiarRol()"
+              class="w-full rounded-xl border px-4 py-3 text-sm font-semibold transition active:opacity-70"
+              :class="rol === 'repartidor'
+                ? 'border-blue-800 bg-blue-950/50 text-blue-300'
+                : 'border-orange-800 bg-orange-950/50 text-orange-300'">
+        ⇄ Cambiar a <span x-text="rolOpuesto"></span>
+      </button>
+    </template>
+
+    <!-- Stats del día -->
+    <div>
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Hoy</p>
+      <div class="grid grid-cols-3 gap-2">
+        <div class="bg-gray-800 rounded-xl p-3 text-center">
+          <p class="text-xl font-bold text-blue-400" x-text="metricas.pedidos_completados ?? '—'"></p>
+          <p class="text-xs text-gray-500 mt-1" x-text="metricaLabel1"></p>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-3 text-center">
+          <p class="text-xl font-bold text-green-400"
+             x-text="metricas.tiempo_medio_min ? metricas.tiempo_medio_min + 'm' : '—'"></p>
+          <p class="text-xs text-gray-500 mt-1">T. medio</p>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-3 text-center">
+          <p class="text-xl font-bold text-amber-400" x-text="metricas.incidencias_hoy ?? '—'"></p>
+          <p class="text-xs text-gray-500 mt-1" x-text="metricaLabel3"></p>
+        </div>
+      </div>
+      <!-- Mi turno de hoy -->
+      <div x-show="fichajeResumen && (fichajeResumen.activo || fichajeResumen.fin)" x-cloak
+           class="mt-2 bg-gray-800 rounded-xl p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-semibold text-white"
+             x-text="formatHoraISO(fichajeResumen?.inicio) + (fichajeResumen?.fin ? ' → ' + formatHoraISO(fichajeResumen.fin) : ' → ahora')"></p>
+          <span class="text-xs text-gray-400"
+                x-text="formatMinutos(fichajeResumen?.duracion_total_min)"></span>
+        </div>
+        <template x-for="t in (fichajeResumen?.tramos || [])" :key="t.rol">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-300" x-text="t.rol === 'picker' ? '📦 Picker' : '🛵 Repartidor'"></span>
+            <span class="text-gray-400" x-text="formatMinutos(t.minutos)"></span>
+          </div>
+        </template>
+        <div x-show="fichajeResumen?.activo" class="text-[11px] text-green-400 font-medium">● En curso</div>
       </div>
     </div>
 
@@ -85,41 +174,6 @@
           </div>
         </div>
       </template>
-    </div>
-
-    <!-- CTA principal — App operativa -->
-    <a :href="appUrl"
-       :class="appGradient"
-       class="block rounded-xl p-4 flex items-center justify-between active:opacity-90 transition">
-      <div>
-        <p class="text-xs uppercase tracking-wide" :class="appSubtitleColor">Mi app</p>
-        <p class="text-white font-bold text-base mt-1" x-text="appLabel"></p>
-        <p class="text-xs mt-1" :class="appSubtitleColor"
-           x-text="pedidosAsignados === 0 ? '0 asignados ahora' : pedidosAsignados + ' asignado' + (pedidosAsignados > 1 ? 's' : '')"></p>
-      </div>
-      <span class="bg-white text-sm font-bold px-3 py-2 rounded-lg" :class="appBtnColor">
-        Entrar →
-      </span>
-    </a>
-
-    <!-- Stats del día -->
-    <div>
-      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Hoy</p>
-      <div class="grid grid-cols-3 gap-2">
-        <div class="bg-gray-800 rounded-xl p-3 text-center">
-          <p class="text-xl font-bold text-blue-400" x-text="metricas.pedidos_completados ?? '—'"></p>
-          <p class="text-xs text-gray-500 mt-1" x-text="metricaLabel1"></p>
-        </div>
-        <div class="bg-gray-800 rounded-xl p-3 text-center">
-          <p class="text-xl font-bold text-green-400"
-             x-text="metricas.tiempo_medio_min ? metricas.tiempo_medio_min + 'm' : '—'"></p>
-          <p class="text-xs text-gray-500 mt-1">T. medio</p>
-        </div>
-        <div class="bg-gray-800 rounded-xl p-3 text-center">
-          <p class="text-xl font-bold text-amber-400" x-text="metricas.incidencias_hoy ?? '—'"></p>
-          <p class="text-xs text-gray-500 mt-1" x-text="metricaLabel3"></p>
-        </div>
-      </div>
     </div>
 
     <!-- Accesos secundarios -->
@@ -150,6 +204,44 @@
       </div>
     </div>
 
+    <!-- Cerrar sesión -->
+    <form action="/auth/logout" method="post">
+      <button type="submit"
+              class="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm font-semibold text-gray-500 transition active:bg-gray-800">
+        Cerrar sesión
+      </button>
+    </form>
+
+    <!-- Modal bloqueo de cambio de rol -->
+    <div x-show="mostrarModalBloqueo" x-cloak
+         class="fixed inset-0 bg-black/70 z-50 flex items-end justify-center p-4">
+      <div class="bg-gray-900 rounded-2xl w-full max-w-md p-5 border border-red-900">
+        <p class="text-red-400 font-bold text-sm mb-2">🔒 No puedes cambiar de rol ahora</p>
+        <p class="text-gray-400 text-xs mb-3">
+          Tienes tareas activas. Termínalas primero:
+        </p>
+        <div class="space-y-2 mb-4">
+          <template x-for="p in pedidosBloqueantes" :key="p.id">
+            <div class="bg-gray-800 rounded-lg px-3 py-2 flex justify-between">
+              <span class="text-sm text-red-300 font-medium" x-text="p.tipo + ' #' + p.id"></span>
+              <span class="text-xs text-gray-500" x-text="p.estado"></span>
+            </div>
+          </template>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <a :href="appUrl"
+             class="bg-blue-700 text-white text-sm font-semibold rounded-xl py-2.5 text-center active:opacity-90">
+            Ir a terminarlos
+          </a>
+          <button @click="mostrarModalBloqueo = false"
+                  class="bg-gray-700 text-gray-300 text-sm rounded-xl py-2.5 active:bg-gray-600">
+            Cancelar
+          </button>
+        </div>
+        <p class="text-center text-gray-600 text-xs mt-3">El manager puede transferir los pedidos desde el dashboard</p>
+      </div>
+    </div>
+
   </main>
 
   <!-- ======== ALPINE COMPONENT ======== -->
@@ -162,6 +254,12 @@
       turno:           null,
       metricas:        {},
       pedidosAsignados: 0,
+      capacidades:         [],
+      mostrarModalBloqueo: false,
+      pedidosBloqueantes:  [],
+      fichajeActivo: false,
+      fichajeInicio: null,
+      fichajeResumen: null,
 
       // -- computed --
       get saludo() {
@@ -193,10 +291,12 @@
       get appBtnColor()     { return this.rol === 'repartidor' ? 'text-orange-600' : 'text-blue-600'; },
       get metricaLabel1()   { return this.rol === 'repartidor' ? 'Entregas' : 'Pedidos'; },
       get metricaLabel3()   { return this.rol === 'repartidor' ? 'Fallidas' : 'Incidencias'; },
+      get rolOpuesto()    { return this.rol === 'picker' ? 'Repartidor' : 'Picker'; },
+      get rolOpuestoSlug(){ return this.rol === 'picker' ? 'repartidor' : 'picker'; },
 
       // -- methods --
       async init() {
-        await Promise.all([this.cargarPerfil(), this.cargarTurno(), this.cargarMetricas()]);
+        await Promise.all([this.cargarPerfil(), this.cargarTurno(), this.cargarMetricas(), this.cargarCapacidades(), this.cargarFichaje()]);
       },
 
       async cargarPerfil() {
@@ -222,6 +322,91 @@
             this.pedidosAsignados = d.pedidos_activos || 0;
           }
         } catch (_) {}
+      },
+
+      async cargarCapacidades() {
+        try {
+          const r = await fetch('/empleado/capacidades');
+          if (r.ok) {
+            const d = await r.json();
+            this.capacidades = d.capacidades || [];
+          }
+        } catch (_) {}
+      },
+
+      async cambiarRol() {
+        const nuevoRol = this.rolOpuestoSlug;
+        try {
+          const r = await fetch('/empleado/cambiar-rol', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rol: nuevoRol }),
+          });
+          if (r.ok) {
+            window.location.reload();
+          } else if (r.status === 409) {
+            const d = await r.json();
+            this.pedidosBloqueantes = d.pedidos_activos || [];
+            this.mostrarModalBloqueo = true;
+          } else {
+            const d = await r.json();
+            alert(d.error || 'Error al cambiar rol');
+          }
+        } catch (_) {
+          alert('Error de conexión');
+        }
+      },
+
+      async cargarFichaje() {
+        try {
+          const r = await fetch('/empleado/fichaje/hoy');
+          if (r.ok) {
+            const d = await r.json();
+            this.fichajeActivo = d.activo || false;
+            this.fichajeInicio = d.inicio || null;
+            this.fichajeResumen = d;
+          }
+        } catch (_) {}
+      },
+
+      async iniciarTurno() {
+        try {
+          const r = await fetch('/empleado/fichaje', { method: 'POST' });
+          if (r.ok) {
+            await this.cargarFichaje();
+          } else {
+            const d = await r.json();
+            alert(d.error || 'Error al iniciar turno');
+          }
+        } catch (_) { alert('Error de conexión'); }
+      },
+
+      async cerrarTurno() {
+        if (!confirm('¿Cerrar el turno ahora?')) return;
+        try {
+          const r = await fetch('/empleado/fichaje/cerrar', { method: 'POST' });
+          if (r.ok) {
+            await this.cargarFichaje();
+          } else {
+            const d = await r.json();
+            alert(d.error || 'Error al cerrar turno');
+          }
+        } catch (_) { alert('Error de conexión'); }
+      },
+
+      formatMinutos(min) {
+        if (!min) return '0 min';
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        if (h === 0) return m + ' min';
+        if (m === 0) return h + 'h';
+        return h + 'h ' + m + 'min';
+      },
+
+      formatHoraISO(iso) {
+        if (!iso) return '';
+        const s = iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z';
+        return new Date(s).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
       },
 
       async cambiarEstado(nuevoEstado) {

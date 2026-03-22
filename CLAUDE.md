@@ -7,16 +7,8 @@ Sistema de pedidos para restaurante vía WhatsApp (Twilio). Los clientes se regi
 ## Comandos esenciales
 
 ```bash
-# Tests (siempre antes de hacer commit)
-pytest -v --tb=short
-
-# Servidor de desarrollo
-python main.py          # http://0.0.0.0:5000
-
-# Modelo spaCy (solo primera vez tras instalar)
-python -m spacy download es_core_news_sm
-
-# Dependencias
+pytest -v --tb=short        # Tests (siempre antes de commit)
+python main.py              # Servidor dev — http://0.0.0.0:5000
 pip install -r requirements.txt
 ```
 
@@ -47,9 +39,11 @@ Twilio webhook → blueprints/ → controllers/ → managers/ → SQL Server / R
 | `webhook` | `blueprints/webhook.py` | `POST /webhook` (Twilio), `POST /webhook/monei` |
 | `menu` | `blueprints/menu.py` | `GET /menu/<token>` |
 | `api` | `blueprints/api.py` | `POST /api/agregar_pedido`, `/api/confirmacion`, `/api/cambiar_estado_a_enlace` |
-| `dashboard` | `blueprints/dashboard.py` | `GET /dashboard`, `/dashboard/monitor`, y endpoints de gestión |
-| `picker` | `blueprints/picker.py` | `GET /picker`, `/picker/mis-pedidos`, `/picker/item/<id>/estado` |
+| `auth` | `blueprints/auth.py` | `GET/POST /auth/login`, `POST /auth/logout` |
+| `dashboard` | `blueprints/dashboard.py` | `GET /dashboard`, `/dashboard/monitor`, endpoints de gestión |
+| `picker` | `blueprints/picker.py` | `GET /picker`, `/picker/mis-pedidos`, `/picker/cola`, `/picker/item/<id>/estado` |
 | `repartidor` | `blueprints/repartidor.py` | `GET /repartidor`, `/repartidor/mis-pedidos`, `/repartidor/cierre` |
+| `empleado` | `blueprints/empleado.py` | `GET /empleado`, `/empleado/perfil`, `/empleado/estado`, `/empleado/turno-hoy`, `/empleado/checkin` |
 | `productos` | `blueprints/productos.py` | `GET /productos`, endpoints admin |
 
 ---
@@ -82,73 +76,58 @@ EstadoReparto: PENDIENTE → ASIGNADO → EN_CAMINO → ENTREGADO | NO_ENTREGADO
 
 ## Managers principales
 
-### `GestorPedidos` (`managers/gestor_pedidos.py`)
-- `iniciar_pedido(id, direccion, telefono)` — crea el pedido en BD
-- `actualizar_estado(pedido_id, nuevo_estado)` — valida transición + audit trail
-- `cancelar_pedido(pedido_id, motivo, empleado_id)` — cancela y registra en `AuditLog`
-- `eliminar_item` / `sustituir_item` — modificaciones de items con audit log
-- Usa `tenacity` con 3 reintentos (1s espera)
-
-### `GestorDashboard` (`managers/gestor_dashboard.py`)
-- `metricas()` — pedidos_hoy, ingresos, tiempos medios, cancelaciones_hoy, ingresos_por_metodo
-- `alertas()` — pedidos en estado demasiado tiempo, incidencias abiertas
-- `pickings_del_picker(picker_id)` — devuelve items_total, items_listos, items_pendientes, picking_completo
-- `marcar_entregado(reparto_id)` — tiene guard: si `forma_pago in ('efectivo','tarjeta')` y `metodo_cobro is None` → error
-- `monitor_empleados()`, `eventos(limit)`, `mapa()`
-
-### `GestorUsuarios` (`managers/gestor_usuarios.py`)
-- `verificar_usuario(numero_cliente)` — devuelve ORM o None
-- `guardar_usuario(numero_cliente, nombre, direccion)`
-
-### `GestorProductos` (`managers/gestor_productos.py`)
-- `obtener_productos()` — catálogo para el menú
-- `descontar_stock_picking(items)` — batch tras completar picking
-
-### `RedisManager` (`managers/gestor_redis.py`)
-- Singleton: `redismanager` (importar desde `managers.gestor_redis`)
-- `get/set/delete` con reintentos tenacity
-- `bloquear_usuario(numero, duracion)` / `esta_bloqueado(numero)` — rate-limiting
+| Manager | Archivo | Responsabilidad |
+|---------|---------|-----------------|
+| `GestorPedidos` | `managers/gestor_pedidos.py` | CRUD pedidos, transiciones de estado, cancelaciones, audit log. Usa tenacity (3 reintentos). |
+| `GestorDashboard` | `managers/gestor_dashboard.py` | Métricas, alertas, monitor de empleados, mapa, pickings, repartos sin asignar. |
+| `GestorEmpleado` | `managers/gestor_empleado.py` | Perfil, estado operativo, turno, métricas individuales, capacidades, check-in. |
+| `GestorUsuarios` | `managers/gestor_usuarios.py` | Verificar y guardar clientes WhatsApp. |
+| `GestorProductos` | `managers/gestor_productos.py` | Catálogo para el menú, descuento de stock tras picking. |
+| `RedisManager` | `managers/gestor_redis.py` | get/set/delete con reintentos, rate-limiting por número de cliente. Singleton: `redismanager`. |
 
 ---
 
-## Servicios externos (`services/`)
+## Base de datos — lógica y relaciones
 
-- **`twilio_service.py`** — `enviar_mensaje_whatsapp(mensaje, destinatario)`, cliente singleton cacheado
-- **`token_service.py`** — `generar_token_temporal(usuario_datos)` → token 7 chars, TTL 24h en Redis
-- **`maps_service.py`** — geocodificación y validación de direcciones (Google Maps)
-- **`services/__init__.py`** — exporta singletons: `gestor_pedidos`, `gestor_usuarios`, `gestor_productos`, `gestor_dashboard`, `cache` (alias de `redismanager`), `get_monei()`
+### Sesión por request
+`get_db()` crea (o reutiliza) una sesión SQLAlchemy en `flask.g` para cada request y la cierra en `teardown_appcontext`. **No usar `db.session` global.** En managers, acceder siempre via `self.session` (property que llama a `get_db()`).
+
+### Flujo de datos de un pedido
+```
+Usuario ──< Pedido ──< PedidoDetalle >── Producto
+                 │
+                 ├──< PickingPedido ──< PickingItem >── PedidoDetalle
+                 │         └── Empleado (picker)
+                 │
+                 └──  Reparto
+                           └── Empleado (repartidor)
+```
+
+1. **Pedido + PedidoDetalle** — se crean cuando el cliente confirma el carrito. `PedidoID` arranca en 2000 (IDENTITY).
+2. **PickingPedido / PickingItem** — se crean automáticamente al pasar a `EN_PREPARACION`. Cada `PickingItem` espeja un `PedidoDetalle`. El picker los marca: `pendiente → encontrado | sin_stock | sustituido`.
+3. **Reparto** — se crea con estado `PENDIENTE` al completar el picking. El repartidor lo reclama (`ASIGNADO`), sale (`EN_CAMINO`) y cierra la entrega (`ENTREGADO`).
+4. **Pago** — registro de cada intento Monei. Un pedido puede tener varios intentos (reintentos de pago).
+
+### Trazabilidad y auditoría
+- `HistorialEstadoPedido` — un registro por cada transición de estado. Es la fuente de métricas de tiempos.
+- `AuditLog` — acciones de empleados: `cancelar_pedido`, `eliminar_item`, `sustituir_item`.
+
+### Cobro presencial (repartidor)
+`Reparto` tiene `metodo_cobro`, `importe_cobrado`, `cambio_devuelto`, `importe_efectivo`, `importe_tarjeta`. Solo se rellenan si `forma_pago` es `efectivo` o `tarjeta`. **Guard:** `marcar_entregado` falla si `forma_pago in ('efectivo','tarjeta')` y `metodo_cobro is None`.
+
+### Campos legacy a evitar en código nuevo
+- `Producto.Categoria` (String) → usar `Producto.categoria_id` (FK)
+- `Empleado.Puesto` (String) → usar `Empleado.rol_id` (FK a `Rol`)
 
 ---
 
-## Redis — qué almacena
+## Convenciones de código
 
-| Clave | Contenido | TTL |
-|-------|-----------|-----|
-| `<numero_cliente>` | JSON estado de registro `{estado, nombre, direccion}` | Sin TTL |
-| `<token>` | JSON datos de usuario para menú | 24h |
-| `bloqueo:<numero>` | `"1"` (usuario bloqueado por rate-limit) | 4s |
-
----
-
-## Base de datos
-
-- **Motor:** SQL Server via `mssql+pyodbc`
-- **ORM:** SQLAlchemy 2.x con session por request (`g.db`)
-- **Inicialización:** `database.conectar_bd1()` — crea todas las tablas incluida `AuditLog`
-- **Session:** acceder via `get_db()` o la propiedad `session` de cada manager
-- **No usar `db.session` global** — cada request tiene su propia sesión en `flask.g`
-
-### Modelos clave
-
-| Modelo | Tabla | Notas |
-|--------|-------|-------|
-| `Pedido` | `pedidos` | `PedidoID` (PK), `forma_pago` en minúsculas (`online`/`efectivo`/`tarjeta`) |
-| `Usuario` | `usuarios` | `numero_cliente` es el identificador WhatsApp |
-| `Empleado` | `empleados` | `password_hash` (werkzeug), `rol_id` FK a `Rol` |
-| `PickingPedido` + `PickingItem` | `picking_*` | Uno por pedido; items reflejan `PedidoDetalle` |
-| `Reparto` | `repartos` | `metodo_cobro`, `importe_cobrado`, `hora_entrega_real` |
-| `HistorialEstadoPedido` | `historial_estados_pedido` | Timestamps de cada transición — fuente para métricas |
-| `AuditLog` | `audit_log` | Acciones de empleados (cancelar, eliminar item, sustituir) |
+- **Logging:** `logger = logging.getLogger(__name__)` al nivel de módulo. Usar `%`-formatting — nunca f-strings en logger.
+- **Eventos de negocio** con prefijos: `REGISTRO_COMPLETADO`, `PEDIDO_INICIADO`, `CARRITO_CONFIRMADO`, `PAGO_INICIADO`
+- **Transiciones de estado** solo via `gestor_pedidos.actualizar_estado()` — nunca `pedido.Estado = ...` directamente.
+- **Sentry SDK v2:** `sentry_sdk.get_current_scope()` — `push_scope()` fue eliminado en v2.
+- **`forma_pago`** en minúsculas: `'online'`, `'efectivo'`, `'tarjeta'`.
 
 ---
 
@@ -160,77 +139,18 @@ pytest tests/test_webhook.py  # Archivo específico
 pytest -k "test_metricas"     # Por nombre
 ```
 
-**Cómo funcionan:**
-- `tests/conftest.py` parchea `redis.Redis` con `fakeredis.FakeRedis` **antes** de cualquier import
-- App fixture con `TESTING=True` — desactiva Sentry y validación de firma Twilio
-- No hay SQL Server en CI: tests que necesitan BD usan `inspect.getsource()` o capturan `OperationalError` con `pass`
-- Tests de managers con BD se mockean via `patch.object(type(manager), 'session', new_callable=PropertyMock)`
-
-**Archivos de test:**
-`test_webhook.py`, `test_menu.py`, `test_api_pedido.py`, `test_registro.py`, `test_mensajes_registrados.py`, `test_gestor_pedidos.py`, `test_gestor_usuarios.py`, `test_gestor_dashboard.py`, `test_repartidor.py`, `test_picker.py`, `test_token_service.py`, `test_states.py`, `test_database.py`
-
-**3 tests pre-existentes fallan** (`TestWebhookMonei`) — son conocidos y no bloquean.
-
----
-
-## Variables de entorno requeridas
-
-```bash
-# Twilio (WhatsApp)
-TWILIO_ACCOUNT_SID
-TWILIO_AUTH_TOKEN
-TWILIO_WHATSAPP_NUMBER
-
-# Monei (pagos)
-MONEI_API_KEY
-MONEI_WEBHOOK_SECRET
-
-# Google Maps
-GOOGLE_MAPS_API_KEY
-
-# Flask
-SECRET_KEY
-PUBLIC_URL            # URL pública (ngrok en dev, dominio real en prod)
-
-# SQL Server
-SQL_SERVER            # default: localhost,1433
-SQL_DATABASE          # default: pruebabot
-SQL_UID
-SQL_PWD
-
-# Redis
-REDIS_HOST            # default: localhost
-REDIS_PORT            # default: 6379
-REDIS_DB              # default: 0
-
-# Sentry
-SENTRY_DSN
-
-# Otros
-INTERNAL_API_TOKEN    # Token para endpoints internos de cambio de estado
-CUSTOMER_SUPPORT_PHONE
-```
-
----
-
-## Convenciones de código
-
-- **Logging:** `logger = logging.getLogger(__name__)` al nivel de módulo, siempre. Usar `%`-formatting: `logger.info("msg %s", var)` — nunca f-strings en logger.
-- **Eventos de negocio** se loguean con prefijos: `REGISTRO_COMPLETADO`, `PEDIDO_INICIADO`, `CARRITO_CONFIRMADO`, `PAGO_INICIADO`
-- **Transiciones de estado** solo via `gestor_pedidos.actualizar_estado()` — nunca escribir `pedido.Estado = ...` directamente
-- **Sentry SDK v2:** usar `sentry_sdk.get_current_scope()` — `push_scope()` fue eliminado en v2
-- **`forma_pago`** en `Pedido` es minúsculas: `'online'`, `'efectivo'`, `'tarjeta'` — no usar mayúsculas ni enum
-- **Guard cobro:** `marcar_entregado` en `GestorDashboard` rechaza si `forma_pago in ('efectivo','tarjeta')` y `reparto.metodo_cobro is None`
+- `conftest.py` parchea Redis con `fakeredis.FakeRedis` antes de cualquier import.
+- App fixture con `TESTING=True` — desactiva Sentry y validación de firma Twilio.
+- Managers con BD se mockean via `patch.object(type(manager), 'session', new_callable=PropertyMock)`.
+- **3 tests pre-existentes fallan** (`TestWebhookMonei`) — conocidos, no bloquean.
 
 ---
 
 ## Estado del proyecto
 
 **Rama activa:** `refactorizar-estructura`
-**Plan en curso:** `docs/superpowers/plans/2026-03-19-produccion-panchi-bot.md`
 
-Fases completadas: 1 (base), 2 (logs/métricas), 3 (pulido de interfaces), 4 (hardening — auth PIN, tenacity Twilio, env vars validation, docker-compose/health, observabilidad)
-**Plan completado al 100%.** No quedan tareas pendientes.
+Plan de producción `docs/superpowers/plans/2026-03-19-produccion-panchi-bot.md` completado al 100%. Features posteriores al plan: cola de pickers, cola de repartidores, gestión de empleados (`/empleado`), quinela.
 
 ### LEGACY-1 (acción pendiente externa)
 Una vez que el dashboard de Monei esté configurado para apuntar a `/webhook/monei`, eliminar la ruta legacy `/webhoo/monei` de `blueprints/webhook.py:90`. Trigger: confirmación del proveedor de que la URL está actualizada.

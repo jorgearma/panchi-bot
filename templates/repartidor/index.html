@@ -17,30 +17,71 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
+    :root {
+      --rep-ink: #172033;
+      --rep-panel: #ffffff;
+      --rep-soft: #fff8f2;
+      --rep-line: #f0ddc9;
+      --rep-brand: #ea580c;
+      --rep-brand-dark: #9a3412;
+      --rep-accent: #0f766e;
+      --rep-warm: #f59e0b;
+      --rep-danger: #dc2626;
+    }
     .slide-up { animation: slideUp .25s ease-out; }
     @keyframes slideUp {
       from { opacity:0; transform:translateY(14px); }
       to   { opacity:1; transform:translateY(0); }
     }
     button { -webkit-tap-highlight-color: transparent; }
+    .tap-xl { min-height: 56px; }
     @keyframes glowRed {
       0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); }
       50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0.25); }
     }
     .card-nuevo { animation: glowRed 1.4s ease-in-out infinite; }
-    #mapa-rep { height: 220px; }
+    #mapa-rep  { height: 220px; }
+    #mapa-cola { height: 220px; }
+    .repartidor-shell {
+      background:
+        radial-gradient(circle at top left, rgba(234, 88, 12, 0.14), transparent 30%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.10), transparent 26%),
+        linear-gradient(180deg, #fff3ea 0%, #f9f7f5 34%, #f3ede8 100%);
+      color: var(--rep-ink);
+    }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(240, 221, 201, 0.9);
+      box-shadow: 0 18px 50px rgba(23, 32, 51, 0.08);
+    }
+    .section-card {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(240, 221, 201, 0.95);
+      box-shadow: 0 18px 40px rgba(23, 32, 51, 0.08);
+    }
+    .metric-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(252,246,240,0.96));
+      border: 1px solid rgba(240, 221, 201, 0.9);
+      box-shadow: 0 14px 30px rgba(23, 32, 51, 0.06);
+    }
+    .queue-card {
+      background: linear-gradient(135deg, rgba(23, 32, 51, 0.98), rgba(154, 52, 18, 0.88));
+      box-shadow: 0 18px 34px rgba(23, 32, 51, 0.24);
+    }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen"
+<body class="repartidor-shell min-h-screen"
       x-data="repartidor({{ repartidor_id or 'null' }})"
       x-init="init()">
 
   <!-- ======== HEADER ======== -->
-  <header class="bg-gray-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow">
+  <header class="bg-slate-950/90 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-lg backdrop-blur">
     <div class="flex items-center gap-2">
       <button x-show="vista !== 'lista'"
               @click="volverALista()"
-              class="text-gray-400 active:text-white transition mr-1 text-xl leading-none">‹</button>
+              class="p-2 -ml-2 text-gray-400 active:text-white transition text-2xl leading-none">‹</button>
       <span class="font-bold text-lg">
         <span x-show="vista === 'lista'">🛵 Mis entregas</span>
         <span x-show="vista === 'pedido'" x-cloak>
@@ -64,7 +105,7 @@
             class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold animate-pulse"
             x-text="pedidosNuevosEnCalle.length + ' nuevo' + (pedidosNuevosEnCalle.length > 1 ? 's' : '')"></span>
       <button @click="recargar()"
-              class="text-gray-400 active:text-white transition text-xl leading-none"
+              class="p-2 -mr-1 text-gray-400 active:text-white transition text-xl leading-none"
               :class="cargando ? 'animate-spin' : ''">↻</button>
     </div>
   </header>
@@ -90,8 +131,49 @@
   ================================================================ -->
   <div x-show="repartidorId && !cargando && vista === 'lista'" x-cloak>
 
+    <!-- ---- Tabs ---- -->
+    <div class="pt-3 px-3 sm:px-4">
+      <div class="glass-panel rounded-[28px] p-2">
+        <div class="grid grid-cols-2 gap-2">
+          <button @click="tabActiva = 'mis-entregas'"
+                  class="rounded-2xl px-4 py-3 text-left transition"
+                  :class="tabActiva === 'mis-entregas'
+                    ? 'bg-gradient-to-r from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-200'
+                    : 'bg-white/60 text-slate-600'">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold">🛵 Mis entregas</span>
+              <span class="rounded-full px-2.5 py-1 text-xs font-bold"
+                    :class="tabActiva === 'mis-entregas' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    x-text="pedidosActivos.length"></span>
+            </div>
+            <p class="mt-1 text-[11px]"
+               :class="tabActiva === 'mis-entregas' ? 'text-orange-100' : 'text-slate-400'">
+              Tus entregas activas y su estado
+            </p>
+          </button>
+          <button @click="tabActiva = 'cola'; cargarCola()"
+                  class="rounded-2xl px-4 py-3 text-left transition"
+                  :class="tabActiva === 'cola'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-200'
+                    : 'bg-white/60 text-slate-600'">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold">📋 Cola</span>
+              <span class="rounded-full px-2.5 py-1 text-xs font-bold"
+                    :class="tabActiva === 'cola' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    x-text="colaTotal"></span>
+            </div>
+            <p class="mt-1 text-[11px]"
+               :class="tabActiva === 'cola' ? 'text-emerald-100' : 'text-slate-400'">
+              Pedidos disponibles para coger
+            </p>
+          </button>
+        </div>
+      </div>
+    </div>
+
+
     <!-- Sin pedidos -->
-    <div x-show="pedidosActivos.length === 0 && pedidosHistorial.length === 0"
+    <div x-show="tabActiva === 'mis-entregas' && pedidosActivos.length === 0 && pedidosHistorial.length === 0"
          class="flex flex-col items-center justify-center min-h-[65vh] text-center px-6">
       <div class="text-6xl mb-4">✅</div>
       <h2 class="text-xl font-bold text-gray-700 mb-2">Sin entregas pendientes</h2>
@@ -102,7 +184,7 @@
       </button>
     </div>
 
-    <div x-show="pedidosActivos.length > 0 || pedidosHistorial.length > 0" class="p-4 space-y-4">
+    <div x-show="tabActiva === 'mis-entregas' && (pedidosActivos.length > 0 || pedidosHistorial.length > 0)" class="px-3 pb-8 pt-4 sm:px-4 space-y-4">
 
       <!-- ── MAPA DE ENTREGAS ── -->
       <template x-if="true">
@@ -307,24 +389,69 @@
         </div>
       </template>
 
-      <!-- Cierre de caja — visible cuando hay historial del día -->
-      <template x-if="pedidosHistorial.length > 0">
-        <div class="pb-6 mt-2">
-          <a :href="'/repartidor/cierre?id=' + repartidorId"
-             class="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-3.5 shadow-sm active:bg-gray-50 transition cursor-pointer">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">💰</div>
-              <div>
-                <p class="text-sm font-semibold text-gray-800">Cierre de caja</p>
-                <p class="text-xs text-gray-400">Resumen del efectivo del turno</p>
-              </div>
-            </div>
-            <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </a>
+
+    </div>
+
+    <!-- ======== SECCIÓN COLA ======== -->
+    <div x-show="tabActiva === 'cola'" x-cloak class="mt-4 px-3 pb-8 sm:px-4">
+
+      <!-- Mapa cola -->
+      <div x-show="cola.some(p => p.lat != null && p.lng != null)" x-cloak
+           class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+        <button @click="toggleMapaCola()"
+                class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 transition">
+          <span class="text-sm font-semibold text-gray-700">🗺️ Ver pedidos de la cola en el mapa</span>
+          <span class="text-gray-400 text-xs" x-text="mapaColaVisible ? '▲' : '▼'"></span>
+        </button>
+        <div x-show="mapaColaVisible" x-cloak>
+          <div id="mapa-cola"></div>
         </div>
-      </template>
+      </div>
+
+      <!-- Lista -->
+      <div x-show="cola.length > 0" class="space-y-4">
+        <template x-for="p in cola" :key="p.pedido_id">
+          <div class="queue-card rounded-2xl p-3 text-white slide-up"
+               :class="p.ya_cogido ? 'opacity-45 saturate-50' : ''">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span x-show="!p.ya_cogido" class="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-100">
+                    Disponible
+                  </span>
+                  <span x-show="!p.ya_cogido"
+                        class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-slate-200"
+                        x-text="p.segundos_esperando < 60 ? p.segundos_esperando + 's' : Math.floor(p.segundos_esperando / 60) + ' min'"></span>
+                  <span x-show="p.ya_cogido"
+                        class="rounded-full bg-red-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-100">
+                    Bloqueado
+                  </span>
+                </div>
+                <div class="mt-2 text-base font-bold">Pedido #<span x-text="p.pedido_id"></span></div>
+                <p class="mt-1 text-xs text-red-100" x-show="p.ya_cogido">Ya cogido por otro repartidor</p>
+              </div>
+              <button @click="cogerReparto(p.pedido_id)"
+                      :disabled="p.ya_cogido || cogiendo !== null"
+                      class="rounded-xl px-3 py-2 text-xs font-bold transition flex-shrink-0"
+                      :class="p.ya_cogido
+                        ? 'bg-white/10 text-slate-300 cursor-not-allowed'
+                        : 'bg-white text-slate-900 active:scale-95'">
+                <span x-show="!p.ya_cogido && cogiendo !== p.pedido_id">Coger →</span>
+                <span x-show="p.ya_cogido">Cogido</span>
+                <span x-show="cogiendo === p.pedido_id && !p.ya_cogido">...</span>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Vacía -->
+      <div x-show="cola.length === 0"
+           class="section-card flex flex-col items-center justify-center rounded-[32px] py-16 text-center px-6">
+        <div class="text-5xl mb-3">📋</div>
+        <p class="text-lg font-bold text-slate-800">La cola está limpia</p>
+        <p class="mt-2 text-sm text-slate-500">No hay pedidos sin asignar ahora mismo.</p>
+      </div>
 
     </div>
   </div>
@@ -332,7 +459,7 @@
   <!-- ================================================================
        VISTA PEDIDO (entrega activa)
   ================================================================ -->
-  <div x-show="vista === 'pedido' && actual" x-cloak class="pb-44">
+  <div x-show="vista === 'pedido' && actual" x-cloak class="pb-40">
 
     <!-- DIRECCIÓN + MAPS -->
     <div class="px-4 pt-4 pb-0">
@@ -408,18 +535,13 @@
            :class="pagoConfirmado ? 'border-green-300' : 'border-orange-300'">
 
         <!-- Importe + estado -->
-        <div class="p-4 text-center transition-colors duration-300"
+        <div class="px-4 py-2.5 text-center transition-colors duration-300"
              :class="pagoConfirmado ? 'bg-green-50' : 'bg-orange-50'">
-          <div class="text-2xl mb-1">
-            <span x-show="actual?.pago?.estado === 'cobrar_efectivo'">💵</span>
-            <span x-show="actual?.pago?.estado === 'cobrar_tarjeta'">📟</span>
-          </div>
           <div class="text-3xl font-black transition-colors duration-300"
                :class="pagoConfirmado ? 'text-green-700' : 'text-orange-900'"
                x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></div>
-          <div class="text-sm font-medium mt-0.5 transition-colors duration-300"
-               :class="pagoConfirmado ? 'text-green-600' : 'text-orange-700'"
-               x-text="pagoConfirmado ? '✓ Cobrado' : actual?.pago?.label"></div>
+          <div x-show="pagoConfirmado"
+               class="text-sm font-medium mt-0.5 text-green-600">✓ Cobrado</div>
         </div>
 
         <!-- CTA: cobrar o resumen de lo cobrado -->
@@ -429,9 +551,9 @@
           <!-- Sin confirmar -->
           <button x-show="!pagoConfirmado"
                   @click="mostrarCobro = true"
-                  class="w-full flex items-center justify-center gap-2 py-3.5 bg-orange-500 active:bg-orange-600 text-white font-bold text-base transition active:scale-[0.98]">
+                  class="w-full flex items-center justify-center gap-2 py-2.5 bg-orange-500 active:bg-orange-600 text-white font-bold text-base transition active:scale-[0.98]">
             <span>💰</span>
-            <span>Cobrar al cliente</span>
+            <span>Cobrar</span>
           </button>
 
           <!-- Confirmado: resumen + opción de editar -->
@@ -468,29 +590,34 @@
     </div>
 
     <!-- PRODUCTOS -->
-    <div class="bg-white mx-4 rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-3">
-      <div class="px-4 py-3 border-b border-gray-100">
+    <div class="bg-white mx-4 rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-3"
+         x-data="{ abierto: false }">
+      <button @click="abierto = !abierto"
+              class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 transition">
         <span class="font-semibold text-gray-700 text-sm">
           Contenido del pedido
           <span class="text-gray-400 font-normal ml-1"
                 x-text="'(' + (actual?.items?.length || 0) + ' productos)'"></span>
         </span>
-      </div>
-      <div class="divide-y divide-gray-50">
-        <template x-for="item in actual?.items" :key="item.nombre">
-          <div class="flex items-center justify-between px-4 py-3">
-            <div class="flex items-center gap-2">
-              <span class="w-6 h-6 bg-gray-100 rounded-lg text-center text-xs font-bold text-gray-600 flex items-center justify-center"
-                    x-text="item.cantidad"></span>
-              <span class="text-sm text-gray-800" x-text="item.nombre"></span>
+        <span class="text-gray-400 text-xs" x-text="abierto ? '▲' : '▼'"></span>
+      </button>
+      <div x-show="abierto" x-cloak>
+        <div class="divide-y divide-gray-50 border-t border-gray-100">
+          <template x-for="item in actual?.items" :key="item.nombre">
+            <div class="flex items-center justify-between px-4 py-3">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 bg-gray-100 rounded-lg text-center text-xs font-bold text-gray-600 flex items-center justify-center"
+                      x-text="item.cantidad"></span>
+                <span class="text-sm text-gray-800" x-text="item.nombre"></span>
+              </div>
+              <span class="text-sm font-medium text-gray-600" x-text="item.subtotal.toFixed(2) + '€'"></span>
             </div>
-            <span class="text-sm font-medium text-gray-600" x-text="item.subtotal.toFixed(2) + '€'"></span>
-          </div>
-        </template>
-      </div>
-      <div class="px-4 py-3 bg-gray-50 flex justify-between items-center">
-        <span class="font-semibold text-gray-700">Total</span>
-        <span class="font-bold text-xl text-gray-900" x-text="actual?.total?.toFixed(2) + '€'"></span>
+          </template>
+        </div>
+        <div class="px-4 py-3 bg-gray-50 flex justify-between items-center">
+          <span class="font-semibold text-gray-700">Total</span>
+          <span class="font-bold text-xl text-gray-900" x-text="actual?.total?.toFixed(2) + '€'"></span>
+        </div>
       </div>
     </div>
 
@@ -1080,6 +1207,9 @@
     let mapaRep = null;
     let mapaRepMarkers = [];
     let marcadorTiendaRep = null;
+    let mapaCola = null;
+    let mapaColaMarkers = [];
+    let marcadorTiendaCola = null;
 
     function repartidor(repartidorId) {
       if (!repartidorId) {
@@ -1092,6 +1222,10 @@
         vista: 'lista',       // lista | pedido | resumen
         actual: null,
         cargando: false,
+        tabActiva: 'mis-entregas',   // 'mis-entregas' | 'cola'
+        cola: [],
+        colaTotal: 0,
+        cogiendo: null,              // reparto_id en vuelo
         procesando: false,
         historialAbierto: false,
         mostrarNoEntregar: false,
@@ -1120,6 +1254,7 @@
 
         // Mapa
         mapaVisible: false,
+        mapaColaVisible: false,
         pedidoDestacado: null,
 
         // Cobro
@@ -1226,9 +1361,9 @@
         async init() {
           if (!this.repartidorId) return;
           localStorage.setItem('panchi_repartidor_id', this.repartidorId);
-          await this.recargar();
+          await Promise.all([this.recargar(), this.cargarCola()]);
           setInterval(() => {
-            if (this.vista === 'lista') this.recargar();
+            if (this.vista === 'lista') { this.recargar(); this.cargarCola(); }
           }, 60000);
           setInterval(() => { this.now = new Date(); }, 30000);
         },
@@ -1261,6 +1396,49 @@
           } finally {
             this.cargando = false;
           }
+        },
+
+        async cargarCola() {
+          try {
+            const r = await fetch('/repartidor/cola');
+            if (r.ok) {
+              const data = await r.json();
+              this.cola = data.cola || [];
+              this.colaTotal = data.total || 0;
+              if (this.mapaColaVisible) this.actualizarMapaCola();
+            } else {
+              this.conexionOk = false;
+            }
+          } catch (_) {
+            this.conexionOk = false;
+          }
+        },
+
+        async cogerReparto(pedidoId) {
+          if (this.cogiendo !== null) return;
+          this.cogiendo = pedidoId;
+          try {
+            const r = await fetch(`/repartidor/cola/coger/${pedidoId}`, { method: 'POST' });
+            if (r.ok) {
+              this.cola = this.cola.map(p =>
+                p.pedido_id === pedidoId ? { ...p, ya_cogido: true } : p
+              );
+              this.colaTotal = Math.max(0, this.colaTotal - 1);
+              await this.recargar();
+            } else {
+              const data = await r.json().catch(() => ({}));
+              if (data.error === 'ya_cogido') {
+                this.cola = this.cola.map(p =>
+                  p.pedido_id === pedidoId ? { ...p, ya_cogido: true } : p
+                );
+              } else {
+                this.conexionOk = false;
+              }
+            }
+          } catch (_) {
+            this.conexionOk = false;
+          }
+          this.cogiendo = null;
         },
 
         abrirPedido(p) {
@@ -1449,13 +1627,13 @@
           mapaRepMarkers.forEach(m => m.remove());
           mapaRepMarkers = [];
 
-          const conCoordenadas = this.pedidosActivos.filter(p => p.estado_reparto === 'en_camino' && p.lat != null && p.lng != null);
+          const conCoordenadas = this.pedidosActivos.filter(p => p.lat != null && p.lng != null);
           conCoordenadas.forEach(p => {
             const mins = this.calculateRemainingMinutes(p.fecha_creacion);
             const color = mins > 8 ? '#16a34a' : mins >= 3 ? '#ca8a04' : mins >= 0 ? '#ea580c' : '#dc2626';
             const icon = L.divIcon({
               className: '',
-              html: `<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4);font-size:10px;font-weight:900;">${p.pedido_id}</div>`,
+              html: `<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4);font-size:10px;font-weight:900;">${String(p.pedido_id).slice(-3)}</div>`,
               iconSize: [26, 26],
               iconAnchor: [13, 13],
             });
@@ -1465,6 +1643,72 @@
           });
 
           // Vista fija del pueblo — no fitBounds, el zoom lo controla setView en iniciarMapaRepartidor
+        },
+
+        toggleMapaCola() {
+          this.mapaColaVisible = !this.mapaColaVisible;
+          if (this.mapaColaVisible) {
+            this.$nextTick(() => setTimeout(() => this.iniciarMapaCola(), 50));
+          }
+        },
+
+        iniciarMapaCola() {
+          const el = document.getElementById('mapa-cola');
+          if (!el) return;
+          if (!mapaCola) {
+            mapaCola = L.map('mapa-cola', {
+              tap: false,
+              dragging: false,
+              touchZoom: false,
+              scrollWheelZoom: false,
+              doubleClickZoom: false,
+              zoomControl: false,
+            }).setView([40.010049, -3.012543], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap',
+              maxZoom: 18,
+            }).addTo(mapaCola);
+          }
+          mapaCola.invalidateSize();
+          this.actualizarMapaCola();
+        },
+
+        actualizarMapaCola() {
+          if (!mapaCola) return;
+
+          if (!marcadorTiendaCola) {
+            const iconTienda = L.divIcon({
+              className: '',
+              html: `
+                      <div style="
+                        width:8px;
+                        height:8px;
+                        background:#000;
+                        border-radius:50%;
+                        box-shadow:0 0 6px rgba(0,0,0,0.6);
+                      "></div>
+                    `,
+              iconSize: [32, 32],
+              iconAnchor: [16, 16],
+            });
+            marcadorTiendaCola = L.marker([40.008778, -3.010905], { icon: iconTienda })
+              .bindPopup('<br>Tienda')
+              .addTo(mapaCola);
+          }
+
+          mapaColaMarkers.forEach(m => m.remove());
+          mapaColaMarkers = [];
+          const conCoordenadas = this.cola.filter(p => !p.ya_cogido && p.lat != null && p.lng != null);
+          conCoordenadas.forEach(p => {
+            const icon = L.divIcon({
+              className: '',
+              html: `<div style="background:#ea580c;color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4);font-size:10px;font-weight:900;">${String(p.pedido_id).slice(-3)}</div>`,
+              iconSize: [26, 26],
+              iconAnchor: [13, 13],
+            });
+            const marker = L.marker([p.lat, p.lng], { icon }).addTo(mapaCola);
+            mapaColaMarkers.push(marker);
+          });
         },
 
         // ── Helpers de navegación ────────────────────────────────

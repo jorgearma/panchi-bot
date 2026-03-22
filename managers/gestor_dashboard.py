@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from models import (
     Empleado, HistorialEstadoPedido, Incidencia, Pedido, PickingItem,
@@ -437,10 +437,17 @@ class GestorDashboard:
 
         empleados = s.query(Empleado).filter(Empleado.activo == True).all()
 
-        repartos_asignados_ids = [r.pedido_id for r in s.query(Reparto.pedido_id).all()]
+        # Pedidos PREPARADO sin repartidor: excluir solo los que ya tienen Reparto con repartidor asignado.
+        # Cubre tanto el caso sin fila Reparto como el caso con fila Reparto pero repartidor_id=NULL
+        # (completar_picking crea Reparto(repartidor_id=None) automáticamente).
+        repartos_con_repartidor_ids = {
+            r.pedido_id for r in s.query(Reparto.pedido_id).filter(
+                Reparto.repartidor_id != None
+            ).all()
+        }
         preparados_sin_reparto = s.query(Pedido).filter(
             Pedido.Estado == EstadoPedido.PREPARADO.value,
-            ~Pedido.PedidoID.in_(repartos_asignados_ids) if repartos_asignados_ids else True,
+            ~Pedido.PedidoID.in_(repartos_con_repartidor_ids) if repartos_con_repartidor_ids else True,
         ).all()
 
         lista_empleados = []
@@ -515,12 +522,14 @@ class GestorDashboard:
                             "creada_en": _iso(ahora),
                         })
 
-        # Prepared orders with no delivery driver
-        repartos_asignados_ids = [r.pedido_id for r in s.query(Reparto.pedido_id).all()]
-        for p in s.query(Pedido).filter(
+        # Prepared orders with no delivery driver assigned (Reparto PENDIENTE sin repartidor_id)
+        for r in s.query(Reparto).filter(
+            Reparto.repartidor_id == None,
+            Reparto.estado == EstadoReparto.PENDIENTE.value,
+        ).join(Pedido, Pedido.PedidoID == Reparto.pedido_id).filter(
             Pedido.Estado == EstadoPedido.PREPARADO.value,
-            ~Pedido.PedidoID.in_(repartos_asignados_ids) if repartos_asignados_ids else True,
         ).all():
+            p = r.pedido
             resultado.append({
                 "tipo": "sin_repartidor",
                 "nivel": "error",
@@ -888,11 +897,10 @@ class GestorDashboard:
             Incidencia.estado.in_(["abierta", "en_proceso"])
         ).scalar() or 0
 
-        # Orders waiting for a picker (pagado / contra-reembolso, no picking assigned yet)
-        picking_ids_asignados = [pk.pedido_id for pk in s.query(PickingPedido.pedido_id).all()]
+        # Orders waiting for a picker — estado PAGADO/CONTRA_REEMBOLSO es fuente de verdad:
+        # cuando un picker lo toma, reclamar_picking() transiciona el pedido a EN_PREPARACION.
         sin_picker = s.query(Pedido).filter(
             Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
-            ~Pedido.PedidoID.in_(picking_ids_asignados) if picking_ids_asignados else True,
         ).order_by(Pedido.FechaCreacion.asc()).all()
 
         pedidos_sin_picker = [
@@ -908,24 +916,31 @@ class GestorDashboard:
             for p in sin_picker
         ]
 
-        # Orders ready (preparado) with no rider assigned yet
-        reparto_ids_asignados = [r.pedido_id for r in s.query(Reparto.pedido_id).all()]
-        sin_repartidor = s.query(Pedido).filter(
-            Pedido.Estado == EstadoPedido.PREPARADO.value,
-            ~Pedido.PedidoID.in_(reparto_ids_asignados) if reparto_ids_asignados else True,
-        ).order_by(Pedido.FechaCreacion.asc()).all()
+        # Orders ready (preparado) with no rider assigned yet (Reparto PENDIENTE sin repartidor_id)
+        repartos_pendientes = (
+            s.query(Reparto)
+            .filter(
+                Reparto.repartidor_id == None,
+                Reparto.estado == EstadoReparto.PENDIENTE.value,
+            )
+            .join(Pedido, Pedido.PedidoID == Reparto.pedido_id)
+            .filter(Pedido.Estado == EstadoPedido.PREPARADO.value)
+            .order_by(Reparto.created_at.asc())
+            .all()
+        )
 
         pedidos_sin_repartidor = [
             {
-                "pedido_id": p.PedidoID,
-                "cliente_nombre": p.cliente.nombre if p.cliente else "—",
-                "direccion": p.DireccionEntrega,
-                "total": float(p.Total) if p.Total else 0.0,
-                "forma_pago": p.forma_pago or "online",
-                "fecha_creacion": _iso(p.FechaCreacion),
-                "minutos_espera": int((ahora - p.FechaCreacion).total_seconds() / 60) if p.FechaCreacion else None,
+                "pedido_id": r.pedido.PedidoID,
+                "reparto_id": r.id,
+                "cliente_nombre": r.pedido.cliente.nombre if r.pedido.cliente else "—",
+                "direccion": r.pedido.DireccionEntrega,
+                "total": float(r.pedido.Total) if r.pedido.Total else 0.0,
+                "forma_pago": r.pedido.forma_pago or "online",
+                "fecha_creacion": _iso(r.pedido.FechaCreacion),
+                "minutos_espera": int((ahora - r.pedido.FechaCreacion).total_seconds() / 60) if r.pedido.FechaCreacion else None,
             }
-            for p in sin_repartidor
+            for r in repartos_pendientes
         ]
 
         return {
@@ -1034,9 +1049,25 @@ class GestorDashboard:
             picking.empleado_id = nuevo_empleado_id
             picking.estado = EstadoPicking.EN_PROCESO.value if nuevo_empleado_id else EstadoPicking.PENDIENTE.value
 
+            # Si se está asignando un picker y el pedido aún está en PAGADO/CONTRA_REEMBOLSO
+            # (porque _asegurar_picking_si_procede creó el PickingPedido antes de que hubiera picker),
+            # transicionar el pedido a EN_PREPARACION para que completar_picking pueda avanzar a PREPARADO.
+            if nuevo_empleado_id:
+                pedido = s.query(Pedido).filter_by(PedidoID=picking.pedido_id).first()
+                if pedido and transicion_valida_pedido(pedido.Estado, EstadoPedido.EN_PREPARACION.value):
+                    estado_anterior = pedido.Estado
+                    pedido.Estado = EstadoPedido.EN_PREPARACION.value
+                    s.add(HistorialEstadoPedido(
+                        pedido_id=pedido.PedidoID,
+                        estado_anterior=estado_anterior,
+                        estado_nuevo=EstadoPedido.EN_PREPARACION.value,
+                        notas=f"Picking asignado desde dashboard — picker #{nuevo_empleado_id}",
+                    ))
+
             s.commit()
             if nuevo_empleado_id:
-                return True, "Picker reasignado correctamente"
+                self._actualizar_estado_operativo(nuevo_empleado_id, 'ocupado')
+                return True, "Picker asignado correctamente"
             return True, "Picker eliminado del picking"
         except SQLAlchemyError as e:
             s.rollback()
@@ -1058,9 +1089,11 @@ class GestorDashboard:
             picking.completado_en = datetime.utcnow()
 
             pedido = picking.pedido
+            pedido_id_para_reparto = None  # capturar antes del commit para evitar lazy-load post-expire
             if pedido and transicion_valida_pedido(pedido.Estado, EstadoPedido.PREPARADO.value):
                 estado_anterior = pedido.Estado
                 pedido.Estado = EstadoPedido.PREPARADO.value
+                pedido_id_para_reparto = pedido.PedidoID
                 s.add(HistorialEstadoPedido(
                     pedido_id=pedido.PedidoID,
                     estado_anterior=estado_anterior,
@@ -1069,6 +1102,24 @@ class GestorDashboard:
                 ))
 
             s.commit()
+
+            if pedido_id_para_reparto:
+                try:
+                    reparto_existente = s.query(Reparto).filter_by(pedido_id=pedido_id_para_reparto).first()
+                    if not reparto_existente:
+                        s.add(Reparto(
+                            pedido_id=pedido_id_para_reparto,
+                            repartidor_id=None,
+                            estado=EstadoReparto.PENDIENTE.value,
+                        ))
+                        s.commit()
+                        logger.info("REPARTO_CREADO pedido=%s", pedido_id_para_reparto)
+                except Exception as _exc:
+                    s.rollback()
+                    if isinstance(_exc, IntegrityError):
+                        logger.info("Reparto ya creado concurrentemente para pedido %s", pedido_id_para_reparto)
+                    else:
+                        logger.warning("No se pudo crear Reparto para pedido %s: %s", pedido_id_para_reparto, _exc)
 
             # Descontar stock después del commit del picking
             items_para_stock = [
@@ -1541,3 +1592,211 @@ class GestorDashboard:
             "total_tarjeta_registrado":  total_tarjeta,
             "detalle": [_detalle(r) for r in repartos],
         }
+
+    def repartos_sin_asignar(self) -> list[dict]:
+        """Pedidos PREPARADO sin repartidor asignado.
+        Incluye tanto pedidos con Reparto PENDIENTE como pedidos sin Reparto todavía.
+        """
+        s = self.session
+        ahora = datetime.utcnow()
+        resultado = []
+
+        # Pedidos PREPARADO con Reparto PENDIENTE y sin repartidor
+        repartos = (
+            s.query(Reparto)
+            .join(Pedido, Pedido.PedidoID == Reparto.pedido_id)
+            .filter(
+                Reparto.repartidor_id == None,
+                Reparto.estado == EstadoReparto.PENDIENTE.value,
+                Pedido.Estado == EstadoPedido.PREPARADO.value,
+            )
+            .all()
+        )
+        pedido_ids_con_reparto = set()
+        for r in repartos:
+            pedido_ids_con_reparto.add(r.pedido_id)
+            resultado.append({
+                'pedido_id':          r.pedido_id,
+                'n_items':            len(r.pedido.detalles) if r.pedido else 0,
+                'direccion_entrega':  r.pedido.DireccionEntrega if r.pedido else '—',
+                'segundos_esperando': int((ahora - r.created_at).total_seconds()) if r.created_at else 0,
+                'lat':                r.pedido.lat_entrega if r.pedido else None,
+                'lng':                r.pedido.lng_entrega if r.pedido else None,
+            })
+
+        # Pedidos PREPARADO sin ningún Reparto (auto-creación no ocurrió o falló)
+        pedidos_sin_reparto = (
+            s.query(Pedido)
+            .outerjoin(Reparto, Reparto.pedido_id == Pedido.PedidoID)
+            .filter(
+                Pedido.Estado == EstadoPedido.PREPARADO.value,
+                Reparto.id == None,
+            )
+            .all()
+        )
+        for p in pedidos_sin_reparto:
+            if p.PedidoID not in pedido_ids_con_reparto:
+                resultado.append({
+                    'pedido_id':          p.PedidoID,
+                    'n_items':            len(p.detalles) if p.detalles else 0,
+                    'direccion_entrega':  p.DireccionEntrega or '—',
+                    'segundos_esperando': int((ahora - p.FechaCreacion).total_seconds()) if p.FechaCreacion else 0,
+                    'lat':                p.lat_entrega,
+                    'lng':                p.lng_entrega,
+                })
+
+        return sorted(resultado, key=lambda x: x['segundos_esperando'], reverse=True)
+
+    def reclamar_reparto(self, pedido_id: int, empleado_id: int) -> tuple[bool, str]:
+        """
+        Asigna el reparto al empleado de forma atómica usando pedido_id.
+        Crea el Reparto si no existe todavía.
+        Nota: no transiciona Pedido.Estado a EN_REPARTO — esa responsabilidad
+        recae en la ruta de blueprint que llama a este método.
+        Returns:
+            (True,  'ok')            — asignado correctamente
+            (False, 'no_encontrado') — pedido_id no existe o no está en PREPARADO
+            (False, 'ya_cogido')     — otro repartidor se adelantó
+            (False, 'error')         — error de BD
+        """
+        s = self.session
+        try:
+            pedido = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido or pedido.Estado != EstadoPedido.PREPARADO.value:
+                return False, 'no_encontrado'
+
+            reparto = s.query(Reparto).filter_by(pedido_id=pedido_id).first()
+            if reparto:
+                # Ya existe — intentar asignar atómicamente
+                if reparto.repartidor_id is not None:
+                    return False, 'ya_cogido'
+                resultado = (
+                    s.query(Reparto)
+                    .filter(
+                        Reparto.pedido_id == pedido_id,
+                        Reparto.repartidor_id == None,
+                    )
+                    .update(
+                        {'repartidor_id': empleado_id, 'estado': EstadoReparto.ASIGNADO.value},
+                        synchronize_session=False,
+                    )
+                )
+                s.commit()
+                if resultado == 0:
+                    return False, 'ya_cogido'
+            else:
+                # No existe — crear y asignar directamente
+                s.add(Reparto(
+                    pedido_id=pedido_id,
+                    repartidor_id=empleado_id,
+                    estado=EstadoReparto.ASIGNADO.value,
+                ))
+                try:
+                    s.commit()
+                except IntegrityError:
+                    s.rollback()
+                    return False, 'ya_cogido'
+
+            self._actualizar_estado_operativo(empleado_id, 'ocupado')
+            return True, 'ok'
+
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error reclamando reparto pedido %s: %s", pedido_id, e)
+            return False, 'error'
+
+    def pickings_sin_asignar(self) -> list[dict]:
+        """Pedidos con PickingPedido creado pero sin picker asignado.
+        Solo incluye pedidos en estado activo (Pagado, contra_reembolso, en_preparacion).
+        """
+        s = self.session
+        estados_activos = [
+            EstadoPedido.PAGADO.value,
+            EstadoPedido.CONTRA_REEMBOLSO.value,
+            EstadoPedido.EN_PREPARACION.value,
+        ]
+        pickings = (
+            s.query(PickingPedido)
+            .join(Pedido, Pedido.PedidoID == PickingPedido.pedido_id)
+            .filter(
+                PickingPedido.empleado_id == None,
+                PickingPedido.estado == EstadoPicking.PENDIENTE.value,
+                Pedido.Estado.in_(estados_activos),
+            )
+            .order_by(PickingPedido.created_at.asc())
+            .all()
+        )
+        ahora = datetime.utcnow()
+        return [
+            {
+                'picking_id':         p.id,
+                'pedido_id':          p.pedido_id,
+                'n_items':            len(p.items),
+                'segundos_esperando': int((ahora - p.created_at).total_seconds()),
+            }
+            for p in pickings
+        ]
+
+    def reclamar_picking(self, picking_id: int, empleado_id: int) -> tuple[bool, str]:
+        """
+        Asigna el picking al empleado de forma atómica, avanza el estado a EN_PROCESO
+        y transiciona el Pedido padre a EN_PREPARACION.
+        Returns:
+            (True,  'ok')            — asignado correctamente
+            (False, 'no_encontrado') — picking_id no existe
+            (False, 'ya_cogido')     — otro picker se adelantó (rowcount == 0)
+            (False, 'error')         — error de BD
+        """
+        s = self.session
+        try:
+            # 1. Verificar existencia antes del UPDATE para dar error preciso
+            picking = s.query(PickingPedido).filter_by(id=picking_id).first()
+            if not picking:
+                return False, 'no_encontrado'
+
+            pedido_id_para_transicion = picking.pedido_id
+
+            # 2. UPDATE atómico — solo actualiza si sigue libre
+            resultado = (
+                s.query(PickingPedido)
+                .filter(
+                    PickingPedido.id == picking_id,
+                    PickingPedido.empleado_id == None,
+                    PickingPedido.estado == EstadoPicking.PENDIENTE.value,
+                )
+                .update(
+                    {
+                        'empleado_id': empleado_id,
+                        'estado': EstadoPicking.EN_PROCESO.value,
+                        'iniciado_en': datetime.utcnow(),
+                    },
+                    synchronize_session=False,
+                )
+            )
+
+            if resultado == 0:
+                return False, 'ya_cogido'
+
+            # 3. Transicionar el Pedido a EN_PREPARACION en la misma transacción
+            pedido = s.query(Pedido).filter_by(PedidoID=pedido_id_para_transicion).first()
+            if pedido and transicion_valida_pedido(pedido.Estado, EstadoPedido.EN_PREPARACION.value):
+                estado_anterior = pedido.Estado
+                pedido.Estado = EstadoPedido.EN_PREPARACION.value
+                s.add(HistorialEstadoPedido(
+                    pedido_id=pedido.PedidoID,
+                    estado_anterior=estado_anterior,
+                    estado_nuevo=EstadoPedido.EN_PREPARACION.value,
+                    notas=f"Picking iniciado — picker #{empleado_id}",
+                ))
+
+            # Un solo commit: picking + pedido juntos, o nada
+            s.commit()
+
+            # 4. Actualizar estado operativo del picker
+            self._actualizar_estado_operativo(empleado_id, 'ocupado')
+            return True, 'ok'
+
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error reclamando picking %s: %s", picking_id, e)
+            return False, 'error'

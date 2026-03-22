@@ -2,25 +2,112 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Menú — Panchi Bot</title>
   <link rel="stylesheet" href="/static/css/styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    .conf-header {
+      background: linear-gradient(135deg, #FF6B35 0%, #FF4500 100%);
+      padding: 16px 0 20px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 0 0 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .conf-header::before {
+      content: ''; position: absolute;
+      width: 160px; height: 160px; border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      top: -40px; right: -30px;
+    }
+    .conf-header::after {
+      content: ''; position: absolute;
+      width: 90px; height: 90px; border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+      bottom: -20px; left: 10px;
+    }
+    .conf-header__row1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 14px;
+      position: relative; z-index: 1;
+    }
+    .conf-header__name {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 900; font-size: 19px; color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .conf-header__badge {
+      background: var(--success);
+      color: #fff; font-size: 11px; font-weight: 700;
+      padding: 5px 11px; border-radius: 20px;
+      box-shadow: 0 2px 10px rgba(34,197,94,0.45);
+      white-space: nowrap;
+    }
+    .conf-header__addr {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 12px; padding: 9px 12px;
+      margin: 0 14px;
+      position: relative; z-index: 1;
+    }
+    .conf-header__addr-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .conf-header__addr-text { display: flex; flex-direction: column; min-width: 0; }
+    .conf-header__addr-label {
+      font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.65);
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .conf-header__addr-street {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 800; font-size: 13px; color: #fff;
+      letter-spacing: -0.2px; margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* Search bar y categorías: se pegan al top correcto sin hueco */
+    #search-bar {
+      top: 0;
+    }
+    #category-nav {
+      top: var(--search-height);
+    }
+
+    /* Cart bar: barra flotante con safe area */
+    #cart-bar {
+      bottom: 0;
+      left: 0;
+      right: 0;
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -2px 20px rgba(0,0,0,0.22);
+      padding: 12px 12px 10px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+  </style>
 </head>
 <body>
 
-  <header class="page-header">
-    <div class="header-avatar">{{ usuario.nombre.split()[0] }}</div>
-    <div class="header-address">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2.5"
-           stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-        <circle cx="12" cy="10" r="3"/>
-      </svg>
-      <span>{{ calle }}</span>
+  <header class="conf-header">
+    <div class="conf-header__row1">
+      <span class="conf-header__name">Hola, {{ usuario.nombre.split()[0] }} 👋</span>
+      <span class="conf-header__badge">✓ Envío gratis</span>
     </div>
-    <span class="header-badge">Envío gratis</span>
+    <div class="conf-header__addr">
+      <div class="conf-header__addr-icon">📍</div>
+      <div class="conf-header__addr-text">
+        <span class="conf-header__addr-label">Dirección de entrega</span>
+        <span class="conf-header__addr-street">{{ calle }}</span>
+      </div>
+    </div>
   </header>
 
   <!-- Search bar -->
