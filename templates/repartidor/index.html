@@ -17,30 +17,70 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
+    :root {
+      --rep-ink: #172033;
+      --rep-panel: #ffffff;
+      --rep-soft: #fff8f2;
+      --rep-line: #f0ddc9;
+      --rep-brand: #ea580c;
+      --rep-brand-dark: #9a3412;
+      --rep-accent: #0f766e;
+      --rep-warm: #f59e0b;
+      --rep-danger: #dc2626;
+    }
     .slide-up { animation: slideUp .25s ease-out; }
     @keyframes slideUp {
       from { opacity:0; transform:translateY(14px); }
       to   { opacity:1; transform:translateY(0); }
     }
     button { -webkit-tap-highlight-color: transparent; }
+    .tap-xl { min-height: 56px; }
     @keyframes glowRed {
       0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); }
       50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0.25); }
     }
     .card-nuevo { animation: glowRed 1.4s ease-in-out infinite; }
     #mapa-rep { height: 220px; }
+    .repartidor-shell {
+      background:
+        radial-gradient(circle at top left, rgba(234, 88, 12, 0.14), transparent 30%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.10), transparent 26%),
+        linear-gradient(180deg, #fff3ea 0%, #f9f7f5 34%, #f3ede8 100%);
+      color: var(--rep-ink);
+    }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(240, 221, 201, 0.9);
+      box-shadow: 0 18px 50px rgba(23, 32, 51, 0.08);
+    }
+    .section-card {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(240, 221, 201, 0.95);
+      box-shadow: 0 18px 40px rgba(23, 32, 51, 0.08);
+    }
+    .metric-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(252,246,240,0.96));
+      border: 1px solid rgba(240, 221, 201, 0.9);
+      box-shadow: 0 14px 30px rgba(23, 32, 51, 0.06);
+    }
+    .queue-card {
+      background: linear-gradient(135deg, rgba(23, 32, 51, 0.98), rgba(154, 52, 18, 0.88));
+      box-shadow: 0 18px 34px rgba(23, 32, 51, 0.24);
+    }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen"
+<body class="repartidor-shell min-h-screen"
       x-data="repartidor({{ repartidor_id or 'null' }})"
       x-init="init()">
 
   <!-- ======== HEADER ======== -->
-  <header class="bg-gray-900 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow">
+  <header class="bg-slate-950/90 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-lg backdrop-blur">
     <div class="flex items-center gap-2">
       <button x-show="vista !== 'lista'"
               @click="volverALista()"
-              class="text-gray-400 active:text-white transition mr-1 text-xl leading-none">‹</button>
+              class="p-2 -ml-2 text-gray-400 active:text-white transition text-2xl leading-none">‹</button>
       <span class="font-bold text-lg">
         <span x-show="vista === 'lista'">🛵 Mis entregas</span>
         <span x-show="vista === 'pedido'" x-cloak>
@@ -64,7 +104,7 @@
             class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold animate-pulse"
             x-text="pedidosNuevosEnCalle.length + ' nuevo' + (pedidosNuevosEnCalle.length > 1 ? 's' : '')"></span>
       <button @click="recargar()"
-              class="text-gray-400 active:text-white transition text-xl leading-none"
+              class="p-2 -mr-1 text-gray-400 active:text-white transition text-xl leading-none"
               :class="cargando ? 'animate-spin' : ''">↻</button>
     </div>
   </header>
@@ -91,28 +131,60 @@
   <div x-show="repartidorId && !cargando && vista === 'lista'" x-cloak>
 
     <!-- ---- Tabs ---- -->
-    <div class="flex border-b-2 border-gray-800 sticky z-20 bg-gray-100"
-         :style="'top:52px'">
-      <button @click="tabActiva = 'mis-entregas'"
-              class="flex-1 text-center py-3 text-sm font-medium transition"
-              :class="tabActiva === 'mis-entregas'
-                ? 'text-orange-400 border-b-2 border-orange-500 -mb-[2px]'
-                : 'text-gray-500'">
-        🛵 Mis entregas
-        <span x-show="pedidosActivos.length > 0"
-              class="ml-1.5 bg-gray-700 text-gray-300 text-xs rounded-full px-2 py-0.5"
-              x-text="pedidosActivos.length"></span>
-      </button>
-      <button @click="tabActiva = 'cola'; cargarCola()"
-              class="flex-1 text-center py-3 text-sm font-medium transition"
-              :class="tabActiva === 'cola'
-                ? 'text-orange-400 border-b-2 border-orange-500 -mb-[2px]'
-                : 'text-gray-500'">
-        📋 Cola
-        <span x-show="colaTotal > 0"
-              class="ml-1.5 bg-red-600 text-white text-xs rounded-full px-2 py-0.5"
-              x-text="colaTotal"></span>
-      </button>
+    <div class="pt-3 px-3 sm:px-4">
+      <div class="glass-panel rounded-[28px] p-2">
+        <div class="grid grid-cols-2 gap-2">
+          <button @click="tabActiva = 'mis-entregas'"
+                  class="rounded-2xl px-4 py-3 text-left transition"
+                  :class="tabActiva === 'mis-entregas'
+                    ? 'bg-gradient-to-r from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-200'
+                    : 'bg-white/60 text-slate-600'">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold">🛵 Mis entregas</span>
+              <span class="rounded-full px-2.5 py-1 text-xs font-bold"
+                    :class="tabActiva === 'mis-entregas' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    x-text="pedidosActivos.length"></span>
+            </div>
+            <p class="mt-1 text-[11px]"
+               :class="tabActiva === 'mis-entregas' ? 'text-orange-100' : 'text-slate-400'">
+              Tus entregas activas y su estado
+            </p>
+          </button>
+          <button @click="tabActiva = 'cola'; cargarCola()"
+                  class="rounded-2xl px-4 py-3 text-left transition"
+                  :class="tabActiva === 'cola'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-200'
+                    : 'bg-white/60 text-slate-600'">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold">📋 Cola</span>
+              <span class="rounded-full px-2.5 py-1 text-xs font-bold"
+                    :class="tabActiva === 'cola' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    x-text="colaTotal"></span>
+            </div>
+            <p class="mt-1 text-[11px]"
+               :class="tabActiva === 'cola' ? 'text-emerald-100' : 'text-slate-400'">
+              Pedidos disponibles para coger
+            </p>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-4 px-3 sm:px-4">
+      <div class="metric-card rounded-3xl px-4 py-4">
+        <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">Activas</p>
+        <div class="mt-2 flex items-end justify-between gap-3">
+          <p class="text-3xl font-black text-slate-900" x-text="pedidosActivos.length"></p>
+          <span class="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">En trabajo</span>
+        </div>
+      </div>
+      <div class="metric-card rounded-3xl px-4 py-4">
+        <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">Cola libre</p>
+        <div class="mt-2 flex items-end justify-between gap-3">
+          <p class="text-3xl font-black text-slate-900" x-text="colaTotal"></p>
+          <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Disponible</span>
+        </div>
+      </div>
     </div>
 
     <!-- Sin pedidos -->
@@ -127,7 +199,7 @@
       </button>
     </div>
 
-    <div x-show="tabActiva === 'mis-entregas' && (pedidosActivos.length > 0 || pedidosHistorial.length > 0)" class="p-4 space-y-4">
+    <div x-show="tabActiva === 'mis-entregas' && (pedidosActivos.length > 0 || pedidosHistorial.length > 0)" class="px-3 pb-8 pt-4 sm:px-4 space-y-4">
 
       <!-- ── MAPA DE ENTREGAS ── -->
       <template x-if="true">
@@ -354,54 +426,86 @@
     </div>
 
     <!-- ======== SECCIÓN COLA ======== -->
-    <div x-show="tabActiva === 'cola'" x-cloak class="p-4">
+    <div x-show="tabActiva === 'cola'" x-cloak class="mt-4 px-3 pb-8 sm:px-4">
 
       <!-- Cabecera -->
-      <div class="flex justify-between items-center mb-3">
-        <p class="text-sm font-semibold text-green-400"
-           x-text="colaTotal + ' pedido' + (colaTotal !== 1 ? 's' : '') + ' disponible' + (colaTotal !== 1 ? 's' : '')"></p>
-        <button @click="cargarCola()"
-                class="bg-gray-800 text-gray-400 text-xs px-3 py-1.5 rounded-lg active:bg-gray-700 transition">
-          ↻ Actualizar
-        </button>
+      <div class="section-card rounded-[30px] p-4 mb-4">
+        <div class="flex justify-between items-start gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Cola activa</p>
+            <p class="mt-1 text-sm text-slate-500"
+               x-text="colaTotal + ' pedido' + (colaTotal !== 1 ? 's' : '') + ' disponible' + (colaTotal !== 1 ? 's' : '')"></p>
+          </div>
+          <button @click="cargarCola()"
+                  class="rounded-2xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition active:scale-95">
+            ↻ Actualizar
+          </button>
+        </div>
+        <div class="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Coge rápido los pedidos más antiguos para mantener la cola limpia y el reparto fluido.
+        </div>
       </div>
 
       <!-- Lista -->
-      <div x-show="cola.length > 0" class="space-y-3">
+      <div x-show="cola.length > 0" class="space-y-4">
         <template x-for="p in cola" :key="p.pedido_id">
-          <div class="bg-gray-800 rounded-2xl p-4 flex justify-between items-center slide-up"
-               :class="p.ya_cogido ? 'opacity-40' : ''">
-            <div>
-              <div class="font-bold text-white text-sm">Pedido #<span x-text="p.pedido_id"></span></div>
-              <div class="text-xs text-gray-400 mt-0.5">📍 <span x-text="p.direccion_entrega"></span></div>
-              <div class="text-xs mt-1" :class="p.ya_cogido ? 'text-red-400' : 'text-gray-500'">
-                <span x-show="!p.ya_cogido"
-                      x-text="'hace ' + (p.segundos_esperando < 60
-                        ? p.segundos_esperando + 's'
-                        : Math.floor(p.segundos_esperando / 60) + 'min') + ' · 📦 ' + p.n_items + ' productos'"></span>
-                <span x-show="p.ya_cogido">Ya cogido por otro repartidor</span>
+          <div class="queue-card rounded-[30px] p-4 text-white slide-up"
+               :class="p.ya_cogido ? 'opacity-45 saturate-50' : ''">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-100">
+                    Disponible
+                  </span>
+                  <span x-show="p.ya_cogido"
+                        class="rounded-full bg-red-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-100">
+                    Bloqueado
+                  </span>
+                </div>
+                <div class="mt-3 text-2xl font-black">Pedido #<span x-text="p.pedido_id"></span></div>
+                <p class="mt-1 text-sm text-slate-300 truncate" x-show="p.direccion_entrega">
+                  📍 <span x-text="p.direccion_entrega"></span>
+                </p>
+                <p class="mt-2 text-sm text-slate-200"
+                   x-show="!p.ya_cogido"
+                   x-text="'Esperando desde hace ' + (p.segundos_esperando < 60
+                     ? p.segundos_esperando + ' segundos'
+                     : Math.floor(p.segundos_esperando / 60) + ' min')"></p>
+                <p class="mt-2 text-sm text-red-100" x-show="p.ya_cogido">Ya cogido por otro repartidor</p>
+              </div>
+              <button @click="cogerReparto(p.pedido_id)"
+                      :disabled="p.ya_cogido || cogiendo !== null"
+                      class="tap-xl rounded-2xl px-5 py-3 text-sm font-bold transition flex-shrink-0"
+                      :class="p.ya_cogido
+                        ? 'bg-white/10 text-slate-300 cursor-not-allowed'
+                        : 'bg-white text-slate-900 active:scale-95'">
+                <span x-show="!p.ya_cogido && cogiendo !== p.pedido_id">Coger →</span>
+                <span x-show="p.ya_cogido">Cogido</span>
+                <span x-show="cogiendo === p.pedido_id && !p.ya_cogido">...</span>
+              </button>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div class="rounded-2xl bg-white/10 px-4 py-3">
+                <p class="text-[11px] uppercase tracking-[0.16em] text-slate-300">Tiempo</p>
+                <p class="mt-1 text-lg font-bold"
+                   x-text="p.segundos_esperando < 60 ? p.segundos_esperando + ' s' : Math.floor(p.segundos_esperando / 60) + ' min'"></p>
+              </div>
+              <div class="rounded-2xl bg-white/10 px-4 py-3">
+                <p class="text-[11px] uppercase tracking-[0.16em] text-slate-300">Productos</p>
+                <p class="mt-1 text-lg font-bold" x-text="p.n_items"></p>
               </div>
             </div>
-            <button @click="cogerReparto(p.pedido_id)"
-                    :disabled="p.ya_cogido || cogiendo !== null"
-                    class="text-sm font-bold px-4 py-2 rounded-xl transition"
-                    style="min-height:56px"
-                    :class="p.ya_cogido
-                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                      : 'bg-orange-500 text-white active:bg-orange-600'">
-              <span x-show="!p.ya_cogido && cogiendo !== p.pedido_id">Coger →</span>
-              <span x-show="p.ya_cogido">Cogido</span>
-              <span x-show="cogiendo === p.pedido_id && !p.ya_cogido">...</span>
-            </button>
           </div>
         </template>
       </div>
 
       <!-- Vacía -->
       <div x-show="cola.length === 0"
-           class="flex flex-col items-center justify-center py-16 text-center px-6">
+           class="section-card flex flex-col items-center justify-center rounded-[32px] py-16 text-center px-6">
         <div class="text-5xl mb-3">📋</div>
-        <p class="text-gray-500 text-sm">No hay pedidos sin asignar ahora mismo</p>
+        <p class="text-lg font-bold text-slate-800">La cola está limpia</p>
+        <p class="mt-2 text-sm text-slate-500">No hay pedidos sin asignar ahora mismo.</p>
       </div>
 
     </div>
@@ -1308,10 +1412,9 @@
         async init() {
           if (!this.repartidorId) return;
           localStorage.setItem('panchi_repartidor_id', this.repartidorId);
-          await this.recargar();
+          await Promise.all([this.recargar(), this.cargarCola()]);
           setInterval(() => {
-            if (this.vista === 'lista') this.recargar();
-            if (this.tabActiva === 'cola') this.cargarCola();
+            if (this.vista === 'lista') { this.recargar(); this.cargarCola(); }
           }, 60000);
           setInterval(() => { this.now = new Date(); }, 30000);
         },
