@@ -437,10 +437,17 @@ class GestorDashboard:
 
         empleados = s.query(Empleado).filter(Empleado.activo == True).all()
 
-        repartos_asignados_ids = [r.pedido_id for r in s.query(Reparto.pedido_id).all()]
+        # Pedidos PREPARADO sin repartidor: excluir solo los que ya tienen Reparto con repartidor asignado.
+        # Cubre tanto el caso sin fila Reparto como el caso con fila Reparto pero repartidor_id=NULL
+        # (completar_picking crea Reparto(repartidor_id=None) automáticamente).
+        repartos_con_repartidor_ids = {
+            r.pedido_id for r in s.query(Reparto.pedido_id).filter(
+                Reparto.repartidor_id != None
+            ).all()
+        }
         preparados_sin_reparto = s.query(Pedido).filter(
             Pedido.Estado == EstadoPedido.PREPARADO.value,
-            ~Pedido.PedidoID.in_(repartos_asignados_ids) if repartos_asignados_ids else True,
+            ~Pedido.PedidoID.in_(repartos_con_repartidor_ids) if repartos_con_repartidor_ids else True,
         ).all()
 
         lista_empleados = []
@@ -1042,9 +1049,25 @@ class GestorDashboard:
             picking.empleado_id = nuevo_empleado_id
             picking.estado = EstadoPicking.EN_PROCESO.value if nuevo_empleado_id else EstadoPicking.PENDIENTE.value
 
+            # Si se está asignando un picker y el pedido aún está en PAGADO/CONTRA_REEMBOLSO
+            # (porque _asegurar_picking_si_procede creó el PickingPedido antes de que hubiera picker),
+            # transicionar el pedido a EN_PREPARACION para que completar_picking pueda avanzar a PREPARADO.
+            if nuevo_empleado_id:
+                pedido = s.query(Pedido).filter_by(PedidoID=picking.pedido_id).first()
+                if pedido and transicion_valida_pedido(pedido.Estado, EstadoPedido.EN_PREPARACION.value):
+                    estado_anterior = pedido.Estado
+                    pedido.Estado = EstadoPedido.EN_PREPARACION.value
+                    s.add(HistorialEstadoPedido(
+                        pedido_id=pedido.PedidoID,
+                        estado_anterior=estado_anterior,
+                        estado_nuevo=EstadoPedido.EN_PREPARACION.value,
+                        notas=f"Picking asignado desde dashboard — picker #{nuevo_empleado_id}",
+                    ))
+
             s.commit()
             if nuevo_empleado_id:
-                return True, "Picker reasignado correctamente"
+                self._actualizar_estado_operativo(nuevo_empleado_id, 'ocupado')
+                return True, "Picker asignado correctamente"
             return True, "Picker eliminado del picking"
         except SQLAlchemyError as e:
             s.rollback()

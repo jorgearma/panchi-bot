@@ -872,7 +872,7 @@
                     class="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">
               Completar picking
             </button>
-            <button x-show="!panel.pedido?.reparto && panel.pedido?.estado === 'preparado'"
+            <button x-show="(!panel.pedido?.reparto || !panel.pedido?.reparto?.repartidor_nombre) && panel.pedido?.estado === 'preparado'"
                     @click="abrirModalRepartidor(panel.pedido.pedido_id, panel.pedido?.reparto?.repartidor_nombre)"
                     class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600">
               Asignar repartidor
