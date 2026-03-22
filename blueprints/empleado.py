@@ -144,3 +144,47 @@ def checkin():
     except Exception as e:
         logger.error("Error en /empleado/checkin: %s", e)
         return redirect('/empleado')
+
+
+@blueprint_empleado.route('/empleado/fichaje', methods=['POST'])
+@requiere_rol(*_ROLES_HUB)
+def fichaje_iniciar():
+    empleado_id = session.get('empleado_id')
+    try:
+        check_in = gestor_empleado.iniciar_turno(empleado_id)
+        return jsonify({'ok': True, 'check_in_id': check_in.id,
+                        'inicio': check_in.inicio.isoformat()})
+    except ValueError as e:
+        if str(e) == 'ya_abierto':
+            return jsonify({'error': 'Ya tienes un turno abierto hoy'}), 409
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error("Error en /empleado/fichaje: %s", e)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+@blueprint_empleado.route('/empleado/fichaje/cerrar', methods=['POST'])
+@requiere_rol(*_ROLES_HUB)
+def fichaje_cerrar():
+    empleado_id = session.get('empleado_id')
+    try:
+        resumen = gestor_empleado.cerrar_turno(empleado_id)
+        return jsonify({'ok': True, **resumen})
+    except ValueError as e:
+        if str(e) == 'no_abierto':
+            return jsonify({'error': 'No tienes un turno abierto'}), 400
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error("Error en /empleado/fichaje/cerrar: %s", e)
+        return jsonify({'error': 'Error interno'}), 500
+
+
+@blueprint_empleado.route('/empleado/fichaje/hoy')
+@requiere_rol(*_ROLES_HUB)
+def fichaje_hoy():
+    empleado_id = session.get('empleado_id')
+    try:
+        return jsonify(gestor_empleado.checkin_hoy(empleado_id))
+    except Exception as e:
+        logger.error("Error en /empleado/fichaje/hoy: %s", e)
+        return jsonify({'activo': False})
