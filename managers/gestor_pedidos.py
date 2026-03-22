@@ -133,7 +133,7 @@ class GestorPedidos:
             raise
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
-    def actualizar_estado(self, pedido_id, nuevo_estado):
+    def actualizar_estado(self, pedido_id, nuevo_estado, notas=None, empleado_id=None):
         try:
             pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
             if not pedido:
@@ -151,6 +151,8 @@ class GestorPedidos:
                 pedido_id=pedido_id,
                 estado_anterior=estado_anterior,
                 estado_nuevo=nuevo_estado,
+                notas=notas,
+                empleado_id=empleado_id,
             ))
             self._asegurar_picking_si_procede(pedido, nuevo_estado)
             self.session.commit()

@@ -156,7 +156,8 @@ class HistorialEstadoPedido(Base):
     estado_anterior = Column(String(30), nullable=False)
     estado_nuevo = Column(String(30), nullable=False)
     cambiado_en = Column(DateTime, default=datetime.utcnow, nullable=False)
-    notas = Column(String(500), nullable=True)
+    notas       = Column(String(500), nullable=True)
+    empleado_id = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
 
     pedido = relationship("Pedido", back_populates="historial_estados")
 
@@ -205,7 +206,8 @@ class Empleado(Base):
     pickings = relationship("PickingPedido", back_populates="empleado")
     repartos = relationship("Reparto", back_populates="repartidor")
     incidencias_asignadas = relationship("Incidencia", back_populates="asignado", foreign_keys="Incidencia.asignado_a")
-    turnos = relationship('Turno', back_populates='empleado', order_by='Turno.fecha')
+    turnos = relationship('Turno', back_populates='empleado', order_by='Turno.fecha',
+                          foreign_keys='Turno.empleado_id')
     check_ins = relationship('CheckIn', back_populates='empleado',
                              order_by='CheckIn.fecha')
     capacidades = relationship('EmpleadoCapacidad', back_populates='empleado',
@@ -224,6 +226,74 @@ class EmpleadoCapacidad(Base):
 
     __table_args__ = (
         UniqueConstraint('empleado_id', 'rol', name='uq_empleado_rol'),
+    )
+
+
+class Ausencia(Base):
+    """Registro de ausencia de un empleado en una fecha concreta."""
+    __tablename__ = 'ausencias'
+
+    TIPOS_VALIDOS   = {'vacaciones', 'baja_medica', 'personal', 'injustificada'}
+    ESTADOS_VALIDOS = {'pendiente', 'aprobada', 'rechazada'}
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    empleado_id  = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=False)
+    fecha        = Column(Date, nullable=False)
+    tipo         = Column(String(30), nullable=False)
+    estado       = Column(String(20), nullable=False, default='pendiente')
+    aprobado_por = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
+    aprobado_en  = Column(DateTime, nullable=True)
+    notas        = Column(String(500), nullable=True)
+    created_at   = Column(DateTime, default=datetime.utcnow)
+
+    empleado  = relationship('Empleado', foreign_keys=[empleado_id], backref='ausencias')
+    aprobador = relationship('Empleado', foreign_keys=[aprobado_por])
+
+    __table_args__ = (
+        UniqueConstraint('empleado_id', 'fecha', name='uq_ausencia_empleado_fecha'),
+    )
+
+
+class SolicitudCambioTurno(Base):
+    """Solicitud de cesión o intercambio de turno entre empleados."""
+    __tablename__ = 'solicitudes_cambio_turno'
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    turno_cedido_id = Column(Integer, ForeignKey('turnos.id'), nullable=False)
+    solicitante_id  = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=False)
+    sustituto_id    = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
+    estado          = Column(String(20), nullable=False, default='pendiente')
+    aprobado_por    = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
+    aprobado_en     = Column(DateTime, nullable=True)
+    motivo          = Column(String(500), nullable=True)
+    created_at      = Column(DateTime, default=datetime.utcnow)
+
+    turno_cedido = relationship('Turno', foreign_keys=[turno_cedido_id])
+    solicitante  = relationship('Empleado', foreign_keys=[solicitante_id])
+    sustituto    = relationship('Empleado', foreign_keys=[sustituto_id])
+    aprobador    = relationship('Empleado', foreign_keys=[aprobado_por])
+
+
+class MetricaDiariaEmpleado(Base):
+    """Resumen de actividad diaria de un empleado por rol. Caché para el dashboard."""
+    __tablename__ = 'metricas_diarias_empleado'
+
+    id                         = Column(Integer, primary_key=True, autoincrement=True)
+    empleado_id                = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=False)
+    fecha                      = Column(Date, nullable=False)
+    rol                        = Column(String(20), nullable=False)
+    horas_trabajadas_min       = Column(Integer, nullable=True)
+    pedidos_completados        = Column(Integer, nullable=False, default=0)
+    tiempo_medio_operacion_min = Column(Integer, nullable=True)
+    incidencias                = Column(Integer, nullable=False, default=0)
+    minutos_tarde              = Column(Integer, nullable=True)
+    calculado_en               = Column(DateTime, default=datetime.utcnow)
+
+    empleado = relationship('Empleado', foreign_keys=[empleado_id], backref='metricas_diarias')
+
+    __table_args__ = (
+        UniqueConstraint('empleado_id', 'fecha', 'rol',
+                         name='uq_metrica_empleado_fecha_rol'),
     )
 
 
@@ -336,10 +406,15 @@ class Turno(Base):
     fecha       = Column(Date, nullable=False)
     hora_inicio = Column(Time, nullable=False)
     hora_fin    = Column(Time, nullable=False)
-    notas       = Column(String(255), nullable=True)
-    created_at  = Column(DateTime, default=datetime.utcnow)
+    notas           = Column(String(255), nullable=True)
+    estado          = Column(String(20), nullable=False, default='planificado')
+    tipo            = Column(String(20), nullable=True)   # mañana | tarde | noche | partido
+    creado_por      = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
+    turno_origen_id = Column(Integer, ForeignKey('turnos.id'), nullable=True)
+    created_at      = Column(DateTime, default=datetime.utcnow)
 
-    empleado = relationship('Empleado', back_populates='turnos')
+    empleado     = relationship('Empleado', back_populates='turnos', foreign_keys=[empleado_id])
+    turno_origen = relationship('Turno', remote_side='Turno.id', foreign_keys='Turno.turno_origen_id')
 
 
 # ---------------------------------------------------------------------------
@@ -350,14 +425,18 @@ class CheckIn(Base):
     """Turno real fichado por el empleado. Puede haber varios por día."""
     __tablename__ = 'check_ins'
 
-    id          = Column(Integer, primary_key=True, autoincrement=True)
-    empleado_id = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=False)
-    fecha       = Column(Date, nullable=False)
-    inicio      = Column(DateTime, nullable=False)
-    fin         = Column(DateTime, nullable=True)
-    created_at  = Column(DateTime, default=datetime.utcnow)
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    empleado_id       = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=False)
+    fecha             = Column(Date, nullable=False)
+    inicio            = Column(DateTime, nullable=False)
+    fin               = Column(DateTime, nullable=True)
+    turno_id          = Column(Integer, ForeignKey('turnos.id'), nullable=True)
+    estado_validacion = Column(String(20), nullable=False, default='pendiente')
+    minutos_tarde     = Column(Integer, nullable=True)
+    created_at        = Column(DateTime, default=datetime.utcnow)
 
     empleado = relationship('Empleado', back_populates='check_ins')
+    turno    = relationship('Turno', foreign_keys=[turno_id])
     tramos   = relationship('TramoTurno', back_populates='check_in',
                             cascade='all, delete-orphan', order_by='TramoTurno.inicio')
 
