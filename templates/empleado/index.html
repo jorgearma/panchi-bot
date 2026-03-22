@@ -35,29 +35,60 @@
   <!-- ======== CONTENIDO ======== -->
   <main class="max-w-md mx-auto px-4 py-4 space-y-3">
 
-    <!-- Estado operativo -->
-    <div :class="estadoBg" class="rounded-xl p-3 border flex items-center justify-between">
-      <div>
-        <p class="text-xs text-gray-400 uppercase tracking-wide">Mi estado</p>
-        <p class="font-bold text-sm mt-0.5" :class="estadoColor">
-          <span>● </span><span x-text="estadoLabel"></span>
-        </p>
-        <p x-show="perfil.estado_operativo === 'ocupado'"
-           class="text-xs text-gray-500 mt-0.5" x-cloak>Asignado por el sistema</p>
+    <!-- Estado operativo + fichaje -->
+    <div :class="estadoBg" class="rounded-xl p-3 border">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs text-gray-400 uppercase tracking-wide">Mi estado</p>
+          <p class="font-bold text-sm mt-0.5" :class="estadoColor">
+            <span>● </span><span x-text="estadoLabel"></span>
+            <span x-show="fichajeActivo && fichajeInicio" x-cloak
+                  class="font-normal text-gray-400 ml-1"
+                  x-text="'desde las ' + formatHoraISO(fichajeInicio)"></span>
+          </p>
+          <p x-show="perfil.estado_operativo === 'ocupado'"
+             class="text-xs text-gray-500 mt-0.5" x-cloak>Asignado por el sistema</p>
+        </div>
+        <div class="flex gap-2">
+          <!-- Sin turno abierto: botón iniciar -->
+          <button x-show="!fichajeActivo"
+                  @click="iniciarTurno()"
+                  class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg transition active:bg-green-700 font-semibold">
+            ▶ Iniciar turno
+          </button>
+          <!-- Con turno abierto: cerrar -->
+          <button x-show="fichajeActivo"
+                  @click="cerrarTurno()"
+                  class="bg-gray-700 text-red-400 text-xs px-3 py-1.5 rounded-lg transition active:bg-gray-600">
+            ⏹ Cerrar turno
+          </button>
+        </div>
       </div>
-      <div class="flex gap-2">
-        <button @click="cambiarEstado('en_pausa')"
-                :disabled="perfil.estado_operativo === 'ocupado'"
-                :class="perfil.estado_operativo === 'ocupado' ? 'opacity-40 cursor-not-allowed' : 'active:bg-gray-600'"
-                class="bg-gray-700 text-gray-300 text-xs px-3 py-1.5 rounded-lg transition">
-          ⏸ Pausa
-        </button>
-        <button @click="cambiarEstado('desconectado')"
-                :disabled="perfil.estado_operativo === 'ocupado'"
-                :class="perfil.estado_operativo === 'ocupado' ? 'opacity-40 cursor-not-allowed' : 'active:bg-gray-600'"
-                class="bg-gray-700 text-red-400 text-xs px-3 py-1.5 rounded-lg transition">
-          ⏹ Salir
-        </button>
+    </div>
+
+    <!-- Mi turno de hoy -->
+    <div x-show="fichajeResumen && (fichajeResumen.activo || fichajeResumen.fin)" x-cloak>
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Mi turno de hoy</p>
+      <div class="bg-gray-800 rounded-xl p-3 space-y-2">
+        <!-- Cabecera: horas y duración total -->
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-semibold text-white"
+             x-text="formatHoraISO(fichajeResumen?.inicio) + (fichajeResumen?.fin ? ' → ' + formatHoraISO(fichajeResumen.fin) : ' → ahora')"></p>
+          <span class="text-xs text-gray-400"
+                x-text="formatMinutos(fichajeResumen?.duracion_total_min)"></span>
+        </div>
+        <!-- Tramos por rol -->
+        <template x-for="t in (fichajeResumen?.tramos || [])" :key="t.rol">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-300">
+              <span x-text="t.rol === 'picker' ? '📦 Picker' : '🛵 Repartidor'"></span>
+            </span>
+            <span class="text-gray-400" x-text="formatMinutos(t.minutos)"></span>
+          </div>
+        </template>
+        <!-- Indicador turno activo -->
+        <div x-show="fichajeResumen?.activo"
+             class="text-[11px] text-green-400 font-medium">● En curso</div>
       </div>
     </div>
 
@@ -238,6 +269,9 @@
       capacidades:         [],
       mostrarModalBloqueo: false,
       pedidosBloqueantes:  [],
+      fichajeActivo: false,
+      fichajeInicio: null,
+      fichajeResumen: null,
 
       // -- computed --
       get saludo() {
@@ -274,7 +308,7 @@
 
       // -- methods --
       async init() {
-        await Promise.all([this.cargarPerfil(), this.cargarTurno(), this.cargarMetricas(), this.cargarCapacidades()]);
+        await Promise.all([this.cargarPerfil(), this.cargarTurno(), this.cargarMetricas(), this.cargarCapacidades(), this.cargarFichaje()]);
       },
 
       async cargarPerfil() {
@@ -333,6 +367,58 @@
         } catch (_) {
           alert('Error de conexión');
         }
+      },
+
+      async cargarFichaje() {
+        try {
+          const r = await fetch('/empleado/fichaje/hoy');
+          if (r.ok) {
+            const d = await r.json();
+            this.fichajeActivo = d.activo || false;
+            this.fichajeInicio = d.inicio || null;
+            this.fichajeResumen = d;
+          }
+        } catch (_) {}
+      },
+
+      async iniciarTurno() {
+        try {
+          const r = await fetch('/empleado/fichaje', { method: 'POST' });
+          if (r.ok) {
+            await this.cargarFichaje();
+          } else {
+            const d = await r.json();
+            alert(d.error || 'Error al iniciar turno');
+          }
+        } catch (_) { alert('Error de conexión'); }
+      },
+
+      async cerrarTurno() {
+        if (!confirm('¿Cerrar el turno ahora?')) return;
+        try {
+          const r = await fetch('/empleado/fichaje/cerrar', { method: 'POST' });
+          if (r.ok) {
+            await this.cargarFichaje();
+          } else {
+            const d = await r.json();
+            alert(d.error || 'Error al cerrar turno');
+          }
+        } catch (_) { alert('Error de conexión'); }
+      },
+
+      formatMinutos(min) {
+        if (!min) return '0 min';
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        if (h === 0) return m + ' min';
+        if (m === 0) return h + 'h';
+        return h + 'h ' + m + 'min';
+      },
+
+      formatHoraISO(iso) {
+        if (!iso) return '';
+        const s = iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z';
+        return new Date(s).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
       },
 
       async cambiarEstado(nuevoEstado) {
