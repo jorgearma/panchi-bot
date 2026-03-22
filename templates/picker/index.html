@@ -902,7 +902,6 @@
               this.cola      = this.cola.filter(p => p.picking_id !== pickingId);
               this.colaTotal = Math.max(0, this.colaTotal - 1);
               await this.recargar();
-              this.tabActiva = 'mis-pedidos';
             } else if (r.status === 409) {
               this.cola = this.cola.map(p =>
                 p.picking_id === pickingId ? { ...p, ya_cogido: true } : p

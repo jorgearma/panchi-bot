@@ -171,22 +171,6 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 mt-4 px-3 sm:px-4">
-      <div class="metric-card rounded-3xl px-4 py-4">
-        <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">Activas</p>
-        <div class="mt-2 flex items-end justify-between gap-3">
-          <p class="text-3xl font-black text-slate-900" x-text="pedidosActivos.length"></p>
-          <span class="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">En trabajo</span>
-        </div>
-      </div>
-      <div class="metric-card rounded-3xl px-4 py-4">
-        <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">Cola libre</p>
-        <div class="mt-2 flex items-end justify-between gap-3">
-          <p class="text-3xl font-black text-slate-900" x-text="colaTotal"></p>
-          <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Disponible</span>
-        </div>
-      </div>
-    </div>
 
     <!-- Sin pedidos -->
     <div x-show="tabActiva === 'mis-entregas' && pedidosActivos.length === 0 && pedidosHistorial.length === 0"
@@ -405,24 +389,6 @@
         </div>
       </template>
 
-      <!-- Cierre de caja — visible cuando hay historial del día -->
-      <template x-if="pedidosHistorial.length > 0">
-        <div class="pb-6 mt-2">
-          <a :href="'/repartidor/cierre?id=' + repartidorId"
-             class="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-3.5 shadow-sm active:bg-gray-50 transition cursor-pointer">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">💰</div>
-              <div>
-                <p class="text-sm font-semibold text-gray-800">Cierre de caja</p>
-                <p class="text-xs text-gray-400">Resumen del efectivo del turno</p>
-              </div>
-            </div>
-            <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </a>
-        </div>
-      </template>
 
     </div>
 
@@ -1459,7 +1425,6 @@
               );
               this.colaTotal = Math.max(0, this.colaTotal - 1);
               await this.recargar();
-              this.tabActiva = 'mis-entregas';
             } else {
               const data = await r.json().catch(() => ({}));
               if (data.error === 'ya_cogido') {
