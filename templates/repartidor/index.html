@@ -40,7 +40,8 @@
       50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0.25); }
     }
     .card-nuevo { animation: glowRed 1.4s ease-in-out infinite; }
-    #mapa-rep { height: 220px; }
+    #mapa-rep  { height: 220px; }
+    #mapa-cola { height: 220px; }
     .repartidor-shell {
       background:
         radial-gradient(circle at top left, rgba(234, 88, 12, 0.14), transparent 30%),
@@ -428,21 +429,16 @@
     <!-- ======== SECCIÓN COLA ======== -->
     <div x-show="tabActiva === 'cola'" x-cloak class="mt-4 px-3 pb-8 sm:px-4">
 
-      <!-- Cabecera -->
-      <div class="section-card rounded-[30px] p-4 mb-4">
-        <div class="flex justify-between items-start gap-3">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Cola activa</p>
-            <p class="mt-1 text-sm text-slate-500"
-               x-text="colaTotal + ' pedido' + (colaTotal !== 1 ? 's' : '') + ' disponible' + (colaTotal !== 1 ? 's' : '')"></p>
-          </div>
-          <button @click="cargarCola()"
-                  class="rounded-2xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition active:scale-95">
-            ↻ Actualizar
-          </button>
-        </div>
-        <div class="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          Coge rápido los pedidos más antiguos para mantener la cola limpia y el reparto fluido.
+      <!-- Mapa cola -->
+      <div x-show="cola.some(p => p.lat != null && p.lng != null)" x-cloak
+           class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+        <button @click="toggleMapaCola()"
+                class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 transition">
+          <span class="text-sm font-semibold text-gray-700">🗺️ Ver pedidos de la cola en el mapa</span>
+          <span class="text-gray-400 text-xs" x-text="mapaColaVisible ? '▲' : '▼'"></span>
+        </button>
+        <div x-show="mapaColaVisible" x-cloak>
+          <div id="mapa-cola"></div>
         </div>
       </div>
 
@@ -454,9 +450,12 @@
             <div class="flex items-start justify-between gap-4">
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-100">
+                  <span x-show="!p.ya_cogido" class="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-100">
                     Disponible
                   </span>
+                  <span x-show="!p.ya_cogido"
+                        class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-slate-200"
+                        x-text="p.segundos_esperando < 60 ? p.segundos_esperando + 's' : Math.floor(p.segundos_esperando / 60) + ' min'"></span>
                   <span x-show="p.ya_cogido"
                         class="rounded-full bg-red-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-100">
                     Bloqueado
@@ -466,11 +465,6 @@
                 <p class="mt-1 text-sm text-slate-300 truncate" x-show="p.direccion_entrega">
                   📍 <span x-text="p.direccion_entrega"></span>
                 </p>
-                <p class="mt-2 text-sm text-slate-200"
-                   x-show="!p.ya_cogido"
-                   x-text="'Esperando desde hace ' + (p.segundos_esperando < 60
-                     ? p.segundos_esperando + ' segundos'
-                     : Math.floor(p.segundos_esperando / 60) + ' min')"></p>
                 <p class="mt-2 text-sm text-red-100" x-show="p.ya_cogido">Ya cogido por otro repartidor</p>
               </div>
               <button @click="cogerReparto(p.pedido_id)"
@@ -483,18 +477,6 @@
                 <span x-show="p.ya_cogido">Cogido</span>
                 <span x-show="cogiendo === p.pedido_id && !p.ya_cogido">...</span>
               </button>
-            </div>
-
-            <div class="mt-4 grid grid-cols-2 gap-3">
-              <div class="rounded-2xl bg-white/10 px-4 py-3">
-                <p class="text-[11px] uppercase tracking-[0.16em] text-slate-300">Tiempo</p>
-                <p class="mt-1 text-lg font-bold"
-                   x-text="p.segundos_esperando < 60 ? p.segundos_esperando + ' s' : Math.floor(p.segundos_esperando / 60) + ' min'"></p>
-              </div>
-              <div class="rounded-2xl bg-white/10 px-4 py-3">
-                <p class="text-[11px] uppercase tracking-[0.16em] text-slate-300">Productos</p>
-                <p class="mt-1 text-lg font-bold" x-text="p.n_items"></p>
-              </div>
             </div>
           </div>
         </template>
@@ -1262,6 +1244,8 @@
     let mapaRep = null;
     let mapaRepMarkers = [];
     let marcadorTiendaRep = null;
+    let mapaCola = null;
+    let mapaColaMarkers = [];
 
     function repartidor(repartidorId) {
       if (!repartidorId) {
@@ -1306,6 +1290,7 @@
 
         // Mapa
         mapaVisible: false,
+        mapaColaVisible: false,
         pedidoDestacado: null,
 
         // Cobro
@@ -1456,6 +1441,7 @@
               const data = await r.json();
               this.cola = data.cola || [];
               this.colaTotal = data.total || 0;
+              if (this.mapaColaVisible) this.actualizarMapaCola();
             } else {
               this.conexionOk = false;
             }
@@ -1678,7 +1664,7 @@
           mapaRepMarkers.forEach(m => m.remove());
           mapaRepMarkers = [];
 
-          const conCoordenadas = this.pedidosActivos.filter(p => p.estado_reparto === 'en_camino' && p.lat != null && p.lng != null);
+          const conCoordenadas = this.pedidosActivos.filter(p => p.lat != null && p.lng != null);
           conCoordenadas.forEach(p => {
             const mins = this.calculateRemainingMinutes(p.fecha_creacion);
             const color = mins > 8 ? '#16a34a' : mins >= 3 ? '#ca8a04' : mins >= 0 ? '#ea580c' : '#dc2626';
@@ -1694,6 +1680,47 @@
           });
 
           // Vista fija del pueblo — no fitBounds, el zoom lo controla setView en iniciarMapaRepartidor
+        },
+
+        toggleMapaCola() {
+          this.mapaColaVisible = !this.mapaColaVisible;
+          if (this.mapaColaVisible) {
+            this.$nextTick(() => setTimeout(() => this.iniciarMapaCola(), 50));
+          }
+        },
+
+        iniciarMapaCola() {
+          const el = document.getElementById('mapa-cola');
+          if (!el) return;
+          if (!mapaCola) {
+            mapaCola = L.map('mapa-cola', {
+              zoomControl: true,
+              dragging: false,
+            }).setView([40.008778, -3.010905], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap',
+              maxZoom: 18,
+            }).addTo(mapaCola);
+          }
+          mapaCola.invalidateSize();
+          this.actualizarMapaCola();
+        },
+
+        actualizarMapaCola() {
+          if (!mapaCola) return;
+          mapaColaMarkers.forEach(m => m.remove());
+          mapaColaMarkers = [];
+          const conCoordenadas = this.cola.filter(p => !p.ya_cogido && p.lat != null && p.lng != null);
+          conCoordenadas.forEach(p => {
+            const icon = L.divIcon({
+              className: '',
+              html: `<div style="background:#ea580c;color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4);font-size:10px;font-weight:900;">${p.pedido_id}</div>`,
+              iconSize: [26, 26],
+              iconAnchor: [13, 13],
+            });
+            const marker = L.marker([p.lat, p.lng], { icon }).addTo(mapaCola);
+            mapaColaMarkers.push(marker);
+          });
         },
 
         // ── Helpers de navegación ────────────────────────────────

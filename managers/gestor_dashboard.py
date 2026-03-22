@@ -1620,6 +1620,8 @@ class GestorDashboard:
                 'n_items':            len(r.pedido.detalles) if r.pedido else 0,
                 'direccion_entrega':  r.pedido.DireccionEntrega if r.pedido else '—',
                 'segundos_esperando': int((ahora - r.created_at).total_seconds()) if r.created_at else 0,
+                'lat':                r.pedido.lat_entrega if r.pedido else None,
+                'lng':                r.pedido.lng_entrega if r.pedido else None,
             })
 
         # Pedidos PREPARADO sin ningún Reparto (auto-creación no ocurrió o falló)
@@ -1639,6 +1641,8 @@ class GestorDashboard:
                     'n_items':            len(p.detalles) if p.detalles else 0,
                     'direccion_entrega':  p.DireccionEntrega or '—',
                     'segundos_esperando': int((ahora - p.FechaCreacion).total_seconds()) if p.FechaCreacion else 0,
+                    'lat':                p.lat_entrega,
+                    'lng':                p.lng_entrega,
                 })
 
         return sorted(resultado, key=lambda x: x['segundos_esperando'], reverse=True)
