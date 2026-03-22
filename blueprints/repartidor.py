@@ -149,3 +149,32 @@ def cierre_datos():
     except Exception as e:
         logger.error("Error en /repartidor/cierre/datos: %s", e)
         return jsonify({"error": "Error interno"}), 500
+
+
+@blueprint_repartidor.route("/repartidor/cola")
+@requiere_rol('repartidor', 'manager', 'admin')
+def cola():
+    try:
+        lista = gestor_dashboard.repartos_sin_asignar()
+        return jsonify({"cola": lista, "total": len(lista)})
+    except Exception as e:
+        logger.error("Error en /repartidor/cola: %s", e)
+        return jsonify({"error": "Error interno"}), 500
+
+
+@blueprint_repartidor.route("/repartidor/cola/coger/<int:pedido_id>", methods=["POST"])
+@requiere_rol('repartidor', 'manager', 'admin')
+def coger_reparto(pedido_id: int):
+    empleado_id = session.get('empleado_id')
+    try:
+        ok, motivo = gestor_dashboard.reclamar_reparto(pedido_id, empleado_id)
+    except Exception as e:
+        logger.error("Error en /repartidor/cola/coger/%s: %s", pedido_id, e)
+        return jsonify({"error": "Error interno"}), 500
+    if ok:
+        return jsonify({"ok": True, "pedido_id": pedido_id})
+    if motivo == 'no_encontrado':
+        return jsonify({"error": motivo}), 404
+    if motivo == 'ya_cogido':
+        return jsonify({"error": motivo}), 409
+    return jsonify({"error": motivo}), 400

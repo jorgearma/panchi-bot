@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Panchi — ¿Cómo entras hoy?</title>
+  <meta name="theme-color" content="#111827">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>[x-cloak] { display: none !important; } button { -webkit-tap-highlight-color: transparent; }</style>
+</head>
+<body class="bg-gray-900 min-h-screen"
+      x-data="checkinHub({{ empleado_id or 'null' }})"
+      x-init="init()">
+
+  <!-- HEADER -->
+  <header class="bg-gray-900 border-b border-gray-800 px-4 py-3 sticky top-0 z-30">
+    <p class="text-xs text-gray-500" x-text="fechaHoy"></p>
+    <p class="text-white font-bold text-base leading-tight" x-text="saludo"></p>
+  </header>
+
+  <main class="max-w-md mx-auto px-4 py-6 space-y-4">
+
+    <!-- Turno del día -->
+    <template x-if="turno">
+      <div class="bg-blue-950 rounded-xl p-3 border border-blue-900">
+        <p class="text-xs text-blue-300 uppercase tracking-wide">Turno hoy</p>
+        <p class="text-white font-semibold text-sm mt-1"
+           x-text="turno.hora_inicio + ' – ' + turno.hora_fin"></p>
+      </div>
+    </template>
+
+    <!-- Título -->
+    <div class="text-center py-2">
+      <p class="text-white font-bold text-xl">¿Cómo entras hoy?</p>
+      <p class="text-gray-500 text-sm mt-1">Elige tu rol para este turno</p>
+    </div>
+
+    <!-- Cards de rol -->
+    <div class="grid grid-cols-2 gap-3">
+
+      <!-- Picker -->
+      <button @click="seleccionarRol('picker')"
+              :disabled="cargando"
+              class="bg-gradient-to-br from-blue-900 to-blue-700 rounded-2xl p-5 text-center
+                     active:opacity-90 transition border-2 border-transparent
+                     hover:border-blue-400 disabled:opacity-50">
+        <p class="text-4xl">🛒</p>
+        <p class="text-white font-bold text-base mt-3">Picker</p>
+        <div class="mt-3 bg-black/30 rounded-lg px-2 py-1.5">
+          <p class="text-blue-300 font-semibold text-sm"
+             x-text="(carga.picker?.pendientes ?? '—') + ' pedidos'"></p>
+          <p class="text-gray-400 text-xs mt-0.5">esperando prep.</p>
+        </div>
+      </button>
+
+      <!-- Repartidor -->
+      <button @click="seleccionarRol('repartidor')"
+              :disabled="cargando"
+              class="bg-gradient-to-br from-orange-900 to-orange-700 rounded-2xl p-5 text-center
+                     active:opacity-90 transition border-2 border-transparent
+                     hover:border-orange-400 disabled:opacity-50">
+        <p class="text-4xl">🛵</p>
+        <p class="text-white font-bold text-base mt-3">Repartidor</p>
+        <div class="mt-3 bg-black/30 rounded-lg px-2 py-1.5">
+          <p class="text-orange-300 font-semibold text-sm"
+             x-text="(carga.repartidor?.listos_para_entregar ?? '—') + ' listos'"></p>
+          <p class="text-gray-400 text-xs mt-0.5">para entregar</p>
+        </div>
+      </button>
+
+    </div>
+
+    <!-- Loading state -->
+    <div x-show="cargando" x-cloak class="text-center py-4">
+      <p class="text-gray-400 text-sm">Entrando...</p>
+    </div>
+
+    <!-- Error -->
+    <div x-show="error" x-cloak class="bg-red-950 border border-red-800 rounded-xl p-3 text-center">
+      <p class="text-red-400 text-sm" x-text="error"></p>
+    </div>
+
+    <p class="text-center text-gray-600 text-xs pt-2">Podrás cambiarlo más tarde si hace falta</p>
+
+  </main>
+
+  <script>
+  function checkinHub(empleadoId) {
+    return {
+      empleadoId,
+      carga: { picker: {}, repartidor: {} },
+      turno: null,
+      cargando: false,
+      error: '',
+
+      get saludo() {
+        const h = new Date().getHours();
+        if (h < 13) return 'Buenos días ☀️';
+        if (h < 20) return 'Buenas tardes 🌤️';
+        return 'Buenas noches 🌙';
+      },
+      get fechaHoy() {
+        return new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+      },
+
+      async init() {
+        await Promise.all([this.cargarCarga(), this.cargarTurno()]);
+      },
+
+      async cargarCarga() {
+        try {
+          const r = await fetch('/empleado/carga-operativa');
+          if (r.ok) this.carga = await r.json();
+        } catch (_) {}
+      },
+
+      async cargarTurno() {
+        try {
+          const r = await fetch('/empleado/turno-hoy');
+          if (r.ok) this.turno = await r.json();
+        } catch (_) {}
+      },
+
+      async seleccionarRol(rol) {
+        if (this.cargando) return;
+        this.cargando = true;
+        this.error = '';
+        try {
+          const r = await fetch('/empleado/cambiar-rol', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rol }),
+          });
+          if (r.ok) {
+            window.location.href = '/empleado';
+          } else {
+            const d = await r.json();
+            this.error = d.error || 'Error al cambiar rol';
+            this.cargando = false;
+          }
+        } catch (_) {
+          this.error = 'Error de conexión. Inténtalo de nuevo.';
+          this.cargando = false;
+        }
+      },
+    };
+  }
+  </script>
+
+</body>
+</html>
