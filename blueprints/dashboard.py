@@ -167,6 +167,45 @@ def empleados():
         return _err("Error interno", 500)
 
 
+@blueprint_dashboard.route("/dashboard/historial")
+@requiere_rol('manager', 'admin')
+def historial():
+    return render_template("dashboard/historial.html")
+
+
+@blueprint_dashboard.route("/dashboard/historial-pedidos")
+@requiere_rol('manager', 'admin')
+def historial_pedidos():
+    try:
+        desde = request.args.get("desde")
+        hasta = request.args.get("hasta")
+        estado = request.args.get("estado")
+        forma_pago = request.args.get("forma_pago")
+        q = request.args.get("q")
+        page = int(request.args.get("page", 1))
+        per_page = int(request.args.get("per_page", 25))
+        return _ok(gestor_dashboard.historial_pedidos(
+            desde=desde, hasta=hasta, estado=estado,
+            forma_pago=forma_pago, q=q, page=page, per_page=per_page,
+        ))
+    except Exception as e:
+        logger.error("Error en /dashboard/historial-pedidos: %s", e)
+        return _err("Error interno", 500)
+
+
+@blueprint_dashboard.route("/dashboard/pedido/<int:pedido_id>/detalle")
+@requiere_rol('manager', 'admin')
+def detalle_pedido(pedido_id):
+    try:
+        data = gestor_dashboard.detalle_pedido(pedido_id)
+        if data is None:
+            return _err("Pedido no encontrado", 404)
+        return _ok(data)
+    except Exception as e:
+        logger.error("Error en /dashboard/pedido/%s/detalle: %s", pedido_id, e)
+        return _err("Error interno", 500)
+
+
 # ---------------------------------------------------------------------------
 # Write endpoints
 # ---------------------------------------------------------------------------

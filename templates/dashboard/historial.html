@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Historial de Pedidos — Panchi Ops</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    [x-cloak] { display: none !important; }
+    :root {
+      --bg: #edf2f7;
+      --panel: rgba(255, 255, 255, 0.86);
+      --panel-strong: #ffffff;
+      --line: rgba(148, 163, 184, 0.22);
+      --ink: #0f172a;
+      --muted: #64748b;
+      --brand: #0f4c81;
+      --brand-soft: #dbeafe;
+    }
+    body {
+      font-family: "Manrope", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(14, 116, 144, 0.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 24%),
+        linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+    .glass-panel {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+    .fade-in { animation: fadeIn .25s ease-in; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body class="min-h-screen">
+
+{% from 'macros/ui.html' import status_badge, empty_state, loading_skeleton, error_banner %}
+
+<!-- ── HEADER ─────────────────────────────────────────────────────────────── -->
+<header class="sticky top-0 z-30 px-4 pt-4 pb-2">
+  <div class="mx-auto max-w-7xl glass-panel rounded-2xl px-5 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">🍕</span>
+      <span class="font-extrabold text-lg tracking-tight" style="color:var(--brand)">Panchi Ops</span>
+      <span class="hidden sm:inline text-slate-300">|</span>
+      <span class="hidden sm:inline text-sm font-semibold text-slate-500">Historial de Pedidos</span>
+    </div>
+    {% include 'dashboard/_nav.html' %}
+  </div>
+</header>
+
+<!-- ── MAIN ───────────────────────────────────────────────────────────────── -->
+<main
+  class="mx-auto max-w-7xl px-4 py-6"
+  x-data="historialApp()"
+>
+
+  <!-- Filter Bar -->
+  <div class="glass-panel rounded-2xl px-5 py-4 mb-5">
+    <div class="flex flex-wrap gap-3 items-end">
+
+      <!-- Búsqueda libre -->
+      <div class="flex-1 min-w-[180px]">
+        <label class="block text-xs font-semibold text-slate-500 mb-1">Buscar</label>
+        <input
+          type="text"
+          x-model="filtros.q"
+          placeholder="# pedido, nombre, teléfono…"
+          class="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        />
+      </div>
+
+      <!-- Fecha desde -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">Desde</label>
+        <input
+          type="date"
+          x-model="filtros.desde"
+          @change="pagina = 1; cargar()"
+          class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        />
+      </div>
+
+      <!-- Fecha hasta -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">Hasta</label>
+        <input
+          type="date"
+          x-model="filtros.hasta"
+          @change="pagina = 1; cargar()"
+          class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        />
+      </div>
+
+      <!-- Estado -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">Estado</label>
+        <select
+          x-model="filtros.estado"
+          @change="pagina = 1; cargar()"
+          class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        >
+          <option value="">Todos</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="CONFIRMANDO_PAGO">Confirmando pago</option>
+          <option value="PAGADO">Pagado</option>
+          <option value="CONTRA_REEMBOLSO">Contrarrembolso</option>
+          <option value="EN_PREPARACION">En preparación</option>
+          <option value="PREPARADO">Preparado</option>
+          <option value="EN_REPARTO">En reparto</option>
+          <option value="ENTREGADO">Entregado</option>
+          <option value="CANCELADO">Cancelado</option>
+          <option value="REEMBOLSADO">Reembolsado</option>
+        </select>
+      </div>
+
+      <!-- Forma de pago -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">Pago</label>
+        <select
+          x-model="filtros.forma_pago"
+          @change="pagina = 1; cargar()"
+          class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        >
+          <option value="">Todos</option>
+          <option value="online">Online</option>
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+        </select>
+      </div>
+
+      <!-- Limpiar filtros -->
+      <button
+        @click="limpiarFiltros()"
+        class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 transition"
+      >
+        Limpiar
+      </button>
+
+    </div>
+
+    <!-- Contador de resultados -->
+    <div class="mt-3 text-xs text-slate-500 font-medium" x-show="!cargando">
+      <span x-text="total"></span> pedidos encontrados
+    </div>
+  </div>
+
+  <!-- Error banner -->
+  {{ error_banner() }}
+
+  <!-- Tabla -->
+  <div class="glass-panel rounded-2xl overflow-hidden">
+
+    <!-- Loading skeleton -->
+    <div x-show="cargando" x-cloak>
+      {{ loading_skeleton(rows=8, cols=6) }}
+    </div>
+
+    <!-- Empty state -->
+    <div x-show="!cargando && pedidos.length === 0" x-cloak>
+      {{ empty_state('📭', 'Sin resultados', 'Prueba a cambiar los filtros o el rango de fechas.') }}
+    </div>
+
+    <!-- Data table -->
+    <div x-show="!cargando && pedidos.length > 0" x-cloak>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 bg-slate-50/60">
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">#</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Cliente</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Estado</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Pago</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Total</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Fecha</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="p in pedidos" :key="p.pedido_id">
+            <tr
+              class="border-b border-slate-100 hover:bg-blue-50/40 transition-colors cursor-pointer fade-in"
+              @click="abrirDetalle(p.pedido_id)"
+            >
+              <td class="px-4 py-3 font-mono font-semibold text-slate-700" x-text="'#' + p.pedido_id"></td>
+              <td class="px-4 py-3">
+                <span class="font-semibold text-slate-800" x-text="p.cliente_nombre"></span>
+                <span class="block text-xs text-slate-400" x-text="p.cliente_telefono"></span>
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                  :class="estadoClases(p.estado)"
+                  x-text="estadoEtiqueta(p.estado)"
+                ></span>
+              </td>
+              <td class="px-4 py-3 capitalize text-slate-600" x-text="p.forma_pago"></td>
+              <td class="px-4 py-3 text-right font-semibold text-slate-800" x-text="'€' + p.total.toFixed(2)"></td>
+              <td class="px-4 py-3 text-slate-500 text-xs" x-text="formatFecha(p.fecha_creacion)"></td>
+              <td class="px-4 py-3 text-right">
+                <span class="text-blue-500 font-semibold text-xs hover:underline">Ver →</span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="flex items-center justify-between px-4 py-3 border-t border-slate-100" x-show="pages > 1">
+        <button
+          @click="pagina = pagina - 1; cargar()"
+          :disabled="pagina <= 1"
+          class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition"
+        >
+          ← Anterior
+        </button>
+        <span class="text-sm text-slate-500">
+          Página <span class="font-semibold text-slate-800" x-text="pagina"></span>
+          de <span x-text="pages"></span>
+        </span>
+        <button
+          @click="pagina = pagina + 1; cargar()"
+          :disabled="pagina >= pages"
+          class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition"
+        >
+          Siguiente →
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── SLIDE-OVER DETAIL PANEL ─────────────────────────────────────────── -->
+  <!-- Backdrop -->
+  <div
+    x-show="panelAbierto"
+    x-cloak
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click="cerrarPanel()"
+    class="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm"
+  ></div>
+
+  <!-- Panel -->
+  <div
+    x-show="panelAbierto"
+    x-cloak
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="translate-x-full"
+    x-transition:enter-end="translate-x-0"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="translate-x-0"
+    x-transition:leave-end="translate-x-full"
+    class="fixed top-0 right-0 h-full w-full max-w-lg z-50 bg-white shadow-2xl flex flex-col overflow-hidden"
+  >
+    <!-- Panel header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Detalle</p>
+        <h2 class="text-lg font-extrabold text-slate-800" x-text="detalle ? '#' + detalle.pedido.pedido_id : '…'"></h2>
+      </div>
+      <button @click="cerrarPanel()" class="rounded-full p-2 hover:bg-slate-100 transition text-slate-400 hover:text-slate-700">
+        ✕
+      </button>
+    </div>
+
+    <!-- Panel body -->
+    <div class="flex-1 overflow-y-auto px-6 py-4 space-y-6" x-show="detalle && !cargandoDetalle">
+
+      <!-- Estado + resumen -->
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <span
+            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+            :class="detalle ? estadoClases(detalle.pedido.estado) : ''"
+            x-text="detalle ? estadoEtiqueta(detalle.pedido.estado) : ''"
+          ></span>
+          <p class="mt-1 text-sm text-slate-500" x-text="detalle ? formatFecha(detalle.pedido.fecha_creacion) : ''"></p>
+        </div>
+        <div class="text-right">
+          <p class="text-2xl font-extrabold text-slate-800" x-text="detalle ? '€' + detalle.pedido.total.toFixed(2) : ''"></p>
+          <p class="text-xs text-slate-400 capitalize" x-text="detalle ? detalle.pedido.forma_pago : ''"></p>
+        </div>
+      </div>
+
+      <!-- Cliente + dirección -->
+      <div class="rounded-xl bg-slate-50 px-4 py-3 space-y-1">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Cliente</p>
+        <p class="font-semibold text-slate-800" x-text="detalle ? detalle.pedido.cliente_nombre : ''"></p>
+        <p class="text-sm text-slate-500" x-text="detalle ? detalle.pedido.cliente_telefono : ''"></p>
+        <p class="text-sm text-slate-500" x-text="detalle ? detalle.pedido.direccion_entrega : ''"></p>
+      </div>
+
+      <!-- Items -->
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Artículos</p>
+        <template x-if="detalle && detalle.items.length === 0">
+          <p class="text-sm text-slate-400 italic">Sin artículos registrados.</p>
+        </template>
+        <template x-for="item in (detalle ? detalle.items : [])" :key="item.detalle_id">
+          <div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+            <div>
+              <span class="font-semibold text-slate-700" x-text="item.nombre"></span>
+              <span class="ml-1 text-slate-400 text-xs" x-text="'× ' + item.cantidad"></span>
+            </div>
+            <span class="font-semibold text-slate-700" x-text="'€' + item.subtotal.toFixed(2)"></span>
+          </div>
+        </template>
+      </div>
+
+      <!-- Historial de estados -->
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Historial</p>
+        <template x-if="detalle && detalle.historial.length === 0">
+          <p class="text-sm text-slate-400 italic">Sin historial de estados.</p>
+        </template>
+        <ol class="relative border-l border-slate-200 ml-2 space-y-3">
+          <template x-for="(h, idx) in (detalle ? detalle.historial : [])" :key="idx">
+            <li class="ml-4">
+              <div class="absolute -left-1.5 w-3 h-3 rounded-full bg-slate-300 border-2 border-white"></div>
+              <p class="text-xs text-slate-400" x-text="formatFecha(h.cambiado_en)"></p>
+              <p class="text-sm font-semibold text-slate-700">
+                <span x-text="h.estado_anterior || '—'"></span>
+                <span class="text-slate-400 mx-1">→</span>
+                <span x-text="h.estado_nuevo"></span>
+              </p>
+              <p class="text-xs text-slate-500 italic" x-show="h.notas" x-text="h.notas"></p>
+            </li>
+          </template>
+        </ol>
+      </div>
+
+      <!-- Picking -->
+      <div x-show="detalle && detalle.picking">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Picking</p>
+        <div class="rounded-xl bg-slate-50 px-4 py-3 space-y-1 text-sm">
+          <p><span class="text-slate-400">Picker:</span> <span class="font-semibold text-slate-700" x-text="detalle && detalle.picking ? (detalle.picking.picker_nombre || '—') : ''"></span></p>
+          <p><span class="text-slate-400">Estado:</span> <span class="font-semibold text-slate-700" x-text="detalle && detalle.picking ? detalle.picking.estado : ''"></span></p>
+          <p x-show="detalle && detalle.picking && detalle.picking.completado_en">
+            <span class="text-slate-400">Completado:</span>
+            <span x-text="detalle && detalle.picking ? formatFecha(detalle.picking.completado_en) : ''"></span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Reparto -->
+      <div x-show="detalle && detalle.reparto">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Reparto</p>
+        <div class="rounded-xl bg-slate-50 px-4 py-3 space-y-1 text-sm">
+          <p><span class="text-slate-400">Repartidor:</span> <span class="font-semibold text-slate-700" x-text="detalle && detalle.reparto ? (detalle.reparto.repartidor_nombre || '—') : ''"></span></p>
+          <p><span class="text-slate-400">Estado:</span> <span class="font-semibold text-slate-700" x-text="detalle && detalle.reparto ? detalle.reparto.estado : ''"></span></p>
+          <p x-show="detalle && detalle.reparto && detalle.reparto.hora_entrega_real">
+            <span class="text-slate-400">Entregado:</span>
+            <span x-text="detalle && detalle.reparto ? formatFecha(detalle.reparto.hora_entrega_real) : ''"></span>
+          </p>
+          <p x-show="detalle && detalle.reparto && detalle.reparto.importe_cobrado">
+            <span class="text-slate-400">Cobrado:</span>
+            <span x-text="detalle && detalle.reparto && detalle.reparto.importe_cobrado ? '€' + detalle.reparto.importe_cobrado.toFixed(2) + ' (' + (detalle.reparto.metodo_cobro || '—') + ')' : ''"></span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Notas / cancelación -->
+      <div x-show="detalle && (detalle.pedido.notas || detalle.pedido.cancel_reason)">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Notas</p>
+        <p class="text-sm text-slate-600 italic" x-text="detalle ? (detalle.pedido.cancel_reason || detalle.pedido.notas) : ''"></p>
+      </div>
+
+    </div>
+
+    <!-- Loading state in panel -->
+    <div x-show="cargandoDetalle" x-cloak class="flex-1 flex items-center justify-center">
+      <div class="animate-spin w-8 h-8 rounded-full border-4 border-blue-200 border-t-blue-500"></div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+function historialApp() {
+  return {
+    pedidos: [],
+    total: 0,
+    pagina: 1,
+    pages: 1,
+    cargando: false,
+    error: null,
+
+    _qTimer: null,
+
+    init() {
+      this.$watch('filtros.q', () => {
+        clearTimeout(this._qTimer);
+        this._qTimer = setTimeout(() => { this.pagina = 1; this.cargar(); }, 400);
+      });
+      this.cargar();
+    },
+
+    filtros: {
+      q: '',
+      desde: '',
+      hasta: '',
+      estado: '',
+      forma_pago: '',
+    },
+
+    panelAbierto: false,
+    detalle: null,
+    cargandoDetalle: false,
+
+    async cargar() {
+      this.cargando = true;
+      this.error = null;
+      try {
+        const params = new URLSearchParams();
+        if (this.filtros.q)          params.set('q',          this.filtros.q);
+        if (this.filtros.desde)      params.set('desde',      this.filtros.desde);
+        if (this.filtros.hasta)      params.set('hasta',      this.filtros.hasta);
+        if (this.filtros.estado)     params.set('estado',     this.filtros.estado);
+        if (this.filtros.forma_pago) params.set('forma_pago', this.filtros.forma_pago);
+        params.set('page', this.pagina);
+        params.set('per_page', 25);
+
+        const resp = await fetch('/dashboard/historial-pedidos?' + params.toString());
+        if (!resp.ok) throw new Error('Error ' + resp.status);
+        const data = await resp.json();
+
+        this.pedidos = data.pedidos;
+        this.total   = data.total;
+        this.pagina  = data.page;
+        this.pages   = data.pages;
+      } catch (e) {
+        this.error = 'No se pudo cargar el historial. ' + e.message;
+      } finally {
+        this.cargando = false;
+      }
+    },
+
+    async abrirDetalle(pedidoId) {
+      this.panelAbierto = true;
+      this.detalle = null;
+      this.cargandoDetalle = true;
+      try {
+        const resp = await fetch(`/dashboard/pedido/${pedidoId}/detalle`);
+        if (!resp.ok) throw new Error('Error ' + resp.status);
+        this.detalle = await resp.json();
+      } catch (e) {
+        this.error = 'No se pudo cargar el detalle. ' + e.message;
+        this.panelAbierto = false;
+      } finally {
+        this.cargandoDetalle = false;
+      }
+    },
+
+    cerrarPanel() {
+      this.panelAbierto = false;
+      this.detalle = null;
+    },
+
+    limpiarFiltros() {
+      this.filtros = { q: '', desde: '', hasta: '', estado: '', forma_pago: '' };
+      this.pagina = 1;
+      this.cargar();
+    },
+
+    formatFecha(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleString('es-ES', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    },
+
+    _estadoConf: {
+      'PENDIENTE':        ['bg-slate-100 text-slate-600',    'Pendiente'],
+      'ENLACE':           ['bg-slate-100 text-slate-600',    'Enlace'],
+      'ENLACE2':          ['bg-slate-100 text-slate-600',    'Enlace 2'],
+      'CONFIRMANDO_PAGO': ['bg-yellow-100 text-yellow-700',  'Confirmando'],
+      'PAGADO':           ['bg-emerald-100 text-emerald-700','Pagado'],
+      'CONTRA_REEMBOLSO': ['bg-violet-100 text-violet-700',  'Contrarremb.'],
+      'EN_PREPARACION':   ['bg-blue-100 text-blue-700',      'Preparando'],
+      'PREPARADO':        ['bg-indigo-100 text-indigo-700',  'Preparado'],
+      'EN_REPARTO':       ['bg-orange-100 text-orange-700',  'En reparto'],
+      'ENTREGADO':        ['bg-emerald-100 text-emerald-800','Entregado'],
+      'CANCELADO':        ['bg-red-100 text-red-700',        'Cancelado'],
+      'REEMBOLSADO':      ['bg-slate-100 text-slate-500',    'Reembolsado'],
+    },
+    estadoClases(estado) {
+      return (this._estadoConf[estado] || ['bg-slate-100 text-slate-500', estado])[0];
+    },
+    estadoEtiqueta(estado) {
+      return (this._estadoConf[estado] || ['bg-slate-100 text-slate-500', estado])[1];
+    },
+  };
+}
+</script>
+
+</body>
+</html>

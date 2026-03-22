@@ -1,0 +1,44 @@
+{#
+  templates/dashboard/_nav.html
+  Barra de navegación entre secciones del dashboard admin. Light-mode.
+
+  Uso: {% include 'dashboard/_nav.html' %}
+       (incluir justo después del </header> principal de la página)
+
+  La pestaña activa se detecta con request.path.
+  En sub-rutas (ej. /dashboard/historial/123) la pestaña padre sigue activa
+  gracias al startswith, excepto /dashboard que necesita coincidencia exacta
+  para no quedar siempre activo.
+
+  NOTA: No usar .glass-panel aquí. Esa clase solo existe en el <style> de index.html
+  y no está disponible globalmente. Se usan clases Tailwind equivalentes inline para que
+  el parcial funcione en cualquier página que lo incluya (historial, turnos, etc.).
+
+  Trade-off conocido: la misma lista de tabs existe en monitor.html como _monitor_links
+  con estilo dark. Si se añade una pestaña nueva, editar los dos archivos.
+#}
+
+{% set _nav_links = [
+  ('Operaciones',  '/dashboard'),
+  ('Monitor',      '/dashboard/monitor'),
+  ('Historial',    '/dashboard/historial'),
+  ('Turnos',       '/dashboard/turnos'),
+  ('Rendimiento',  '/dashboard/rendimiento'),
+  ('Estadísticas', '/dashboard/estadisticas'),
+] %}
+
+<nav aria-label="Navegación dashboard"
+     class="flex gap-1 overflow-x-auto rounded-2xl border border-slate-400/20 bg-white/80 p-1 shadow-lg backdrop-blur-lg">
+  {% for _label, _href in _nav_links %}
+    {% if _href == '/dashboard' %}
+      {% set _activo = (request.path == '/dashboard') %}
+    {% else %}
+      {% set _activo = request.path.startswith(_href) %}
+    {% endif %}
+    <a href="{{ _href }}"
+       class="whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition
+              {{ 'bg-slate-950 text-white shadow-sm' if _activo else 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
+      {{ _label }}
+    </a>
+  {% endfor %}
+</nav>

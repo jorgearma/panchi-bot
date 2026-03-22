@@ -1800,3 +1800,159 @@ class GestorDashboard:
             s.rollback()
             logger.error("Error reclamando picking %s: %s", picking_id, e)
             return False, 'error'
+
+    def historial_pedidos(
+        self,
+        desde: str = None,
+        hasta: str = None,
+        estado: str = None,
+        forma_pago: str = None,
+        q: str = None,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> dict:
+        from math import ceil
+        from sqlalchemy import or_
+        from models import Usuario
+
+        per_page = min(per_page, 100)
+        s = self.session
+
+        query = s.query(Pedido)
+
+        if desde:
+            try:
+                dt_desde = datetime.strptime(desde, '%Y-%m-%d')
+                query = query.filter(Pedido.FechaCreacion >= dt_desde)
+            except ValueError:
+                pass
+
+        if hasta:
+            try:
+                dt_hasta = datetime.strptime(hasta, '%Y-%m-%d') + timedelta(days=1)
+                query = query.filter(Pedido.FechaCreacion < dt_hasta)
+            except ValueError:
+                pass
+
+        if estado:
+            query = query.filter(Pedido.Estado == estado)
+
+        if forma_pago:
+            query = query.filter(Pedido.forma_pago == forma_pago)
+
+        if q:
+            q_strip = q.strip()
+            if q_strip.isdigit():
+                query = query.filter(Pedido.PedidoID == int(q_strip))
+            else:
+                q_escaped = q_strip.replace('%', r'\%').replace('_', r'\_')
+                query = query.outerjoin(Usuario, Pedido.ClienteID == Usuario.id).filter(
+                    or_(
+                        Usuario.nombre.ilike(f'%{q_escaped}%', escape='\\'),
+                        Pedido.TelefonoEntrega.ilike(f'%{q_escaped}%', escape='\\'),
+                    )
+                )
+
+        total = query.count()
+        pages = ceil(total / per_page) if total else 1
+
+        pedidos = (
+            query
+            .order_by(Pedido.FechaCreacion.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+
+        resultado = []
+        for p in pedidos:
+            resultado.append({
+                "pedido_id": p.PedidoID,
+                "cliente_nombre": p.cliente.nombre if p.cliente else "—",
+                "cliente_telefono": p.TelefonoEntrega,
+                "estado": p.Estado,
+                "forma_pago": p.forma_pago or "online",
+                "total": float(p.Total) if p.Total else 0.0,
+                "fecha_creacion": _iso(p.FechaCreacion),
+                "fecha_actualizacion": _iso(p.FechaActualizacion),
+                "notas": p.Notas,
+                "cancel_reason": p.cancel_reason,
+            })
+
+        return {"pedidos": resultado, "total": total, "page": page, "pages": pages}
+
+    def detalle_pedido(self, pedido_id: int) -> dict | None:
+        s = self.session
+        p = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
+        if not p:
+            return None
+
+        items = [
+            {
+                "detalle_id": d.DetalleID,
+                "nombre": d.NombreProducto or (d.producto.Nombre if d.producto else "—"),
+                "cantidad": d.Cantidad,
+                "precio_unitario": float(d.PrecioUnitario) if d.PrecioUnitario else 0.0,
+                "subtotal": float(d.Subtotal) if d.Subtotal else 0.0,
+            }
+            for d in p.detalles
+        ]
+
+        historial = [
+            {
+                "estado_anterior": h.estado_anterior,
+                "estado_nuevo": h.estado_nuevo,
+                "cambiado_en": _iso(h.cambiado_en),
+                "notas": h.notas,
+            }
+            for h in sorted(p.historial_estados, key=lambda h: h.cambiado_en or datetime.min)
+        ]
+
+        picking = None
+        if p.picking:
+            pk = p.picking
+            picking = {
+                "estado": pk.estado,
+                "picker_nombre": (
+                    f"{pk.empleado.Nombre} {pk.empleado.Apellido}" if pk.empleado else None
+                ),
+                "asignado_en": _iso(pk.created_at),
+                "iniciado_en": _iso(pk.iniciado_en),
+                "completado_en": _iso(pk.completado_en),
+            }
+
+        reparto = None
+        if p.reparto:
+            rp = p.reparto
+            reparto = {
+                "estado": rp.estado,
+                "repartidor_nombre": (
+                    f"{rp.repartidor.Nombre} {rp.repartidor.Apellido}" if rp.repartidor else None
+                ),
+                "hora_salida": _iso(rp.hora_salida),
+                "hora_entrega_real": _iso(rp.hora_entrega_real),
+                "metodo_cobro": rp.metodo_cobro,
+                "importe_cobrado": float(rp.importe_cobrado) if rp.importe_cobrado else None,
+            }
+
+        pedido_dict = {
+            "pedido_id": p.PedidoID,
+            "cliente_nombre": p.cliente.nombre if p.cliente else "—",
+            "cliente_telefono": p.TelefonoEntrega,
+            "direccion_entrega": p.DireccionEntrega,
+            "estado": p.Estado,
+            "forma_pago": p.forma_pago or "online",
+            "total": float(p.Total) if p.Total else 0.0,
+            "fecha_creacion": _iso(p.FechaCreacion),
+            "fecha_actualizacion": _iso(p.FechaActualizacion),
+            "notas": p.Notas,
+            "cancel_reason": p.cancel_reason,
+        }
+
+        return {
+            "pedido": pedido_dict,
+            "items": items,
+            "historial": historial,
+            "picking": picking,
+            "reparto": reparto,
+        }
