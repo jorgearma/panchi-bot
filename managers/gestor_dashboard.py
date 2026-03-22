@@ -890,11 +890,10 @@ class GestorDashboard:
             Incidencia.estado.in_(["abierta", "en_proceso"])
         ).scalar() or 0
 
-        # Orders waiting for a picker (pagado / contra-reembolso, no picking assigned yet)
-        picking_ids_asignados = [pk.pedido_id for pk in s.query(PickingPedido.pedido_id).all()]
+        # Orders waiting for a picker — estado PAGADO/CONTRA_REEMBOLSO es fuente de verdad:
+        # cuando un picker lo toma, reclamar_picking() transiciona el pedido a EN_PREPARACION.
         sin_picker = s.query(Pedido).filter(
             Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
-            ~Pedido.PedidoID.in_(picking_ids_asignados) if picking_ids_asignados else True,
         ).order_by(Pedido.FechaCreacion.asc()).all()
 
         pedidos_sin_picker = [
@@ -1747,12 +1746,11 @@ class GestorDashboard:
                     synchronize_session=False,
                 )
             )
-            s.commit()
 
             if resultado == 0:
                 return False, 'ya_cogido'
 
-            # 3. Transicionar el Pedido a EN_PREPARACION
+            # 3. Transicionar el Pedido a EN_PREPARACION en la misma transacción
             pedido = s.query(Pedido).filter_by(PedidoID=pedido_id_para_transicion).first()
             if pedido and transicion_valida_pedido(pedido.Estado, EstadoPedido.EN_PREPARACION.value):
                 estado_anterior = pedido.Estado
@@ -1763,7 +1761,9 @@ class GestorDashboard:
                     estado_nuevo=EstadoPedido.EN_PREPARACION.value,
                     notas=f"Picking iniciado — picker #{empleado_id}",
                 ))
-                s.commit()
+
+            # Un solo commit: picking + pedido juntos, o nada
+            s.commit()
 
             # 4. Actualizar estado operativo del picker
             self._actualizar_estado_operativo(empleado_id, 'ocupado')
