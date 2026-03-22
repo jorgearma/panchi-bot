@@ -116,29 +116,6 @@
       </button>
     </template>
 
-    <!-- Turno de hoy -->
-    <div class="bg-blue-950 rounded-xl p-3 border border-blue-900">
-      <template x-if="turno">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-xs text-blue-300 uppercase tracking-wide">Turno hoy</p>
-            <p class="text-white font-semibold text-sm mt-0.5"
-               x-text="turno.hora_inicio + ' – ' + turno.hora_fin"></p>
-            <p class="text-gray-400 text-xs mt-0.5" x-text="turno.notas || ''"></p>
-          </div>
-        </div>
-      </template>
-      <template x-if="!turno">
-        <div class="flex items-center gap-3">
-          <span class="text-xl">🗓️</span>
-          <div>
-            <p class="text-gray-400 text-sm">Sin turno registrado</p>
-            <p class="text-gray-600 text-xs mt-0.5">El manager lo añadirá pronto</p>
-          </div>
-        </div>
-      </template>
-    </div>
-
     <!-- Stats del día -->
     <div>
       <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Hoy</p>
@@ -174,6 +151,29 @@
         </template>
         <div x-show="fichajeResumen?.activo" class="text-[11px] text-green-400 font-medium">● En curso</div>
       </div>
+    </div>
+
+    <!-- Turno de hoy -->
+    <div class="bg-blue-950 rounded-xl p-3 border border-blue-900">
+      <template x-if="turno">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-blue-300 uppercase tracking-wide">Turno hoy</p>
+            <p class="text-white font-semibold text-sm mt-0.5"
+               x-text="turno.hora_inicio + ' – ' + turno.hora_fin"></p>
+            <p class="text-gray-400 text-xs mt-0.5" x-text="turno.notas || ''"></p>
+          </div>
+        </div>
+      </template>
+      <template x-if="!turno">
+        <div class="flex items-center gap-3">
+          <span class="text-xl">🗓️</span>
+          <div>
+            <p class="text-gray-400 text-sm">Sin turno registrado</p>
+            <p class="text-gray-600 text-xs mt-0.5">El manager lo añadirá pronto</p>
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- Accesos secundarios -->
