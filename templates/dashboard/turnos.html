@@ -754,6 +754,7 @@ function turnosApp() {
     },
 
     diasSemana() {
+      if (!this.semanaBase) return [];
       return Array.from({ length: 7 }, (_, i) => {
         const d = new Date(this.semanaBase);
         d.setDate(d.getDate() + i);
@@ -818,11 +819,18 @@ function turnosApp() {
       this.planCargando = true;
       try {
         const params = new URLSearchParams();
-        if (this.planFiltros.desde) params.set('desde', this.planFiltros.desde);
-        if (this.planFiltros.hasta) params.set('hasta', this.planFiltros.hasta);
-        if (this.planFiltros.rol)   params.set('rol',   this.planFiltros.rol);
-        params.set('page',     this.planPage);
-        params.set('per_page', 25);
+        if (this.vistaGrid) {
+          const dias = this.diasSemana();
+          params.set('desde',    this.formatISO(dias[0]));
+          params.set('hasta',    this.formatISO(dias[6]));
+          params.set('per_page', 200);
+        } else {
+          if (this.planFiltros.desde) params.set('desde', this.planFiltros.desde);
+          if (this.planFiltros.hasta) params.set('hasta', this.planFiltros.hasta);
+          if (this.planFiltros.rol)   params.set('rol',   this.planFiltros.rol);
+          params.set('page',     this.planPage);
+          params.set('per_page', 25);
+        }
         const resp = await fetch('/dashboard/turnos/planificacion?' + params.toString());
         if (!resp.ok) throw new Error('Error ' + resp.status);
         const data = await resp.json();
@@ -850,7 +858,7 @@ function turnosApp() {
       }
     },
 
-    async abrirModalCrear() {
+    async abrirModalCrear(empleadoId = null, fecha = null) {
       this.modalModo    = 'crear';
       this.turnoEdicion = null;
       this.formError    = null;
@@ -863,6 +871,9 @@ function turnosApp() {
         notas: '',
       };
       await this._cargarEmpleados();
+      // Pre-rellenar si se llamó desde una celda de la cuadrícula
+      if (empleadoId !== null) this.form.empleado_id = String(empleadoId);
+      if (fecha      !== null) this.form.fecha       = fecha;
       this.modalAbierto = true;
     },
 
