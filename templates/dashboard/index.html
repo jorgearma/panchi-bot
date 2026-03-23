@@ -1616,7 +1616,7 @@
           const data = await r.json();
           if (r.ok) {
             this.mostrarToast(data.mensaje || `Pedido #${pedidoId} asignado`);
-            await this.cargarTodo();
+            this.cargarTodo();
           } else {
             this.mostrarToast(data.error || 'No se pudo asignar el picker', true);
           }
@@ -1636,7 +1636,7 @@
           const data = await r.json();
           if (r.ok) {
             this.mostrarToast(data.mensaje || `Pedido #${pendiente.pedido_id} asignado`);
-            await this.cargarTodo();
+            this.cargarTodo();
           } else {
             this.mostrarToast(data.error || 'No se pudo asignar el repartidor', true);
           }
@@ -1781,7 +1781,7 @@
           if (r.ok) {
             this.modalPicker.visible = false;
             this.mostrarToast(data.mensaje);
-            await this.cargarTodo();
+            this.cargarTodo();
           } else {
             this.modalError = data.error;
           }
@@ -1792,7 +1792,7 @@
           const data = await r.json();
           if (r.ok) {
             this.mostrarToast(data.mensaje);
-            await this.cargarTodo();
+            this.cargarTodo();
           } else {
             this.mostrarToast(data.error, true);
           }
@@ -1861,7 +1861,7 @@
           if (r.ok) {
             this.modalRepartidor.visible = false;
             this.mostrarToast(data.mensaje);
-            await this.cargarTodo();
+            this.cargarTodo();
           } else {
             this.modalError = data.error;
           }
@@ -1870,14 +1870,14 @@
         async marcarSalida(reparto_id) {
           const r = await fetch(`/dashboard/reparto/${reparto_id}/salida`, { method: 'POST' });
           const data = await r.json();
-          if (r.ok) { this.mostrarToast(data.mensaje); await this.cargarTodo(); }
+          if (r.ok) { this.mostrarToast(data.mensaje); this.cargarTodo(); }
           else { this.mostrarToast(data.error, true); }
         },
 
         async marcarEntregado(reparto_id) {
           const r = await fetch(`/dashboard/reparto/${reparto_id}/entregar`, { method: 'POST' });
           const data = await r.json();
-          if (r.ok) { this.mostrarToast(data.mensaje); await this.cargarTodo(); }
+          if (r.ok) { this.mostrarToast(data.mensaje); this.cargarTodo(); }
           else { this.mostrarToast(data.error, true); }
         },
 
@@ -1908,7 +1908,7 @@
             this.modalCancelacion.visible = false;
             this.cerrarPanel();
             this.mostrarToast(data.mensaje);
-            await this.cargarTodo();
+            this.cargarTodo();
           } else {
             this.modalError = data.error;
           }
@@ -1923,7 +1923,7 @@
           const data = await r.json();
           if (r.ok) {
             this.mostrarToast(data.mensaje);
-            await this.cargarTodo();
+            this.cargarTodo();
           } else {
             this.mostrarToast(data.error, true);
           }
@@ -1958,7 +1958,7 @@
           if (r.ok) {
             this.modalSustituir.visible = false;
             this.mostrarToast(data.mensaje);
-            await this.cargarTodo();
+            this.cargarTodo();
           } else {
             this.modalError = data.error;
           }
