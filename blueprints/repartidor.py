@@ -91,10 +91,9 @@ def marcar_salida(reparto_id: int):
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/entregar", methods=["POST"])
 @requiere_rol('repartidor', 'manager', 'admin')
 def marcar_entregado(reparto_id: int):
-    ok, msg, telefono = gestor_dashboard.marcar_entregado(reparto_id)
+    ok, msg, _ = gestor_dashboard.marcar_entregado(reparto_id)
     if not ok:
         return jsonify({"error": msg}), 400
-    _notificar(telefono, "🙌 ¡Tu pedido ha sido entregado! Gracias por tu compra. ¡Hasta la próxima!")
     return jsonify({"ok": True, "mensaje": msg})
 
 

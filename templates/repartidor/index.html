@@ -1447,7 +1447,8 @@
                 p.pedido_id === pedidoId ? { ...p, ya_cogido: true } : p
               );
               this.colaTotal = Math.max(0, this.colaTotal - 1);
-              this.tabActiva = 'mis-entregas';
+              this.mostrarToast('Reparto cogido ✓');
+              this.cargarCola();
               this.recargar(true, true);
             } else {
               const data = await r.json().catch(() => ({}));
@@ -1772,6 +1773,8 @@
             const data = await r.json();
             if (r.ok) {
               this.mostrarToast('Pedido entregado ✓');
+              const repartoId = this.actual.reparto_id;
+              this.pedidos = this.pedidos.filter(p => p.reparto_id !== repartoId);
               this.volverALista();
             } else {
               this.mostrarToast(data.error, true);
