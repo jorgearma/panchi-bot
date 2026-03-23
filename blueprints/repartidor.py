@@ -81,18 +81,22 @@ def mis_pedidos():
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/salida", methods=["POST"])
 @requiere_rol('repartidor', 'manager', 'admin')
 def marcar_salida(reparto_id: int):
+    empleado_id = session.get('empleado_id')
     ok, msg, _ = gestor_dashboard.marcar_salida_reparto(reparto_id)
     if not ok:
         return jsonify({"error": msg}), 400
+    logger.info("[REPARTO] Empleado %s sale a entregar reparto %s", empleado_id, reparto_id)
     return jsonify({"ok": True, "mensaje": msg})
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/entregar", methods=["POST"])
 @requiere_rol('repartidor', 'manager', 'admin')
 def marcar_entregado(reparto_id: int):
+    empleado_id = session.get('empleado_id')
     ok, msg, _ = gestor_dashboard.marcar_entregado(reparto_id)
     if not ok:
         return jsonify({"error": msg}), 400
+    logger.info("[REPARTO] Empleado %s entrega reparto %s", empleado_id, reparto_id)
     return jsonify({"ok": True, "mensaje": msg})
 
 
@@ -103,9 +107,11 @@ def marcar_no_entregado(reparto_id: int):
     motivo = data.get("motivo", "").strip()
     if not motivo:
         return jsonify({"error": "Indica el motivo de no entrega"}), 400
+    empleado_id = session.get('empleado_id')
     ok, msg, telefono = gestor_dashboard.marcar_no_entregado(reparto_id, motivo)
     if not ok:
         return jsonify({"error": msg}), 400
+    logger.info("[REPARTO] Empleado %s marca no entregado reparto %s — motivo: %s", empleado_id, reparto_id, motivo)
     _notificar(telefono, "⚠️ Lo sentimos, no hemos podido entregar tu pedido. Nuestro equipo se pondrá en contacto contigo muy pronto.")
     return jsonify({"ok": True, "mensaje": msg})
 
@@ -123,12 +129,14 @@ def registrar_cobro(reparto_id: int):
     except (TypeError, ValueError):
         return jsonify({"error": "Importes inválidos"}), 400
 
+    empleado_id = session.get('empleado_id')
     ok, msg = gestor_dashboard.registrar_cobro(
         reparto_id, metodo, importe_cobrado,
         cambio_devuelto, importe_efectivo, importe_tarjeta,
     )
     if not ok:
         return jsonify({"error": msg}), 400
+    logger.info("[COBRO] Empleado %s registra cobro reparto %s — método: %s, importe: %.2f", empleado_id, reparto_id, metodo, importe_cobrado)
     return jsonify({"ok": True})
 
 
@@ -173,6 +181,7 @@ def coger_reparto(pedido_id: int):
         logger.error("Error en /repartidor/cola/coger/%s: %s", pedido_id, e)
         return jsonify({"error": "Error interno"}), 500
     if ok:
+        logger.info("[REPARTO] Empleado %s coge reparto pedido %s", empleado_id, pedido_id)
         return jsonify({"ok": True, "pedido_id": pedido_id})
     if motivo == 'no_encontrado':
         return jsonify({"error": motivo}), 404
