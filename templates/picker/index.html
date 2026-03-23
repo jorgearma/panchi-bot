@@ -860,12 +860,22 @@
         async recargar() {
           if (!this.pickerId) return;
           this.cargando = true;
+          const _cacheKey = `panchi_picker_pedidos_${this.pickerId}`;
+          try {
+            const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
+            if (_cached) {
+              _cached.forEach(p => p.items.forEach(item => { item._guardando = false; }));
+              this.pedidos = _cached;
+              this.cargando = false;
+            }
+          } catch (_) {}
           try {
             const r = await fetch(`/picker/mis-pedidos?picker_id=${this.pickerId}`);
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             const data = await r.json();
             data.forEach(p => p.items.forEach(item => { item._guardando = false; }));
             this.pedidos = data;
+            localStorage.setItem(_cacheKey, JSON.stringify(data));
             if (this.ticketActual) {
               const actualizado = data.find(p => p.picking_id === this.ticketActual.picking_id);
               if (actualizado && !this.ticketActual.items.some(i => i._guardando)) {
@@ -881,12 +891,21 @@
         },
 
         async cargarCola() {
+          const _cacheKey = `panchi_picker_cola_${this.pickerId}`;
+          try {
+            const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
+            if (_cached) {
+              this.cola      = _cached.cola  || [];
+              this.colaTotal = _cached.total || 0;
+            }
+          } catch (_) {}
           try {
             const r = await fetch('/picker/cola');
             if (r.ok) {
               const d = await r.json();
               this.cola      = d.cola  || [];
               this.colaTotal = d.total || 0;
+              localStorage.setItem(_cacheKey, JSON.stringify(d));
             }
           } catch (_) {
             this.mostrarToast('Error al cargar la cola', true);

@@ -1,6 +1,7 @@
 import logging
-
 import os
+from threading import Thread
+
 from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, session
 
 from blueprints.auth import requiere_rol
@@ -13,10 +14,12 @@ logger = logging.getLogger(__name__)
 def _notificar(telefono: str, mensaje: str) -> None:
     if not telefono:
         return
-    try:
-        enviar_mensaje_whatsapp(mensaje, telefono)
-    except Exception as exc:
-        logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
+    def _enviar():
+        try:
+            enviar_mensaje_whatsapp(mensaje, telefono)
+        except Exception as exc:
+            logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
+    Thread(target=_enviar, daemon=True).start()
 
 blueprint_picker = Blueprint("picker", __name__)
 
