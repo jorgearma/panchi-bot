@@ -808,9 +808,9 @@
 
         // ---- Data ----
 
-        async recargar() {
+        async recargar(silencioso = false) {
           if (!this.pickerId) return;
-          this.cargando = true;
+          if (!silencioso) this.cargando = true;
           const _cacheKey = `panchi_picker_pedidos_${this.pickerId}`;
           try {
             const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
@@ -871,8 +871,8 @@
             if (r.ok) {
               this.cola      = this.cola.filter(p => p.picking_id !== pickingId);
               this.colaTotal = Math.max(0, this.colaTotal - 1);
-              this.mostrarToast('Pedido cogido ✓');
               this.cargarCola();
+              this.recargar(true);
             } else if (r.status === 409) {
               this.cola = this.cola.map(p =>
                 p.picking_id === pickingId ? { ...p, ya_cogido: true } : p
