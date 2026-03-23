@@ -1,6 +1,7 @@
 import logging
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from threading import Thread
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -72,20 +73,30 @@ class GestorDashboard:
     _ESTADOS_PROTEGIDOS = frozenset({'en_pausa', 'desconectado'})
 
     def _actualizar_estado_operativo(self, empleado_id: int, nuevo_estado: str) -> None:
-        """Actualiza estado_operativo solo si el estado actual no está protegido.
+        """Actualiza estado_operativo en background con su propia sesión de BD.
 
         Los estados en_pausa y desconectado son manuales — el sistema no los sobreescribe.
-        Llamar DESPUÉS del commit de la operación principal, dentro del mismo request.
+        Corre en un thread daemon para no bloquear la respuesta HTTP.
         """
         if not empleado_id:
             return
-        try:
-            empleado = self.session.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
-            if empleado and empleado.estado_operativo not in self._ESTADOS_PROTEGIDOS:
-                empleado.estado_operativo = nuevo_estado
-                self.session.commit()
-        except Exception as e:
-            logger.warning("No se pudo actualizar estado_operativo de empleado %s: %s", empleado_id, e)
+        estados_protegidos = self._ESTADOS_PROTEGIDOS
+
+        def _ejecutar():
+            from database import SessionLocal
+            s = SessionLocal()
+            try:
+                empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+                if empleado and empleado.estado_operativo not in estados_protegidos:
+                    empleado.estado_operativo = nuevo_estado
+                    s.commit()
+            except Exception as e:
+                logger.warning("No se pudo actualizar estado_operativo de empleado %s: %s", empleado_id, e)
+                s.rollback()
+            finally:
+                s.close()
+
+        Thread(target=_ejecutar, daemon=True).start()
 
     # -------------------------------------------------------------------------
     # Read methods
@@ -1121,7 +1132,7 @@ class GestorDashboard:
                     else:
                         logger.warning("No se pudo crear Reparto para pedido %s: %s", pedido_id_para_reparto, _exc)
 
-            # Descontar stock después del commit del picking
+            # Descontar stock en background — no bloquea la respuesta HTTP
             items_para_stock = [
                 {
                     "producto_id": item.pedido_detalle.ProductoID if item.pedido_detalle else None,
@@ -1133,22 +1144,36 @@ class GestorDashboard:
                 if item.pedido_detalle and item.pedido_detalle.ProductoID
             ]
             if items_para_stock:
-                from managers.gestor_productos import ProductoManager
-                ProductoManager().descontar_stock_picking(items_para_stock)
+                def _descontar(items=items_para_stock):
+                    try:
+                        from managers.gestor_productos import ProductoManager
+                        ProductoManager().descontar_stock_picking(items)
+                    except Exception as e:
+                        logger.error("Error descontando stock picking: %s", e)
+                Thread(target=_descontar, daemon=True).start()
 
-            # Auto-actualizar estado: volver a disponible si no quedan pickings activos
+            # Auto-actualizar estado en background: no bloquea la respuesta HTTP
             _picker_id = picking.empleado_id
             if _picker_id:
-                _pickings_activos = s.query(PickingPedido).filter(
-                    PickingPedido.empleado_id == _picker_id,
-                    PickingPedido.estado.in_([
-                        EstadoPicking.PENDIENTE.value,
-                        EstadoPicking.EN_PROCESO.value,
-                        EstadoPicking.CON_INCIDENCIAS.value,
-                    ]),
-                ).count()
-                if _pickings_activos == 0:
-                    self._actualizar_estado_operativo(_picker_id, 'disponible')
+                def _actualizar_disponibilidad_picker(emp_id=_picker_id):
+                    from database import SessionLocal
+                    _s = SessionLocal()
+                    try:
+                        _activos = _s.query(PickingPedido).filter(
+                            PickingPedido.empleado_id == emp_id,
+                            PickingPedido.estado.in_([
+                                EstadoPicking.PENDIENTE.value,
+                                EstadoPicking.EN_PROCESO.value,
+                                EstadoPicking.CON_INCIDENCIAS.value,
+                            ]),
+                        ).count()
+                        if _activos == 0:
+                            self._actualizar_estado_operativo(emp_id, 'disponible')
+                    except Exception as e:
+                        logger.warning("Error comprobando disponibilidad picker %s: %s", emp_id, e)
+                    finally:
+                        _s.close()
+                Thread(target=_actualizar_disponibilidad_picker, daemon=True).start()
 
             telefono = pedido.TelefonoEntrega if pedido else None
             return True, "Picking completado", telefono
@@ -1455,18 +1480,27 @@ class GestorDashboard:
 
             s.commit()
 
-            # Auto-actualizar estado: volver a disponible si no quedan repartos activos
+            # Auto-actualizar estado en background: no bloquea la respuesta HTTP
             _repartidor_id = reparto.repartidor_id
             if _repartidor_id:
-                _repartos_activos = s.query(Reparto).filter(
-                    Reparto.repartidor_id == _repartidor_id,
-                    Reparto.estado.in_([
-                        EstadoReparto.ASIGNADO.value,
-                        EstadoReparto.EN_CAMINO.value,
-                    ]),
-                ).count()
-                if _repartos_activos == 0:
-                    self._actualizar_estado_operativo(_repartidor_id, 'disponible')
+                def _actualizar_disponibilidad(emp_id=_repartidor_id):
+                    from database import SessionLocal
+                    _s = SessionLocal()
+                    try:
+                        _activos = _s.query(Reparto).filter(
+                            Reparto.repartidor_id == emp_id,
+                            Reparto.estado.in_([
+                                EstadoReparto.ASIGNADO.value,
+                                EstadoReparto.EN_CAMINO.value,
+                            ]),
+                        ).count()
+                        if _activos == 0:
+                            self._actualizar_estado_operativo(emp_id, 'disponible')
+                    except Exception as e:
+                        logger.warning("Error comprobando disponibilidad repartidor %s: %s", emp_id, e)
+                    finally:
+                        _s.close()
+                Thread(target=_actualizar_disponibilidad, daemon=True).start()
 
             telefono = pedido.TelefonoEntrega if pedido else None
             return True, "Pedido marcado como entregado", telefono
@@ -1661,11 +1695,17 @@ class GestorDashboard:
         """
         s = self.session
         try:
-            pedido = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
-            if not pedido or pedido.Estado != EstadoPedido.PREPARADO.value:
+            # Una sola query: Pedido + Reparto (outer join) en vez de dos queries separadas
+            fila = (
+                s.query(Pedido, Reparto)
+                .outerjoin(Reparto, Reparto.pedido_id == Pedido.PedidoID)
+                .filter(Pedido.PedidoID == pedido_id)
+                .first()
+            )
+            if not fila or fila[0].Estado != EstadoPedido.PREPARADO.value:
                 return False, 'no_encontrado'
 
-            reparto = s.query(Reparto).filter_by(pedido_id=pedido_id).first()
+            pedido, reparto = fila
             if reparto:
                 # Ya existe — intentar asignar atómicamente
                 if reparto.repartidor_id is not None:
