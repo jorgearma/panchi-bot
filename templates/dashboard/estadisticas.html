@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estadísticas — Panchi Ops</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  {% from 'macros/ui.html' import error_banner, loading_skeleton, empty_state %}
+  <style>
+    :root {
+      --bg: #f1f5f9; --panel: #ffffff; --panel-strong: #f8fafc;
+      --line: #e2e8f0; --ink: #1e293b; --muted: #64748b;
+      --brand: #6366f1; --brand-soft: #eef2ff;
+      --warning: #f59e0b; --danger: #ef4444; --success: #10b981;
+    }
+    body { font-family: 'Manrope', sans-serif; background: var(--bg); color: var(--ink); }
+    .glass-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 1rem; }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body x-data="estadisticasApp()" x-init="init()" x-cloak>
+
+  <!-- ── Header nav ─────────────────────────────────────────────────────── -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <span class="font-extrabold text-lg tracking-tight text-indigo-600">PANCHI OPS</span>
+      <nav class="flex flex-wrap gap-1 text-sm font-medium">
+        <a href="/dashboard"              class="px-3 py-1.5 rounded-lg hover:bg-slate-100">Hoy</a>
+        <a href="/dashboard/monitor"      class="px-3 py-1.5 rounded-lg hover:bg-slate-100">Monitor</a>
+        <a href="/dashboard/historial"    class="px-3 py-1.5 rounded-lg hover:bg-slate-100">Historial</a>
+        <a href="/dashboard/turnos"       class="px-3 py-1.5 rounded-lg hover:bg-slate-100">Turnos</a>
+        <a href="/dashboard/rendimiento"  class="px-3 py-1.5 rounded-lg hover:bg-slate-100">Rendimiento</a>
+        <a href="/dashboard/estadisticas" class="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-semibold">Estadísticas</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- ── Title + period selector ──────────────────────────────────────── -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <h1 class="text-2xl font-bold">Estadísticas</h1>
+      <div class="flex flex-wrap gap-2 items-center">
+        <div class="flex rounded-lg border border-slate-200 overflow-hidden text-sm font-medium">
+          <template x-for="p in [{k:'semana',l:'7 días'},{k:'mes',l:'30 días'},{k:'3meses',l:'3 meses'},{k:'custom',l:'Personalizado'}]" :key="p.k">
+            <button
+              @click="periodo = p.k; if(p.k !== 'custom') cargar()"
+              :class="periodo === p.k ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'"
+              class="px-3 py-1.5 transition-colors"
+              x-text="p.l"
+            ></button>
+          </template>
+        </div>
+        <!-- Custom date range -->
+        <template x-if="periodo === 'custom'">
+          <div class="flex items-center gap-2 text-sm">
+            <input type="date" x-model="customDesde" class="border border-slate-200 rounded-lg px-2 py-1.5 text-sm">
+            <span class="text-slate-400">→</span>
+            <input type="date" x-model="customHasta" class="border border-slate-200 rounded-lg px-2 py-1.5 text-sm">
+            <select x-model="granularidad" class="border border-slate-200 rounded-lg px-2 py-1.5 text-sm">
+              <option value="dia">Por día</option>
+              <option value="semana">Por semana</option>
+            </select>
+            <button @click="cargar()" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+              Aplicar
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ── Error banner ──────────────────────────────────────────────────── -->
+    {{ error_banner() }}
+
+    <!-- ── Loading skeleton ─────────────────────────────────────────────── -->
+    <template x-if="cargando && !kpis">
+      {{ loading_skeleton(rows=3) }}
+    </template>
+
+    <!-- ── KPI grid ─────────────────────────────────────────────────────── -->
+    <template x-if="kpis">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div class="glass-panel p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Ingresos</p>
+          <p class="text-2xl font-extrabold" x-text="kpis.ingresos != null ? '€ ' + kpis.ingresos.toFixed(2) : '—'"></p>
+        </div>
+        <div class="glass-panel p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Pedidos</p>
+          <p class="text-2xl font-extrabold" x-text="kpis.pedidos ?? '—'"></p>
+        </div>
+        <div class="glass-panel p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Entregados</p>
+          <p class="text-2xl font-extrabold text-emerald-600" x-text="kpis.entregados ?? '—'"></p>
+        </div>
+        <div class="glass-panel p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Cancelados</p>
+          <p class="text-2xl font-extrabold text-red-500">
+            <span x-text="kpis.cancelados ?? '—'"></span>
+            <span x-show="kpis.tasa_cancelacion_pct != null" class="text-sm font-medium text-slate-400 ml-1">
+              (<span x-text="kpis.tasa_cancelacion_pct"></span>%)
+            </span>
+          </p>
+        </div>
+        <div class="glass-panel p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">T. Preparación</p>
+          <p class="text-2xl font-extrabold" x-text="kpis.t_prep_min != null ? kpis.t_prep_min + ' min' : '—'"></p>
+        </div>
+        <div class="glass-panel p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">T. Entrega</p>
+          <p class="text-2xl font-extrabold" x-text="kpis.t_entrega_min != null ? kpis.t_entrega_min + ' min' : '—'"></p>
+        </div>
+      </div>
+    </template>
+
+    <!-- ── Chart: Pedidos e Ingresos ─────────────────────────────────────── -->
+    <div class="glass-panel p-4">
+      <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Pedidos e Ingresos</h2>
+      <div class="relative h-64">
+        <canvas id="chartVolumen"></canvas>
+        <template x-if="!cargando && serieVolumen.length === 0">
+          {{ empty_state('📊', 'Sin datos', 'No hay datos para este período.') }}
+        </template>
+      </div>
+    </div>
+
+    <!-- ── Charts: Estados + Pago ────────────────────────────────────────── -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="glass-panel p-4">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Distribución por Estado</h2>
+        <div class="relative h-56">
+          <canvas id="chartEstados"></canvas>
+        </div>
+      </div>
+      <div class="glass-panel p-4">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Forma de Pago</h2>
+        <div class="relative h-56 flex items-center justify-center">
+          <canvas id="chartPago" class="max-w-xs"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Chart: Tiempos ────────────────────────────────────────────────── -->
+    <div class="glass-panel p-4">
+      <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Tiempos Medios de Operación</h2>
+      <div class="relative h-64">
+        <canvas id="chartTiempos"></canvas>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    function estadisticasApp() {
+      const BRAND   = '#6366f1';
+      const SUCCESS = '#10b981';
+      const WARNING = '#f59e0b';
+      const DANGER  = '#ef4444';
+      const MUTED   = '#94a3b8';
+
+      return {
+        periodo:        'semana',
+        customDesde:    '',
+        customHasta:    '',
+        granularidad:   'dia',
+        cargando:       false,
+        error:          null,
+        kpis:           null,
+        serieVolumen:   [],
+        distribEstados: {},
+        formaPago:      {},
+        serieTiempos:   [],
+        _charts:        {},
+
+        init() {
+          this.cargar();
+        },
+
+        _fechas() {
+          const hoy = new Date();
+          const fmt = d => d.toISOString().slice(0, 10);
+          const ago = n => { const d = new Date(hoy); d.setDate(d.getDate() - n); return d; };
+          if (this.periodo === 'semana')  return { desde: fmt(ago(6)),  hasta: fmt(hoy), gran: 'dia' };
+          if (this.periodo === 'mes')     return { desde: fmt(ago(29)), hasta: fmt(hoy), gran: 'dia' };
+          if (this.periodo === '3meses')  return { desde: fmt(ago(89)), hasta: fmt(hoy), gran: 'semana' };
+          return { desde: this.customDesde, hasta: this.customHasta, gran: this.granularidad };
+        },
+
+        async cargar() {
+          this.cargando = true;
+          this.error = null;
+          try {
+            const { desde, hasta, gran } = this._fechas();
+            if (!desde || !hasta) {
+              this.error = 'Selecciona un rango de fechas válido.';
+              return;
+            }
+            const r = await fetch(`/dashboard/estadisticas-datos?desde=${desde}&hasta=${hasta}&granularidad=${gran}`);
+            if (!r.ok) throw new Error(r.status);
+            const d = await r.json();
+            this.kpis           = d.kpis;
+            this.serieVolumen   = d.serie_pedidos_ingresos;
+            this.distribEstados = d.distribucion_estados;
+            this.formaPago      = d.forma_pago;
+            this.serieTiempos   = d.serie_tiempos;
+            await this.$nextTick();
+            this._renderCharts();
+          } catch (e) {
+            this.error = 'Error al cargar estadísticas. ¿Reintentar?';
+          } finally {
+            this.cargando = false;
+          }
+        },
+
+        _renderCharts() {
+          this._destroyCharts();
+          this._chartVolumen();
+          this._chartEstados();
+          this._chartPago();
+          this._chartTiempos();
+        },
+
+        _destroyCharts() {
+          Object.values(this._charts).forEach(c => c && c.destroy());
+          this._charts = {};
+        },
+
+        _chartVolumen() {
+          const ctx = document.getElementById('chartVolumen');
+          if (!ctx || !this.serieVolumen.length) return;
+          this._charts.volumen = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: this.serieVolumen.map(e => e.fecha),
+              datasets: [
+                {
+                  label: 'Pedidos', yAxisID: 'yPedidos',
+                  data: this.serieVolumen.map(e => e.pedidos),
+                  borderColor: BRAND, backgroundColor: BRAND + '22',
+                  tension: 0.3, fill: true,
+                },
+                {
+                  label: 'Ingresos €', yAxisID: 'yIngresos',
+                  data: this.serieVolumen.map(e => e.ingresos),
+                  borderColor: SUCCESS, backgroundColor: SUCCESS + '22',
+                  tension: 0.3, fill: false,
+                },
+              ],
+            },
+            options: {
+              animation: { duration: 300 },
+              plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } },
+              scales: {
+                yPedidos:  { type: 'linear', position: 'left',  title: { display: true, text: 'Pedidos' }, ticks: { precision: 0 } },
+                yIngresos: { type: 'linear', position: 'right', title: { display: true, text: 'Ingresos €' },
+                             grid: { drawOnChartArea: false } },
+              },
+            },
+          });
+        },
+
+        _chartEstados() {
+          const ctx = document.getElementById('chartEstados');
+          if (!ctx) return;
+          const COLORES = {
+            entregado: SUCCESS, en_reparto: '#f97316', preparado: '#6366f1',
+            en_preparacion: '#3b82f6', cancelado: DANGER, reembolsado: '#8b5cf6',
+          };
+          const labels = Object.keys(this.distribEstados);
+          this._charts.estados = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [{
+                label: 'Pedidos',
+                data: labels.map(k => this.distribEstados[k]),
+                backgroundColor: labels.map(k => COLORES[k] || MUTED),
+              }],
+            },
+            options: {
+              indexAxis: 'y',
+              animation: { duration: 300 },
+              plugins: { legend: { display: false } },
+              scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+          });
+        },
+
+        _chartPago() {
+          const ctx = document.getElementById('chartPago');
+          if (!ctx) return;
+          this._charts.pago = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['Online', 'Efectivo', 'Tarjeta'],
+              datasets: [{
+                data: [
+                  this.formaPago.online   || 0,
+                  this.formaPago.efectivo || 0,
+                  this.formaPago.tarjeta  || 0,
+                ],
+                backgroundColor: [BRAND, SUCCESS, WARNING],
+              }],
+            },
+            options: {
+              animation: { duration: 300 },
+              plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} pedidos` } },
+              },
+            },
+          });
+        },
+
+        _chartTiempos() {
+          const ctx = document.getElementById('chartTiempos');
+          if (!ctx || !this.serieTiempos.length) return;
+          this._charts.tiempos = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: this.serieTiempos.map(e => e.fecha),
+              datasets: [
+                {
+                  label: 'Preparación (min)',
+                  data: this.serieTiempos.map(e => e.t_prep),
+                  borderColor: BRAND, tension: 0.3, spanGaps: true,
+                },
+                {
+                  label: 'Entrega (min)',
+                  data: this.serieTiempos.map(e => e.t_entrega),
+                  borderColor: WARNING, tension: 0.3, spanGaps: true,
+                },
+              ],
+            },
+            options: {
+              animation: { duration: 300 },
+              plugins: { legend: { position: 'top' } },
+              scales: { y: { beginAtZero: true, title: { display: true, text: 'Minutos' } } },
+            },
+          });
+        },
+      };
+    }
+  </script>
+</body>
+</html>

@@ -201,17 +201,45 @@ class GestorEmpleado:
         tramo = TramoTurno(check_in_id=check_in.id, rol=rol, inicio=ahora)
         self.session.add(tramo)
 
-    def iniciar_turno(self, empleado_id: int) -> CheckIn:
-        """Crea un CheckIn para hoy. Lanza ValueError('ya_abierto') si ya existe uno."""
+    def iniciar_turno(self, empleado_id: int, turno_id: int | None = None,
+                      ahora: datetime | None = None) -> CheckIn:
+        """Crea un CheckIn para hoy.
+
+        Args:
+            empleado_id: ID del empleado.
+            turno_id: ID del turno planificado al que corresponde este fichaje (opcional).
+                      Si se proporciona, calcula minutos_tarde respecto a la hora de inicio del turno.
+            ahora: Momento del fichaje. Default None → datetime.utcnow(). Inyectable para tests.
+
+        Raises:
+            ValueError('ya_abierto'): si ya hay un check-in abierto.
+        """
         s = self.session
-        ahora = datetime.utcnow()
+        ahora = ahora or datetime.utcnow()
         hoy = ahora.date()
 
         if self._checkin_abierto_hoy(empleado_id):
             raise ValueError('ya_abierto')
 
+        # Calcular minutos de desfase si hay turno asociado
+        minutos_tarde = None
+        if turno_id is not None:
+            turno = s.query(Turno).filter_by(id=turno_id).first()
+            if turno and turno.fecha == hoy:
+                inicio_planificado = datetime(
+                    hoy.year, hoy.month, hoy.day,
+                    turno.hora_inicio.hour, turno.hora_inicio.minute
+                )
+                minutos_tarde = int((ahora - inicio_planificado).total_seconds() / 60)
+
         empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
-        check_in = CheckIn(empleado_id=empleado_id, fecha=hoy, inicio=ahora)
+        check_in = CheckIn(
+            empleado_id=empleado_id,
+            fecha=hoy,
+            inicio=ahora,
+            turno_id=turno_id,
+            minutos_tarde=minutos_tarde,
+        )
         s.add(check_in)
         try:
             s.flush()
@@ -224,7 +252,8 @@ class GestorEmpleado:
             s.rollback()
             logger.error("Error en iniciar_turno empleado %s: %s", empleado_id, e)
             raise
-        logger.info("CHECKIN empleado_id=%s inicio=%s", empleado_id, ahora.isoformat())
+        logger.info("CHECKIN empleado_id=%s inicio=%s turno_id=%s minutos_tarde=%s",
+                    empleado_id, ahora.isoformat(), turno_id, minutos_tarde)
         return check_in
 
     def cerrar_turno(self, empleado_id: int) -> dict:
@@ -384,3 +413,165 @@ class GestorEmpleado:
                 'incidencias_hoy':     fallidos,
                 **self._colas_globales(),
             }
+
+    # -------------------------------------------------------------------------
+    # Puntualidad
+    # -------------------------------------------------------------------------
+
+    _MARGEN_PUNTUALIDAD_MIN = 5   # minutos de gracia antes de contar como tarde
+
+    def puntualidad_empleado(self, empleado_id: int, fecha_inicio, fecha_fin) -> dict:
+        """Resumen de puntualidad de un empleado en un rango de fechas.
+
+        Solo se analizan check-ins vinculados a un turno planificado (turno_id no nulo).
+        Un fichaje es 'puntual' si minutos_tarde <= _MARGEN_PUNTUALIDAD_MIN.
+
+        Returns:
+            Dict con total_turnos, puntuales, tarde, tasa_puntualidad_pct, media_minutos_tarde.
+        """
+        checkins = [
+            c for c in (
+                self.session.query(CheckIn)
+                .filter(
+                    CheckIn.empleado_id == empleado_id,
+                    CheckIn.fecha >= fecha_inicio,
+                    CheckIn.fecha <= fecha_fin,
+                )
+                .all()
+            )
+            if c.turno_id is not None
+        ]
+
+        total = len(checkins)
+        if total == 0:
+            return {
+                'total_turnos': 0,
+                'puntuales': 0,
+                'tarde': 0,
+                'tasa_puntualidad_pct': 100,
+                'media_minutos_tarde': None,
+            }
+
+        puntuales = sum(
+            1 for c in checkins
+            if c.minutos_tarde is not None and c.minutos_tarde <= self._MARGEN_PUNTUALIDAD_MIN
+        )
+        tarde = total - puntuales
+
+        minutos_con_dato = [c.minutos_tarde for c in checkins if c.minutos_tarde is not None]
+        media = round(sum(minutos_con_dato) / len(minutos_con_dato)) if minutos_con_dato else None
+
+        return {
+            'total_turnos':         total,
+            'puntuales':            puntuales,
+            'tarde':                tarde,
+            'tasa_puntualidad_pct': round(puntuales / total * 100),
+            'media_minutos_tarde':  media,
+        }
+
+    # -------------------------------------------------------------------------
+    # Ausencias
+    # -------------------------------------------------------------------------
+
+    _TIPOS_AUSENCIA = {'vacaciones', 'baja_medica', 'personal', 'injustificada'}
+
+    def registrar_ausencia(self, empleado_id: int, fecha, tipo: str,
+                           notas: str | None = None):
+        """Registra una ausencia para un empleado en una fecha.
+
+        Raises:
+            ValueError('tipo_invalido'): Si el tipo no está en los valores permitidos.
+        """
+        from models import Ausencia
+        if tipo not in self._TIPOS_AUSENCIA:
+            raise ValueError('tipo_invalido')
+        s = self.session
+        ausencia = Ausencia(empleado_id=empleado_id, fecha=fecha, tipo=tipo, notas=notas)
+        s.add(ausencia)
+        try:
+            s.commit()
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error registrando ausencia empleado %s: %s", empleado_id, e)
+            raise
+        logger.info("AUSENCIA_REGISTRADA empleado_id=%s fecha=%s tipo=%s", empleado_id, fecha, tipo)
+        return ausencia
+
+    # -------------------------------------------------------------------------
+    # Métricas diarias (caché para dashboard)
+    # -------------------------------------------------------------------------
+
+    def calcular_y_guardar_metrica_diaria(self, empleado_id: int, fecha, rol: str) -> None:
+        """Calcula y persiste las métricas del día para un empleado en un rol.
+
+        Diseñado para ser llamado al cerrar turno o desde un job nocturno.
+        Si ya existe un registro para ese día+rol, lo sobreescribe (delete+insert).
+        """
+        from models import MetricaDiariaEmpleado
+        s = self.session
+
+        check_in = s.query(CheckIn).filter(
+            CheckIn.empleado_id == empleado_id,
+            CheckIn.fecha == fecha,
+        ).first()
+
+        horas_min = None
+        minutos_tarde_dia = None
+        if check_in and check_in.inicio and check_in.fin:
+            horas_min = int((check_in.fin - check_in.inicio).total_seconds() / 60)
+            minutos_tarde_dia = check_in.minutos_tarde
+
+        kpis = self.metricas_hoy(empleado_id, rol)
+
+        s.query(MetricaDiariaEmpleado).filter(
+            MetricaDiariaEmpleado.empleado_id == empleado_id,
+            MetricaDiariaEmpleado.fecha == fecha,
+            MetricaDiariaEmpleado.rol == rol,
+        ).delete()
+        s.flush()
+
+        metrica = MetricaDiariaEmpleado(
+            empleado_id=empleado_id,
+            fecha=fecha,
+            rol=rol,
+            horas_trabajadas_min=horas_min,
+            pedidos_completados=kpis.get('pedidos_completados', 0),
+            tiempo_medio_operacion_min=kpis.get('tiempo_medio_min'),
+            incidencias=kpis.get('incidencias_hoy', 0),
+            minutos_tarde=minutos_tarde_dia,
+        )
+        s.add(metrica)
+        try:
+            s.commit()
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error guardando metrica diaria empleado %s fecha %s: %s",
+                         empleado_id, fecha, e)
+            raise
+        logger.info("METRICA_DIARIA_GUARDADA empleado_id=%s fecha=%s rol=%s",
+                    empleado_id, fecha, rol)
+
+    def ausencias_empleado(self, empleado_id: int, fecha_inicio, fecha_fin) -> list:
+        """Lista ausencias de un empleado en un rango de fechas."""
+        from models import Ausencia
+        ausencias = (
+            self.session.query(Ausencia)
+            .filter(
+                Ausencia.empleado_id == empleado_id,
+                Ausencia.fecha >= fecha_inicio,
+                Ausencia.fecha <= fecha_fin,
+            )
+            .order_by(Ausencia.fecha)
+            .all()
+        )
+        return [
+            {
+                'id':           a.id,
+                'fecha':        a.fecha.isoformat(),
+                'tipo':         a.tipo,
+                'estado':       a.estado,
+                'aprobado_por': a.aprobado_por,
+                'notas':        a.notas,
+            }
+            for a in ausencias
+        ]

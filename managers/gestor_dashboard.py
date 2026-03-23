@@ -1,6 +1,7 @@
 import logging
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from threading import Thread
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -72,20 +73,30 @@ class GestorDashboard:
     _ESTADOS_PROTEGIDOS = frozenset({'en_pausa', 'desconectado'})
 
     def _actualizar_estado_operativo(self, empleado_id: int, nuevo_estado: str) -> None:
-        """Actualiza estado_operativo solo si el estado actual no está protegido.
+        """Actualiza estado_operativo en background con su propia sesión de BD.
 
         Los estados en_pausa y desconectado son manuales — el sistema no los sobreescribe.
-        Llamar DESPUÉS del commit de la operación principal, dentro del mismo request.
+        Corre en un thread daemon para no bloquear la respuesta HTTP.
         """
         if not empleado_id:
             return
-        try:
-            empleado = self.session.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
-            if empleado and empleado.estado_operativo not in self._ESTADOS_PROTEGIDOS:
-                empleado.estado_operativo = nuevo_estado
-                self.session.commit()
-        except Exception as e:
-            logger.warning("No se pudo actualizar estado_operativo de empleado %s: %s", empleado_id, e)
+        estados_protegidos = self._ESTADOS_PROTEGIDOS
+
+        def _ejecutar():
+            from database import SessionLocal
+            s = SessionLocal()
+            try:
+                empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+                if empleado and empleado.estado_operativo not in estados_protegidos:
+                    empleado.estado_operativo = nuevo_estado
+                    s.commit()
+            except Exception as e:
+                logger.warning("No se pudo actualizar estado_operativo de empleado %s: %s", empleado_id, e)
+                s.rollback()
+            finally:
+                s.close()
+
+        Thread(target=_ejecutar, daemon=True).start()
 
     # -------------------------------------------------------------------------
     # Read methods
@@ -1121,7 +1132,7 @@ class GestorDashboard:
                     else:
                         logger.warning("No se pudo crear Reparto para pedido %s: %s", pedido_id_para_reparto, _exc)
 
-            # Descontar stock después del commit del picking
+            # Descontar stock en background — no bloquea la respuesta HTTP
             items_para_stock = [
                 {
                     "producto_id": item.pedido_detalle.ProductoID if item.pedido_detalle else None,
@@ -1133,22 +1144,54 @@ class GestorDashboard:
                 if item.pedido_detalle and item.pedido_detalle.ProductoID
             ]
             if items_para_stock:
-                from managers.gestor_productos import ProductoManager
-                ProductoManager().descontar_stock_picking(items_para_stock)
+                def _descontar(items=items_para_stock):
+                    from database import SessionLocal
+                    from models import Producto
+                    from sqlalchemy.exc import SQLAlchemyError
+                    s = SessionLocal()
+                    try:
+                        for item in items:
+                            p = s.query(Producto).filter_by(ProductoID=item["producto_id"]).first()
+                            if not p:
+                                continue
+                            if item["estado"] == "encontrado":
+                                cantidad = item["cantidad_encontrada"] or item["cantidad_pedida"]
+                                p.Stock = max(0, p.Stock - cantidad)
+                                if p.Stock == 0:
+                                    p.Disponible = False
+                            elif item["estado"] == "sin_stock":
+                                p.Stock = 0
+                                p.Disponible = False
+                        s.commit()
+                    except SQLAlchemyError as e:
+                        s.rollback()
+                        logger.error("Error descontando stock picking: %s", e)
+                    finally:
+                        s.close()
+                Thread(target=_descontar, daemon=True).start()
 
-            # Auto-actualizar estado: volver a disponible si no quedan pickings activos
+            # Auto-actualizar estado en background: no bloquea la respuesta HTTP
             _picker_id = picking.empleado_id
             if _picker_id:
-                _pickings_activos = s.query(PickingPedido).filter(
-                    PickingPedido.empleado_id == _picker_id,
-                    PickingPedido.estado.in_([
-                        EstadoPicking.PENDIENTE.value,
-                        EstadoPicking.EN_PROCESO.value,
-                        EstadoPicking.CON_INCIDENCIAS.value,
-                    ]),
-                ).count()
-                if _pickings_activos == 0:
-                    self._actualizar_estado_operativo(_picker_id, 'disponible')
+                def _actualizar_disponibilidad_picker(emp_id=_picker_id):
+                    from database import SessionLocal
+                    _s = SessionLocal()
+                    try:
+                        _activos = _s.query(PickingPedido).filter(
+                            PickingPedido.empleado_id == emp_id,
+                            PickingPedido.estado.in_([
+                                EstadoPicking.PENDIENTE.value,
+                                EstadoPicking.EN_PROCESO.value,
+                                EstadoPicking.CON_INCIDENCIAS.value,
+                            ]),
+                        ).count()
+                        if _activos == 0:
+                            self._actualizar_estado_operativo(emp_id, 'disponible')
+                    except Exception as e:
+                        logger.warning("Error comprobando disponibilidad picker %s: %s", emp_id, e)
+                    finally:
+                        _s.close()
+                Thread(target=_actualizar_disponibilidad_picker, daemon=True).start()
 
             telefono = pedido.TelefonoEntrega if pedido else None
             return True, "Picking completado", telefono
@@ -1455,18 +1498,27 @@ class GestorDashboard:
 
             s.commit()
 
-            # Auto-actualizar estado: volver a disponible si no quedan repartos activos
+            # Auto-actualizar estado en background: no bloquea la respuesta HTTP
             _repartidor_id = reparto.repartidor_id
             if _repartidor_id:
-                _repartos_activos = s.query(Reparto).filter(
-                    Reparto.repartidor_id == _repartidor_id,
-                    Reparto.estado.in_([
-                        EstadoReparto.ASIGNADO.value,
-                        EstadoReparto.EN_CAMINO.value,
-                    ]),
-                ).count()
-                if _repartos_activos == 0:
-                    self._actualizar_estado_operativo(_repartidor_id, 'disponible')
+                def _actualizar_disponibilidad(emp_id=_repartidor_id):
+                    from database import SessionLocal
+                    _s = SessionLocal()
+                    try:
+                        _activos = _s.query(Reparto).filter(
+                            Reparto.repartidor_id == emp_id,
+                            Reparto.estado.in_([
+                                EstadoReparto.ASIGNADO.value,
+                                EstadoReparto.EN_CAMINO.value,
+                            ]),
+                        ).count()
+                        if _activos == 0:
+                            self._actualizar_estado_operativo(emp_id, 'disponible')
+                    except Exception as e:
+                        logger.warning("Error comprobando disponibilidad repartidor %s: %s", emp_id, e)
+                    finally:
+                        _s.close()
+                Thread(target=_actualizar_disponibilidad, daemon=True).start()
 
             telefono = pedido.TelefonoEntrega if pedido else None
             return True, "Pedido marcado como entregado", telefono
@@ -1661,11 +1713,17 @@ class GestorDashboard:
         """
         s = self.session
         try:
-            pedido = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
-            if not pedido or pedido.Estado != EstadoPedido.PREPARADO.value:
+            # Una sola query: Pedido + Reparto (outer join) en vez de dos queries separadas
+            fila = (
+                s.query(Pedido, Reparto)
+                .outerjoin(Reparto, Reparto.pedido_id == Pedido.PedidoID)
+                .filter(Pedido.PedidoID == pedido_id)
+                .first()
+            )
+            if not fila or fila[0].Estado != EstadoPedido.PREPARADO.value:
                 return False, 'no_encontrado'
 
-            reparto = s.query(Reparto).filter_by(pedido_id=pedido_id).first()
+            pedido, reparto = fila
             if reparto:
                 # Ya existe — intentar asignar atómicamente
                 if reparto.repartidor_id is not None:
@@ -1800,3 +1858,997 @@ class GestorDashboard:
             s.rollback()
             logger.error("Error reclamando picking %s: %s", picking_id, e)
             return False, 'error'
+
+    def historial_pedidos(
+        self,
+        desde: str = None,
+        hasta: str = None,
+        estado: str = None,
+        forma_pago: str = None,
+        q: str = None,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> dict:
+        from math import ceil
+        from sqlalchemy import or_
+        from models import Usuario
+
+        estados_finales = [
+            EstadoPedido.ENTREGADO.value,
+            EstadoPedido.CANCELADO.value,
+            EstadoPedido.REEMBOLSADO.value,
+        ]
+
+        per_page = min(per_page, 100)
+        s = self.session
+
+        query = s.query(Pedido)
+
+        if desde:
+            try:
+                dt_desde = datetime.strptime(desde, '%Y-%m-%d')
+                query = query.filter(Pedido.FechaCreacion >= dt_desde)
+            except ValueError:
+                pass
+
+        if hasta:
+            try:
+                dt_hasta = datetime.strptime(hasta, '%Y-%m-%d') + timedelta(days=1)
+                query = query.filter(Pedido.FechaCreacion < dt_hasta)
+            except ValueError:
+                pass
+
+        if estado:
+            query = query.filter(Pedido.Estado == estado)
+        else:
+            query = query.filter(Pedido.Estado.in_(estados_finales))
+
+        if forma_pago:
+            query = query.filter(Pedido.forma_pago == forma_pago)
+
+        if q:
+            q_strip = q.strip()
+            if q_strip.isdigit():
+                query = query.filter(Pedido.PedidoID == int(q_strip))
+            else:
+                q_escaped = q_strip.replace('%', r'\%').replace('_', r'\_')
+                query = query.outerjoin(Usuario, Pedido.ClienteID == Usuario.id).filter(
+                    or_(
+                        Usuario.nombre.ilike(f'%{q_escaped}%', escape='\\'),
+                        Pedido.TelefonoEntrega.ilike(f'%{q_escaped}%', escape='\\'),
+                    )
+                )
+
+        total = query.count()
+        pages = ceil(total / per_page) if total else 1
+
+        pedidos = (
+            query
+            .order_by(Pedido.FechaCreacion.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+
+        resultado = []
+        for p in pedidos:
+            resultado.append({
+                "pedido_id": p.PedidoID,
+                "cliente_nombre": p.cliente.nombre if p.cliente else "—",
+                "cliente_telefono": p.TelefonoEntrega,
+                "estado": p.Estado,
+                "forma_pago": p.forma_pago or "online",
+                "total": float(p.Total) if p.Total else 0.0,
+                "fecha_creacion": _iso(p.FechaCreacion),
+                "fecha_actualizacion": _iso(p.FechaActualizacion),
+                "notas": p.Notas,
+                "cancel_reason": p.cancel_reason,
+            })
+
+        return {"pedidos": resultado, "total": total, "page": page, "pages": pages}
+
+    def detalle_pedido(self, pedido_id: int) -> dict | None:
+        s = self.session
+        p = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
+        if not p:
+            return None
+
+        items = [
+            {
+                "detalle_id": d.DetalleID,
+                "nombre": d.NombreProducto or (d.producto.Nombre if d.producto else "—"),
+                "cantidad": d.Cantidad,
+                "precio_unitario": float(d.PrecioUnitario) if d.PrecioUnitario else 0.0,
+                "subtotal": float(d.Subtotal) if d.Subtotal else 0.0,
+            }
+            for d in p.detalles
+        ]
+
+        historial = [
+            {
+                "estado_anterior": h.estado_anterior,
+                "estado_nuevo": h.estado_nuevo,
+                "cambiado_en": _iso(h.cambiado_en),
+                "notas": h.notas,
+            }
+            for h in sorted(p.historial_estados, key=lambda h: h.cambiado_en or datetime.min)
+        ]
+
+        picking = None
+        if p.picking:
+            pk = p.picking
+            picking = {
+                "estado": pk.estado,
+                "picker_nombre": (
+                    f"{pk.empleado.Nombre} {pk.empleado.Apellido}" if pk.empleado else None
+                ),
+                "asignado_en": _iso(pk.created_at),
+                "iniciado_en": _iso(pk.iniciado_en),
+                "completado_en": _iso(pk.completado_en),
+            }
+
+        reparto = None
+        if p.reparto:
+            rp = p.reparto
+            reparto = {
+                "estado": rp.estado,
+                "repartidor_nombre": (
+                    f"{rp.repartidor.Nombre} {rp.repartidor.Apellido}" if rp.repartidor else None
+                ),
+                "hora_salida": _iso(rp.hora_salida),
+                "hora_entrega_real": _iso(rp.hora_entrega_real),
+                "metodo_cobro": rp.metodo_cobro,
+                "importe_cobrado": float(rp.importe_cobrado) if rp.importe_cobrado else None,
+            }
+
+        pedido_dict = {
+            "pedido_id": p.PedidoID,
+            "cliente_nombre": p.cliente.nombre if p.cliente else "—",
+            "cliente_telefono": p.TelefonoEntrega,
+            "direccion_entrega": p.DireccionEntrega,
+            "estado": p.Estado,
+            "forma_pago": p.forma_pago or "online",
+            "total": float(p.Total) if p.Total else 0.0,
+            "fecha_creacion": _iso(p.FechaCreacion),
+            "fecha_actualizacion": _iso(p.FechaActualizacion),
+            "notas": p.Notas,
+            "cancel_reason": p.cancel_reason,
+        }
+
+        return {
+            "pedido": pedido_dict,
+            "items": items,
+            "historial": historial,
+            "picking": picking,
+            "reparto": reparto,
+        }
+
+    def turnos_hoy(self) -> dict:
+        """Estado de asistencia del día actual.
+
+        Devuelve todos los empleados activos con su check-in de hoy (si lo hay),
+        el turno planificado del día, el tiempo acumulado, y el estado operativo.
+
+        Returns:
+            {
+                empleados: [{
+                    id, nombre, rol, rol_activo, estado_operativo,
+                    check_in_inicio, check_in_fin, minutos_activo,
+                    activo (bool), minutos_tarde,
+                    tiene_turno (bool), turno_id, turno_hora_inicio, turno_hora_fin, turno_tipo,
+                }],
+                resumen: { con_checkin, en_pausa, desconectados, con_turno, ausentes, total }
+            }
+        """
+        from models import CheckIn
+        from models import Turno as TurnoModel
+
+        hoy = datetime.utcnow().date()
+        ahora = datetime.utcnow()
+        s = self.session
+
+        empleados = (
+            s.query(Empleado)
+            .filter_by(activo=True)
+            .order_by(Empleado.Nombre)
+            .all()
+        )
+
+        # Build dict empleado_id → best check-in of the day
+        # Prefer open check-ins; among same type, prefer the most recent
+        checkins_hoy = {}
+        for ci in s.query(CheckIn).filter(CheckIn.fecha == hoy).all():
+            prev = checkins_hoy.get(ci.empleado_id)
+            if prev is None:
+                checkins_hoy[ci.empleado_id] = ci
+            elif ci.fin is None and prev.fin is not None:
+                # Open beats closed
+                checkins_hoy[ci.empleado_id] = ci
+            elif ci.fin is None and prev.fin is None:
+                # Both open — keep later
+                if ci.inicio > prev.inicio:
+                    checkins_hoy[ci.empleado_id] = ci
+            elif prev.fin is not None and ci.fin is not None:
+                # Both closed — keep later
+                if ci.inicio > prev.inicio:
+                    checkins_hoy[ci.empleado_id] = ci
+
+        # Build dict empleado_id → turno planificado de hoy (no cancelado)
+        turnos_hoy_map = {}
+        for t in (
+            s.query(TurnoModel)
+            .filter(TurnoModel.fecha == hoy, TurnoModel.estado != 'cancelado')
+            .all()
+        ):
+            turnos_hoy_map[t.empleado_id] = t
+
+        resultado = []
+        for emp in empleados:
+            ci = checkins_hoy.get(emp.EmpleadoID)
+            turno = turnos_hoy_map.get(emp.EmpleadoID)
+            minutos_activo = None
+            if ci:
+                fin_efectivo = ci.fin or ahora
+                minutos_activo = int((fin_efectivo - ci.inicio).total_seconds() / 60)
+
+            resultado.append({
+                'id':               emp.EmpleadoID,
+                'nombre':           f'{emp.Nombre} {emp.Apellido}',
+                'rol':              emp.rol.nombre if emp.rol else None,
+                'rol_activo':       emp.rol_activo,
+                'estado_operativo': emp.estado_operativo,
+                'check_in_inicio':  _iso(ci.inicio) if ci else None,
+                'check_in_fin':     _iso(ci.fin) if ci else None,
+                'minutos_activo':   minutos_activo,
+                'activo':           ci is not None and ci.fin is None,
+                'minutos_tarde':    ci.minutos_tarde if ci else None,
+                # Turno planificado
+                'tiene_turno':      turno is not None,
+                'turno_id':         turno.id if turno else None,
+                'turno_hora_inicio': str(turno.hora_inicio)[:5] if turno and turno.hora_inicio else None,
+                'turno_hora_fin':    str(turno.hora_fin)[:5] if turno and turno.hora_fin else None,
+                'turno_tipo':        turno.tipo if turno else None,
+                'turno_empezado':   (
+                    datetime.combine(turno.fecha, turno.hora_inicio) <= ahora
+                    if turno and turno.hora_inicio else False
+                ),
+            })
+
+        n_con_checkin   = sum(1 for e in resultado if e['activo'])
+        n_pausa         = sum(1 for e in resultado if e['estado_operativo'] == 'en_pausa')
+        n_desconectados = sum(1 for e in resultado if e['estado_operativo'] == 'desconectado')
+        n_con_turno     = sum(1 for e in resultado if e['tiene_turno'])
+        n_ausentes      = sum(1 for e in resultado if e['tiene_turno'] and e['turno_empezado'] and not e['check_in_inicio'])
+
+        return {
+            'empleados': resultado,
+            'resumen': {
+                'con_checkin':   n_con_checkin,
+                'en_pausa':      n_pausa,
+                'desconectados': n_desconectados,
+                'con_turno':     n_con_turno,
+                'ausentes':      n_ausentes,
+                'total':         len(resultado),
+            },
+        }
+
+    def turnos_historial(
+        self,
+        desde: str = None,
+        hasta: str = None,
+        empleado_id: int = None,
+        rol: str = None,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> dict:
+        """Historial paginado de check-ins con filtros.
+
+        Args:
+            desde:       fecha ISO 'YYYY-MM-DD' (inclusive)
+            hasta:       fecha ISO 'YYYY-MM-DD' (inclusive)
+            empleado_id: filtrar por empleado concreto
+            rol:         filtrar por nombre de rol (Rol.nombre)
+            page:        página 1-based
+            per_page:    resultados por página (máx 100)
+
+        Returns:
+            { turnos: list[dict], total: int, page: int, pages: int }
+        """
+        from math import ceil
+        from models import CheckIn, Rol as RolModel
+
+        per_page = min(per_page, 100)
+        s = self.session
+
+        query = (
+            s.query(CheckIn)
+            .join(Empleado, CheckIn.empleado_id == Empleado.EmpleadoID)
+        )
+
+        if desde:
+            try:
+                query = query.filter(CheckIn.fecha >= datetime.strptime(desde, '%Y-%m-%d').date())
+            except ValueError:
+                pass
+
+        if hasta:
+            try:
+                query = query.filter(CheckIn.fecha <= datetime.strptime(hasta, '%Y-%m-%d').date())
+            except ValueError:
+                pass
+
+        if empleado_id:
+            query = query.filter(CheckIn.empleado_id == empleado_id)
+
+        if rol:
+            query = (
+                query
+                .join(RolModel, Empleado.rol_id == RolModel.id)
+                .filter(RolModel.nombre == rol)
+            )
+
+        total = query.count()
+        pages = ceil(total / per_page) if total else 1
+
+        checkins = (
+            query
+            .order_by(CheckIn.fecha.desc(), CheckIn.inicio.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+
+        resultado = []
+        for ci in checkins:
+            emp = ci.empleado
+            horas_trabajadas = None
+            if ci.inicio and ci.fin:
+                horas_trabajadas = round((ci.fin - ci.inicio).total_seconds() / 3600, 1)
+
+            resultado.append({
+                'check_in_id':      ci.id,
+                'empleado_id':      emp.EmpleadoID,
+                'empleado_nombre':  f'{emp.Nombre} {emp.Apellido}',
+                'rol':              emp.rol.nombre if emp.rol else None,
+                'fecha':            ci.fecha.isoformat() if ci.fecha else None,
+                'inicio':           _iso(ci.inicio),
+                'fin':              _iso(ci.fin),
+                'horas_trabajadas': horas_trabajadas,
+                'minutos_tarde':    ci.minutos_tarde,
+                'activo':           ci.fin is None,
+            })
+
+        return {'turnos': resultado, 'total': total, 'page': page, 'pages': pages}
+
+    def rendimiento_resumen(self, periodo: str = 'hoy', rol: str = None) -> dict:
+        """Ranking de rendimiento de empleados para el período dado.
+
+        Consulta directamente PickingPedido y Reparto, sin depender de la caché
+        MetricaDiariaEmpleado.
+
+        Args:
+            periodo: 'hoy' | 'semana' | 'mes'
+            rol:     'picker' | 'repartidor' | None (todos)
+
+        Returns:
+            { empleados: [{ id, nombre, rol_sistema, rol_operativo,
+                            pedidos, tiempo_medio_min, incidencias, tasa_pct }] }
+        """
+        hoy = datetime.utcnow().date()
+        if periodo == 'semana':
+            desde = hoy - timedelta(days=6)
+        elif periodo == 'mes':
+            desde = hoy - timedelta(days=29)
+        else:
+            desde = hoy
+
+        desde_dt = datetime(desde.year, desde.month, desde.day)
+        s = self.session
+
+        # {(empleado_id, rol_op): {pedidos, incidencias, tiempos}}
+        agg = {}
+
+        if not rol or rol == 'picker':
+            pickings = (
+                s.query(PickingPedido)
+                .filter(
+                    PickingPedido.empleado_id.isnot(None),
+                    PickingPedido.estado.in_(['completado', 'con_incidencias']),
+                    PickingPedido.completado_en >= desde_dt,
+                )
+                .all()
+            )
+            for pk in pickings:
+                key = (pk.empleado_id, 'picker')
+                if key not in agg:
+                    agg[key] = {'pedidos': 0, 'incidencias': 0, 'tiempos': []}
+                if pk.estado == 'completado':
+                    agg[key]['pedidos'] += 1
+                    if pk.iniciado_en and pk.completado_en:
+                        agg[key]['tiempos'].append(
+                            (pk.completado_en - pk.iniciado_en).total_seconds() / 60
+                        )
+                else:
+                    agg[key]['incidencias'] += 1
+
+        if not rol or rol == 'repartidor':
+            repartos = (
+                s.query(Reparto)
+                .filter(
+                    Reparto.repartidor_id.isnot(None),
+                    Reparto.estado.in_(['entregado', 'no_entregado']),
+                    Reparto.hora_entrega_real >= desde_dt,
+                )
+                .all()
+            )
+            for rp in repartos:
+                key = (rp.repartidor_id, 'repartidor')
+                if key not in agg:
+                    agg[key] = {'pedidos': 0, 'incidencias': 0, 'tiempos': []}
+                if rp.estado == 'entregado':
+                    agg[key]['pedidos'] += 1
+                    if rp.hora_salida and rp.hora_entrega_real:
+                        agg[key]['tiempos'].append(
+                            (rp.hora_entrega_real - rp.hora_salida).total_seconds() / 60
+                        )
+                else:
+                    agg[key]['incidencias'] += 1
+
+        ids = list({k[0] for k in agg})
+        empleados_map = {}
+        if ids:
+            for emp in s.query(Empleado).filter(Empleado.EmpleadoID.in_(ids)).all():
+                empleados_map[emp.EmpleadoID] = emp
+
+        resultado = []
+        for (emp_id, rol_op), data in agg.items():
+            pedidos    = data['pedidos']
+            incidencias = data['incidencias']
+            tiempos    = data['tiempos']
+            tasa       = round(pedidos / (pedidos + incidencias) * 100) if (pedidos + incidencias) > 0 else None
+            tiempo_medio = round(sum(tiempos) / len(tiempos)) if tiempos else None
+            emp = empleados_map.get(emp_id)
+            resultado.append({
+                'id':               emp_id,
+                'nombre':           f'{emp.Nombre} {emp.Apellido}' if emp else f'#{emp_id}',
+                'rol_sistema':      emp.rol.nombre if emp and emp.rol else None,
+                'rol_operativo':    rol_op,
+                'pedidos':          pedidos,
+                'tiempo_medio_min': tiempo_medio,
+                'incidencias':      incidencias,
+                'tasa_pct':         tasa,
+            })
+
+        resultado.sort(key=lambda e: e['pedidos'], reverse=True)
+        return {'empleados': resultado}
+
+    def rendimiento_empleado(self, empleado_id: int, periodo: str = 'semana') -> dict | None:
+        """Detalle de rendimiento individual.
+
+        Args:
+            empleado_id: ID del empleado.
+            periodo:     'hoy' | 'semana' | 'mes'
+
+        Returns None si el empleado no existe.
+
+        Returns:
+            {
+                nombre, rol_sistema,
+                kpis: { pedidos, tiempo_medio_min, mejor_tiempo_min, incidencias },
+                pedidos_por_dia: [{ fecha, pedidos }],
+                turnos_recientes: [{ fecha, inicio, fin, horas }],
+                ultimos_pedidos: [{ tipo, pedido_id, fecha, duracion_min }],
+            }
+        """
+        from models import CheckIn
+
+        s = self.session
+        emp = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+        if not emp:
+            return None
+
+        hoy = datetime.utcnow().date()
+        if periodo == 'semana':
+            desde = hoy - timedelta(days=6)
+        elif periodo == 'mes':
+            desde = hoy - timedelta(days=29)
+        else:
+            desde = hoy
+
+        desde_dt = datetime(desde.year, desde.month, desde.day)
+
+        # ── KPIs — from PickingPedido + Reparto ──
+        pickings_periodo = (
+            s.query(PickingPedido)
+            .filter(
+                PickingPedido.empleado_id == empleado_id,
+                PickingPedido.estado.in_(['completado', 'con_incidencias']),
+                PickingPedido.completado_en >= desde_dt,
+            )
+            .all()
+        )
+        repartos_periodo = (
+            s.query(Reparto)
+            .filter(
+                Reparto.repartidor_id == empleado_id,
+                Reparto.estado.in_(['entregado', 'no_entregado']),
+                Reparto.hora_entrega_real >= desde_dt,
+            )
+            .all()
+        )
+
+        tiempos = []
+        pedidos_total = 0
+        incidencias_total = 0
+        for pk in pickings_periodo:
+            if pk.estado == 'completado':
+                pedidos_total += 1
+                if pk.iniciado_en and pk.completado_en:
+                    tiempos.append((pk.completado_en - pk.iniciado_en).total_seconds() / 60)
+            else:
+                incidencias_total += 1
+        for rp in repartos_periodo:
+            if rp.estado == 'entregado':
+                pedidos_total += 1
+                if rp.hora_salida and rp.hora_entrega_real:
+                    tiempos.append((rp.hora_entrega_real - rp.hora_salida).total_seconds() / 60)
+            else:
+                incidencias_total += 1
+
+        tiempo_medio_avg = round(sum(tiempos) / len(tiempos)) if tiempos else None
+        mejor_tiempo     = round(min(tiempos)) if tiempos else None
+
+        # ── pedidos_por_dia — last 7 days for the chart ──
+        siete_dias = hoy - timedelta(days=6)
+        siete_dias_dt = datetime(siete_dias.year, siete_dias.month, siete_dias.day)
+        conteo_por_dia = {}
+        for pk in pickings_periodo:
+            if pk.estado == 'completado' and pk.completado_en and pk.completado_en >= siete_dias_dt:
+                dia = pk.completado_en.date()
+                conteo_por_dia[dia] = conteo_por_dia.get(dia, 0) + 1
+        for rp in repartos_periodo:
+            if rp.estado == 'entregado' and rp.hora_entrega_real and rp.hora_entrega_real >= siete_dias_dt:
+                dia = rp.hora_entrega_real.date()
+                conteo_por_dia[dia] = conteo_por_dia.get(dia, 0) + 1
+        pedidos_por_dia = []
+        for i in range(7):
+            dia = siete_dias + timedelta(days=i)
+            pedidos_por_dia.append({
+                'fecha':   dia.isoformat(),
+                'pedidos': conteo_por_dia.get(dia, 0),
+            })
+
+        # ── turnos_recientes — last 5 check-ins ──
+        checkins = (
+            s.query(CheckIn)
+            .filter_by(empleado_id=empleado_id)
+            .order_by(CheckIn.fecha.desc(), CheckIn.inicio.desc())
+            .limit(5)
+            .all()
+        )
+        turnos_recientes = []
+        for ci in checkins:
+            horas = None
+            if ci.inicio and ci.fin:
+                horas = round((ci.fin - ci.inicio).total_seconds() / 3600, 1)
+            turnos_recientes.append({
+                'fecha':  ci.fecha.isoformat() if ci.fecha else None,
+                'inicio': _iso(ci.inicio),
+                'fin':    _iso(ci.fin),
+                'horas':  horas,
+            })
+
+        # ── ultimos_pedidos — last 10 completed pickings + entregas in period ──
+        pickings = (
+            s.query(PickingPedido)
+            .filter(
+                PickingPedido.empleado_id == empleado_id,
+                PickingPedido.estado == 'completado',
+                PickingPedido.completado_en >= desde_dt,
+            )
+            .order_by(PickingPedido.completado_en.desc())
+            .limit(10)
+            .all()
+        )
+        repartos = (
+            s.query(Reparto)
+            .filter(
+                Reparto.repartidor_id == empleado_id,
+                Reparto.estado == 'entregado',
+                Reparto.hora_entrega_real >= desde_dt,
+            )
+            .order_by(Reparto.hora_entrega_real.desc())
+            .limit(10)
+            .all()
+        )
+
+        ultimos_pedidos = []
+        for pk in pickings:
+            dur = None
+            if pk.iniciado_en and pk.completado_en:
+                dur = int((pk.completado_en - pk.iniciado_en).total_seconds() / 60)
+            ultimos_pedidos.append({
+                'tipo': 'picking',
+                'pedido_id': pk.pedido_id,
+                'fecha': _iso(pk.completado_en),
+                'duracion_min': dur,
+            })
+        for rp in repartos:
+            dur = None
+            if rp.hora_salida and rp.hora_entrega_real:
+                dur = int((rp.hora_entrega_real - rp.hora_salida).total_seconds() / 60)
+            ultimos_pedidos.append({
+                'tipo': 'reparto',
+                'pedido_id': rp.pedido_id,
+                'fecha': _iso(rp.hora_entrega_real),
+                'duracion_min': dur,
+            })
+
+        ultimos_pedidos.sort(key=lambda x: x['fecha'] or '', reverse=True)
+        ultimos_pedidos = ultimos_pedidos[:10]
+
+        return {
+            'nombre':      f'{emp.Nombre} {emp.Apellido}',
+            'rol_sistema': emp.rol.nombre if emp.rol else None,
+            'kpis': {
+                'pedidos':          pedidos_total,
+                'tiempo_medio_min': tiempo_medio_avg,
+                'mejor_tiempo_min': mejor_tiempo,
+                'incidencias':      incidencias_total,
+            },
+            'pedidos_por_dia':  pedidos_por_dia,
+            'turnos_recientes': turnos_recientes,
+            'ultimos_pedidos':  ultimos_pedidos,
+        }
+
+    def estadisticas(self, desde: str = None, hasta: str = None, granularidad: str = 'dia') -> dict:
+        """Estadísticas de ventas y operación para el período dado.
+
+        Args:
+            desde:        Fecha ISO YYYY-MM-DD (default: hace 6 días)
+            hasta:        Fecha ISO YYYY-MM-DD (default: hoy)
+            granularidad: 'dia' | 'semana'
+
+        Returns:
+            {
+              kpis: {ingresos, pedidos, entregados, cancelados,
+                     tasa_cancelacion_pct, t_prep_min, t_entrega_min},
+              serie_pedidos_ingresos: [{fecha, pedidos, ingresos}],
+              distribucion_estados:   {estado: count, ...},
+              forma_pago:             {online, efectivo, tarjeta},
+              serie_tiempos:          [{fecha, t_prep, t_entrega}],
+            }
+        """
+        hoy = datetime.utcnow().date()
+        fecha_desde = datetime.strptime(desde, '%Y-%m-%d').date() if desde else hoy - timedelta(days=6)
+        fecha_hasta = datetime.strptime(hasta, '%Y-%m-%d').date() if hasta else hoy
+
+        if granularidad not in ('dia', 'semana'):
+            granularidad = 'dia'
+
+        dt_desde = datetime.combine(fecha_desde, datetime.min.time())
+        dt_hasta = datetime.combine(fecha_hasta, datetime.max.time())
+
+        s = self.session
+        pedidos = (
+            s.query(Pedido)
+            .filter(Pedido.FechaCreacion >= dt_desde, Pedido.FechaCreacion <= dt_hasta)
+            .all()
+        )
+
+        # ── KPIs ─────────────────────────────────────────────────────────────
+        total_pedidos = len(pedidos)
+        entregados   = [p for p in pedidos if p.Estado == EstadoPedido.ENTREGADO.value]
+        cancelados   = [p for p in pedidos if p.Estado in (
+            EstadoPedido.CANCELADO.value, EstadoPedido.REEMBOLSADO.value
+        )]
+        ingresos      = sum(float(p.Total or 0) for p in entregados)
+        tasa_cancelacion = (
+            round(len(cancelados) / total_pedidos * 100, 1) if total_pedidos > 0 else None
+        )
+
+        # ── Tiempos via HistorialEstadoPedido ─────────────────────────────────
+        pedido_ids = [p.PedidoID for p in pedidos]
+        t_prep_sum = t_prep_cnt = t_entrega_sum = t_entrega_cnt = 0
+        tiempos_por_dia: dict[str, dict] = {}
+
+        if pedido_ids:
+            historial = (
+                s.query(HistorialEstadoPedido)
+                .filter(
+                    HistorialEstadoPedido.pedido_id.in_(pedido_ids),
+                    HistorialEstadoPedido.estado_nuevo.in_([
+                        EstadoPedido.EN_PREPARACION.value,
+                        EstadoPedido.PREPARADO.value,
+                        EstadoPedido.EN_REPARTO.value,
+                        EstadoPedido.ENTREGADO.value,
+                    ])
+                )
+                .all()
+            )
+            hist_by_pedido: dict[int, dict] = {}
+            for h in sorted(historial, key=lambda x: x.cambiado_en):
+                ts = hist_by_pedido.setdefault(h.pedido_id, {})
+                ts.setdefault(h.estado_nuevo, h.cambiado_en)
+
+            EN_PREP = EstadoPedido.EN_PREPARACION.value
+            PREP    = EstadoPedido.PREPARADO.value
+            EN_REP  = EstadoPedido.EN_REPARTO.value
+            ENTR    = EstadoPedido.ENTREGADO.value
+
+            for ts in hist_by_pedido.values():
+                if EN_PREP in ts and PREP in ts:
+                    mins = (ts[PREP] - ts[EN_PREP]).total_seconds() / 60
+                    if mins >= 0:
+                        t_prep_sum += mins
+                        t_prep_cnt += 1
+                        dk = ts[PREP].date().isoformat()
+                        b = tiempos_por_dia.setdefault(dk, {'ps': 0, 'pc': 0, 'es': 0, 'ec': 0})
+                        b['ps'] += mins
+                        b['pc'] += 1
+                if EN_REP in ts and ENTR in ts:
+                    mins = (ts[ENTR] - ts[EN_REP]).total_seconds() / 60
+                    if mins >= 0:
+                        t_entrega_sum += mins
+                        t_entrega_cnt += 1
+                        dk = ts[ENTR].date().isoformat()
+                        b = tiempos_por_dia.setdefault(dk, {'ps': 0, 'pc': 0, 'es': 0, 'ec': 0})
+                        b['es'] += mins
+                        b['ec'] += 1
+
+        t_prep_min    = round(t_prep_sum    / t_prep_cnt,    1) if t_prep_cnt    > 0 else None
+        t_entrega_min = round(t_entrega_sum / t_entrega_cnt, 1) if t_entrega_cnt > 0 else None
+
+        # ── Distribución estados ──────────────────────────────────────────────
+        _ESTADOS_DIST = [
+            EstadoPedido.EN_PREPARACION.value, EstadoPedido.PREPARADO.value,
+            EstadoPedido.EN_REPARTO.value,     EstadoPedido.ENTREGADO.value,
+            EstadoPedido.CANCELADO.value,      EstadoPedido.REEMBOLSADO.value,
+        ]
+        distribucion_estados = {e: 0 for e in _ESTADOS_DIST}
+        for p in pedidos:
+            if p.Estado in distribucion_estados:
+                distribucion_estados[p.Estado] += 1
+
+        # ── Forma de pago ─────────────────────────────────────────────────────
+        forma_pago = {'online': 0, 'efectivo': 0, 'tarjeta': 0}
+        for p in pedidos:
+            if p.forma_pago in forma_pago:
+                forma_pago[p.forma_pago] += 1
+
+        # ── Pedidos por fecha para series (day-level) ─────────────────────────
+        pedidos_por_dia: dict[str, dict] = {}
+        for p in pedidos:
+            if p.FechaCreacion:
+                dk = p.FechaCreacion.date().isoformat()
+                b = pedidos_por_dia.setdefault(dk, {'pedidos': 0, 'ingresos': 0.0})
+                b['pedidos'] += 1
+                if p.Estado == EstadoPedido.ENTREGADO.value:
+                    b['ingresos'] += float(p.Total or 0)
+
+        # ── Build output series (apply granularidad) ──────────────────────────
+        def _gen_keys():
+            """Generate ordered unique series keys (always advances by 1 day)."""
+            seen: set = set()
+            d = fecha_desde
+            while d <= fecha_hasta:
+                if granularidad == 'semana':
+                    iso = d.isocalendar()
+                    key = f"{iso[0]}-W{iso[1]:02d}"
+                    if key not in seen:
+                        seen.add(key)
+                        yield key
+                else:
+                    yield d.isoformat()
+                d += timedelta(days=1)
+
+        def _dias_in_key(key: str):
+            """Return day ISOs that belong to a series key."""
+            result = []
+            d = fecha_desde
+            while d <= fecha_hasta:
+                if granularidad == 'semana':
+                    iso = d.isocalendar()
+                    if f"{iso[0]}-W{iso[1]:02d}" == key:
+                        result.append(d.isoformat())
+                else:
+                    if d.isoformat() == key:
+                        result.append(d.isoformat())
+                d += timedelta(days=1)
+            return result
+
+        serie_pedidos_ingresos = []
+        serie_tiempos = []
+        for key in _gen_keys():
+            dias = _dias_in_key(key)
+            p_total = sum(pedidos_por_dia.get(dk, {}).get('pedidos',  0)   for dk in dias)
+            i_total = sum(pedidos_por_dia.get(dk, {}).get('ingresos', 0.0) for dk in dias)
+            ps = sum(tiempos_por_dia.get(dk, {}).get('ps', 0) for dk in dias)
+            pc = sum(tiempos_por_dia.get(dk, {}).get('pc', 0) for dk in dias)
+            es = sum(tiempos_por_dia.get(dk, {}).get('es', 0) for dk in dias)
+            ec = sum(tiempos_por_dia.get(dk, {}).get('ec', 0) for dk in dias)
+            serie_pedidos_ingresos.append({
+                'fecha':    key,
+                'pedidos':  p_total,
+                'ingresos': round(i_total, 2),
+            })
+            serie_tiempos.append({
+                'fecha':     key,
+                't_prep':    round(ps / pc, 1) if pc > 0 else None,
+                't_entrega': round(es / ec, 1) if ec > 0 else None,
+            })
+
+        return {
+            'kpis': {
+                'ingresos':             round(ingresos, 2),
+                'pedidos':              total_pedidos,
+                'entregados':           len(entregados),
+                'cancelados':           len(cancelados),
+                'tasa_cancelacion_pct': tasa_cancelacion,
+                't_prep_min':           t_prep_min,
+                't_entrega_min':        t_entrega_min,
+            },
+            'serie_pedidos_ingresos': serie_pedidos_ingresos,
+            'distribucion_estados':   distribucion_estados,
+            'forma_pago':             forma_pago,
+            'serie_tiempos':          serie_tiempos,
+        }
+
+    def turnos_planificacion(
+        self,
+        desde: str = None,
+        hasta: str = None,
+        empleado_id: int = None,
+        rol: str = None,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> dict:
+        """Lista de turnos planificados (pasados y futuros), paginada."""
+        from models import Turno as TurnoModel
+        hoy = datetime.utcnow().date()
+        fecha_desde = datetime.strptime(desde, '%Y-%m-%d').date() if desde else hoy
+        fecha_hasta = datetime.strptime(hasta, '%Y-%m-%d').date() if hasta else hoy + timedelta(days=13)
+        page = max(page, 1)
+
+        s = self.session
+        query = (
+            s.query(TurnoModel)
+            .join(Empleado, TurnoModel.empleado_id == Empleado.EmpleadoID)
+            .filter(TurnoModel.fecha >= fecha_desde, TurnoModel.fecha <= fecha_hasta)
+        )
+
+        if empleado_id:
+            query = query.filter(TurnoModel.empleado_id == empleado_id)
+        if rol:
+            query = query.join(Rol, Empleado.rol_id == Rol.id).filter(Rol.nombre == rol)
+
+        total = query.count()
+        pages = max((total + per_page - 1) // per_page, 1)
+        turnos = (
+            query
+            .order_by(TurnoModel.fecha.asc(), TurnoModel.hora_inicio.asc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+
+        resultado = []
+        for t in turnos:
+            emp = t.empleado
+            resultado.append({
+                'id':          t.id,
+                'empleado_id': t.empleado_id,
+                'empleado':    f'{emp.Nombre} {emp.Apellido}' if emp else f'#{t.empleado_id}',
+                'rol':         emp.rol.nombre if emp and emp.rol else None,
+                'fecha':       t.fecha.isoformat() if t.fecha else None,
+                'hora_inicio': t.hora_inicio.strftime('%H:%M') if t.hora_inicio else None,
+                'hora_fin':    t.hora_fin.strftime('%H:%M') if t.hora_fin else None,
+                'tipo':        t.tipo,
+                'estado':      t.estado,
+                'notas':       t.notas,
+            })
+
+        return {'turnos': resultado, 'total': total, 'page': page, 'pages': pages}
+
+    def crear_turno(
+        self,
+        empleado_id: int,
+        fecha: str,
+        hora_inicio: str,
+        hora_fin: str,
+        tipo: str = None,
+        notas: str = None,
+    ) -> dict:
+        """Crea un nuevo turno para un empleado."""
+        from models import Turno as TurnoModel
+        from datetime import time as dtime
+
+        s = self.session
+        emp = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+        if not emp:
+            return {'ok': False, 'error': 'Empleado no encontrado'}
+
+        try:
+            fecha_dt = datetime.strptime(fecha, '%Y-%m-%d').date()
+            h_ini = dtime(*[int(x) for x in hora_inicio.split(':')])
+            h_fin = dtime(*[int(x) for x in hora_fin.split(':')])
+        except (ValueError, AttributeError) as exc:
+            return {'ok': False, 'error': 'Formato de fecha/hora inválido: %s' % exc}
+
+        turno = TurnoModel(
+            empleado_id=empleado_id,
+            fecha=fecha_dt,
+            hora_inicio=h_ini,
+            hora_fin=h_fin,
+            tipo=tipo or None,
+            notas=notas or None,
+            estado='planificado',
+        )
+        try:
+            s.add(turno)
+            s.flush()
+            turno_id = turno.id
+            s.commit()
+            logger.info('TURNO_CREADO empleado=%s fecha=%s', empleado_id, fecha)
+            return {'ok': True, 'turno_id': turno_id}
+        except Exception as exc:
+            s.rollback()
+            logger.error('Error creando turno para empleado %s: %s', empleado_id, exc)
+            return {'ok': False, 'error': 'Error al guardar el turno'}
+
+    def editar_turno(
+        self,
+        turno_id: int,
+        hora_inicio: str = None,
+        hora_fin: str = None,
+        tipo: str = None,
+        notas: str = None,
+    ) -> dict:
+        """Edita hora_inicio, hora_fin, tipo y/o notas de un turno planificado."""
+        from models import Turno as TurnoModel
+        from datetime import time as dtime
+
+        s = self.session
+        turno = s.query(TurnoModel).filter_by(id=turno_id).first()
+        if not turno:
+            return {'ok': False, 'error': 'Turno no encontrado'}
+        if turno.estado == 'cancelado':
+            return {'ok': False, 'error': 'No se puede editar un turno cancelado'}
+
+        try:
+            if hora_inicio:
+                turno.hora_inicio = dtime(*[int(x) for x in hora_inicio.split(':')])
+            if hora_fin:
+                turno.hora_fin = dtime(*[int(x) for x in hora_fin.split(':')])
+            if tipo is not None and tipo != '__no_change__':
+                turno.tipo = tipo or None
+            if notas is not None and notas != '__no_change__':
+                turno.notas = notas or None
+            s.commit()
+            logger.info('TURNO_EDITADO id=%s', turno_id)
+            return {'ok': True}
+        except Exception as exc:
+            s.rollback()
+            logger.error('Error editando turno %s: %s', turno_id, exc)
+            return {'ok': False, 'error': 'Error al guardar los cambios'}
+
+    def cancelar_turno(self, turno_id: int) -> dict:
+        """Marca un turno como cancelado."""
+        from models import Turno as TurnoModel
+
+        s = self.session
+        turno = s.query(TurnoModel).filter_by(id=turno_id).first()
+        if not turno:
+            return {'ok': False, 'error': 'Turno no encontrado'}
+        if turno.estado == 'cancelado':
+            return {'ok': False, 'error': 'El turno ya está cancelado'}
+
+        try:
+            turno.estado = 'cancelado'
+            s.commit()
+            logger.info('TURNO_CANCELADO id=%s', turno_id)
+            return {'ok': True}
+        except Exception as exc:
+            s.rollback()
+            logger.error('Error cancelando turno %s: %s', turno_id, exc)
+            return {'ok': False, 'error': 'Error al cancelar el turno'}
