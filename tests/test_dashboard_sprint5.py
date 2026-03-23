@@ -158,3 +158,35 @@ def test_estadisticas_datos_pasa_parametros(client):
         mock_est.assert_called_once_with(
             desde='2026-01-01', hasta='2026-01-31', granularidad='semana'
         )
+
+
+# ── Task 3: Template ──────────────────────────────────────────────────────────
+
+def test_estadisticas_template_cargable_en_jinja2(app):
+    """estadisticas.html se puede cargar en Jinja2 sin errores."""
+    with app.app_context():
+        template = app.jinja_env.get_template('dashboard/estadisticas.html')
+        assert template is not None
+
+
+def test_estadisticas_html_contiene_nav_links(client):
+    """GET /dashboard/estadisticas incluye links de navegación."""
+    with client.session_transaction() as sess:
+        sess['empleado_id'] = 1
+        sess['rol'] = 'admin'
+    resp = client.get('/dashboard/estadisticas')
+    assert resp.status_code == 200
+    html = resp.data.decode()
+    for ruta in ['/dashboard', '/dashboard/monitor', '/dashboard/historial',
+                 '/dashboard/turnos', '/dashboard/rendimiento', '/dashboard/estadisticas']:
+        assert ruta in html, f"Link {ruta} no encontrado en estadisticas.html"
+
+
+def test_estadisticas_html_contiene_alpine_app(client):
+    """GET /dashboard/estadisticas incluye x-data estadisticasApp()."""
+    with client.session_transaction() as sess:
+        sess['empleado_id'] = 1
+        sess['rol'] = 'admin'
+    resp = client.get('/dashboard/estadisticas')
+    assert resp.status_code == 200
+    assert b'estadisticasApp' in resp.data
