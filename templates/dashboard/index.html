@@ -140,42 +140,23 @@
           <div class="flex items-center justify-between">
             <div>
               <p class="section-title text-[11px] font-bold uppercase text-slate-500">Atenci&oacute;n Inmediata</p>
-              <h2 class="mt-1 text-lg font-extrabold text-slate-950">Triage operativo</h2>
             </div>
             <span class="rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700" x-text="alertasError.length"></span>
           </div>
           <div class="mt-4 space-y-3">
             <template x-for="a in alertasError.slice(0, 4)" :key="a.tipo + '-' + (a.pedido_id || a.producto_id || a.mensaje)">
-              <article class="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                <div class="flex items-start justify-between gap-3">
+              <article class="rounded-[20px] border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                       :class="a.pedido_id ? 'cursor-pointer' : ''"
+                       @click="a.pedido_id && resolverAlerta(a)">
+                <div class="flex items-center justify-between gap-3">
                   <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em]"
-                            :class="alertSeverityClass(a)"
-                            x-text="alertSeverityLabel(a)"></span>
-                      <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600"
-                            x-text="alertTypeLabel(a)"></span>
-                    </div>
-                    <h3 class="mt-3 text-sm font-extrabold leading-snug text-slate-950" x-text="alertTitle(a)"></h3>
-                    <p class="mt-1 text-sm leading-relaxed text-slate-600" x-text="alertDetail(a)"></p>
+                    <p class="text-sm font-black tracking-tight text-slate-950" x-text="'#' + (a.pedido_id || '—')"></p>
+                    <p class="mt-1 text-sm font-medium text-slate-700" x-text="alertReason(a)"></p>
                   </div>
-                  <template x-if="a.pedido_id">
-                    <span class="shrink-0 rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black tracking-tight text-white"
-                          x-text="'#' + a.pedido_id"></span>
-                  </template>
-                </div>
-
-                <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span class="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600"
-                          x-text="alertContextPrimary(a)"></span>
-                    <span x-show="alertContextSecondary(a)" class="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600"
-                          x-text="alertContextSecondary(a)"></span>
+                  <div class="shrink-0 text-right">
+                    <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Tiempo</p>
+                    <p class="mt-1 text-sm font-bold text-slate-900" x-text="alertElapsed(a)"></p>
                   </div>
-                  <button x-show="a.pedido_id"
-                          @click="resolverAlerta(a)"
-                          class="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-                          x-text="alertActionLabel(a)"></button>
                 </div>
               </article>
             </template>
@@ -1236,6 +1217,18 @@
 
         pedidoPorId(pedidoId) {
           return this.pedidos.find(p => p.pedido_id === pedidoId) || null;
+        },
+
+        alertReason(alerta) {
+          if (alerta.tipo === 'sin_repartidor') return 'Sin repartidor asignado';
+          if (alerta.tipo === 'pedido_retrasado') return 'Sin picker asignado';
+          return 'Incidencia operativa';
+        },
+
+        alertElapsed(alerta) {
+          const pedido = this.pedidoPorId(alerta.pedido_id);
+          const minutos = alerta.minutos ?? pedido?.minutos_en_estado ?? null;
+          return this.formatMinutos(minutos);
         },
 
         alertSummaryHeadline() {

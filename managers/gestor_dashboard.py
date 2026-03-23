@@ -2556,3 +2556,162 @@ class GestorDashboard:
             'forma_pago':             forma_pago,
             'serie_tiempos':          serie_tiempos,
         }
+
+    def turnos_planificacion(
+        self,
+        desde: str = None,
+        hasta: str = None,
+        empleado_id: int = None,
+        rol: str = None,
+        page: int = 1,
+        per_page: int = 25,
+    ) -> dict:
+        """Lista de turnos planificados (pasados y futuros), paginada."""
+        from models import Turno as TurnoModel
+        hoy = datetime.utcnow().date()
+        fecha_desde = datetime.strptime(desde, '%Y-%m-%d').date() if desde else hoy
+        fecha_hasta = datetime.strptime(hasta, '%Y-%m-%d').date() if hasta else hoy + timedelta(days=13)
+        page = max(page, 1)
+
+        s = self.session
+        query = (
+            s.query(TurnoModel)
+            .join(Empleado, TurnoModel.empleado_id == Empleado.EmpleadoID)
+            .filter(TurnoModel.fecha >= fecha_desde, TurnoModel.fecha <= fecha_hasta)
+        )
+
+        if empleado_id:
+            query = query.filter(TurnoModel.empleado_id == empleado_id)
+        if rol:
+            query = query.join(Rol, Empleado.rol_id == Rol.id).filter(Rol.nombre == rol)
+
+        total = query.count()
+        pages = max((total + per_page - 1) // per_page, 1)
+        turnos = (
+            query
+            .order_by(TurnoModel.fecha.asc(), TurnoModel.hora_inicio.asc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+
+        resultado = []
+        for t in turnos:
+            emp = t.empleado
+            resultado.append({
+                'id':          t.id,
+                'empleado_id': t.empleado_id,
+                'empleado':    f'{emp.Nombre} {emp.Apellido}' if emp else f'#{t.empleado_id}',
+                'rol':         emp.rol.nombre if emp and emp.rol else None,
+                'fecha':       t.fecha.isoformat() if t.fecha else None,
+                'hora_inicio': t.hora_inicio.strftime('%H:%M') if t.hora_inicio else None,
+                'hora_fin':    t.hora_fin.strftime('%H:%M') if t.hora_fin else None,
+                'tipo':        t.tipo,
+                'estado':      t.estado,
+                'notas':       t.notas,
+            })
+
+        return {'turnos': resultado, 'total': total, 'page': page, 'pages': pages}
+
+    def crear_turno(
+        self,
+        empleado_id: int,
+        fecha: str,
+        hora_inicio: str,
+        hora_fin: str,
+        tipo: str = None,
+        notas: str = None,
+    ) -> dict:
+        """Crea un nuevo turno para un empleado."""
+        from models import Turno as TurnoModel
+        from datetime import time as dtime
+
+        s = self.session
+        emp = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+        if not emp:
+            return {'ok': False, 'error': 'Empleado no encontrado'}
+
+        try:
+            fecha_dt = datetime.strptime(fecha, '%Y-%m-%d').date()
+            h_ini = dtime(*[int(x) for x in hora_inicio.split(':')])
+            h_fin = dtime(*[int(x) for x in hora_fin.split(':')])
+        except (ValueError, AttributeError) as exc:
+            return {'ok': False, 'error': 'Formato de fecha/hora inválido: %s' % exc}
+
+        turno = TurnoModel(
+            empleado_id=empleado_id,
+            fecha=fecha_dt,
+            hora_inicio=h_ini,
+            hora_fin=h_fin,
+            tipo=tipo or None,
+            notas=notas or None,
+            estado='planificado',
+        )
+        try:
+            s.add(turno)
+            s.flush()
+            turno_id = turno.id
+            s.commit()
+            logger.info('TURNO_CREADO empleado=%s fecha=%s', empleado_id, fecha)
+            return {'ok': True, 'turno_id': turno_id}
+        except Exception as exc:
+            s.rollback()
+            logger.error('Error creando turno para empleado %s: %s', empleado_id, exc)
+            return {'ok': False, 'error': 'Error al guardar el turno'}
+
+    def editar_turno(
+        self,
+        turno_id: int,
+        hora_inicio: str = None,
+        hora_fin: str = None,
+        tipo: str = None,
+        notas: str = None,
+    ) -> dict:
+        """Edita hora_inicio, hora_fin, tipo y/o notas de un turno planificado."""
+        from models import Turno as TurnoModel
+        from datetime import time as dtime
+
+        s = self.session
+        turno = s.query(TurnoModel).filter_by(id=turno_id).first()
+        if not turno:
+            return {'ok': False, 'error': 'Turno no encontrado'}
+        if turno.estado == 'cancelado':
+            return {'ok': False, 'error': 'No se puede editar un turno cancelado'}
+
+        try:
+            if hora_inicio:
+                turno.hora_inicio = dtime(*[int(x) for x in hora_inicio.split(':')])
+            if hora_fin:
+                turno.hora_fin = dtime(*[int(x) for x in hora_fin.split(':')])
+            if tipo is not None and tipo != '__no_change__':
+                turno.tipo = tipo or None
+            if notas is not None and notas != '__no_change__':
+                turno.notas = notas or None
+            s.commit()
+            logger.info('TURNO_EDITADO id=%s', turno_id)
+            return {'ok': True}
+        except Exception as exc:
+            s.rollback()
+            logger.error('Error editando turno %s: %s', turno_id, exc)
+            return {'ok': False, 'error': 'Error al guardar los cambios'}
+
+    def cancelar_turno(self, turno_id: int) -> dict:
+        """Marca un turno como cancelado."""
+        from models import Turno as TurnoModel
+
+        s = self.session
+        turno = s.query(TurnoModel).filter_by(id=turno_id).first()
+        if not turno:
+            return {'ok': False, 'error': 'Turno no encontrado'}
+        if turno.estado == 'cancelado':
+            return {'ok': False, 'error': 'El turno ya está cancelado'}
+
+        try:
+            turno.estado = 'cancelado'
+            s.commit()
+            logger.info('TURNO_CANCELADO id=%s', turno_id)
+            return {'ok': True}
+        except Exception as exc:
+            s.rollback()
+            logger.error('Error cancelando turno %s: %s', turno_id, exc)
+            return {'ok': False, 'error': 'Error al cancelar el turno'}
