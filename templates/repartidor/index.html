@@ -1371,10 +1371,22 @@
         async recargar() {
           if (!this.repartidorId) return;
           this.cargando = true;
+          const _cacheKey = `panchi_rep_pedidos_${this.repartidorId}`;
+          try {
+            const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
+            if (_cached) {
+              this.pedidos = _cached;
+              if (!_cached.some(p => p.estado_reparto === 'en_camino'))
+                _cached.filter(p => p.estado_reparto === 'asignado')
+                       .forEach(p => this.pedidosConocidos.add(p.reparto_id));
+              this.cargando = false;
+            }
+          } catch (_) {}
           try {
             const r = await fetch(`/repartidor/mis-pedidos?repartidor_id=${this.repartidorId}`);
             if (r.ok) {
               this.pedidos = await r.json();
+              localStorage.setItem(_cacheKey, JSON.stringify(this.pedidos));
               this.conexionOk = true;
               this.lastFetchTime = new Date();
               if (this.mapaVisible) this.actualizarMapaRepartidor();
@@ -1399,12 +1411,21 @@
         },
 
         async cargarCola() {
+          const _cacheKey = `panchi_rep_cola_${this.repartidorId}`;
+          try {
+            const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
+            if (_cached) {
+              this.cola = _cached.cola || [];
+              this.colaTotal = _cached.total || 0;
+            }
+          } catch (_) {}
           try {
             const r = await fetch('/repartidor/cola');
             if (r.ok) {
               const data = await r.json();
               this.cola = data.cola || [];
               this.colaTotal = data.total || 0;
+              localStorage.setItem(_cacheKey, JSON.stringify(data));
               if (this.mapaColaVisible) this.actualizarMapaCola();
             } else {
               this.conexionOk = false;

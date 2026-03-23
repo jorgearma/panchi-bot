@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from decimal import Decimal
+from threading import Thread
 
 from flask import Blueprint, jsonify, render_template, request, session
 
@@ -14,10 +15,12 @@ logger = logging.getLogger(__name__)
 def _notificar(telefono: str, mensaje: str) -> None:
     if not telefono:
         return
-    try:
-        enviar_mensaje_whatsapp(mensaje, telefono)
-    except Exception as exc:
-        logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
+    def _enviar():
+        try:
+            enviar_mensaje_whatsapp(mensaje, telefono)
+        except Exception as exc:
+            logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
+    Thread(target=_enviar, daemon=True).start()
 
 blueprint_dashboard = Blueprint("dashboard", __name__)
 
