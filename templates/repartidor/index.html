@@ -1368,20 +1368,22 @@
           setInterval(() => { this.now = new Date(); }, 30000);
         },
 
-        async recargar() {
+        async recargar(skipCache = false, silencioso = false) {
           if (!this.repartidorId) return;
-          this.cargando = true;
+          if (!silencioso) this.cargando = true;
           const _cacheKey = `panchi_rep_pedidos_${this.repartidorId}`;
-          try {
-            const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
-            if (_cached) {
-              this.pedidos = _cached;
-              if (!_cached.some(p => p.estado_reparto === 'en_camino'))
-                _cached.filter(p => p.estado_reparto === 'asignado')
-                       .forEach(p => this.pedidosConocidos.add(p.reparto_id));
-              this.cargando = false;
-            }
-          } catch (_) {}
+          if (!skipCache) {
+            try {
+              const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
+              if (_cached) {
+                this.pedidos = _cached;
+                if (!_cached.some(p => p.estado_reparto === 'en_camino'))
+                  _cached.filter(p => p.estado_reparto === 'asignado')
+                         .forEach(p => this.pedidosConocidos.add(p.reparto_id));
+                if (!silencioso) this.cargando = false;
+              }
+            } catch (_) {}
+          }
           try {
             const r = await fetch(`/repartidor/mis-pedidos?repartidor_id=${this.repartidorId}`);
             if (r.ok) {
@@ -1406,7 +1408,7 @@
           } catch {
             this.conexionOk = false;
           } finally {
-            this.cargando = false;
+            if (!silencioso) this.cargando = false;
           }
         },
 
@@ -1446,7 +1448,7 @@
               );
               this.colaTotal = Math.max(0, this.colaTotal - 1);
               this.tabActiva = 'mis-entregas';
-              this.recargar();
+              this.recargar(true, true);
             } else {
               const data = await r.json().catch(() => ({}));
               if (data.error === 'ya_cogido') {
@@ -1490,7 +1492,7 @@
           this.importeTarjetaMixto = '';
           this.metodoCobro = '';
           this._stopHold();
-          this.recargar();
+          this.recargar(true, true);
         },
 
         cerrarNoEntregar() {
@@ -1792,7 +1794,7 @@
             if (r.ok) {
               this.mostrarToast('Registrado. El supervisor lo verá.');
               this.mostrarNoEntregar = false;
-              await this.recargar();
+              await this.recargar(true, true);
               const updated = this.pedidos.find(p => p.reparto_id === this.actual?.reparto_id);
               if (updated) this.actual = updated;
               this.motivoSeleccionado = '';
@@ -1813,7 +1815,7 @@
             const data = await r.json();
             if (r.ok) {
               this.mostrarToast('Corregido como entregado ✓');
-              await this.recargar();
+              await this.recargar(true, true);
               const updated = this.pedidos.find(p => p.reparto_id === this.actual?.reparto_id);
               if (updated) this.actual = updated;
             } else {
