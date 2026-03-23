@@ -124,10 +124,9 @@ def buscar_productos():
 @requiere_rol('picker', 'manager', 'admin')
 def finalizar_picking(picking_id: int):
     picker_id = session.get('empleado_id')
-    ok, msg, telefono = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
+    ok, msg, _ = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
     if not ok:
         return jsonify({"error": msg}), 400
-    _notificar(telefono, "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦")
     return jsonify({"ok": True, "mensaje": msg})
 
 
