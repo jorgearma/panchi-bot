@@ -309,7 +309,7 @@ def turnos_planificacion():
         empleado_id  = int(request.args.get('empleado_id')) if request.args.get('empleado_id') else None
         rol          = request.args.get('rol') or None
         page         = max(int(request.args.get('page', 1)), 1)
-        per_page     = min(int(request.args.get('per_page', 25)), 100)
+        per_page     = min(int(request.args.get('per_page', 25)), 200)
         return _ok(gestor_dashboard.turnos_planificacion(
             desde=desde, hasta=hasta, empleado_id=empleado_id,
             rol=rol, page=page, per_page=per_page,

@@ -102,9 +102,21 @@
     <!-- Summary bar -->
     <div class="glass-panel rounded-2xl px-5 py-3 mb-5 flex flex-wrap gap-5 items-center" x-show="!cargandoHoy && resumen">
       <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
+        <span class="text-sm font-semibold text-slate-700">
+          <span x-text="resumen ? resumen.con_turno : 0"></span> con turno
+        </span>
+      </div>
+      <div class="flex items-center gap-2">
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
         <span class="text-sm font-semibold text-slate-700">
           <span x-text="resumen ? resumen.con_checkin : 0"></span> activos
+        </span>
+      </div>
+      <div class="flex items-center gap-2" x-show="resumen && resumen.ausentes > 0">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+        <span class="text-sm font-semibold text-amber-700">
+          <span x-text="resumen ? resumen.ausentes : 0"></span> ausentes
         </span>
       </div>
       <div class="flex items-center gap-2">
@@ -141,7 +153,10 @@
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
     >
       <template x-for="emp in empleados" :key="emp.id">
-        <div class="glass-panel rounded-2xl px-4 py-4 flex flex-col gap-3 fade-in">
+        <div
+          class="glass-panel rounded-2xl px-4 py-4 flex flex-col gap-3 fade-in"
+          :class="emp.tiene_turno && !emp.check_in_inicio ? 'ring-2 ring-amber-300/70' : ''"
+        >
 
           <!-- Avatar + nombre -->
           <div class="flex items-center gap-3">
@@ -154,7 +169,22 @@
               <p class="font-bold text-slate-800 text-sm truncate" x-text="emp.nombre"></p>
               <p class="text-xs text-slate-400 truncate" x-text="emp.rol || '—'"></p>
             </div>
+            <!-- Ausente badge -->
+            <template x-if="emp.tiene_turno && emp.turno_empezado && !emp.check_in_inicio">
+              <span class="ml-auto flex-shrink-0 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">ausente</span>
+            </template>
           </div>
+
+          <!-- Turno planificado -->
+          <template x-if="emp.tiene_turno">
+            <div class="flex items-center gap-1.5 text-xs">
+              <span class="text-slate-400">🕐</span>
+              <span class="font-semibold text-slate-700" x-text="(emp.turno_hora_inicio || '?') + '–' + (emp.turno_hora_fin || '?')"></span>
+              <template x-if="emp.turno_tipo">
+                <span class="text-slate-400 capitalize" x-text="'· ' + emp.turno_tipo"></span>
+              </template>
+            </div>
+          </template>
 
           <!-- Estado operativo badge -->
           <div class="flex items-center gap-2">
@@ -181,7 +211,9 @@
           </div>
 
           <!-- Tiempo activo -->
-          <div class="rounded-xl bg-slate-50 px-3 py-2">
+          <div class="rounded-xl px-3 py-2"
+            :class="emp.tiene_turno && emp.turno_empezado && !emp.check_in_inicio ? 'bg-amber-50' : 'bg-slate-50'"
+          >
             <template x-if="emp.activo">
               <div class="flex items-center justify-between">
                 <span class="text-xs text-slate-400">Tiempo activo</span>
@@ -197,7 +229,13 @@
                 <span class="text-sm font-semibold text-slate-600" x-text="formatMinutos(emp.minutos_activo)"></span>
               </div>
             </template>
-            <template x-if="!emp.activo && !emp.check_in_inicio">
+            <template x-if="!emp.activo && !emp.check_in_inicio && emp.tiene_turno && emp.turno_empezado">
+              <p class="text-xs text-amber-600 font-semibold">No se ha presentado</p>
+            </template>
+            <template x-if="!emp.activo && !emp.check_in_inicio && emp.tiene_turno && !emp.turno_empezado">
+              <p class="text-xs text-slate-400 italic">Turno a las <span class="font-semibold" x-text="emp.turno_hora_inicio"></span></p>
+            </template>
+            <template x-if="!emp.activo && !emp.check_in_inicio && !emp.tiene_turno">
               <p class="text-xs text-slate-400 italic">Sin turno hoy</p>
             </template>
           </div>
@@ -609,6 +647,10 @@ function turnosApp() {
     planCargado: false,
     planFiltros: { desde: '', hasta: '', rol: '' },
 
+    // ── Vista semana ──
+    vistaGrid: false,
+    semanaBase: null,
+
     // ── Modal ──
     modalAbierto: false,
     modalModo: 'crear',
@@ -634,6 +676,7 @@ function turnosApp() {
       this._tickTimer = setInterval(() => {
         this.ticksSinceLoad++;
       }, 60000);
+      this.semanaBase = this.lunes(new Date());
     },
 
     async cargarHoy() {
@@ -691,6 +734,78 @@ function turnosApp() {
       if (!iso) return '—';
       const d = new Date(iso);
       return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    },
+
+    formatISO(date) {
+      // Date → 'YYYY-MM-DD' en hora local (evita desfase UTC)
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    },
+
+    lunes(date) {
+      const d = new Date(date);
+      const day = d.getDay(); // 0=dom, 1=lun, …
+      const diff = (day === 0) ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    },
+
+    diasSemana() {
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(this.semanaBase);
+        d.setDate(d.getDate() + i);
+        return d;
+      });
+    },
+
+    semanaLabel() {
+      const dias = this.diasSemana();
+      const lun = dias[0];
+      const dom = dias[6];
+      const DIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+      const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      const labelLun = `${DIAS[lun.getDay()]} ${lun.getDate()}`;
+      const labelDom = `${DIAS[dom.getDay()]} ${dom.getDate()}`;
+      const mismoMes = lun.getMonth() === dom.getMonth();
+      if (mismoMes) {
+        return `${labelLun} — ${labelDom} ${MESES[dom.getMonth()]} ${dom.getFullYear()}`;
+      }
+      return `${labelLun} ${MESES[lun.getMonth()]} — ${labelDom} ${MESES[dom.getMonth()]} ${dom.getFullYear()}`;
+    },
+
+    esHoy(date) {
+      const hoy = new Date();
+      return date.getFullYear() === hoy.getFullYear()
+          && date.getMonth()    === hoy.getMonth()
+          && date.getDate()     === hoy.getDate();
+    },
+
+    semanaTurnos() {
+      // { String(empleado_id): { 'YYYY-MM-DD': turno[] } }
+      const mapa = {};
+      for (const t of this.planTurnos) {
+        const eid = String(t.empleado_id);
+        if (!mapa[eid]) mapa[eid] = {};
+        if (!mapa[eid][t.fecha]) mapa[eid][t.fecha] = [];
+        mapa[eid][t.fecha].push(t);
+      }
+      return mapa;
+    },
+
+    empleadosSemana() {
+      const vistos = new Set();
+      const lista  = [];
+      for (const t of this.planTurnos) {
+        if (!vistos.has(t.empleado_id)) {
+          vistos.add(t.empleado_id);
+          lista.push({ id: t.empleado_id, nombre: t.empleado });
+        }
+      }
+      lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      return lista;
     },
 
     cargar() {
