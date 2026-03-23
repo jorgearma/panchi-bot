@@ -1145,11 +1145,29 @@ class GestorDashboard:
             ]
             if items_para_stock:
                 def _descontar(items=items_para_stock):
+                    from database import SessionLocal
+                    from models import Producto
+                    from sqlalchemy.exc import SQLAlchemyError
+                    s = SessionLocal()
                     try:
-                        from managers.gestor_productos import ProductoManager
-                        ProductoManager().descontar_stock_picking(items)
-                    except Exception as e:
+                        for item in items:
+                            p = s.query(Producto).filter_by(ProductoID=item["producto_id"]).first()
+                            if not p:
+                                continue
+                            if item["estado"] == "encontrado":
+                                cantidad = item["cantidad_encontrada"] or item["cantidad_pedida"]
+                                p.Stock = max(0, p.Stock - cantidad)
+                                if p.Stock == 0:
+                                    p.Disponible = False
+                            elif item["estado"] == "sin_stock":
+                                p.Stock = 0
+                                p.Disponible = False
+                        s.commit()
+                    except SQLAlchemyError as e:
+                        s.rollback()
                         logger.error("Error descontando stock picking: %s", e)
+                    finally:
+                        s.close()
                 Thread(target=_descontar, daemon=True).start()
 
             # Auto-actualizar estado en background: no bloquea la respuesta HTTP

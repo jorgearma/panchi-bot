@@ -1755,6 +1755,9 @@
             const data = await r.json();
             if (r.ok) {
               this.actual.estado_reparto = 'en_camino';
+              const repartoId = this.actual.reparto_id;
+              const p = this.pedidos.find(p => p.reparto_id === repartoId);
+              if (p) p.estado_reparto = 'en_camino';
               this.mostrarToast('¡En camino! Buena entrega 🛵');
               return true;
             } else {
