@@ -1424,7 +1424,8 @@
                 p.pedido_id === pedidoId ? { ...p, ya_cogido: true } : p
               );
               this.colaTotal = Math.max(0, this.colaTotal - 1);
-              await this.recargar();
+              this.tabActiva = 'mis-entregas';
+              this.recargar();
             } else {
               const data = await r.json().catch(() => ({}));
               if (data.error === 'ya_cogido') {

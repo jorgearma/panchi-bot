@@ -53,6 +53,11 @@ def utc_now() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def build_run_tag() -> str:
+    """Genera una marca única por ejecución para evitar colisiones al reseedear."""
+    return f"{SCRIPT_TAG}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
+
+
 def ensure_role(session, nombre: str, descripcion: str) -> Rol:
     role = session.query(Rol).filter_by(nombre=nombre).first()
     if role:
@@ -172,7 +177,7 @@ def add_detalle(session, pedido_id: int, producto: Producto, cantidad: int) -> P
     return detalle
 
 
-def create_pedido_base(session, usuario: Usuario, idx: int) -> Pedido:
+def create_pedido_base(session, usuario: Usuario, idx: int, run_tag: str) -> Pedido:
     pedido = Pedido(
         ClienteID=usuario.id,
         FechaCreacion=utc_now() - timedelta(minutes=idx * 7),
@@ -180,14 +185,14 @@ def create_pedido_base(session, usuario: Usuario, idx: int) -> Pedido:
         Total=Decimal("0.00"),
         DireccionEntrega=usuario.direccion,
         TelefonoEntrega=usuario.numero_cliente.replace("whatsapp:", ""),
-        enlace=f"demo://pedido/{SCRIPT_TAG}/{idx}",
+        enlace=f"demo://pedido/{run_tag}/{idx}",
         redisID=str(uuid.uuid4()),
         estadopago=None,
-        estadoauxiliar=SCRIPT_TAG,
+        estadoauxiliar=run_tag,
         forma_pago="online",
         lat_entrega=40.006 + idx / 1000,
         lng_entrega=-3.001 - idx / 1000,
-        Notas=SCRIPT_TAG,
+        Notas=run_tag,
     )
     session.add(pedido)
     session.flush()
@@ -197,23 +202,14 @@ def create_pedido_base(session, usuario: Usuario, idx: int) -> Pedido:
 def seed_one_order(
     session,
     idx: int,
+    run_tag: str,
     final_state: str,
     productos: list[tuple[Producto, int]],
     picker: Empleado | None,
     repartidor: Empleado | None,
 ) -> Pedido:
     usuario = create_demo_user(session, idx)
-
-    existente = (
-        session.query(Pedido)
-        .filter_by(ClienteID=usuario.id, Notas=SCRIPT_TAG)
-        .order_by(Pedido.PedidoID.desc())
-        .first()
-    )
-    if existente:
-        return existente
-
-    pedido = create_pedido_base(session, usuario, idx)
+    pedido = create_pedido_base(session, usuario, idx, run_tag)
 
     detalles = [add_detalle(session, pedido.PedidoID, producto, cantidad) for producto, cantidad in productos]
     pedido.Total = sum((detalle.Subtotal for detalle in detalles), Decimal("0.00"))
@@ -229,7 +225,7 @@ def seed_one_order(
     session.add(Pago(
         pedido_id=pedido.PedidoID,
         proveedor="monei",
-        referencia_externa=f"{SCRIPT_TAG}-pago-{idx}",
+        referencia_externa=f"{run_tag}-pago-{idx}",
         estado="completado",
         importe=pedido.Total,
         importe_reembolsado=Decimal("0.00"),
@@ -306,6 +302,7 @@ def main() -> int:
     with app.app_context():
         conectar_bd1()
         session = get_db()
+        run_tag = build_run_tag()
 
         try:
             role_admin = ensure_role(session, "admin", "Acceso total")
@@ -325,6 +322,7 @@ def main() -> int:
                 seed_one_order(
                     session,
                     idx=1,
+                    run_tag=run_tag,
                     final_state=EstadoPedido.PAGADO.value,
                     productos=[(producto_1, 2), (producto_2, 1)],
                     picker=picker,
@@ -333,6 +331,7 @@ def main() -> int:
                 seed_one_order(
                     session,
                     idx=2,
+                    run_tag=run_tag,
                     final_state=EstadoPedido.EN_PREPARACION.value,
                     productos=[(producto_2, 2), (producto_3, 1)],
                     picker=picker,
@@ -341,6 +340,7 @@ def main() -> int:
                 seed_one_order(
                     session,
                     idx=3,
+                    run_tag=run_tag,
                     final_state=EstadoPedido.PREPARADO.value,
                     productos=[(producto_1, 1), (producto_3, 2)],
                     picker=picker,
@@ -349,6 +349,7 @@ def main() -> int:
                 seed_one_order(
                     session,
                     idx=4,
+                    run_tag=run_tag,
                     final_state=EstadoPedido.EN_REPARTO.value,
                     productos=[(producto_1, 1), (producto_2, 1), (producto_3, 1)],
                     picker=picker,
@@ -358,7 +359,7 @@ def main() -> int:
 
             session.commit()
 
-            print("Pedidos demo listos:")
+            print(f"Pedidos demo listos para run_tag={run_tag}:")
             for pedido in pedidos:
                 print(f"  - Pedido #{pedido.PedidoID}: estado={pedido.Estado} total={pedido.Total} cliente_id={pedido.ClienteID}")
         except Exception:
