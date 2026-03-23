@@ -127,6 +127,7 @@ def finalizar_picking(picking_id: int):
     ok, msg, _ = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
     if not ok:
         return jsonify({"error": msg}), 400
+    logger.info("[PICKING] Empleado %s finaliza picking %s", picker_id, picking_id)
     return jsonify({"ok": True, "mensaje": msg})
 
 
@@ -151,6 +152,7 @@ def coger_picking(picking_id: int):
         logger.error("Error en /picker/cola/coger/%s: %s", picking_id, e)
         return jsonify({"error": "Error interno"}), 500
     if ok:
+        logger.info("[PICKING] Empleado %s coge picking %s", empleado_id, picking_id)
         return jsonify({"ok": True, "picking_id": picking_id})
     if motivo == 'no_encontrado':
         return jsonify({"error": motivo}), 404
