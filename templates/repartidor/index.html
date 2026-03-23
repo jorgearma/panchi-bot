@@ -1368,13 +1368,27 @@
           setInterval(() => { this.now = new Date(); }, 30000);
         },
 
-        async recargar() {
+        async recargar(skipCache = false, silencioso = false) {
           if (!this.repartidorId) return;
-          this.cargando = true;
+          if (!silencioso) this.cargando = true;
+          const _cacheKey = `panchi_rep_pedidos_${this.repartidorId}`;
+          if (!skipCache) {
+            try {
+              const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
+              if (_cached) {
+                this.pedidos = _cached;
+                if (!_cached.some(p => p.estado_reparto === 'en_camino'))
+                  _cached.filter(p => p.estado_reparto === 'asignado')
+                         .forEach(p => this.pedidosConocidos.add(p.reparto_id));
+                if (!silencioso) this.cargando = false;
+              }
+            } catch (_) {}
+          }
           try {
             const r = await fetch(`/repartidor/mis-pedidos?repartidor_id=${this.repartidorId}`);
             if (r.ok) {
               this.pedidos = await r.json();
+              localStorage.setItem(_cacheKey, JSON.stringify(this.pedidos));
               this.conexionOk = true;
               this.lastFetchTime = new Date();
               if (this.mapaVisible) this.actualizarMapaRepartidor();
@@ -1394,17 +1408,26 @@
           } catch {
             this.conexionOk = false;
           } finally {
-            this.cargando = false;
+            if (!silencioso) this.cargando = false;
           }
         },
 
         async cargarCola() {
+          const _cacheKey = `panchi_rep_cola_${this.repartidorId}`;
+          try {
+            const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
+            if (_cached) {
+              this.cola = _cached.cola || [];
+              this.colaTotal = _cached.total || 0;
+            }
+          } catch (_) {}
           try {
             const r = await fetch('/repartidor/cola');
             if (r.ok) {
               const data = await r.json();
               this.cola = data.cola || [];
               this.colaTotal = data.total || 0;
+              localStorage.setItem(_cacheKey, JSON.stringify(data));
               if (this.mapaColaVisible) this.actualizarMapaCola();
             } else {
               this.conexionOk = false;
@@ -1424,7 +1447,9 @@
                 p.pedido_id === pedidoId ? { ...p, ya_cogido: true } : p
               );
               this.colaTotal = Math.max(0, this.colaTotal - 1);
-              await this.recargar();
+              this.mostrarToast('Reparto cogido ✓');
+              this.cargarCola();
+              this.recargar(true, true);
             } else {
               const data = await r.json().catch(() => ({}));
               if (data.error === 'ya_cogido') {
@@ -1468,7 +1493,7 @@
           this.importeTarjetaMixto = '';
           this.metodoCobro = '';
           this._stopHold();
-          this.recargar();
+          this.recargar(true, true);
         },
 
         cerrarNoEntregar() {
@@ -1730,6 +1755,9 @@
             const data = await r.json();
             if (r.ok) {
               this.actual.estado_reparto = 'en_camino';
+              const repartoId = this.actual.reparto_id;
+              const p = this.pedidos.find(p => p.reparto_id === repartoId);
+              if (p) p.estado_reparto = 'en_camino';
               this.mostrarToast('¡En camino! Buena entrega 🛵');
               return true;
             } else {
@@ -1748,6 +1776,8 @@
             const data = await r.json();
             if (r.ok) {
               this.mostrarToast('Pedido entregado ✓');
+              const repartoId = this.actual.reparto_id;
+              this.pedidos = this.pedidos.filter(p => p.reparto_id !== repartoId);
               this.volverALista();
             } else {
               this.mostrarToast(data.error, true);
@@ -1770,7 +1800,7 @@
             if (r.ok) {
               this.mostrarToast('Registrado. El supervisor lo verá.');
               this.mostrarNoEntregar = false;
-              await this.recargar();
+              await this.recargar(true, true);
               const updated = this.pedidos.find(p => p.reparto_id === this.actual?.reparto_id);
               if (updated) this.actual = updated;
               this.motivoSeleccionado = '';
@@ -1791,7 +1821,7 @@
             const data = await r.json();
             if (r.ok) {
               this.mostrarToast('Corregido como entregado ✓');
-              await this.recargar();
+              await this.recargar(true, true);
               const updated = this.pedidos.find(p => p.reparto_id === this.actual?.reparto_id);
               if (updated) this.actual = updated;
             } else {

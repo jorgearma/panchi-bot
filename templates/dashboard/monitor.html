@@ -64,11 +64,29 @@
       <button @click="cargar()"
               class="text-gray-500 hover:text-white transition text-lg leading-none"
               :class="cargando ? 'animate-spin' : ''">↻</button>
-      <!-- Back to dashboard -->
-      <a href="/dashboard"
-         class="text-xs text-gray-500 hover:text-orange-400 transition border border-gray-700 rounded px-2 py-1">
-        ← Dashboard
-      </a>
+      <!-- Navegación entre secciones -->
+      {% set _monitor_links = [
+        ('Ops',          '/dashboard'),
+        ('Monitor',      '/dashboard/monitor'),
+        ('Historial',    '/dashboard/historial'),
+        ('Turnos',       '/dashboard/turnos'),
+        ('Rendimiento',  '/dashboard/rendimiento'),
+        ('Estadísticas', '/dashboard/estadisticas'),
+      ] %}
+      <nav class="flex items-center gap-0.5 overflow-x-auto" aria-label="Navegación dashboard">
+        {% for _label, _href in _monitor_links %}
+          {% if _href == '/dashboard' %}
+            {% set _activo = (request.path == '/dashboard') %}
+          {% else %}
+            {% set _activo = request.path.startswith(_href) %}
+          {% endif %}
+          <a href="{{ _href }}"
+             class="whitespace-nowrap rounded px-2.5 py-1 text-xs font-semibold transition
+                    {{ 'bg-gray-700 text-white' if _activo else 'text-gray-500 hover:text-gray-300 hover:bg-gray-800' }}">
+            {{ _label }}
+          </a>
+        {% endfor %}
+      </nav>
     </div>
   </header>
 

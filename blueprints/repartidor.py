@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import date
+from threading import Thread
 
 from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, session
 
@@ -14,10 +15,12 @@ logger = logging.getLogger(__name__)
 def _notificar(telefono: str, mensaje: str) -> None:
     if not telefono:
         return
-    try:
-        enviar_mensaje_whatsapp(mensaje, telefono)
-    except Exception as exc:
-        logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
+    def _enviar():
+        try:
+            enviar_mensaje_whatsapp(mensaje, telefono)
+        except Exception as exc:
+            logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
+    Thread(target=_enviar, daemon=True).start()
 
 blueprint_repartidor = Blueprint("repartidor", __name__)
 
@@ -78,20 +81,18 @@ def mis_pedidos():
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/salida", methods=["POST"])
 @requiere_rol('repartidor', 'manager', 'admin')
 def marcar_salida(reparto_id: int):
-    ok, msg, telefono = gestor_dashboard.marcar_salida_reparto(reparto_id)
+    ok, msg, _ = gestor_dashboard.marcar_salida_reparto(reparto_id)
     if not ok:
         return jsonify({"error": msg}), 400
-    _notificar(telefono, "🛵 Tu pedido está en camino. ¡El repartidor ya va hacia tu dirección!")
     return jsonify({"ok": True, "mensaje": msg})
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/entregar", methods=["POST"])
 @requiere_rol('repartidor', 'manager', 'admin')
 def marcar_entregado(reparto_id: int):
-    ok, msg, telefono = gestor_dashboard.marcar_entregado(reparto_id)
+    ok, msg, _ = gestor_dashboard.marcar_entregado(reparto_id)
     if not ok:
         return jsonify({"error": msg}), 400
-    _notificar(telefono, "🙌 ¡Tu pedido ha sido entregado! Gracias por tu compra. ¡Hasta la próxima!")
     return jsonify({"ok": True, "mensaje": msg})
 
 

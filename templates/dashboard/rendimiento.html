@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rendimiento — Panchi Ops</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    [x-cloak] { display: none !important; }
+    :root {
+      --bg: #edf2f7;
+      --panel: rgba(255, 255, 255, 0.86);
+      --panel-strong: #ffffff;
+      --line: rgba(148, 163, 184, 0.22);
+      --ink: #0f172a;
+      --muted: #64748b;
+      --brand: #0f4c81;
+      --brand-soft: #dbeafe;
+    }
+    body {
+      font-family: "Manrope", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(14, 116, 144, 0.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 24%),
+        linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+    .glass-panel {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+    .fade-in { animation: fadeIn .25s ease-in; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body class="min-h-screen">
+
+{% from 'macros/ui.html' import empty_state, loading_skeleton, error_banner %}
+
+<header class="sticky top-0 z-30 px-4 pt-4 pb-2">
+  <div class="mx-auto max-w-7xl glass-panel rounded-2xl px-5 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">🍕</span>
+      <span class="font-extrabold text-lg tracking-tight" style="color:var(--brand)">Panchi Ops</span>
+      <span class="hidden sm:inline text-slate-300">|</span>
+      <span class="hidden sm:inline text-sm font-semibold text-slate-500">Rendimiento</span>
+    </div>
+    {% include 'dashboard/_nav.html' %}
+  </div>
+</header>
+
+<main
+  class="mx-auto max-w-7xl px-4 py-6"
+  x-data="rendimientoApp()"
+>
+
+  <!-- ── VISTA LISTA ──────────────────────────────────────────────────────── -->
+  <div x-show="vista === 'lista'">
+
+    <div class="glass-panel rounded-2xl px-5 py-4 mb-5 flex flex-wrap gap-4 items-center">
+      <div class="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+        <template x-for="p in ['hoy','semana','mes']" :key="p">
+          <button
+            @click="periodo = p; cargar()"
+            :class="periodo === p
+              ? 'bg-white shadow-sm text-slate-800 font-semibold'
+              : 'text-slate-500 hover:text-slate-700'"
+            class="px-3 py-1.5 rounded-lg text-sm capitalize transition"
+            x-text="p"
+          ></button>
+        </template>
+      </div>
+
+      <select
+        x-model="rolFiltro"
+        @change="cargar()"
+        class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+      >
+        <option value="">Todos los roles</option>
+        <option value="picker">Picker</option>
+        <option value="repartidor">Repartidor</option>
+      </select>
+
+      <div class="ml-auto text-xs text-slate-400" x-show="!cargando">
+        <span x-text="empleados.length"></span> empleados
+      </div>
+    </div>
+
+    {{ error_banner() }}
+
+    <div x-show="cargando" x-cloak>
+      {{ loading_skeleton(rows=6, cols=5) }}
+    </div>
+
+    <div x-show="!cargando && empleados.length === 0" x-cloak>
+      {{ empty_state('📊', 'Sin datos', 'No hay métricas registradas para este período y rol.') }}
+    </div>
+
+    <div x-show="!cargando && empleados.length > 0" x-cloak class="glass-panel rounded-2xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 bg-slate-50/60">
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">#</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Empleado</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Rol op.</th>
+            <th
+              @click="ordenarPor('pedidos')"
+              class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 select-none"
+            >
+              Pedidos <span x-show="ordenCol === 'pedidos'" x-text="ordenDir === 'desc' ? '↓' : '↑'"></span>
+            </th>
+            <th
+              @click="ordenarPor('tiempo_medio_min')"
+              class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 select-none"
+            >
+              T. medio <span x-show="ordenCol === 'tiempo_medio_min'" x-text="ordenDir === 'desc' ? '↓' : '↑'"></span>
+            </th>
+            <th
+              @click="ordenarPor('incidencias')"
+              class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 select-none"
+            >
+              Incid. <span x-show="ordenCol === 'incidencias'" x-text="ordenDir === 'desc' ? '↓' : '↑'"></span>
+            </th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Tasa</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(emp, idx) in empleadosOrdenados" :key="emp.id + '-' + emp.rol_operativo">
+            <tr
+              class="border-b border-slate-100 hover:bg-blue-50/40 transition-colors cursor-pointer fade-in"
+              @click="abrirDetalle(emp)"
+            >
+              <td class="px-4 py-3 text-slate-400 text-xs font-mono" x-text="idx + 1"></td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div
+                    class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    x-text="emp.nombre.charAt(0)"
+                  ></div>
+                  <span class="font-semibold text-slate-800" x-text="emp.nombre"></span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-slate-500 capitalize text-xs" x-text="emp.rol_operativo"></td>
+              <td class="px-4 py-3 text-right font-bold text-slate-800" x-text="emp.pedidos"></td>
+              <td class="px-4 py-3 text-right text-slate-600"
+                  x-text="emp.tiempo_medio_min !== null ? emp.tiempo_medio_min + 'min' : '—'"></td>
+              <td class="px-4 py-3 text-right"
+                  :class="emp.incidencias > 0 ? 'text-amber-600 font-semibold' : 'text-slate-400'"
+                  x-text="emp.incidencias"></td>
+              <td class="px-4 py-3 text-right">
+                <span
+                  x-show="emp.tasa_pct !== null"
+                  class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                  :class="emp.tasa_pct >= 90 ? 'bg-emerald-100 text-emerald-700' : emp.tasa_pct >= 75 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'"
+                  x-text="emp.tasa_pct + '%'"
+                ></span>
+                <span x-show="emp.tasa_pct === null" class="text-slate-400 text-xs">—</span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <span class="text-blue-500 font-semibold text-xs hover:underline">Ver →</span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ── VISTA INDIVIDUAL ──────────────────────────────────────────────────── -->
+  <div x-show="vista === 'detalle'" x-cloak>
+
+    <div class="flex items-center gap-3 mb-5">
+      <button
+        @click="vista = 'lista'; detalle = null"
+        class="flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-800 transition"
+      >
+        ← Volver
+      </button>
+      <div class="flex items-center gap-2" x-show="detalle">
+        <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold"
+          x-text="detalle ? detalle.nombre.charAt(0) : ''"></div>
+        <div>
+          <p class="font-extrabold text-slate-800" x-text="detalle ? detalle.nombre : ''"></p>
+          <p class="text-xs text-slate-400 capitalize" x-text="detalle ? (detalle.rol_sistema || '—') : ''"></p>
+        </div>
+      </div>
+    </div>
+
+    <div x-show="cargandoDetalle" x-cloak>
+      {{ loading_skeleton(rows=4, cols=4) }}
+    </div>
+
+    <div x-show="!cargandoDetalle && detalle" x-cloak class="space-y-5">
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass-panel rounded-2xl px-4 py-4 text-center fade-in">
+          <p class="text-3xl font-extrabold text-slate-800" x-text="detalle ? detalle.kpis.pedidos : '—'"></p>
+          <p class="text-xs text-slate-400 mt-1 font-semibold uppercase tracking-wide">Pedidos</p>
+        </div>
+        <div class="glass-panel rounded-2xl px-4 py-4 text-center fade-in">
+          <p class="text-3xl font-extrabold text-slate-800"
+             x-text="detalle && detalle.kpis.tiempo_medio_min !== null ? detalle.kpis.tiempo_medio_min + 'min' : '—'"></p>
+          <p class="text-xs text-slate-400 mt-1 font-semibold uppercase tracking-wide">T. medio</p>
+        </div>
+        <div class="glass-panel rounded-2xl px-4 py-4 text-center fade-in">
+          <p class="text-3xl font-extrabold text-emerald-600"
+             x-text="detalle && detalle.kpis.mejor_tiempo_min !== null ? detalle.kpis.mejor_tiempo_min + 'min' : '—'"></p>
+          <p class="text-xs text-slate-400 mt-1 font-semibold uppercase tracking-wide">Mejor tiempo</p>
+        </div>
+        <div class="glass-panel rounded-2xl px-4 py-4 text-center fade-in">
+          <p class="text-3xl font-extrabold"
+             :class="detalle && detalle.kpis.incidencias > 0 ? 'text-amber-600' : 'text-slate-800'"
+             x-text="detalle ? detalle.kpis.incidencias : '—'"></p>
+          <p class="text-xs text-slate-400 mt-1 font-semibold uppercase tracking-wide">Incidencias</p>
+        </div>
+      </div>
+
+      <div class="glass-panel rounded-2xl px-5 py-5 fade-in">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">Pedidos por día (últimos 7 días)</p>
+        <div style="height:180px">
+          <canvas id="chartPedidosDia"></canvas>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        <div class="glass-panel rounded-2xl px-5 py-4 fade-in">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Últimos pedidos</p>
+          <template x-if="detalle && detalle.ultimos_pedidos.length === 0">
+            <p class="text-sm text-slate-400 italic">Sin pedidos en el período.</p>
+          </template>
+          <div class="space-y-2">
+            <template x-for="(p, idx) in (detalle ? detalle.ultimos_pedidos : [])" :key="idx">
+              <div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                    :class="p.tipo === 'picking' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'"
+                    x-text="p.tipo === 'picking' ? 'Pick' : 'Rep'"
+                  ></span>
+                  <span class="text-sm font-semibold text-slate-700" x-text="'#' + p.pedido_id"></span>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs text-slate-500" x-text="p.duracion_min !== null ? p.duracion_min + 'min' : '—'"></span>
+                  <span class="text-xs text-slate-400 ml-2" x-text="formatFecha(p.fecha)"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl px-5 py-4 fade-in">
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Turnos recientes</p>
+          <template x-if="detalle && detalle.turnos_recientes.length === 0">
+            <p class="text-sm text-slate-400 italic">Sin turnos registrados.</p>
+          </template>
+          <div class="space-y-2">
+            <template x-for="(t, idx) in (detalle ? detalle.turnos_recientes : [])" :key="idx">
+              <div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+                <span class="text-sm text-slate-600 font-mono" x-text="t.fecha"></span>
+                <div class="text-right text-xs text-slate-500">
+                  <span x-text="formatHora(t.inicio)"></span>
+                  <template x-if="t.fin">
+                    <span> → <span x-text="formatHora(t.fin)"></span></span>
+                  </template>
+                  <template x-if="!t.fin">
+                    <span class="text-emerald-600 font-semibold"> activo</span>
+                  </template>
+                  <template x-if="t.horas !== null">
+                    <span class="ml-1 font-semibold text-slate-700" x-text="'(' + t.horas + 'h)'"></span>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+function rendimientoApp() {
+  return {
+    vista: 'lista',
+    periodo: 'hoy',
+    rolFiltro: '',
+    empleados: [],
+    cargando: false,
+    error: null,
+    ordenCol: 'pedidos',
+    ordenDir: 'desc',
+
+    detalle: null,
+    cargandoDetalle: false,
+    _chart: null,
+
+    init() {
+      this.cargar();
+    },
+
+    async cargar() {
+      this.cargando = true;
+      this.error = null;
+      try {
+        const params = new URLSearchParams({ periodo: this.periodo });
+        if (this.rolFiltro) params.set('rol', this.rolFiltro);
+        const resp = await fetch('/dashboard/rendimiento-datos?' + params.toString());
+        if (!resp.ok) throw new Error('Error ' + resp.status);
+        const data = await resp.json();
+        this.empleados = data.empleados;
+      } catch (e) {
+        this.error = 'No se pudo cargar el ranking. ' + e.message;
+      } finally {
+        this.cargando = false;
+      }
+    },
+
+    async abrirDetalle(emp) {
+      this.vista = 'detalle';
+      this.detalle = null;
+      this.cargandoDetalle = true;
+      try {
+        const resp = await fetch(`/dashboard/rendimiento/${emp.id}?periodo=${this.periodo}`);
+        if (!resp.ok) throw new Error('Error ' + resp.status);
+        this.detalle = await resp.json();
+        this.$nextTick(() => this._renderChart());
+      } catch (e) {
+        this.error = 'No se pudo cargar el detalle. ' + e.message;
+        this.vista = 'lista';
+      } finally {
+        this.cargandoDetalle = false;
+      }
+    },
+
+    _renderChart() {
+      const canvas = document.getElementById('chartPedidosDia');
+      if (!canvas || !this.detalle) return;
+      if (this._chart) {
+        this._chart.destroy();
+        this._chart = null;
+      }
+      const labels = this.detalle.pedidos_por_dia.map(d => {
+        const parts = d.fecha.split('-');
+        return `${parts[2]}/${parts[1]}`;
+      });
+      const data = this.detalle.pedidos_por_dia.map(d => d.pedidos);
+      this._chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Pedidos',
+            data,
+            backgroundColor: 'rgba(59,130,246,0.6)',
+            borderColor: 'rgba(59,130,246,0.9)',
+            borderWidth: 1,
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1, font: { size: 11 } },
+              grid: { color: 'rgba(148,163,184,0.15)' },
+            },
+            x: {
+              ticks: { font: { size: 11 } },
+              grid: { display: false },
+            },
+          },
+        },
+      });
+    },
+
+    ordenarPor(col) {
+      if (this.ordenCol === col) {
+        this.ordenDir = this.ordenDir === 'desc' ? 'asc' : 'desc';
+      } else {
+        this.ordenCol = col;
+        this.ordenDir = 'desc';
+      }
+    },
+
+    get empleadosOrdenados() {
+      const col = this.ordenCol;
+      const dir = this.ordenDir === 'desc' ? -1 : 1;
+      return [...this.empleados].sort((a, b) => {
+        const av = a[col] ?? -1;
+        const bv = b[col] ?? -1;
+        return (av - bv) * dir;
+      });
+    },
+
+    formatFecha(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+    },
+
+    formatHora(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    },
+  };
+}
+</script>
+
+</body>
+</html>
