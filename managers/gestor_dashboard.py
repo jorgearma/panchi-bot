@@ -2165,7 +2165,8 @@ class GestorDashboard:
     def rendimiento_resumen(self, periodo: str = 'hoy', rol: str = None) -> dict:
         """Ranking de rendimiento de empleados para el período dado.
 
-        Agrega MetricaDiariaEmpleado por (empleado_id, rol).
+        Consulta directamente PickingPedido y Reparto, sin depender de la caché
+        MetricaDiariaEmpleado.
 
         Args:
             periodo: 'hoy' | 'semana' | 'mes'
@@ -2175,8 +2176,6 @@ class GestorDashboard:
             { empleados: [{ id, nombre, rol_sistema, rol_operativo,
                             pedidos, tiempo_medio_min, incidencias, tasa_pct }] }
         """
-        from models import MetricaDiariaEmpleado
-
         hoy = datetime.utcnow().date()
         if periodo == 'semana':
             desde = hoy - timedelta(days=6)
@@ -2185,45 +2184,79 @@ class GestorDashboard:
         else:
             desde = hoy
 
+        desde_dt = datetime(desde.year, desde.month, desde.day)
         s = self.session
 
-        query = (
-            s.query(
-                MetricaDiariaEmpleado.empleado_id,
-                MetricaDiariaEmpleado.rol,
-                func.sum(MetricaDiariaEmpleado.pedidos_completados).label('pedidos'),
-                func.avg(MetricaDiariaEmpleado.tiempo_medio_operacion_min).label('tiempo_medio'),
-                func.sum(MetricaDiariaEmpleado.incidencias).label('incidencias'),
+        # {(empleado_id, rol_op): {pedidos, incidencias, tiempos}}
+        agg = {}
+
+        if not rol or rol == 'picker':
+            pickings = (
+                s.query(PickingPedido)
+                .filter(
+                    PickingPedido.empleado_id.isnot(None),
+                    PickingPedido.estado.in_(['completado', 'con_incidencias']),
+                    PickingPedido.completado_en >= desde_dt,
+                )
+                .all()
             )
-            .filter(MetricaDiariaEmpleado.fecha >= desde)
-            .group_by(MetricaDiariaEmpleado.empleado_id, MetricaDiariaEmpleado.rol)
-        )
+            for pk in pickings:
+                key = (pk.empleado_id, 'picker')
+                if key not in agg:
+                    agg[key] = {'pedidos': 0, 'incidencias': 0, 'tiempos': []}
+                if pk.estado == 'completado':
+                    agg[key]['pedidos'] += 1
+                    if pk.iniciado_en and pk.completado_en:
+                        agg[key]['tiempos'].append(
+                            (pk.completado_en - pk.iniciado_en).total_seconds() / 60
+                        )
+                else:
+                    agg[key]['incidencias'] += 1
 
-        if rol:
-            query = query.filter(MetricaDiariaEmpleado.rol == rol)
+        if not rol or rol == 'repartidor':
+            repartos = (
+                s.query(Reparto)
+                .filter(
+                    Reparto.repartidor_id.isnot(None),
+                    Reparto.estado.in_(['entregado', 'no_entregado']),
+                    Reparto.hora_entrega_real >= desde_dt,
+                )
+                .all()
+            )
+            for rp in repartos:
+                key = (rp.repartidor_id, 'repartidor')
+                if key not in agg:
+                    agg[key] = {'pedidos': 0, 'incidencias': 0, 'tiempos': []}
+                if rp.estado == 'entregado':
+                    agg[key]['pedidos'] += 1
+                    if rp.hora_salida and rp.hora_entrega_real:
+                        agg[key]['tiempos'].append(
+                            (rp.hora_entrega_real - rp.hora_salida).total_seconds() / 60
+                        )
+                else:
+                    agg[key]['incidencias'] += 1
 
-        rows = query.all()
-
-        # Build employee name cache
-        ids = list({r.empleado_id for r in rows})
+        ids = list({k[0] for k in agg})
         empleados_map = {}
         if ids:
             for emp in s.query(Empleado).filter(Empleado.EmpleadoID.in_(ids)).all():
                 empleados_map[emp.EmpleadoID] = emp
 
         resultado = []
-        for r in rows:
-            pedidos = int(r.pedidos or 0)
-            incidencias = int(r.incidencias or 0)
-            tasa = round(pedidos / (pedidos + incidencias) * 100) if (pedidos + incidencias) > 0 else None
-            emp = empleados_map.get(r.empleado_id)
+        for (emp_id, rol_op), data in agg.items():
+            pedidos    = data['pedidos']
+            incidencias = data['incidencias']
+            tiempos    = data['tiempos']
+            tasa       = round(pedidos / (pedidos + incidencias) * 100) if (pedidos + incidencias) > 0 else None
+            tiempo_medio = round(sum(tiempos) / len(tiempos)) if tiempos else None
+            emp = empleados_map.get(emp_id)
             resultado.append({
-                'id':               r.empleado_id,
-                'nombre':           f'{emp.Nombre} {emp.Apellido}' if emp else f'#{r.empleado_id}',
+                'id':               emp_id,
+                'nombre':           f'{emp.Nombre} {emp.Apellido}' if emp else f'#{emp_id}',
                 'rol_sistema':      emp.rol.nombre if emp and emp.rol else None,
-                'rol_operativo':    r.rol,
+                'rol_operativo':    rol_op,
                 'pedidos':          pedidos,
-                'tiempo_medio_min': round(r.tiempo_medio) if r.tiempo_medio else None,
+                'tiempo_medio_min': tiempo_medio,
                 'incidencias':      incidencias,
                 'tasa_pct':         tasa,
             })
@@ -2249,7 +2282,7 @@ class GestorDashboard:
                 ultimos_pedidos: [{ tipo, pedido_id, fecha, duracion_min }],
             }
         """
-        from models import MetricaDiariaEmpleado, CheckIn
+        from models import CheckIn
 
         s = self.session
         emp = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
@@ -2264,46 +2297,67 @@ class GestorDashboard:
         else:
             desde = hoy
 
-        # ── KPIs — aggregate from MetricaDiariaEmpleado for the period ──
-        agg = (
-            s.query(
-                func.sum(MetricaDiariaEmpleado.pedidos_completados),
-                func.avg(MetricaDiariaEmpleado.tiempo_medio_operacion_min),
-                func.min(MetricaDiariaEmpleado.tiempo_medio_operacion_min),
-                func.sum(MetricaDiariaEmpleado.incidencias),
-            )
+        desde_dt = datetime(desde.year, desde.month, desde.day)
+
+        # ── KPIs — from PickingPedido + Reparto ──
+        pickings_periodo = (
+            s.query(PickingPedido)
             .filter(
-                MetricaDiariaEmpleado.empleado_id == empleado_id,
-                MetricaDiariaEmpleado.fecha >= desde,
+                PickingPedido.empleado_id == empleado_id,
+                PickingPedido.estado.in_(['completado', 'con_incidencias']),
+                PickingPedido.completado_en >= desde_dt,
             )
-            .first()
+            .all()
         )
-        pedidos_total     = int(agg[0] or 0)
-        tiempo_medio_avg  = round(agg[1]) if agg[1] else None
-        mejor_tiempo      = round(agg[2]) if agg[2] else None
-        incidencias_total = int(agg[3] or 0)
+        repartos_periodo = (
+            s.query(Reparto)
+            .filter(
+                Reparto.repartidor_id == empleado_id,
+                Reparto.estado.in_(['entregado', 'no_entregado']),
+                Reparto.hora_entrega_real >= desde_dt,
+            )
+            .all()
+        )
+
+        tiempos = []
+        pedidos_total = 0
+        incidencias_total = 0
+        for pk in pickings_periodo:
+            if pk.estado == 'completado':
+                pedidos_total += 1
+                if pk.iniciado_en and pk.completado_en:
+                    tiempos.append((pk.completado_en - pk.iniciado_en).total_seconds() / 60)
+            else:
+                incidencias_total += 1
+        for rp in repartos_periodo:
+            if rp.estado == 'entregado':
+                pedidos_total += 1
+                if rp.hora_salida and rp.hora_entrega_real:
+                    tiempos.append((rp.hora_entrega_real - rp.hora_salida).total_seconds() / 60)
+            else:
+                incidencias_total += 1
+
+        tiempo_medio_avg = round(sum(tiempos) / len(tiempos)) if tiempos else None
+        mejor_tiempo     = round(min(tiempos)) if tiempos else None
 
         # ── pedidos_por_dia — last 7 days for the chart ──
         siete_dias = hoy - timedelta(days=6)
-        filas_dia = (
-            s.query(
-                MetricaDiariaEmpleado.fecha,
-                func.sum(MetricaDiariaEmpleado.pedidos_completados).label('pedidos'),
-            )
-            .filter(
-                MetricaDiariaEmpleado.empleado_id == empleado_id,
-                MetricaDiariaEmpleado.fecha >= siete_dias,
-            )
-            .group_by(MetricaDiariaEmpleado.fecha)
-            .all()
-        )
-        datos_dia = {r.fecha: int(r.pedidos) for r in filas_dia}
+        siete_dias_dt = datetime(siete_dias.year, siete_dias.month, siete_dias.day)
+        conteo_por_dia = {}
+        for pk in pickings_periodo:
+            if pk.estado == 'completado' and pk.completado_en and pk.completado_en >= siete_dias_dt:
+                dia = pk.completado_en.date()
+                conteo_por_dia[dia] = conteo_por_dia.get(dia, 0) + 1
+        for rp in repartos_periodo:
+            if rp.estado == 'entregado' and rp.hora_entrega_real and rp.hora_entrega_real >= siete_dias_dt:
+                dia = rp.hora_entrega_real.date()
+                conteo_por_dia[dia] = conteo_por_dia.get(dia, 0) + 1
         pedidos_por_dia = []
         for i in range(7):
             dia = siete_dias + timedelta(days=i)
             pedidos_por_dia.append({
-                'fecha': dia.isoformat(),
-                'pedidos': datos_dia.get(dia, 0),
+                'fecha':   dia.isoformat(),
+                'pedidos': conteo_por_dia.get(dia, 0),
             })
 
         # ── turnos_recientes — last 5 check-ins ──
@@ -2327,7 +2381,6 @@ class GestorDashboard:
             })
 
         # ── ultimos_pedidos — last 10 completed pickings + entregas in period ──
-        desde_dt = datetime(desde.year, desde.month, desde.day)
         pickings = (
             s.query(PickingPedido)
             .filter(
