@@ -1969,7 +1969,7 @@ class GestorDashboard:
         """Estado de asistencia del día actual.
 
         Devuelve todos los empleados activos con su check-in de hoy (si lo hay),
-        el tiempo acumulado, y el estado operativo actual.
+        el turno planificado del día, el tiempo acumulado, y el estado operativo.
 
         Returns:
             {
@@ -1977,11 +1977,13 @@ class GestorDashboard:
                     id, nombre, rol, rol_activo, estado_operativo,
                     check_in_inicio, check_in_fin, minutos_activo,
                     activo (bool), minutos_tarde,
+                    tiene_turno (bool), turno_id, turno_hora_inicio, turno_hora_fin, turno_tipo,
                 }],
-                resumen: { con_checkin, en_pausa, desconectados, total }
+                resumen: { con_checkin, en_pausa, desconectados, con_turno, ausentes, total }
             }
         """
         from models import CheckIn
+        from models import Turno as TurnoModel
 
         hoy = datetime.utcnow().date()
         ahora = datetime.utcnow()
@@ -2013,9 +2015,19 @@ class GestorDashboard:
                 if ci.inicio > prev.inicio:
                     checkins_hoy[ci.empleado_id] = ci
 
+        # Build dict empleado_id → turno planificado de hoy (no cancelado)
+        turnos_hoy_map = {}
+        for t in (
+            s.query(TurnoModel)
+            .filter(TurnoModel.fecha == hoy, TurnoModel.estado != 'cancelado')
+            .all()
+        ):
+            turnos_hoy_map[t.empleado_id] = t
+
         resultado = []
         for emp in empleados:
             ci = checkins_hoy.get(emp.EmpleadoID)
+            turno = turnos_hoy_map.get(emp.EmpleadoID)
             minutos_activo = None
             if ci:
                 fin_efectivo = ci.fin or ahora
@@ -2032,11 +2044,23 @@ class GestorDashboard:
                 'minutos_activo':   minutos_activo,
                 'activo':           ci is not None and ci.fin is None,
                 'minutos_tarde':    ci.minutos_tarde if ci else None,
+                # Turno planificado
+                'tiene_turno':      turno is not None,
+                'turno_id':         turno.id if turno else None,
+                'turno_hora_inicio': str(turno.hora_inicio)[:5] if turno and turno.hora_inicio else None,
+                'turno_hora_fin':    str(turno.hora_fin)[:5] if turno and turno.hora_fin else None,
+                'turno_tipo':        turno.tipo if turno else None,
+                'turno_empezado':   (
+                    datetime.combine(turno.fecha, turno.hora_inicio) <= ahora
+                    if turno and turno.hora_inicio else False
+                ),
             })
 
         n_con_checkin   = sum(1 for e in resultado if e['activo'])
         n_pausa         = sum(1 for e in resultado if e['estado_operativo'] == 'en_pausa')
         n_desconectados = sum(1 for e in resultado if e['estado_operativo'] == 'desconectado')
+        n_con_turno     = sum(1 for e in resultado if e['tiene_turno'])
+        n_ausentes      = sum(1 for e in resultado if e['tiene_turno'] and e['turno_empezado'] and not e['check_in_inicio'])
 
         return {
             'empleados': resultado,
@@ -2044,6 +2068,8 @@ class GestorDashboard:
                 'con_checkin':   n_con_checkin,
                 'en_pausa':      n_pausa,
                 'desconectados': n_desconectados,
+                'con_turno':     n_con_turno,
+                'ausentes':      n_ausentes,
                 'total':         len(resultado),
             },
         }
