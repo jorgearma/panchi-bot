@@ -120,12 +120,6 @@
         </span>
       </div>
       <div class="flex items-center gap-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span>
-        <span class="text-sm font-semibold text-slate-700">
-          <span x-text="resumen ? resumen.en_pausa : 0"></span> en pausa
-        </span>
-      </div>
-      <div class="flex items-center gap-2">
         <span class="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>
         <span class="text-sm font-semibold text-slate-700">
           <span x-text="resumen ? resumen.desconectados : 0"></span> desconectados
@@ -154,15 +148,19 @@
     >
       <template x-for="emp in empleados" :key="emp.id">
         <div
-          class="glass-panel rounded-2xl px-4 py-4 flex flex-col gap-3 fade-in"
-          :class="emp.tiene_turno && !emp.check_in_inicio ? 'ring-2 ring-amber-300/70' : ''"
+          class="glass-panel rounded-2xl px-4 py-4 flex flex-col gap-3 fade-in border"
+          :class="{
+            'border-blue-200 bg-gradient-to-br from-blue-50/90 via-white/90 to-sky-50/70 shadow-blue-100/60': emp.tiene_turno,
+            'border-slate-200 bg-white/75': !emp.tiene_turno,
+            'ring-2 ring-amber-300/70': emp.tiene_turno && !emp.check_in_inicio,
+          }"
         >
 
           <!-- Avatar + nombre -->
           <div class="flex items-center gap-3">
             <div
               class="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0"
-              :class="emp.activo ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'"
+              :class="emp.tiene_turno ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'"
               x-text="emp.nombre.charAt(0).toUpperCase()"
             ></div>
             <div class="min-w-0">
@@ -177,11 +175,12 @@
 
           <!-- Turno planificado -->
           <template x-if="emp.tiene_turno">
-            <div class="flex items-center gap-1.5 text-xs">
-              <span class="text-slate-400">🕐</span>
-              <span class="font-semibold text-slate-700" x-text="(emp.turno_hora_inicio || '?') + '–' + (emp.turno_hora_fin || '?')"></span>
+            <div class="flex items-center gap-1.5 text-xs rounded-xl px-2.5 py-2"
+              :class="emp.tiene_turno ? 'bg-blue-100/80 text-blue-800' : 'bg-slate-100 text-slate-500'">
+              <span :class="emp.tiene_turno ? 'text-blue-500' : 'text-slate-400'">🕐</span>
+              <span class="font-semibold" x-text="(emp.turno_hora_inicio || '?') + '–' + (emp.turno_hora_fin || '?')"></span>
               <template x-if="emp.turno_tipo">
-                <span class="text-slate-400 capitalize" x-text="'· ' + emp.turno_tipo"></span>
+                <span class="capitalize opacity-80" x-text="'· ' + emp.turno_tipo"></span>
               </template>
             </div>
           </template>
@@ -193,7 +192,6 @@
               :class="{
                 'bg-emerald-500': emp.estado_operativo === 'disponible',
                 'bg-blue-500':    emp.estado_operativo === 'ocupado',
-                'bg-yellow-400':  emp.estado_operativo === 'en_pausa',
                 'bg-slate-300':   emp.estado_operativo === 'desconectado',
               }"
             ></span>
@@ -202,17 +200,18 @@
               :class="{
                 'text-emerald-700': emp.estado_operativo === 'disponible',
                 'text-blue-700':    emp.estado_operativo === 'ocupado',
-                'text-yellow-700':  emp.estado_operativo === 'en_pausa',
                 'text-slate-400':   emp.estado_operativo === 'desconectado',
               }"
-              x-text="emp.estado_operativo.replace('_', ' ')"
+              x-text="emp.estado_operativo === 'en_pausa' ? 'desconectado' : emp.estado_operativo.replace('_', ' ')"
             ></span>
             <span x-show="emp.rol_activo" class="ml-auto text-xs bg-slate-100 text-slate-500 rounded px-1.5 py-0.5 font-medium" x-text="emp.rol_activo"></span>
           </div>
 
           <!-- Tiempo activo -->
           <div class="rounded-xl px-3 py-2"
-            :class="emp.tiene_turno && emp.turno_empezado && !emp.check_in_inicio ? 'bg-amber-50' : 'bg-slate-50'"
+            :class="emp.tiene_turno
+              ? (emp.turno_empezado && !emp.check_in_inicio ? 'bg-amber-50' : 'bg-blue-50/70')
+              : 'bg-slate-50'"
           >
             <template x-if="emp.activo">
               <div class="flex items-center justify-between">
@@ -802,7 +801,11 @@ function turnosApp() {
         const resp = await fetch('/dashboard/turnos/hoy');
         if (!resp.ok) throw new Error('Error ' + resp.status);
         const data = await resp.json();
-        this.empleados = data.empleados;
+        this.empleados = [...data.empleados].sort((a, b) => {
+          if (a.tiene_turno !== b.tiene_turno) return a.tiene_turno ? -1 : 1;
+          if (a.activo !== b.activo) return a.activo ? -1 : 1;
+          return (a.nombre || '').localeCompare(b.nombre || '', 'es');
+        });
         this.resumen   = data.resumen;
         this.ticksSinceLoad = 0;
         this.segundosParaActualizar = 30;
