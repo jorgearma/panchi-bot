@@ -1,0 +1,6 @@
+{
+  "status": "blocked",
+  "result_available": false,
+  "agents_completed": [],
+  "reason": "Ciclo reseteado. Ejecutar agentes antes de despachar al reviewer."
+}

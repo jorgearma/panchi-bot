@@ -231,7 +231,7 @@
                   <th class="bg-slate-950 px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Cliente</th>
                   <th class="bg-slate-950 px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Estado · Acci&oacute;n</th>
                   <th class="bg-slate-950 px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Asignaci&oacute;n</th>
-                  <th class="bg-slate-950 px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 w-[100px]">Tiempo</th>
+                  <th class="bg-slate-950 px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 w-[90px]">Edad</th>
                   <th class="bg-slate-950 px-4 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 w-[90px]">Importe</th>
                 </tr>
               </thead>
@@ -244,7 +244,7 @@
                     <!-- #ID -->
                     <td class="px-4 py-3 align-middle">
                       <p class="text-base font-black tabular-nums text-slate-900 leading-none"
-                         x-text="'#' + p.pedido_id"></p>
+                         x-text="p.pedido_id"></p>
                       <p class="mt-1 text-[10px] font-semibold"
                          :class="p.forma_pago === 'efectivo' ? 'text-amber-600' : 'text-sky-600'"
                          x-text="p.forma_pago === 'efectivo' ? '💵 Efectivo' : '💳 Online'"></p>
@@ -265,60 +265,53 @@
                          :class="p.es_alerta ? 'text-red-600' : 'text-slate-400'"
                          x-text="
                            p.es_alerta ? '⚠ Requiere atención' :
-                           (p.estado === 'pagado' || p.estado === 'contra_reembolso') ? '→ Asignar picker' :
-                           p.estado === 'en_preparacion' ? '→ Preparando...' :
-                           p.estado === 'preparado' ? '→ Asignar repartidor' :
-                           p.estado === 'en_reparto' ? '→ En camino' : ''
+                           (p.estado === 'pagado' || p.estado === 'contra_reembolso') ? '→ Asignar picker ahora' :
+                           p.estado === 'en_preparacion' ? '→ Picker en curso' :
+                           p.estado === 'preparado' ? (p.reparto?.repartidor_nombre ? '→ Listo para salir' : '→ Asignar repartidor') :
+                           p.estado === 'en_reparto' ? '→ En camino al cliente' :
+                           p.estado === 'entregado' ? '✓ Completado' :
+                           p.estado === 'cancelado' ? '✗ Cancelado' : ''
                          "></p>
+                      <div x-show="!['entregado','cancelado','reembolsado','enlace','enlace2','confirmando-pago'].includes(p.estado)" class="mt-1.5">
+                        <p class="text-xs font-black tabular-nums leading-none"
+                           :class="p.minutos_en_estado > 30 ? 'text-red-600' : p.minutos_en_estado > 20 ? 'text-amber-500' : 'text-slate-700'"
+                           x-text="formatMinutos(p.minutos_en_estado)"></p>
+                        <div class="mt-1 h-1 w-12 overflow-hidden rounded-full bg-slate-100">
+                          <div class="h-1 rounded-full transition-all"
+                               :class="p.minutos_en_estado > 30 ? 'bg-red-500' : p.minutos_en_estado > 20 ? 'bg-amber-400' : 'bg-emerald-400'"
+                               :style="'width:' + Math.min((p.minutos_en_estado / 40) * 100, 100) + '%'"></div>
+                        </div>
+                      </div>
                     </td>
 
                     <!-- Asignación: picker + repartidor en una celda -->
                     <td class="px-3 py-3 align-middle">
                       <div class="space-y-1">
-                        <template x-if="p.picking">
-                          <div class="flex items-center gap-1.5">
-                            <span class="h-4 w-4 rounded-md bg-sky-500 text-white flex items-center justify-center text-[9px] font-black shrink-0">P</span>
-                            <span class="text-[11px] text-slate-700 truncate max-w-[110px]" x-text="p.picking.picker_nombre || '—'"></span>
-                            <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                                  :class="badgePickingClass(p.picking.estado)"
-                                  x-text="p.picking.estado"></span>
-                          </div>
-                        </template>
-                        <template x-if="!p.picking">
-                          <div class="flex items-center gap-1.5">
-                            <span class="h-4 w-4 rounded-md bg-slate-200 flex items-center justify-center text-[9px] font-black text-slate-400 shrink-0">P</span>
-                            <span class="text-[11px] text-slate-300">Sin picker</span>
-                          </div>
-                        </template>
-                        <template x-if="p.reparto">
-                          <div class="flex items-center gap-1.5">
-                            <span class="h-4 w-4 rounded-md bg-orange-500 text-white flex items-center justify-center text-[9px] font-black shrink-0">R</span>
-                            <span class="text-[11px] text-slate-700 truncate max-w-[110px]" x-text="p.reparto.repartidor_nombre || '—'"></span>
-                            <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                                  :class="badgeRepartoClass(p.reparto.estado)"
-                                  x-text="p.reparto.estado === 'en_camino' ? 'ruta' : p.reparto.estado"></span>
-                          </div>
-                        </template>
-                        <template x-if="!p.reparto">
-                          <div class="flex items-center gap-1.5">
-                            <span class="h-4 w-4 rounded-md bg-slate-200 flex items-center justify-center text-[9px] font-black text-slate-400 shrink-0">R</span>
-                            <span class="text-[11px] text-slate-300">Sin repartidor</span>
-                          </div>
-                        </template>
+                        <div class="flex items-center gap-1.5">
+                          <span class="h-4 w-4 rounded-md flex items-center justify-center text-[9px] font-black shrink-0"
+                                :class="p.picking ? 'bg-sky-500 text-white' : 'bg-slate-200 text-slate-400'">P</span>
+                          <span class="truncate max-w-[110px]"
+                                :class="p.picking?.picker_nombre && p.picking?.estado !== 'completado' ? 'text-base font-bold text-slate-900' : (p.reparto?.repartidor_nombre ? 'text-[11px] text-slate-400' : 'text-sm text-slate-300')"
+                                x-text="p.picking?.picker_nombre || 'Sin picker'"></span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                          <span class="h-4 w-4 rounded-md flex items-center justify-center text-[9px] font-black shrink-0"
+                                :class="p.reparto?.repartidor_nombre ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-400'">R</span>
+                          <span class="truncate max-w-[110px]"
+                                :class="p.reparto?.repartidor_nombre ? 'text-base font-bold text-slate-900' : 'text-sm text-slate-300'"
+                                x-text="p.reparto?.repartidor_nombre || 'Sin repartidor'"></span>
+                        </div>
                       </div>
                     </td>
 
-                    <!-- Tiempo en estado — elemento dominante -->
-                    <td class="px-3 py-3 text-center align-middle">
-                      <p class="text-xl font-black tabular-nums leading-none"
-                         :class="p.minutos_en_estado > 30 ? 'text-red-600' : p.minutos_en_estado > 20 ? 'text-amber-500' : 'text-slate-700'"
-                         x-text="formatMinutos(p.minutos_en_estado)"></p>
-                      <!-- barra de urgencia -->
-                      <div class="mt-1.5 mx-auto h-1 w-12 overflow-hidden rounded-full bg-slate-100">
-                        <div class="h-1 rounded-full transition-all"
-                             :class="p.minutos_en_estado > 30 ? 'bg-red-500' : p.minutos_en_estado > 20 ? 'bg-amber-400' : 'bg-emerald-400'"
-                             :style="'width:' + Math.min((p.minutos_en_estado / 40) * 100, 100) + '%'"></div>
-                      </div>
+
+                    <!-- Edad del pedido desde creación -->
+                    <td class="px-3 py-3 align-middle">
+                      <span class="text-sm font-black tabular-nums leading-none"
+                            :class="minutosDesdeCreacion(p) > 60 ? 'text-red-600' : minutosDesdeCreacion(p) > 30 ? 'text-amber-500' : 'text-slate-700'"
+                            x-text="minutosDesde(p.fecha_creacion) || '—'"></span>
+                      <p x-show="minutosDesdeCreacion(p) > 30"
+                         class="mt-1 text-[10px] font-semibold text-red-600 leading-tight">⚠ Atención</p>
                     </td>
 
                     <!-- Importe -->
@@ -1368,7 +1361,7 @@
             .filter(p => !this.filtroEstado || p.estado === this.filtroEstado)
             .filter(p => this.matchesQuickFilter(p))
             .filter(p => this.matchesBusqueda(p))
-            .sort((a, b) => this.prioridadPedidoValor(b) - this.prioridadPedidoValor(a) || (b.minutos_en_estado || 0) - (a.minutos_en_estado || 0));
+            .sort((a, b) => b.pedido_id - a.pedido_id);
         },
 
         async init() {
@@ -2115,6 +2108,11 @@
           return m > 0 ? `${h}h ${m}min` : `${h}h`;
         },
 
+        minutosDesdeCreacion(p) {
+          if (!p?.fecha_creacion) return 0;
+          return Math.round((this.now - new Date(p.fecha_creacion)) / 60000);
+        },
+
         mostrarToast(msg, error = false) {
           this.toast = { visible: true, msg, error };
           setTimeout(() => { this.toast.visible = false; }, 3000);
@@ -2140,11 +2138,11 @@
             'enlace':            'Enlace',
             'enlace2':           'Confirmación',
             'confirmando-pago':  'Pago...',
-            'pagado':            'Pagado',
-            'contra_reembolso':  'Contra reembolso',
-            'en_preparacion':    'En picking',
-            'preparado':         'Preparado',
-            'en_reparto':        'En reparto',
+            'pagado':            'Pago OK',
+            'contra_reembolso':  'Efectivo',
+            'en_preparacion':    'Picking',
+            'preparado':         'Listo',
+            'en_reparto':        'En ruta',
             'entregado':         'Entregado',
             'cancelado':         'Cancelado',
             'reembolsado':       'Reembolsado',
@@ -2158,14 +2156,14 @@
 
         badgePedidoClass(estado) {
           const m = {
-            'pagado':           'bg-emerald-100 text-emerald-800',
-            'contra_reembolso': 'bg-purple-100 text-purple-800',
-            'en_preparacion':   'bg-blue-100 text-blue-800',
-            'preparado':        'bg-indigo-100 text-indigo-800',
-            'en_reparto':       'bg-orange-100 text-orange-800',
-            'entregado':        'bg-green-100 text-green-800',
-            'cancelado':        'bg-red-100 text-red-700',
-            'reembolsado':      'bg-red-100 text-red-700',
+            'pagado':           'bg-amber-400 text-amber-900',
+            'contra_reembolso': 'bg-amber-400 text-amber-900',
+            'en_preparacion':   'bg-blue-500 text-white',
+            'preparado':        'bg-emerald-500 text-white',
+            'en_reparto':       'bg-orange-500 text-white',
+            'entregado':        'bg-slate-200 text-slate-500',
+            'cancelado':        'bg-red-600 text-white',
+            'reembolsado':      'bg-red-200 text-red-700',
             'confirmando-pago': 'bg-yellow-100 text-yellow-800',
             'enlace':           'bg-gray-100 text-gray-600',
             'enlace2':          'bg-gray-100 text-gray-600',

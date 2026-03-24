@@ -1,4 +1,4 @@
-# CLAUDE.md
+cpcp# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -161,3 +161,58 @@ Copy `.env.example` to `.env`. Key variables:
 - WhatsApp notifications in `blueprints/picker.py`, `repartidor.py`, `dashboard.py` use bare `threading.Thread` with no error handling — failures are silent.
 - `/webhoo/monei` (typo route) exists alongside `/webhook/monei` pending Monei dashboard update — don't replicate this pattern.
 - `blueprints/api.py` contains business logic that belongs in controllers — don't add more.
+
+
+
+
+
+
+### Agentes y sus roles
+
+| Agente | Entrada | Salida |
+|--------|---------|--------|
+| `reader` (entry point) | Peticion del usuario | `reader-context.json` |
+| `planner` | reader-context.json | `plan.json` |
+| `writer` | plan.json | `execution-brief.json` + `execution-brief.md` |
+| `frontend` / `backend` | execution-dispatch.json | `result.json` |
+| `reviewer` | result.json + plan.json | `review.json` |
+
+### Readers especializados
+
+El `reader` principal activa solo los readers necesarios segun el dominio de la peticion:
+
+- `project-reader` → arquitectura, modulos, flujo general (`PROJECT_MAP.md`)
+- `db-reader` → tablas, modelos, migraciones (`DB_MAP.md`)
+- `query-reader` → queries, acceso a datos, performance (`QUERY_MAP.md`)
+- `ui-reader` → vistas, componentes, estados UI (`UI_MAP.md`)
+
+Cada reader lee su `*_MAP.md` y devuelve un JSON con `files_to_open` y `files_to_review`. Para requests que cruzan dominios, el reader elige un `primary_reader` de todas formas.
+
+### Gate de aprobacion
+
+Ningun agente ejecutor (frontend/backend) puede actuar sin `operator-approval.json` con `status: "approved"`. El script `execute-plan.py` valida esto antes de generar `execution-dispatch.json`. Los agentes ejecutores verifican `selected_agents` en el dispatch para saber si deben actuar.
+
+### Contratos JSON
+
+Todos los artefactos del flujo tienen schema en `.claude/schemas/`. Los archivos de runtime en `.claude/runtime/` son generados y sobreescritos en cada ciclo — no editar manualmente salvo `operator-approval.json` via hooks.
+
+## Instalacion en un proyecto nuevo
+
+1. Copia esta carpeta al proyecto que usara Claude.
+2. Verifica que exista `.claude/plugin.json`.
+3. Rellena los `*_MAP.md` en `.claude/maps/` con el contexto real del proyecto.
+4. Ejecuta `python3 .claude/hooks/pre-commit.py` para validar la estructura.
+                                                                                   
+┌──(venv)─(siemprearmando㉿elfavo)-[~/panchi-bot] ➟ prueba-agentes
+└─$ 
+
+### Contratos JSON
+
+Todos los artefactos del flujo tienen schema en `.claude/schemas/`. Los archivos de runtime en `.claude/runtime/` son generados y sobreescritos en cada ciclo — no editar manualmente salvo `operator-approval.json` via hooks.tar manualmente salvo `operator-approval.json` via hooks.
+
+## Instalacion en un proyecto nuevo
+
+1. Copia esta carpeta al proyecto que usara Claude.
+2. Verifica que exista `.claude/plugin.json`.
+3. Rellena los `*_MAP.md` en `.claude/maps/` con el contexto real del proyecto.
+4. Ejecuta `python3 .claude/hooks/pre-commit.py` para validar la estructura.

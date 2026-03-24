@@ -1,0 +1,61 @@
+{
+  "task": "Mejorar claridad visual del estado-acción en la tabla de pedidos del dashboard: colores de badge más contrastados por estado, labels y mensajes de acción orientados al operador, y mostrar minutos en estado dentro de la misma celda de estado eliminando la columna separada.",
+  "context_inputs": {
+    "selected_readers": ["ui-reader"],
+    "maps_used": [],
+    "files_to_open": [
+      "/home/siemprearmando/panchi-bot/templates/dashboard/index.html"
+    ],
+    "files_to_review": [
+      "templates/dashboard/index.html:259-273 (badge de estado y mensaje de acción)",
+      "templates/dashboard/index.html:311-322 (columna de tiempo en estado con formatMinutos)",
+      "templates/dashboard/index.html:2137-2175 (funciones estadoLabel y badgePedidoClass)"
+    ],
+    "notes": "Los minutos ya existen en columna separada (líneas 311-322) con formatMinutos(p.minutos_en_estado) y barra de urgencia. Se moverán a la celda de estado. Eliminar la columna separada y su <th>."
+  },
+  "steps": [
+    {
+      "id": "step-1",
+      "title": "Actualizar badgePedidoClass: colores de alta visibilidad por estado operativo",
+      "owner": "frontend",
+      "notes": "pagado/contra_reembolso → bg-amber-400 text-amber-900 (urgente, asignar picker), en_preparacion → bg-blue-500 text-white (picker activo), preparado → bg-emerald-500 text-white (listo para reparto), en_reparto → bg-orange-500 text-white (en camino), entregado → bg-slate-200 text-slate-500 (cerrado), cancelado → bg-red-600 text-white"
+    },
+    {
+      "id": "step-2",
+      "title": "Actualizar estadoLabel: labels cortos orientados al operador",
+      "owner": "frontend",
+      "notes": "pagado → 'Pago OK', contra_reembolso → 'Efectivo', en_preparacion → 'Picking', preparado → 'Listo', en_reparto → 'En ruta', entregado → 'Entregado', cancelado → 'Cancelado'"
+    },
+    {
+      "id": "step-3",
+      "title": "Actualizar mensajes de acción: concretos y orientados a tarea",
+      "owner": "frontend",
+      "notes": "pagado/contra_reembolso → '→ Asignar picker ahora', en_preparacion → '→ Picker en curso', preparado → '→ Asignar repartidor', en_reparto → '→ En camino al cliente', entregado → '✓ Completado', cancelado → '✗ Cancelado'"
+    },
+    {
+      "id": "step-4",
+      "title": "Añadir minutos en celda de estado, debajo del mensaje de acción",
+      "owner": "frontend",
+      "notes": "Añadir bloque con formatMinutos(p.minutos_en_estado) y barra de urgencia justo debajo del <p> de acción. x-show para ocultar en entregado/cancelado/reembolsado/enlace/enlace2. Texto text-xs."
+    },
+    {
+      "id": "step-5",
+      "title": "Eliminar columna separada de tiempo (td + th)",
+      "owner": "frontend",
+      "notes": "Eliminar el <td> de tiempo en estado (líneas 311-322) y el <th> correspondiente del encabezado de la tabla."
+    }
+  ],
+  "risks": [
+    "Desalineación thead/tbody si el <th> de tiempo no se localiza y elimina correctamente.",
+    "Badges con fondo sólido pueden crear contraste excesivo con muchos pedidos activos simultáneos.",
+    "La condición x-show para ocultar minutos debe cubrir estados intermedios (enlace, enlace2, confirmando-pago)."
+  ],
+  "done_criteria": [
+    "badgePedidoClass devuelve colores diferenciados para los 5 estados operativos principales.",
+    "estadoLabel devuelve labels cortos para todos los estados.",
+    "El mensaje de acción indica una tarea concreta para el operador.",
+    "Los minutos y barra de urgencia aparecen en la celda de estado, debajo del mensaje de acción.",
+    "La columna separada de tiempo (td + th) ha sido eliminada sin dejar columnas huérfanas.",
+    "Estados terminales (entregado, cancelado, reembolsado) no muestran el bloque de minutos."
+  ]
+}

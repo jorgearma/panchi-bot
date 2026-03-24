@@ -1,0 +1,12 @@
+{
+  "primary_reader": "ui-reader",
+  "selected_readers": ["ui-reader"],
+  "maps_used": ["UI_MAP.md"],
+  "files_to_open": ["/home/siemprearmando/panchi-bot/templates/dashboard/index.html"],
+  "files_to_review": [
+    "templates/dashboard/index.html:259-273 (badge de estado y mensaje de acción)",
+    "templates/dashboard/index.html:2137-2175 (funciones estadoLabel y badgePedidoClass)"
+  ],
+  "reason": "Mejorar claridad visual y legibilidad del estado-acción en la tabla de pedidos del dashboard. El usuario solicita optimizar colores de badge, mensajes de acción contextualizados y mostrar minutos en estado directamente en la sección de estado/acción.",
+  "notes": "La petición es específica de UI: cambiar colores, etiquetas y disposición en el dashboard sin tocar lógica de negocio. Los minutos ya existen en la columna 'Tiempo' (línea ~311-322) pero pueden reorganizarse. Las funciones JS badgePedidoClass() y estadoLabel() requieren actualización para reflejar nuevos criterios visuales."
+}
