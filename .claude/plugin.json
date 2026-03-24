@@ -1,0 +1,52 @@
+{
+  "name": "losgretis-claude-plugin",
+  "version": "0.1.0",
+  "description": "Plugin base para Claude con un agente reader que enruta peticiones a subagentes segun mapas del proyecto.",
+  "entry_agent": "reader",
+  "agents_dir": ".claude/agents",
+  "readers_dir": ".claude/agents/readers",
+  "maps_dir": ".claude/maps",
+  "commands_dir": ".claude/commands",
+  "schemas_dir": ".claude/schemas",
+  "hooks_dir": ".claude/hooks",
+  "agents": [
+    "reader",
+    "project-reader",
+    "db-reader",
+    "query-reader",
+    "ui-reader",
+    "planner",
+    "writer",
+    "frontend",
+    "backend",
+    "reviewer"
+  ],
+  "commands": [
+    "start-cycle",
+    "implement-feature",
+    "review-change"
+  ],
+  "hooks": [
+    "pre-commit.py",
+    "approve-plan.py",
+    "execute-plan.py",
+    "dispatch-reviewer.py",
+    "recover-cycle.py"
+  ],
+  "maps": [
+    "PROJECT_MAP.md",
+    "DB_MAP.md",
+    "QUERY_MAP.md",
+    "UI_MAP.md"
+  ],
+  "reader_output_schema": ".claude/schemas/reader-context.json"
+  ,
+  "writer_output_schema": ".claude/schemas/execution-brief.json",
+  "writer_output_file": ".claude/runtime/execution-brief.json",
+  "writer_human_output_file": ".claude/runtime/execution-brief.md",
+  "operator_approval_schema": ".claude/schemas/operator-approval.json",
+  "operator_approval_file": ".claude/runtime/operator-approval.json",
+  "dispatch_schema": ".claude/schemas/execution-dispatch.json",
+  "dispatch_file": ".claude/runtime/execution-dispatch.json",
+  "runtime_plan_file": ".claude/runtime/plan.json"
+}

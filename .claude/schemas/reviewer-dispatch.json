@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaudeReviewerDispatch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "result_available", "agents_completed", "reason"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["ready", "blocked"]
+    },
+    "result_available": {
+      "type": "boolean"
+    },
+    "agents_completed": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["frontend", "backend"]
+      }
+    },
+    "reason": {
+      "type": "string"
+    }
+  }
+}

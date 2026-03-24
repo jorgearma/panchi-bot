@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaudeExecutionDispatch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "approved", "selected_agents", "task", "step_ids"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["ready", "blocked"]
+    },
+    "approved": {
+      "type": "boolean"
+    },
+    "task": {
+      "type": "string"
+    },
+    "selected_agents": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["frontend", "backend"]
+      }
+    },
+    "step_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reason": {
+      "type": "string"
+    }
+  }
+}

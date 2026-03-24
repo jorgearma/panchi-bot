@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaudeReaderContext",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "primary_reader",
+    "selected_readers",
+    "maps_used",
+    "files_to_open",
+    "files_to_review",
+    "reason"
+  ],
+  "properties": {
+    "primary_reader": {
+      "type": "string",
+      "enum": ["project-reader", "db-reader", "query-reader", "ui-reader"]
+    },
+    "selected_readers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": ["project-reader", "db-reader", "query-reader", "ui-reader"]
+      }
+    },
+    "maps_used": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": ["PROJECT_MAP.md", "DB_MAP.md", "QUERY_MAP.md", "UI_MAP.md"]
+      }
+    },
+    "files_to_open": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "files_to_review": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reason": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

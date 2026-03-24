@@ -1,0 +1,56 @@
+{
+  "task": "Mejorar claridad visual del estado-acción en la tabla de pedidos del dashboard.",
+  "approval_status": "pending_operator_review",
+  "target_agents": ["frontend"],
+  "context_summary": "La tabla de pedidos usa colores pastel de baja visibilidad para los badges de estado, labels verbosos y una columna separada de tiempo. El plan consolida el tiempo dentro de la celda de estado, sube el contraste de los badges y acorta labels y mensajes de acción para lectura rápida en operación.",
+  "files_to_open": [
+    "templates/dashboard/index.html"
+  ],
+  "files_to_review": [
+    "templates/dashboard/index.html"
+  ],
+  "implementation_steps": [
+    {
+      "id": "step-1",
+      "owner": "frontend",
+      "instruction": "Localiza badgePedidoClass (~línea 2159). Reemplaza el objeto `m` completo:\n\nOLD:\n  const m = {\n    'pagado':           'bg-emerald-100 text-emerald-800',\n    'contra_reembolso': 'bg-purple-100 text-purple-800',\n    'en_preparacion':   'bg-blue-100 text-blue-800',\n    'preparado':        'bg-indigo-100 text-indigo-800',\n    'en_reparto':       'bg-orange-100 text-orange-800',\n    'entregado':        'bg-green-100 text-green-800',\n    'cancelado':        'bg-red-100 text-red-700',\n\nNEW:\n  const m = {\n    'pagado':           'bg-amber-400 text-amber-900',\n    'contra_reembolso': 'bg-amber-400 text-amber-900',\n    'en_preparacion':   'bg-blue-500 text-white',\n    'preparado':        'bg-emerald-500 text-white',\n    'en_reparto':       'bg-orange-500 text-white',\n    'entregado':        'bg-slate-200 text-slate-500',\n    'cancelado':        'bg-red-600 text-white',",
+      "expected_output": "Badges con colores de alto contraste: amarillo para pendiente de picker, azul para picking, verde para listo, naranja para en ruta, gris para entregado, rojo para cancelado."
+    },
+    {
+      "id": "step-2",
+      "owner": "frontend",
+      "instruction": "Localiza estadoLabel (~línea 2137). Reemplaza los valores de los estados operativos dentro del objeto `labels`:\n\nOLD:\n    'pagado':            'Pagado',\n    'contra_reembolso':  'Contra reembolso',\n    'en_preparacion':    'En picking',\n    'preparado':         'Preparado',\n    'en_reparto':        'En reparto',\n\nNEW:\n    'pagado':            'Pago OK',\n    'contra_reembolso':  'Efectivo',\n    'en_preparacion':    'Picking',\n    'preparado':         'Listo',\n    'en_reparto':        'En ruta',\n\nNo tocar las demás claves (Pendiente, enlace, enlace2, confirmando-pago, entregado, cancelado, reembolsado).",
+      "expected_output": "Labels cortos: 'Pago OK', 'Efectivo', 'Picking', 'Listo', 'En ruta'."
+    },
+    {
+      "id": "step-3",
+      "owner": "frontend",
+      "instruction": "Localiza el <p> de mensaje de acción dentro de la celda de estado (~línea 264). Reemplaza el x-text completo:\n\nOLD:\n     x-text=\"\n       p.es_alerta ? '⚠ Requiere atención' :\n       (p.estado === 'pagado' || p.estado === 'contra_reembolso') ? '→ Asignar picker' :\n       p.estado === 'en_preparacion' ? '→ Preparando...' :\n       p.estado === 'preparado' ? '→ Asignar repartidor' :\n       p.estado === 'en_reparto' ? '→ En camino' : ''\n     \"\n\nNEW:\n     x-text=\"\n       p.es_alerta ? '⚠ Requiere atención' :\n       (p.estado === 'pagado' || p.estado === 'contra_reembolso') ? '→ Asignar picker ahora' :\n       p.estado === 'en_preparacion' ? '→ Picker en curso' :\n       p.estado === 'preparado' ? '→ Asignar repartidor' :\n       p.estado === 'en_reparto' ? '→ En camino al cliente' :\n       p.estado === 'entregado' ? '✓ Completado' :\n       p.estado === 'cancelado' ? '✗ Cancelado' : ''\n     \"",
+      "expected_output": "Mensajes de acción actualizados con los textos especificados."
+    },
+    {
+      "id": "step-4",
+      "owner": "frontend",
+      "instruction": "Dentro del <td> de estado (~línea 259), añade el siguiente bloque JUSTO DESPUÉS del <p> de clase mt-1 (mensaje de acción) y ANTES del cierre </td>:\n\n<div x-show=\"!['entregado','cancelado','reembolsado','enlace','enlace2','confirmando-pago'].includes(p.estado)\" class=\"mt-1.5\">\n  <p class=\"text-xs font-black tabular-nums leading-none\"\n     :class=\"p.minutos_en_estado > 30 ? 'text-red-600' : p.minutos_en_estado > 20 ? 'text-amber-500' : 'text-slate-700'\"\n     x-text=\"formatMinutos(p.minutos_en_estado)\"></p>\n  <div class=\"mt-1 h-1 w-12 overflow-hidden rounded-full bg-slate-100\">\n    <div class=\"h-1 rounded-full transition-all\"\n         :class=\"p.minutos_en_estado > 30 ? 'bg-red-500' : p.minutos_en_estado > 20 ? 'bg-amber-400' : 'bg-emerald-400'\"\n         :style=\"'width:' + Math.min((p.minutos_en_estado / 40) * 100, 100) + '%'\"></div>\n  </div>\n</div>",
+      "expected_output": "Tiempo en estado y barra de urgencia visibles en la celda de estado para estados operativos activos, ocultos para terminales y pre-operativos."
+    },
+    {
+      "id": "step-5",
+      "owner": "frontend",
+      "instruction": "Elimina el <td> completo de tiempo en estado (~líneas 311-322):\n\nBLOQUE A ELIMINAR:\n<!-- Tiempo en estado — elemento dominante -->\n<td class=\"px-3 py-3 text-center align-middle\">\n  <p class=\"text-xl font-black tabular-nums leading-none\"\n     :class=\"p.minutos_en_estado > 30 ? 'text-red-600' : p.minutos_en_estado > 20 ? 'text-amber-500' : 'text-slate-700'\"\n     x-text=\"formatMinutos(p.minutos_en_estado)\"></p>\n  <!-- barra de urgencia -->\n  <div class=\"mt-1.5 mx-auto h-1 w-12 overflow-hidden rounded-full bg-slate-100\">\n    <div class=\"h-1 rounded-full transition-all\"\n         :class=\"p.minutos_en_estado > 30 ? 'bg-red-500' : p.minutos_en_estado > 20 ? 'bg-amber-400' : 'bg-emerald-400'\"\n         :style=\"'width:' + Math.min((p.minutos_en_estado / 40) * 100, 100) + '%'\"></div>\n  </div>\n</td>\n\nTambién elimina el <th> correspondiente del thead de la tabla (buscar el encabezado que dice 'Tiempo' o 'Mins' junto a los otros th de la fila de cabecera).",
+      "expected_output": "La tabla no tiene columna separada de tiempo. thead y tbody tienen el mismo número de columnas."
+    }
+  ],
+  "done_criteria": [
+    "badgePedidoClass: bg-amber-400 text-amber-900 para pagado/contra_reembolso.",
+    "badgePedidoClass: bg-blue-500 text-white para en_preparacion.",
+    "badgePedidoClass: bg-emerald-500 text-white para preparado.",
+    "badgePedidoClass: bg-orange-500 text-white para en_reparto.",
+    "badgePedidoClass: bg-red-600 text-white para cancelado.",
+    "estadoLabel: 'Pago OK', 'Efectivo', 'Picking', 'Listo', 'En ruta'.",
+    "Mensajes de acción: '→ Asignar picker ahora', '→ Picker en curso', '→ Asignar repartidor', '→ En camino al cliente', '✓ Completado', '✗ Cancelado'.",
+    "Celda de estado incluye formatMinutos y barra de urgencia, ocultos para estados terminales/pre-operativos.",
+    "Columna separada de tiempo (th + td) eliminada. Número de columnas consistente en thead/tbody."
+  ],
+  "notes": "Ejecutar pasos en orden: step-1 y step-2 son JS, step-3 y step-4 son HTML en la celda de estado, step-5 es eliminación de la columna separada. formatMinutos ya existe en el archivo, no redefinir."
+}
