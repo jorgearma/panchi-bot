@@ -69,6 +69,18 @@ def turno_hoy():
         return jsonify({'error': 'Error interno'}), 500
 
 
+@blueprint_empleado.route('/empleado/puede-iniciar')
+@requiere_rol(*_ROLES_HUB)
+def puede_iniciar():
+    empleado_id = session.get('empleado_id')
+    try:
+        resultado = gestor_empleado.puede_iniciar_turno(empleado_id)
+        return jsonify(resultado), 200
+    except Exception as e:
+        logger.error("Error en /empleado/puede-iniciar: %s", e)
+        return jsonify({'puede': False, 'razon': 'Error interno'}), 500
+
+
 @blueprint_empleado.route('/empleado/metricas')
 @requiere_rol(*_ROLES_HUB)
 def metricas():
@@ -152,7 +164,10 @@ def checkin():
 def fichaje_iniciar():
     empleado_id = session.get('empleado_id')
     try:
-        check_in = gestor_empleado.iniciar_turno(empleado_id)
+        puede_result = gestor_empleado.puede_iniciar_turno(empleado_id)
+        if not puede_result['puede']:
+            return jsonify({'error': puede_result['razon']}), 403
+        check_in = gestor_empleado.iniciar_turno(empleado_id, turno_id=puede_result['turno_id'])
         return jsonify({'ok': True, 'check_in_id': check_in.id,
                         'inicio': check_in.inicio.isoformat()})
     except ValueError as e:

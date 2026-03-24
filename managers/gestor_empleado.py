@@ -204,6 +204,66 @@ class GestorEmpleado:
             return False, 'Error de base de datos', []
 
     # -------------------------------------------------------------------------
+    # Ventana de fichaje
+    # -------------------------------------------------------------------------
+
+    _MINUTOS_ANTES = 10
+    _MINUTOS_DESPUES = 30
+
+    def puede_iniciar_turno(self, empleado_id: int) -> dict:
+        """Comprueba si el empleado está dentro de la ventana de fichaje de su turno de hoy.
+
+        Returns:
+            Dict con keys: puede (bool), razon (str|None), turno_id (int|None),
+            ventana_desde (str|None), ventana_hasta (str|None).
+        """
+        from datetime import timedelta
+        turno_data = self.turno_hoy(empleado_id)
+        if turno_data is None:
+            return {
+                'puede': False,
+                'razon': 'Sin turno hoy',
+                'turno_id': None,
+                'ventana_desde': None,
+                'ventana_hasta': None,
+            }
+
+        hoy = date.today()
+        turno = self.session.query(Turno).filter_by(
+            empleado_id=empleado_id, fecha=hoy
+        ).first()
+
+        inicio_turno = datetime(
+            turno.fecha.year, turno.fecha.month, turno.fecha.day,
+            turno.hora_inicio.hour, turno.hora_inicio.minute
+        )
+        ventana_desde = inicio_turno - timedelta(minutes=self._MINUTOS_ANTES)
+        ventana_hasta = inicio_turno + timedelta(minutes=self._MINUTOS_DESPUES)
+
+        ahora = datetime.now()
+        ahora_comparable = datetime(hoy.year, hoy.month, hoy.day, ahora.hour, ahora.minute)
+
+        if not (ventana_desde <= ahora_comparable <= ventana_hasta):
+            return {
+                'puede': False,
+                'razon': (
+                    f"Fuera del horario de fichaje "
+                    f"(ventana {ventana_desde.strftime('%H:%M')}-{ventana_hasta.strftime('%H:%M')})"
+                ),
+                'turno_id': turno.id,
+                'ventana_desde': ventana_desde.strftime('%H:%M'),
+                'ventana_hasta': ventana_hasta.strftime('%H:%M'),
+            }
+
+        return {
+            'puede': True,
+            'razon': None,
+            'turno_id': turno.id,
+            'ventana_desde': ventana_desde.strftime('%H:%M'),
+            'ventana_hasta': ventana_hasta.strftime('%H:%M'),
+        }
+
+    # -------------------------------------------------------------------------
     # Fichaje / Check-in
     # -------------------------------------------------------------------------
 
