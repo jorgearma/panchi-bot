@@ -184,10 +184,11 @@
           <p class="text-xl">📊</p>
           <p class="text-xs text-gray-400 mt-1">Desempeño</p>
         </button>
-        <button class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition">
+        <a href="/empleado/turnos"
+           class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition block">
           <p class="text-xl">🗓️</p>
           <p class="text-xs text-gray-400 mt-1">Turnos</p>
-        </button>
+        </a>
         <template x-if="rol === 'repartidor'">
           <a href="/repartidor/cierre"
              class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition block">
