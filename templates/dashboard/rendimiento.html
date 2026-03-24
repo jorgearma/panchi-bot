@@ -103,64 +103,97 @@
       {{ empty_state('📊', 'Sin datos', 'No hay métricas registradas para este período y rol.') }}
     </div>
 
-    <div x-show="!cargando && empleados.length > 0" x-cloak class="space-y-5">
-      <div x-show="pickersOrdenados.length > 0" class="glass-panel rounded-2xl overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Rendimiento</p>
-            <h3 class="text-base font-extrabold text-slate-800">Pickers</h3>
+    <div x-show="!cargando && empleados.length > 0" x-cloak class="space-y-6">
+      <div x-show="pickersOrdenados.length > 0" class="glass-panel rounded-3xl overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50/90 via-white to-sky-50/70">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-500">Rendimiento</p>
+              <h3 class="mt-1 text-xl font-extrabold text-slate-800">Pickers</h3>
+              <p class="mt-1 text-sm text-slate-500">Velocidad de picking, incidencias y fiabilidad del equipo.</p>
+            </div>
+            <div class="grid grid-cols-3 gap-2 min-w-[320px]">
+              <div class="rounded-2xl bg-white/80 border border-blue-100 px-3 py-3 text-center">
+                <div class="text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">Equipo</div>
+                <div class="mt-1 text-lg font-extrabold text-slate-800" x-text="pickersOrdenados.length"></div>
+              </div>
+              <div class="rounded-2xl bg-white/80 border border-blue-100 px-3 py-3 text-center">
+                <div class="text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">Pedidos</div>
+                <div class="mt-1 text-lg font-extrabold text-slate-800" x-text="sumaCampo(pickersOrdenados, 'pedidos')"></div>
+              </div>
+              <div class="rounded-2xl bg-white/80 border border-blue-100 px-3 py-3 text-center">
+                <div class="text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">Top tasa</div>
+                <div class="mt-1 text-lg font-extrabold text-emerald-600" x-text="mejorTasa(pickersOrdenados)"></div>
+              </div>
+            </div>
           </div>
-          <span class="text-xs font-semibold text-slate-500" x-text="pickersOrdenados.length + ' empleados'"></span>
         </div>
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-slate-100 bg-slate-50/60">
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">#</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Empleado</th>
+            <tr class="border-b border-slate-100 bg-white/80">
+              <th class="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em]">#</th>
+              <th class="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em]">Empleado</th>
               <th
                 @click="ordenarPor('pedidos')"
-                class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 select-none"
+                class="px-4 py-3 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em] cursor-pointer hover:text-slate-600 select-none"
               >
                 Pedidos <span x-show="ordenCol === 'pedidos'" x-text="ordenDir === 'desc' ? '↓' : '↑'"></span>
               </th>
               <th
                 @click="ordenarPor('tiempo_medio_min')"
-                class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 select-none"
+                class="px-4 py-3 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em] cursor-pointer hover:text-slate-600 select-none"
               >
                 T. medio <span x-show="ordenCol === 'tiempo_medio_min'" x-text="ordenDir === 'desc' ? '↓' : '↑'"></span>
               </th>
               <th
                 @click="ordenarPor('incidencias')"
-                class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 select-none"
+                class="px-4 py-3 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em] cursor-pointer hover:text-slate-600 select-none"
               >
                 Incid. <span x-show="ordenCol === 'incidencias'" x-text="ordenDir === 'desc' ? '↓' : '↑'"></span>
               </th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Tasa</th>
-              <th class="px-4 py-3"></th>
+              <th class="px-4 py-3 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em]">Tasa</th>
+              <th class="px-5 py-3"></th>
             </tr>
           </thead>
           <tbody>
             <template x-for="(emp, idx) in pickersOrdenados" :key="'picker-' + emp.id + '-' + emp.rol_operativo">
-              <tr class="border-b border-slate-100 hover:bg-blue-50/40 transition-colors cursor-pointer fade-in" @click="abrirDetalle(emp)">
-                <td class="px-4 py-3 text-slate-400 text-xs font-mono" x-text="idx + 1"></td>
-                <td class="px-4 py-3">
+              <tr class="border-b border-slate-100/80 hover:bg-blue-50/40 transition-colors cursor-pointer fade-in" @click="abrirDetalle(emp)">
+                <td class="px-5 py-4">
                   <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      x-text="emp.nombre.charAt(0)"></div>
-                    <span class="font-semibold text-slate-800" x-text="emp.nombre"></span>
+                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-500" x-text="idx + 1"></span>
+                    <span x-show="idx === 0" class="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-600">Top</span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-right font-bold text-slate-800" x-text="emp.pedidos"></td>
-                <td class="px-4 py-3 text-right text-slate-600" x-text="emp.tiempo_medio_min !== null ? emp.tiempo_medio_min + 'min' : '—'"></td>
-                <td class="px-4 py-3 text-right" :class="emp.incidencias > 0 ? 'text-amber-600 font-semibold' : 'text-slate-400'" x-text="emp.incidencias"></td>
-                <td class="px-4 py-3 text-right">
+                <td class="px-5 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm"
+                      x-text="emp.nombre.charAt(0)"></div>
+                    <div>
+                      <div class="font-bold text-slate-800" x-text="emp.nombre"></div>
+                      <div class="mt-0.5 text-[11px] font-medium text-slate-500">Picker operativo</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <div class="text-lg font-extrabold text-slate-800" x-text="emp.pedidos"></div>
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700"
+                    x-text="emp.tiempo_medio_min !== null ? emp.tiempo_medio_min + ' min' : '—'"></span>
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold"
+                    :class="emp.incidencias > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'"
+                    x-text="emp.incidencias"></span>
+                </td>
+                <td class="px-4 py-4 text-right">
                   <span x-show="emp.tasa_pct !== null" class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
                     :class="emp.tasa_pct >= 90 ? 'bg-emerald-100 text-emerald-700' : emp.tasa_pct >= 75 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'"
                     x-text="emp.tasa_pct + '%'"></span>
                   <span x-show="emp.tasa_pct === null" class="text-slate-400 text-xs">—</span>
                 </td>
-                <td class="px-4 py-3 text-right">
-                  <span class="text-blue-500 font-semibold text-xs hover:underline">Ver →</span>
+                <td class="px-5 py-4 text-right">
+                  <span class="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">Ver detalle</span>
                 </td>
               </tr>
             </template>
@@ -168,63 +201,96 @@
         </table>
       </div>
 
-      <div x-show="repartidoresOrdenados.length > 0" class="glass-panel rounded-2xl overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Rendimiento</p>
-            <h3 class="text-base font-extrabold text-slate-800">Repartidores</h3>
+      <div x-show="repartidoresOrdenados.length > 0" class="glass-panel rounded-3xl overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-orange-50/90 via-white to-amber-50/70">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">Rendimiento</p>
+              <h3 class="mt-1 text-xl font-extrabold text-slate-800">Repartidores</h3>
+              <p class="mt-1 text-sm text-slate-500">Entregas, tiempos en ruta e incidencias de reparto.</p>
+            </div>
+            <div class="grid grid-cols-3 gap-2 min-w-[320px]">
+              <div class="rounded-2xl bg-white/80 border border-orange-100 px-3 py-3 text-center">
+                <div class="text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">Equipo</div>
+                <div class="mt-1 text-lg font-extrabold text-slate-800" x-text="repartidoresOrdenados.length"></div>
+              </div>
+              <div class="rounded-2xl bg-white/80 border border-orange-100 px-3 py-3 text-center">
+                <div class="text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">Pedidos</div>
+                <div class="mt-1 text-lg font-extrabold text-slate-800" x-text="sumaCampo(repartidoresOrdenados, 'pedidos')"></div>
+              </div>
+              <div class="rounded-2xl bg-white/80 border border-orange-100 px-3 py-3 text-center">
+                <div class="text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">Top tasa</div>
+                <div class="mt-1 text-lg font-extrabold text-emerald-600" x-text="mejorTasa(repartidoresOrdenados)"></div>
+              </div>
+            </div>
           </div>
-          <span class="text-xs font-semibold text-slate-500" x-text="repartidoresOrdenados.length + ' empleados'"></span>
         </div>
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-slate-100 bg-slate-50/60">
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">#</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Empleado</th>
+            <tr class="border-b border-slate-100 bg-white/80">
+              <th class="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em]">#</th>
+              <th class="px-5 py-3 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em]">Empleado</th>
               <th
                 @click="ordenarPor('pedidos')"
-                class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 select-none"
+                class="px-4 py-3 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em] cursor-pointer hover:text-slate-600 select-none"
               >
                 Pedidos <span x-show="ordenCol === 'pedidos'" x-text="ordenDir === 'desc' ? '↓' : '↑'"></span>
               </th>
               <th
                 @click="ordenarPor('tiempo_medio_min')"
-                class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 select-none"
+                class="px-4 py-3 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em] cursor-pointer hover:text-slate-600 select-none"
               >
                 T. medio <span x-show="ordenCol === 'tiempo_medio_min'" x-text="ordenDir === 'desc' ? '↓' : '↑'"></span>
               </th>
               <th
                 @click="ordenarPor('incidencias')"
-                class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-600 select-none"
+                class="px-4 py-3 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em] cursor-pointer hover:text-slate-600 select-none"
               >
                 Incid. <span x-show="ordenCol === 'incidencias'" x-text="ordenDir === 'desc' ? '↓' : '↑'"></span>
               </th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Tasa</th>
-              <th class="px-4 py-3"></th>
+              <th class="px-4 py-3 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-[0.18em]">Tasa</th>
+              <th class="px-5 py-3"></th>
             </tr>
           </thead>
           <tbody>
             <template x-for="(emp, idx) in repartidoresOrdenados" :key="'repartidor-' + emp.id + '-' + emp.rol_operativo">
-              <tr class="border-b border-slate-100 hover:bg-blue-50/40 transition-colors cursor-pointer fade-in" @click="abrirDetalle(emp)">
-                <td class="px-4 py-3 text-slate-400 text-xs font-mono" x-text="idx + 1"></td>
-                <td class="px-4 py-3">
+              <tr class="border-b border-slate-100/80 hover:bg-orange-50/40 transition-colors cursor-pointer fade-in" @click="abrirDetalle(emp)">
+                <td class="px-5 py-4">
                   <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      x-text="emp.nombre.charAt(0)"></div>
-                    <span class="font-semibold text-slate-800" x-text="emp.nombre"></span>
+                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-500" x-text="idx + 1"></span>
+                    <span x-show="idx === 0" class="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-600">Top</span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-right font-bold text-slate-800" x-text="emp.pedidos"></td>
-                <td class="px-4 py-3 text-right text-slate-600" x-text="emp.tiempo_medio_min !== null ? emp.tiempo_medio_min + 'min' : '—'"></td>
-                <td class="px-4 py-3 text-right" :class="emp.incidencias > 0 ? 'text-amber-600 font-semibold' : 'text-slate-400'" x-text="emp.incidencias"></td>
-                <td class="px-4 py-3 text-right">
+                <td class="px-5 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm"
+                      x-text="emp.nombre.charAt(0)"></div>
+                    <div>
+                      <div class="font-bold text-slate-800" x-text="emp.nombre"></div>
+                      <div class="mt-0.5 text-[11px] font-medium text-slate-500">Repartidor operativo</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <div class="text-lg font-extrabold text-slate-800" x-text="emp.pedidos"></div>
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700"
+                    x-text="emp.tiempo_medio_min !== null ? emp.tiempo_medio_min + ' min' : '—'"></span>
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold"
+                    :class="emp.incidencias > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'"
+                    x-text="emp.incidencias"></span>
+                </td>
+                <td class="px-4 py-4 text-right">
                   <span x-show="emp.tasa_pct !== null" class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
                     :class="emp.tasa_pct >= 90 ? 'bg-emerald-100 text-emerald-700' : emp.tasa_pct >= 75 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'"
                     x-text="emp.tasa_pct + '%'"></span>
                   <span x-show="emp.tasa_pct === null" class="text-slate-400 text-xs">—</span>
                 </td>
-                <td class="px-4 py-3 text-right">
-                  <span class="text-blue-500 font-semibold text-xs hover:underline">Ver →</span>
+                <td class="px-5 py-4 text-right">
+                  <span class="inline-flex items-center rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">Ver detalle</span>
                 </td>
               </tr>
             </template>
@@ -475,6 +541,18 @@ function rendimientoApp() {
 
     get repartidoresOrdenados() {
       return this.empleadosOrdenados.filter(emp => emp.rol_operativo === 'repartidor');
+    },
+
+    sumaCampo(lista, campo) {
+      return (lista || []).reduce((acc, item) => acc + (Number(item?.[campo]) || 0), 0);
+    },
+
+    mejorTasa(lista) {
+      const tasas = (lista || [])
+        .map(item => item?.tasa_pct)
+        .filter(v => typeof v === 'number');
+      if (tasas.length === 0) return '—';
+      return Math.max(...tasas) + '%';
     },
 
     formatFecha(iso) {
