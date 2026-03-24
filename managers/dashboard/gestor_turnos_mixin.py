@@ -367,3 +367,26 @@ class GestorTurnosMixin:
             s.rollback()
             logger.error('Error cancelando turno %s: %s', turno_id, exc)
             return {'ok': False, 'error': 'Error al cancelar el turno'}
+
+    def eliminar_turno(self, turno_id: int) -> dict:
+        """Elimina físicamente un turno si no tiene fichajes asociados."""
+        from models import CheckIn, Turno as TurnoModel
+
+        s = self.session
+        turno = s.query(TurnoModel).filter_by(id=turno_id).first()
+        if not turno:
+            return {'ok': False, 'error': 'Turno no encontrado'}
+
+        tiene_checkins = s.query(CheckIn).filter_by(turno_id=turno_id).count() > 0
+        if tiene_checkins:
+            return {'ok': False, 'error': 'No se puede eliminar un turno con fichajes asociados'}
+
+        try:
+            s.delete(turno)
+            s.commit()
+            logger.info('TURNO_ELIMINADO id=%s', turno_id)
+            return {'ok': True}
+        except Exception as exc:
+            s.rollback()
+            logger.error('Error eliminando turno %s: %s', turno_id, exc)
+            return {'ok': False, 'error': 'Error al eliminar el turno'}

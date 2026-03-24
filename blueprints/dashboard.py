@@ -382,6 +382,19 @@ def cancelar_turno_route(turno_id):
         return _err("Error interno", 500)
 
 
+@blueprint_dashboard.route("/dashboard/turnos/<int:turno_id>/eliminar", methods=["POST"])
+@requiere_rol('manager', 'admin')
+def eliminar_turno_route(turno_id):
+    try:
+        result = gestor_dashboard.eliminar_turno(turno_id=turno_id)
+        if not result['ok']:
+            return _err(result['error'])
+        return _ok(result)
+    except Exception as e:
+        logger.error("Error en /dashboard/turnos/%s/eliminar: %s", turno_id, e)
+        return _err("Error interno", 500)
+
+
 # ---------------------------------------------------------------------------
 # Write endpoints
 # ---------------------------------------------------------------------------
