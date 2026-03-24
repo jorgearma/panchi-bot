@@ -166,48 +166,64 @@
           </div>
         </div>
 
-        <div class="glass-panel rounded-[24px] p-5">
-          <div class="flex items-center justify-between">
+        <div class="glass-panel rounded-[24px] overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200/80">
             <div>
               <p class="section-title text-[11px] font-bold uppercase text-slate-500">Acciones Sugeridas</p>
-              <h2 class="mt-1 text-lg font-extrabold text-slate-950">Bloqueos del flujo</h2>
+              <h2 class="mt-0.5 text-lg font-extrabold text-slate-950">Bloqueos del flujo</h2>
             </div>
-            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600" x-text="sinPicker.length + sinRepartidor.length"></span>
+            <span class="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-bold text-white"
+                  x-text="sinPicker.length + sinRepartidor.length"></span>
           </div>
 
-          <div class="mt-4 space-y-3">
+          <div class="p-4 space-y-2">
+
+            <!-- Sin picker → azul -->
             <template x-for="pk in sinPicker.slice(0, 3)" :key="'sin-picker-'+pk.pedido_id">
-              <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <p class="text-sm font-bold text-slate-900">#<span x-text="pk.pedido_id"></span> sin picker</p>
-                    <p class="mt-1 text-xs text-slate-500" x-text="pk.items_pendientes + ' items pendientes · ' + (pk.empleado?.nombre || 'sin asignar')"></p>
+              <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <!-- icono P -->
+                  <div class="h-8 w-8 shrink-0 rounded-xl bg-sky-500 text-white flex items-center justify-center text-xs font-black">P</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-black text-slate-900">#<span x-text="pk.pedido_id"></span></span>
+                      <span class="rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold text-white">Sin picker</span>
+                    </div>
+                    <p class="mt-0.5 text-[11px] text-sky-700 truncate"
+                       x-text="pk.items_pendientes + ' items pendientes'"></p>
                   </div>
                   <button @click="pk.picking_id ? abrirModalReasignar(pk.picking_id) : abrirModalPicker(pk.pedido_id)"
-                          class="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800">
-                    Resolver
-                  </button>
-                </div>
-              </div>
-            </template>
-
-            <template x-for="p in sinRepartidor.slice(0, 3)" :key="'sin-repartidor-'+p.pedido_id">
-              <div class="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3">
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <p class="text-sm font-bold text-slate-900">#<span x-text="p.pedido_id"></span> listo para salir</p>
-                    <p class="mt-1 text-xs text-slate-500 truncate max-w-[180px]" x-text="p.direccion"></p>
-                  </div>
-                  <button @click="abrirModalRepartidor(p.pedido_id, p.repartidor_nombre)"
-                          class="rounded-xl bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-600">
+                          class="shrink-0 rounded-xl bg-sky-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-sky-600">
                     Asignar
                   </button>
                 </div>
               </div>
             </template>
 
-            <div x-show="sinPicker.length === 0 && sinRepartidor.length === 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-              No hay bloqueos pendientes. El flujo est&aacute; despejado.
+            <!-- Sin repartidor → naranja -->
+            <template x-for="p in sinRepartidor.slice(0, 3)" :key="'sin-repartidor-'+p.pedido_id">
+              <div class="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <!-- icono R -->
+                  <div class="h-8 w-8 shrink-0 rounded-xl bg-orange-500 text-white flex items-center justify-center text-xs font-black">R</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-black text-slate-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold text-white">Listo</span>
+                    </div>
+                    <p class="mt-0.5 text-[11px] text-orange-700 truncate" x-text="p.direccion"></p>
+                  </div>
+                  <button @click="abrirModalRepartidor(p.pedido_id, p.repartidor_nombre)"
+                          class="shrink-0 rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-orange-600">
+                    Asignar
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <div x-show="sinPicker.length === 0 && sinRepartidor.length === 0"
+                 class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              Flujo despejado — sin bloqueos.
             </div>
           </div>
         </div>
@@ -215,54 +231,16 @@
 
       <main class="space-y-5 min-w-0">
         <div class="glass-panel rounded-[24px] overflow-hidden">
-          <!-- Header -->
-          <div class="flex flex-col gap-3 border-b border-slate-200/80 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-            <div class="flex items-center gap-4">
-              <div>
-                <p class="section-title text-[11px] font-bold uppercase text-slate-500">Pedidos Activos</p>
-                <h2 class="mt-0.5 text-lg font-extrabold text-slate-950">
-                  <span x-text="pedidosVisibles.length"></span> pedidos en curso
-                </h2>
-              </div>
-              <!-- Mini contadores por estado -->
-              <div class="hidden lg:flex items-center gap-2 flex-wrap">
-                <template x-for="f in filtrosRapidos.filter(f => f.id !== 'todos')" :key="f.id">
-                  <button @click="quickFilter = f.id"
-                          class="rounded-xl px-2.5 py-1 text-[11px] font-bold transition"
-                          :class="quickFilter === f.id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'">
-                    <span x-text="f.label"></span>
-                    <span class="ml-1 opacity-70" x-text="'·' + filterCount(f.id)"></span>
-                  </button>
-                </template>
-              </div>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <select x-model="filtroEstado"
-                      class="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100">
-                <option value="">Todos los estados</option>
-                <option value="pagado">Pagado online</option>
-                <option value="contra_reembolso">Contra reembolso</option>
-                <option value="en_preparacion">En preparación</option>
-                <option value="preparado">Preparado</option>
-                <option value="en_reparto">En reparto</option>
-              </select>
-              <button @click="quickFilter = 'urgentes'"
-                      class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100">
-                ⚡ Urgentes
-              </button>
-            </div>
-          </div>
-
-          <div class="overflow-auto max-h-[720px]">
+          <div class="overflow-auto max-h-[760px]">
             <table class="data-table w-full min-w-[780px] text-sm">
               <thead>
-                <tr class="bg-slate-950 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                  <th class="px-4 py-3 text-left w-[90px]">#</th>
-                  <th class="px-3 py-3 text-left">Cliente</th>
-                  <th class="px-3 py-3 text-left">Estado · Acción</th>
-                  <th class="px-3 py-3 text-left">Asignación</th>
-                  <th class="px-3 py-3 text-center w-[100px]">Tiempo</th>
-                  <th class="px-4 py-3 text-right w-[90px]">Importe</th>
+                <tr>
+                  <th class="bg-slate-950 px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 w-[90px]">#</th>
+                  <th class="bg-slate-950 px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Cliente</th>
+                  <th class="bg-slate-950 px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Estado · Acci&oacute;n</th>
+                  <th class="bg-slate-950 px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Asignaci&oacute;n</th>
+                  <th class="bg-slate-950 px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 w-[100px]">Tiempo</th>
+                  <th class="bg-slate-950 px-4 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 w-[90px]">Importe</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
