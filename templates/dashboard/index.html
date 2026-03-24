@@ -215,15 +215,30 @@
 
       <main class="space-y-5 min-w-0">
         <div class="glass-panel rounded-[24px] overflow-hidden">
-          <div class="flex flex-col gap-4 border-b border-slate-200/80 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p class="section-title text-[11px] font-bold uppercase text-slate-500">Pedidos Activos</p>
-              <h2 class="mt-1 text-xl font-extrabold text-slate-950">Vista operativa principal</h2>
-              <p class="mt-1 text-sm text-slate-500">Ordenada para detectar r&aacute;pido qu&eacute; pedido requiere acci&oacute;n.</p>
+          <!-- Header -->
+          <div class="flex flex-col gap-3 border-b border-slate-200/80 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-4">
+              <div>
+                <p class="section-title text-[11px] font-bold uppercase text-slate-500">Pedidos Activos</p>
+                <h2 class="mt-0.5 text-lg font-extrabold text-slate-950">
+                  <span x-text="pedidosVisibles.length"></span> pedidos en curso
+                </h2>
+              </div>
+              <!-- Mini contadores por estado -->
+              <div class="hidden lg:flex items-center gap-2 flex-wrap">
+                <template x-for="f in filtrosRapidos.filter(f => f.id !== 'todos')" :key="f.id">
+                  <button @click="quickFilter = f.id"
+                          class="rounded-xl px-2.5 py-1 text-[11px] font-bold transition"
+                          :class="quickFilter === f.id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'">
+                    <span x-text="f.label"></span>
+                    <span class="ml-1 opacity-70" x-text="'·' + filterCount(f.id)"></span>
+                  </button>
+                </template>
+              </div>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <select x-model="filtroEstado"
-                      class="rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100">
+                      class="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100">
                 <option value="">Todos los estados</option>
                 <option value="pagado">Pagado online</option>
                 <option value="contra_reembolso">Contra reembolso</option>
@@ -232,93 +247,122 @@
                 <option value="en_reparto">En reparto</option>
               </select>
               <button @click="quickFilter = 'urgentes'"
-                      class="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100">
-                Ver urgentes
+                      class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100">
+                ⚡ Urgentes
               </button>
             </div>
           </div>
 
-          <div class="overflow-auto max-h-[760px]">
-            <table class="data-table w-full min-w-[920px] text-sm">
+          <div class="overflow-auto max-h-[720px]">
+            <table class="data-table w-full min-w-[780px] text-sm">
               <thead>
-                <tr class="bg-slate-950 text-[11px] uppercase tracking-[0.18em] text-slate-300">
-                  <th class="px-4 py-4 text-left">Pedido</th>
-                  <th class="px-4 py-4 text-left">Cliente</th>
-                  <th class="px-4 py-4 text-left">Estado</th>
-                  <th class="px-4 py-4 text-left">Picking</th>
-                  <th class="px-4 py-4 text-left">Reparto</th>
-                  <th class="px-4 py-4 text-right">SLA</th>
-                  <th class="px-4 py-4 text-right">Total</th>
+                <tr class="bg-slate-950 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                  <th class="px-4 py-3 text-left w-[90px]">#</th>
+                  <th class="px-3 py-3 text-left">Cliente</th>
+                  <th class="px-3 py-3 text-left">Estado · Acción</th>
+                  <th class="px-3 py-3 text-left">Asignación</th>
+                  <th class="px-3 py-3 text-center w-[100px]">Tiempo</th>
+                  <th class="px-4 py-3 text-right w-[90px]">Importe</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-200/70">
+              <tbody class="divide-y divide-slate-100">
                 <template x-for="p in pedidosVisibles" :key="p.pedido_id">
-                  <tr class="cursor-pointer bg-white/70 transition hover:bg-slate-50/90"
-                      :class="p.es_alerta ? 'border-l-[3px] border-red-500' : p.minutos_en_estado > 30 ? 'border-l-[3px] border-amber-500' : 'border-l-[3px] border-transparent'"
+                  <tr class="group cursor-pointer transition-colors hover:bg-sky-50/50"
+                      :class="p.es_alerta ? 'border-l-4 border-red-500 bg-red-50/30' : p.minutos_en_estado > 30 ? 'border-l-4 border-amber-400 bg-amber-50/20' : 'border-l-4 border-transparent bg-white/60'"
                       @click="abrirPanel(p)">
-                    <td class="px-4 py-4 align-top">
-                      <div class="flex items-start gap-3">
-                        <div class="mt-0.5 h-10 w-10 rounded-2xl flex items-center justify-center text-xs font-extrabold"
-                             :class="p.es_alerta ? 'bg-red-100 text-red-700' : p.reparto?.estado === 'en_camino' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-700'">
-                          #<span x-text="p.pedido_id"></span>
-                        </div>
-                        <div>
-                          <div class="flex items-center gap-2">
-                            <span class="rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
-                                  :class="prioridadPedidoClass(p)"
-                                  x-text="prioridadPedidoLabel(p)"></span>
-                            <span x-show="p.es_alerta" class="text-xs font-semibold text-red-600">requiere atenci&oacute;n</span>
+
+                    <!-- #ID -->
+                    <td class="px-4 py-3 align-middle">
+                      <p class="text-base font-black tabular-nums text-slate-900 leading-none"
+                         x-text="'#' + p.pedido_id"></p>
+                      <p class="mt-1 text-[10px] font-semibold"
+                         :class="p.forma_pago === 'efectivo' ? 'text-amber-600' : 'text-sky-600'"
+                         x-text="p.forma_pago === 'efectivo' ? '💵 Efectivo' : '💳 Online'"></p>
+                    </td>
+
+                    <!-- Cliente + dirección -->
+                    <td class="px-3 py-3 align-middle max-w-[200px]">
+                      <p class="font-bold text-slate-900 truncate" x-text="p.cliente_nombre"></p>
+                      <p class="mt-0.5 text-[11px] text-slate-400 truncate" x-text="p.direccion_entrega"></p>
+                    </td>
+
+                    <!-- Estado + próxima acción -->
+                    <td class="px-3 py-3 align-middle">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold"
+                            :class="badgePedidoClass(p.estado)"
+                            x-text="estadoLabel(p.estado)"></span>
+                      <p class="mt-1 text-[11px] font-semibold leading-tight"
+                         :class="p.es_alerta ? 'text-red-600' : 'text-slate-400'"
+                         x-text="
+                           p.es_alerta ? '⚠ Requiere atención' :
+                           (p.estado === 'pagado' || p.estado === 'contra_reembolso') ? '→ Asignar picker' :
+                           p.estado === 'en_preparacion' ? '→ Preparando...' :
+                           p.estado === 'preparado' ? '→ Asignar repartidor' :
+                           p.estado === 'en_reparto' ? '→ En camino' : ''
+                         "></p>
+                    </td>
+
+                    <!-- Asignación: picker + repartidor en una celda -->
+                    <td class="px-3 py-3 align-middle">
+                      <div class="space-y-1">
+                        <template x-if="p.picking">
+                          <div class="flex items-center gap-1.5">
+                            <span class="h-4 w-4 rounded-md bg-sky-500 text-white flex items-center justify-center text-[9px] font-black shrink-0">P</span>
+                            <span class="text-[11px] text-slate-700 truncate max-w-[110px]" x-text="p.picking.picker_nombre || '—'"></span>
+                            <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                                  :class="badgePickingClass(p.picking.estado)"
+                                  x-text="p.picking.estado"></span>
                           </div>
-                          <p class="mt-2 text-xs text-slate-500" x-text="p.forma_pago === 'efectivo' ? 'Cobro en entrega' : 'Pago online confirmado'"></p>
-                        </div>
+                        </template>
+                        <template x-if="!p.picking">
+                          <div class="flex items-center gap-1.5">
+                            <span class="h-4 w-4 rounded-md bg-slate-200 flex items-center justify-center text-[9px] font-black text-slate-400 shrink-0">P</span>
+                            <span class="text-[11px] text-slate-300">Sin picker</span>
+                          </div>
+                        </template>
+                        <template x-if="p.reparto">
+                          <div class="flex items-center gap-1.5">
+                            <span class="h-4 w-4 rounded-md bg-orange-500 text-white flex items-center justify-center text-[9px] font-black shrink-0">R</span>
+                            <span class="text-[11px] text-slate-700 truncate max-w-[110px]" x-text="p.reparto.repartidor_nombre || '—'"></span>
+                            <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                                  :class="badgeRepartoClass(p.reparto.estado)"
+                                  x-text="p.reparto.estado === 'en_camino' ? 'ruta' : p.reparto.estado"></span>
+                          </div>
+                        </template>
+                        <template x-if="!p.reparto">
+                          <div class="flex items-center gap-1.5">
+                            <span class="h-4 w-4 rounded-md bg-slate-200 flex items-center justify-center text-[9px] font-black text-slate-400 shrink-0">R</span>
+                            <span class="text-[11px] text-slate-300">Sin repartidor</span>
+                          </div>
+                        </template>
                       </div>
                     </td>
-                    <td class="px-4 py-4 align-top">
-                      <p class="font-bold text-slate-900" x-text="p.cliente_nombre"></p>
-                      <p class="mt-1 max-w-[240px] text-xs leading-relaxed text-slate-500" x-text="p.direccion_entrega"></p>
-                    </td>
-                    <td class="px-4 py-4 align-top">
-                      <div class="space-y-2">
-                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="badgePedidoClass(p.estado)" x-text="estadoLabel(p.estado)"></span>
-                        <div class="text-xs text-slate-500">
-                          <span x-text="p.forma_pago === 'efectivo' ? 'Efectivo' : 'Online'"></span>
-                        </div>
+
+                    <!-- Tiempo en estado — elemento dominante -->
+                    <td class="px-3 py-3 text-center align-middle">
+                      <p class="text-xl font-black tabular-nums leading-none"
+                         :class="p.minutos_en_estado > 30 ? 'text-red-600' : p.minutos_en_estado > 20 ? 'text-amber-500' : 'text-slate-700'"
+                         x-text="formatMinutos(p.minutos_en_estado)"></p>
+                      <!-- barra de urgencia -->
+                      <div class="mt-1.5 mx-auto h-1 w-12 overflow-hidden rounded-full bg-slate-100">
+                        <div class="h-1 rounded-full transition-all"
+                             :class="p.minutos_en_estado > 30 ? 'bg-red-500' : p.minutos_en_estado > 20 ? 'bg-amber-400' : 'bg-emerald-400'"
+                             :style="'width:' + Math.min((p.minutos_en_estado / 40) * 100, 100) + '%'"></div>
                       </div>
                     </td>
-                    <td class="px-4 py-4 align-top">
-                      <template x-if="p.picking">
-                        <div class="space-y-2">
-                          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="badgePickingClass(p.picking.estado)" x-text="p.picking.estado"></span>
-                          <p class="text-xs text-slate-500" x-text="p.picking.picker_nombre || 'sin picker'"></p>
-                        </div>
-                      </template>
-                      <template x-if="!p.picking">
-                        <span class="text-xs text-slate-300">Sin picking</span>
-                      </template>
-                    </td>
-                    <td class="px-4 py-4 align-top">
-                      <template x-if="p.reparto">
-                        <div class="space-y-2">
-                          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="badgeRepartoClass(p.reparto.estado)" x-text="p.reparto.estado"></span>
-                          <p class="text-xs text-slate-500" x-text="p.reparto.repartidor_nombre || 'sin repartidor'"></p>
-                        </div>
-                      </template>
-                      <template x-if="!p.reparto">
-                        <span class="text-xs text-slate-300">Sin reparto</span>
-                      </template>
-                    </td>
-                    <td class="px-4 py-4 text-right align-top">
-                      <p class="text-lg font-extrabold tabular-nums" :class="p.minutos_en_estado > 30 ? 'text-red-600' : p.minutos_en_estado > 20 ? 'text-amber-600' : 'text-slate-800'" x-text="formatMinutos(p.minutos_en_estado)"></p>
-                      <p class="mt-1 text-[11px] uppercase tracking-wide text-slate-400">estado actual</p>
-                    </td>
-                    <td class="px-4 py-4 text-right align-top">
-                      <p class="text-lg font-extrabold tabular-nums text-slate-950" x-text="p.total.toFixed(2) + '€'"></p>
-                      <p class="mt-1 text-xs text-slate-400">abrir detalle</p>
+
+                    <!-- Importe -->
+                    <td class="px-4 py-3 text-right align-middle">
+                      <p class="text-sm font-extrabold tabular-nums text-slate-950"
+                         x-text="p.total.toFixed(2) + '€'"></p>
+                      <p class="mt-0.5 text-[10px] text-slate-400 group-hover:text-sky-500 transition-colors">ver detalle →</p>
                     </td>
                   </tr>
                 </template>
                 <tr x-show="pedidosVisibles.length === 0">
-                  <td colspan="7" class="px-4 py-10 text-center text-sm text-slate-400">No hay pedidos que coincidan con los filtros actuales.</td>
+                  <td colspan="6" class="px-4 py-12 text-center text-sm text-slate-400">
+                    No hay pedidos que coincidan con los filtros actuales.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -396,11 +440,12 @@
               <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Pickers · Preparación</p>
               <div class="space-y-4">
                 <template x-for="picker in pickersEquipo" :key="'p-'+picker.empleado_id">
-                  <div>
-                    <!-- Worker row -->
-                    <div class="flex items-center gap-3 mb-2">
-                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black"
-                           :class="picker.carga.score >= 3 ? 'bg-red-100 text-red-700' : picker.carga.score === 2 ? 'bg-amber-100 text-amber-700' : picker.carga.score === 1 ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-700'"
+                  <div x-data="{ open: true }">
+                    <!-- Worker row — clic para colapsar -->
+                    <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
+                         :class="open ? 'mb-2' : 'mb-0'"
+                         @click="open = !open">
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black bg-sky-500 text-white"
                            x-text="picker.nombre.charAt(0).toUpperCase()"></div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
@@ -412,15 +457,22 @@
                         <p class="text-[11px] text-slate-400 mt-0.5"
                            x-text="picker.pedidos_activos + ' pedido(s) · ' + picker.items_pendientes + ' items pend.'"></p>
                       </div>
-                      <button @click="asignarSiguienteAPicker(picker.empleado_id)"
-                              class="shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-                              title="Asignar siguiente pedido pendiente">
-                        + sig.
-                      </button>
+                      <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
+                           :class="open ? '' : '-rotate-90'"
+                           fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                      </svg>
                     </div>
 
                     <!-- Pickings del picker -->
-                    <div class="ml-11 space-y-1.5">
+                    <div class="ml-11 space-y-1.5"
+                         x-show="open"
+                         x-transition:enter="transition ease-out duration-150"
+                         x-transition:enter-start="opacity-0 -translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-100"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0">
                       <template x-for="pk in picker.pickings" :key="'pk-'+pk.picking_id">
                         <div class="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
                           <div class="flex items-center gap-2">
@@ -468,11 +520,12 @@
               <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Repartidores · Calle</p>
               <div class="space-y-4">
                 <template x-for="emp in repartidoresEquipo" :key="'r-'+emp.empleado_id">
-                  <div>
-                    <!-- Worker row -->
-                    <div class="flex items-center gap-3 mb-2">
-                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black"
-                           :class="emp.carga.score >= 3 ? 'bg-red-100 text-red-700' : emp.carga.score === 2 ? 'bg-amber-100 text-amber-700' : emp.carga.score === 1 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'"
+                  <div x-data="{ open: true }">
+                    <!-- Worker row — clic para colapsar -->
+                    <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
+                         :class="open ? 'mb-2' : 'mb-0'"
+                         @click="open = !open">
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black bg-orange-500 text-white"
                            x-text="emp.nombre.charAt(0).toUpperCase()"></div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
@@ -484,15 +537,22 @@
                         <p class="text-[11px] text-slate-400 mt-0.5"
                            x-text="emp.pedidos_activos.length + ' en ruta · ' + emp.entregados_hoy + ' entregados hoy'"></p>
                       </div>
-                      <button @click="asignarSiguienteARepartidor(emp.empleado_id)"
-                              class="shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-                              title="Asignar siguiente pedido pendiente">
-                        + sig.
-                      </button>
+                      <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
+                           :class="open ? '' : '-rotate-90'"
+                           fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                      </svg>
                     </div>
 
                     <!-- Pedidos del repartidor -->
-                    <div class="ml-11 space-y-1.5">
+                    <div class="ml-11 space-y-1.5"
+                         x-show="open"
+                         x-transition:enter="transition ease-out duration-150"
+                         x-transition:enter-start="opacity-0 -translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-100"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0">
                       <template x-for="r in emp.pedidos_activos" :key="'rp-'+r.reparto_id">
                         <div class="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
                           <div class="flex items-center gap-2">
