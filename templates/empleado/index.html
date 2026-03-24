@@ -32,35 +32,50 @@
   <!-- ======== CONTENIDO ======== -->
   <main class="max-w-md mx-auto px-4 py-4 space-y-3">
 
-    <!-- Estado operativo + fichaje -->
-    <div :class="estadoBg" class="rounded-xl p-3 border">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-xs text-gray-400 uppercase tracking-wide">Mi estado</p>
-          <p class="font-bold text-sm mt-0.5" :class="estadoColor">
-            <span>● </span><span x-text="estadoLabel"></span>
-            <span x-show="fichajeActivo && fichajeInicio" x-cloak
-                  class="font-normal text-gray-400 ml-1"
-                  x-text="'desde las ' + formatHoraISO(fichajeInicio)"></span>
-          </p>
-          <p x-show="perfil.estado_operativo === 'ocupado'"
-             class="text-xs text-gray-500 mt-0.5" x-cloak>Asignado por el sistema</p>
+    <!-- Turno de hoy + fichaje -->
+    <div class="bg-blue-950 rounded-xl p-3 border border-blue-900">
+      <template x-if="turno">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-blue-300 uppercase tracking-wide">Turno hoy</p>
+            <p class="text-white font-semibold text-sm mt-0.5"
+               x-text="turno.hora_inicio + ' – ' + turno.hora_fin"></p>
+            <p x-show="fichajeActivo && fichajeInicio" x-cloak
+               class="text-xs text-blue-300 mt-0.5"
+               x-text="'En curso desde las ' + formatHoraISO(fichajeInicio)"></p>
+            <p x-show="turno.notas" x-cloak class="text-gray-400 text-xs mt-0.5" x-text="turno.notas"></p>
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            <!-- Sin turno abierto: botón iniciar -->
+            <div x-show="!fichajeActivo" class="flex flex-col items-center">
+              <button @click="iniciarTurno()"
+                      :disabled="!puedeIniciarTurno"
+                      :class="puedeIniciarTurno
+                        ? 'bg-green-600 text-white active:bg-green-700'
+                        : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-60'"
+                      class="text-xs px-3 py-1.5 rounded-lg transition font-semibold">
+                ▶ Iniciar turno
+              </button>
+              <span x-show="!puedeIniciarTurno" x-text="razonNoIniciar" class="text-xs text-gray-500 mt-1 text-center block"></span>
+            </div>
+            <!-- Con turno abierto: cerrar -->
+            <button x-show="fichajeActivo"
+                    @click="cerrarTurno()"
+                    class="bg-gray-700 text-red-400 text-xs px-3 py-1.5 rounded-lg transition active:bg-gray-600">
+              ⏹ Cerrar turno
+            </button>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <!-- Sin turno abierto: botón iniciar -->
-          <button x-show="!fichajeActivo"
-                  @click="iniciarTurno()"
-                  class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg transition active:bg-green-700 font-semibold">
-            ▶ Iniciar turno
-          </button>
-          <!-- Con turno abierto: cerrar -->
-          <button x-show="fichajeActivo"
-                  @click="cerrarTurno()"
-                  class="bg-gray-700 text-red-400 text-xs px-3 py-1.5 rounded-lg transition active:bg-gray-600">
-            ⏹ Cerrar turno
-          </button>
+      </template>
+      <template x-if="!turno">
+        <div class="flex items-center gap-3">
+          <span class="text-xl">🗓️</span>
+          <div>
+            <p class="text-gray-400 text-sm">Sin turno registrado</p>
+            <p class="text-gray-600 text-xs mt-0.5">El manager lo añadirá pronto</p>
+          </div>
         </div>
-      </div>
+      </template>
     </div>
 
     <!-- Colas globales -->
@@ -153,29 +168,6 @@
       </div>
     </div>
 
-    <!-- Turno de hoy -->
-    <div class="bg-blue-950 rounded-xl p-3 border border-blue-900">
-      <template x-if="turno">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-xs text-blue-300 uppercase tracking-wide">Turno hoy</p>
-            <p class="text-white font-semibold text-sm mt-0.5"
-               x-text="turno.hora_inicio + ' – ' + turno.hora_fin"></p>
-            <p class="text-gray-400 text-xs mt-0.5" x-text="turno.notas || ''"></p>
-          </div>
-        </div>
-      </template>
-      <template x-if="!turno">
-        <div class="flex items-center gap-3">
-          <span class="text-xl">🗓️</span>
-          <div>
-            <p class="text-gray-400 text-sm">Sin turno registrado</p>
-            <p class="text-gray-600 text-xs mt-0.5">El manager lo añadirá pronto</p>
-          </div>
-        </div>
-      </template>
-    </div>
-
     <!-- Accesos secundarios -->
     <div>
       <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Más</p>
@@ -261,6 +253,8 @@
       fichajeActivo: false,
       fichajeInicio: null,
       fichajeResumen: null,
+      puedeIniciarTurno: false,
+      razonNoIniciar: null,
 
       // -- computed --
       get saludo() {
@@ -297,7 +291,8 @@
 
       // -- methods --
       async init() {
-        await Promise.all([this.cargarPerfil(), this.cargarTurno(), this.cargarMetricas(), this.cargarCapacidades(), this.cargarFichaje()]);
+        await Promise.all([this.cargarPerfil(), this.cargarTurno(), this.cargarMetricas(), this.cargarCapacidades(), this.cargarFichaje(), this.cargarPuedeIniciar()]);
+        setInterval(() => this.cargarPuedeIniciar(), 60000);
       },
 
       async cargarPerfil() {
@@ -368,6 +363,23 @@
             this.fichajeResumen = d;
           }
         } catch (_) {}
+      },
+
+      async cargarPuedeIniciar() {
+        try {
+          const res = await fetch('/empleado/puede-iniciar');
+          if (res.ok) {
+            const data = await res.json();
+            this.puedeIniciarTurno = data.puede;
+            this.razonNoIniciar = data.razon;
+          } else {
+            this.puedeIniciarTurno = false;
+            this.razonNoIniciar = 'Error al verificar';
+          }
+        } catch {
+          this.puedeIniciarTurno = false;
+          this.razonNoIniciar = 'Error al verificar';
+        }
       },
 
       async iniciarTurno() {
