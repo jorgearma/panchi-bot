@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Panchi — Mis turnos</title>
+  <meta name="theme-color" content="#111827">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    button { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body class="bg-gray-900 min-h-screen"
+      x-data="turnosVista({{ empleado_id or 'null' }})"
+      x-init="init()">
+
+  <!-- HEADER -->
+  <header class="border-b border-gray-800 bg-gray-900 px-4 py-3">
+    <div class="max-w-md mx-auto flex items-center gap-3">
+      <a href="/empleado"
+         class="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 text-gray-400 active:bg-gray-700 transition flex-shrink-0">
+        &#8592;
+      </a>
+      <p class="text-sm font-bold text-white">Mis turnos</p>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="max-w-md mx-auto px-4 py-4 space-y-3">
+
+    <!-- Indicador de carga -->
+    <div x-show="cargando" x-cloak class="flex justify-center py-10">
+      <div class="w-6 h-6 border-2 border-gray-600 border-t-white rounded-full animate-spin"></div>
+    </div>
+
+    <!-- Sin turnos -->
+    <div x-show="!cargando && turnos.length === 0" x-cloak
+         class="bg-gray-800 rounded-xl p-6 text-center">
+      <p class="text-gray-400 text-sm">Sin turnos en este periodo</p>
+      <p class="text-gray-600 text-xs mt-1">El manager los añadirá pronto</p>
+    </div>
+
+    <!-- Lista de turnos -->
+    <template x-for="t in turnos" :key="t.id">
+      <div :class="[
+             'bg-gray-800 rounded-xl p-4 border',
+             t.estado === 'cancelado' ? 'opacity-50 border-red-900' : 'border-transparent'
+           ]">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <!-- Fecha -->
+            <p class="text-xs text-gray-500 uppercase tracking-wide" x-text="formatFecha(t.fecha)"></p>
+            <!-- Horario -->
+            <p class="text-white font-semibold text-sm mt-0.5"
+               x-text="t.hora_inicio + ' \u2013 ' + t.hora_fin"></p>
+            <!-- Notas -->
+            <p x-show="t.notas" x-cloak class="text-gray-400 text-xs mt-0.5" x-text="t.notas"></p>
+          </div>
+          <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <!-- Badge tipo -->
+            <span x-show="t.tipo" x-cloak
+                  :class="tipoBadge(t.tipo)"
+                  class="text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"
+                  x-text="t.tipo"></span>
+            <!-- Badge estado -->
+            <span :class="estadoBadge(t.estado)"
+                  class="text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"
+                  x-text="t.estado"></span>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Botón ver turnos anteriores -->
+    <button x-show="!mostrarAnteriores && !cargando" x-cloak
+            @click="verAnteriores()"
+            class="w-full bg-gray-800 rounded-xl py-3 text-sm text-gray-400 font-semibold active:bg-gray-700 transition">
+      Ver turnos anteriores (30 días)
+    </button>
+
+  </main>
+
+  <script>
+    function turnosVista(empleadoId) {
+      return {
+        empleadoId: empleadoId,
+        turnos: [],
+        cargando: true,
+        mostrarAnteriores: false,
+
+        init() {
+          this.cargar();
+        },
+
+        cargar() {
+          this.cargando = true;
+          const hasta = this.fechaISO(this.sumarDias(new Date(), 14));
+          const desde = this.mostrarAnteriores
+            ? this.fechaISO(this.sumarDias(new Date(), -30))
+            : this.fechaISO(new Date());
+          fetch(`/empleado/turnos/datos?desde=${desde}&hasta=${hasta}`)
+            .then(r => r.json())
+            .then(data => {
+              this.turnos = data.turnos || [];
+              this.cargando = false;
+            })
+            .catch(() => {
+              this.cargando = false;
+            });
+        },
+
+        verAnteriores() {
+          this.mostrarAnteriores = true;
+          this.cargar();
+        },
+
+        fechaISO(d) {
+          return d.toISOString().slice(0, 10);
+        },
+
+        sumarDias(d, n) {
+          const r = new Date(d);
+          r.setDate(r.getDate() + n);
+          return r;
+        },
+
+        formatFecha(iso) {
+          if (!iso) return '';
+          const [y, m, d] = iso.split('-');
+          const fecha = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+          return fecha.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        },
+
+        tipoBadge(tipo) {
+          const mapa = {
+            'manana':  'bg-yellow-900 text-yellow-300',
+            'mañana':  'bg-yellow-900 text-yellow-300',
+            'tarde':   'bg-orange-900 text-orange-300',
+            'noche':   'bg-blue-900   text-blue-300',
+            'partido': 'bg-purple-900 text-purple-300',
+          };
+          return mapa[tipo] || 'bg-gray-700 text-gray-300';
+        },
+
+        estadoBadge(estado) {
+          if (estado === 'cancelado')   return 'bg-red-900 text-red-300';
+          if (estado === 'planificado') return 'bg-green-900 text-green-300';
+          return 'bg-gray-700 text-gray-300';
+        },
+      };
+    }
+  </script>
+
+</body>
+</html>

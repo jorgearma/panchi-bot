@@ -1,4 +1,5 @@
 import logging
+from datetime import date, timedelta
 
 from flask import Blueprint, jsonify, redirect, render_template, request, session
 
@@ -188,3 +189,32 @@ def fichaje_hoy():
     except Exception as e:
         logger.error("Error en /empleado/fichaje/hoy: %s", e)
         return jsonify({'activo': False})
+
+
+@blueprint_empleado.route('/empleado/turnos')
+@requiere_rol(*_ROLES_HUB)
+def turnos_page():
+    empleado_id = session.get('empleado_id')
+    rol = session.get('rol')
+    return render_template('empleado/turnos.html', empleado_id=empleado_id, rol=rol)
+
+
+@blueprint_empleado.route('/empleado/turnos/datos')
+@requiere_rol(*_ROLES_HUB)
+def turnos_datos():
+    empleado_id = session.get('empleado_id')
+    hoy = date.today()
+    try:
+        desde_str = request.args.get('desde')
+        hasta_str = request.args.get('hasta')
+        desde = date.fromisoformat(desde_str) if desde_str else hoy
+        hasta = date.fromisoformat(hasta_str) if hasta_str else hoy + timedelta(days=14)
+    except ValueError:
+        desde = hoy
+        hasta = hoy + timedelta(days=14)
+    try:
+        lista = gestor_empleado.turnos_proximos(empleado_id, desde, hasta)
+        return jsonify({'turnos': lista})
+    except Exception as e:
+        logger.error('Error en /empleado/turnos/datos: %s', e)
+        return jsonify({'error': 'Error interno'}), 500

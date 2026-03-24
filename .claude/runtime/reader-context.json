@@ -1,12 +1,35 @@
 {
+  "request": "Crear la pantalla de Turnos accesible desde el botón 'Turnos' en empleado/index.html, con el mismo estilo visual (Alpine.js + Tailwind dark theme bg-gray-900), mostrando los turnos planificados del empleado autenticado",
+  "domain": "fullstack",
   "primary_reader": "ui-reader",
-  "selected_readers": ["ui-reader"],
-  "maps_used": ["UI_MAP.md"],
-  "files_to_open": ["/home/siemprearmando/panchi-bot/templates/dashboard/index.html"],
-  "files_to_review": [
-    "templates/dashboard/index.html:259-273 (badge de estado y mensaje de acción)",
-    "templates/dashboard/index.html:2137-2175 (funciones estadoLabel y badgePedidoClass)"
+  "files_to_open": [
+    "/home/siemprearmando/panchi-bot/templates/empleado/index.html",
+    "/home/siemprearmando/panchi-bot/blueprints/empleado.py",
+    "/home/siemprearmando/panchi-bot/managers/gestor_empleado.py",
+    "/home/siemprearmando/panchi-bot/managers/dashboard/gestor_turnos_mixin.py",
+    "/home/siemprearmando/panchi-bot/models.py",
+    "/home/siemprearmando/panchi-bot/templates/dashboard/turnos.html"
   ],
-  "reason": "Mejorar claridad visual y legibilidad del estado-acción en la tabla de pedidos del dashboard. El usuario solicita optimizar colores de badge, mensajes de acción contextualizados y mostrar minutos en estado directamente en la sección de estado/acción.",
-  "notes": "La petición es específica de UI: cambiar colores, etiquetas y disposición en el dashboard sin tocar lógica de negocio. Los minutos ya existen en la columna 'Tiempo' (línea ~311-322) pero pueden reorganizarse. Las funciones JS badgePedidoClass() y estadoLabel() requieren actualización para reflejar nuevos criterios visuales."
+  "files_to_review": [
+    "/home/siemprearmando/panchi-bot/templates/empleado/index.html",
+    "/home/siemprearmando/panchi-bot/templates/empleado/turnos.html",
+    "/home/siemprearmando/panchi-bot/blueprints/empleado.py",
+    "/home/siemprearmando/panchi-bot/managers/gestor_empleado.py"
+  ],
+  "context_summary": "El botón 'Turnos' está en la sección 'Más' (grid 3 columnas) de templates/empleado/index.html, línea 187-190, como botón estático sin acción. El hub usa Alpine.js 3 + Tailwind CDN, dark theme bg-gray-900, con fetch a endpoints JSON en /empleado/*. El modelo Turno (models.py, tabla 'turnos') tiene: id, empleado_id, fecha, hora_inicio, hora_fin, notas, estado ('planificado'/'cancelado'), tipo ('mañana'/'tarde'/'noche'/'partido'), created_at. El blueprint empleado.py ya tiene el patrón: ruta Flask → gestor_empleado.método() → jsonify(). gestor_empleado.turno_hoy() devuelve el turno de hoy como dict {fecha, hora_inicio, hora_fin, notas} o None. El GestorTurnosMixin (dashboard) tiene turnos_planificacion() que filtra por empleado_id y rango de fechas devolviendo {turnos: list[dict], total, page, pages}; cada turno incluye id, fecha, hora_inicio, hora_fin, tipo, estado, notas. No existe aún ninguna ruta /empleado/turnos ni template empleado/turnos.html. El diseño del hub es: header fijo, main max-w-md, tarjetas bg-gray-800 rounded-xl, texto xs/sm, colores blue-950/blue-900 para turnos planificados (ya usado en la sección 'Turno hoy').",
+  "constraints": [
+    "Mantener el mismo stack visual: Alpine.js 3 CDN + Tailwind CDN, dark theme bg-gray-900, sin frameworks externos adicionales",
+    "El nuevo endpoint /empleado/turnos debe usar @requiere_rol(*_ROLES_HUB) igual que el resto del blueprint",
+    "La lógica de query de turnos debe ir en gestor_empleado.py (no en el blueprint ni en gestor_dashboard)",
+    "gestor_dashboard.py es un god object de 121 KB — no añadir lógica ahí; usar gestor_empleado.py",
+    "No añadir business logic en blueprints/empleado.py — solo routing y llamada al manager",
+    "El empleado solo ve sus propios turnos (filtrar por session empleado_id), nunca los de otros",
+    "Los turnos deben mostrarse desde hoy hacia adelante por defecto (próximas 2 semanas), con opción de ver anteriores",
+    "El estado 'cancelado' debe visualmente distinguirse del estado 'planificado'"
+  ],
+  "dependencies": [
+    "GET /empleado/turnos — nuevo endpoint JSON que devuelve lista de turnos planificados del empleado autenticado con filtro de fechas (desde/hasta como query params)",
+    "gestor_empleado.turnos_proximos(empleado_id, desde, hasta) — nuevo método a crear en managers/gestor_empleado.py, reutilizando la query de GestorTurnosMixin.turnos_planificacion() pero filtrada para un solo empleado",
+    "models.Turno — campos: id, fecha, hora_inicio, hora_fin, notas, estado, tipo"
+  ]
 }

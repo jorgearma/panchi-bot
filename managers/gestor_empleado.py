@@ -81,6 +81,35 @@ class GestorEmpleado:
             'notas':       turno.notas,
         }
 
+    def turnos_proximos(self, empleado_id: int, desde: date, hasta: date) -> list[dict]:
+        """Lista de turnos en el rango [desde, hasta] para el empleado."""
+        try:
+            turnos = (
+                self.session.query(Turno)
+                .filter(
+                    Turno.empleado_id == empleado_id,
+                    Turno.fecha >= desde,
+                    Turno.fecha <= hasta,
+                )
+                .order_by(Turno.fecha, Turno.hora_inicio)
+                .all()
+            )
+            return [
+                {
+                    'id':          t.id,
+                    'fecha':       t.fecha.isoformat(),
+                    'hora_inicio': str(t.hora_inicio)[:5],
+                    'hora_fin':    str(t.hora_fin)[:5],
+                    'notas':       t.notas,
+                    'estado':      t.estado,
+                    'tipo':        t.tipo,
+                }
+                for t in turnos
+            ]
+        except SQLAlchemyError as e:
+            logger.error('Error obteniendo turnos_proximos empleado %s: %s', empleado_id, e)
+            return []
+
     def capacidades(self, empleado_id: int) -> list[str]:
         """Roles que puede desempeñar el empleado. Ej: ['picker', 'repartidor']"""
         empleado = self.session.query(Empleado).filter_by(

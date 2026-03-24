@@ -405,317 +405,183 @@
   <!-- ── TAB PLANIFICACIÓN ─────────────────────────────────────────────────── -->
   <div x-show="tab === 'plan'" x-cloak>
 
-    <!-- Cabecera: toggle vista + botón nuevo turno -->
+    <!-- Cabecera: navegación semanal + botón nuevo turno -->
     <div class="glass-panel rounded-2xl px-5 py-4 mb-4">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <!-- Toggle tabla / semana -->
-        <div class="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-          <button
-            @click="vistaGrid = false; planPage = 1; cargarPlan()"
-            :class="!vistaGrid ? 'bg-white text-blue-700 shadow-sm font-semibold' : 'text-slate-500 hover:text-slate-700'"
-            class="px-3 py-1.5 text-sm rounded-lg transition">
-            ≡ Tabla
-          </button>
-          <button
-            @click="vistaGrid = true; cargarPlan()"
-            :class="vistaGrid ? 'bg-white text-blue-700 shadow-sm font-semibold' : 'text-slate-500 hover:text-slate-700'"
-            class="px-3 py-1.5 text-sm rounded-lg transition">
-            ▦ Semana
-          </button>
-        </div>
-
-        <!-- Filtros tabla (ocultos en modo semana) -->
-        <div x-show="!vistaGrid" class="flex flex-wrap gap-3 items-end">
-          <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1">Desde</label>
-            <input type="date" x-model="planFiltros.desde"
-              @change="planPage = 1; cargarPlan()"
-              class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1">Hasta</label>
-            <input type="date" x-model="planFiltros.hasta"
-              @change="planPage = 1; cargarPlan()"
-              class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1">Rol</label>
-            <select x-model="planFiltros.rol" @change="planPage = 1; cargarPlan()"
-              class="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-              <option value="">Todos</option>
-              <option value="picker">Picker</option>
-              <option value="repartidor">Repartidor</option>
-              <option value="manager">Manager</option>
-            </select>
-          </div>
-          <button @click="planFiltros.rol = ''; planPage = 1; cargarPlan()"
-            class="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition">
-            Limpiar
-          </button>
-        </div>
-
+      <!-- Fila principal: nav + título + botón -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <button
+          @click="semanaBase = lunes(new Date(semanaBase.getTime() - 7 * 86400000)); cargarPlan()"
+          class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition flex-shrink-0"
+          title="Semana anterior">
+          ←
+        </button>
+        <span class="flex-1 text-center text-lg font-bold text-slate-800 min-w-0" x-text="semanaBase ? semanaLabel() : ''"></span>
+        <button
+          @click="semanaBase = lunes(new Date(semanaBase.getTime() + 7 * 86400000)); cargarPlan()"
+          class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition flex-shrink-0"
+          title="Semana siguiente">
+          →
+        </button>
         <button @click="abrirModalCrear()"
-          class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition">
+          class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition flex-shrink-0">
           <span class="text-base leading-none">+</span> Nuevo turno
         </button>
       </div>
-
-      <!-- Navegación semanal (solo en modo semana) -->
-      <div x-show="vistaGrid" class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-        <button
-          @click="semanaBase = lunes(new Date(semanaBase.getTime() - 7 * 86400000)); cargarPlan()"
-          class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition">
-          ← Anterior
-        </button>
-        <span class="text-sm font-semibold text-slate-700" x-text="semanaBase ? semanaLabel() : ''"></span>
-        <button
-          @click="semanaBase = lunes(new Date(semanaBase.getTime() + 7 * 86400000)); cargarPlan()"
-          class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition">
-          Siguiente →
-        </button>
+      <!-- Fila leyenda -->
+      <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
+          <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>Mañana
+        </span>
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+          <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Tarde
+        </span>
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700">
+          <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>Noche
+        </span>
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Partido
+        </span>
+        <span class="ml-auto text-[11px] text-slate-400 self-center">
+          <span x-text="_empleadosSemana.length"></span> personas · <span x-text="planTurnos.length"></span> turnos
+        </span>
       </div>
     </div>
 
-    <!-- Loading (compartido por tabla y semana) -->
+    <!-- Loading -->
     <div x-show="planCargando" x-cloak>
       {{ loading_skeleton(rows=5, cols=5) }}
     </div>
 
-    <!-- ── VISTA TABLA ── -->
-    <template x-if="!vistaGrid">
-      <div>
-        <!-- Empty state tabla -->
-        <div x-show="!planCargando && planTurnos.length === 0">
-          {{ empty_state('📅', 'Sin turnos', 'No hay turnos para este período. Crea uno con el botón +.') }}
-        </div>
+    <!-- Empty state -->
+    <div x-show="!planCargando && _empleadosSemana.length === 0" x-cloak>
+      {{ empty_state('📅', 'Sin turnos esta semana', 'No hay turnos planificados. Pulsa + Nuevo turno para crear uno.') }}
+    </div>
 
-        <!-- Tabla -->
-        <div x-show="!planCargando && planTurnos.length > 0">
-          <div class="glass-panel rounded-2xl overflow-hidden">
-            <table class="w-full text-sm">
-              <thead class="bg-slate-50/60 border-b border-slate-200">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Fecha</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Empleado</th>
-                  <th class="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Rol</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Horario</th>
-                  <th class="hidden md:table-cell px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Tipo</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
-                  <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template x-for="t in planTurnos" :key="t.id">
-                  <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition">
-                    <td class="px-4 py-3 font-medium text-slate-800" x-text="t.fecha"></td>
-                    <td class="px-4 py-3 text-slate-700" x-text="t.empleado"></td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-500 capitalize" x-text="t.rol || '—'"></td>
-                    <td class="px-4 py-3 font-mono text-slate-700">
-                      <span x-text="t.hora_inicio"></span>–<span x-text="t.hora_fin"></span>
-                    </td>
-                    <td class="hidden md:table-cell px-4 py-3 capitalize text-slate-500" x-text="t.tipo || '—'"></td>
-                    <td class="px-4 py-3">
-                      <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                        :class="{
-                          'bg-blue-100 text-blue-700':       t.estado === 'planificado',
-                          'bg-emerald-100 text-emerald-700': t.estado === 'completado',
-                          'bg-red-100 text-red-600':         t.estado === 'cancelado',
-                        }"
-                        x-text="t.estado"></span>
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                      <template x-if="t.estado !== 'cancelado'">
-                        <div class="flex items-center justify-end gap-2">
-                          <button @click="abrirModalEditar(t)"
-                            class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                            title="Editar">✏️</button>
-                          <button @click="confirmarCancelar(t.id)"
-                            class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                            title="Cancelar turno">✕</button>
-                        </div>
-                      </template>
-                      <span x-show="t.estado === 'cancelado'" class="text-xs text-slate-300 italic">—</span>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Paginación -->
-          <div x-show="planPages > 1" class="flex items-center justify-between mt-4 text-sm text-slate-500">
-            <span><span x-text="planTotal"></span> turnos</span>
-            <div class="flex gap-1">
-              <button @click="planPage--; cargarPlan()" :disabled="planPage <= 1"
-                class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                ← Anterior
-              </button>
-              <span class="px-3 py-1.5 text-slate-600">
-                <span x-text="planPage"></span> / <span x-text="planPages"></span>
-              </span>
-              <button @click="planPage++; cargarPlan()" :disabled="planPage >= planPages"
-                class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                Siguiente →
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-
-    <!-- ── VISTA SEMANA ── -->
-    <template x-if="vistaGrid">
-      <div>
-        <!-- Empty state semana -->
-        <div x-show="!planCargando && _empleadosSemana.length === 0">
-          {{ empty_state('📅', 'Sin turnos', 'Sin turnos esta semana. Pulsa + en cualquier celda para crear uno.') }}
-        </div>
-
-        <!-- Cuadrícula -->
-        <div x-show="!planCargando && _empleadosSemana.length > 0"
-          class="space-y-4">
-          <div class="glass-panel rounded-2xl px-5 py-4">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Vista semanal</p>
-                <h3 class="mt-1 text-lg font-extrabold text-slate-800">Plan de turnos del equipo</h3>
-                <p class="mt-1 text-sm text-slate-500">
-                  <span x-text="_empleadosSemana.length"></span> personas con
-                  <span x-text="planTurnos.length"></span> turno<span x-text="planTurnos.length === 1 ? '' : 's'"></span> esta semana
-                </p>
-              </div>
-              <div class="flex flex-wrap gap-2 text-xs font-semibold">
-                <span class="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-blue-700">
-                  <span class="h-2 w-2 rounded-full bg-blue-500"></span>Mañana
-                </span>
-                <span class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-amber-700">
-                  <span class="h-2 w-2 rounded-full bg-amber-500"></span>Tarde
-                </span>
-                <span class="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-indigo-700">
-                  <span class="h-2 w-2 rounded-full bg-indigo-500"></span>Noche
-                </span>
-                <span class="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">
-                  <span class="h-2 w-2 rounded-full bg-emerald-500"></span>Partido
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div class="glass-panel rounded-2xl overflow-x-auto border border-white/60">
-          <table class="w-full min-w-[980px] text-sm border-separate border-spacing-0">
-            <thead>
-              <tr>
-                <!-- Columna nombre empleado -->
-                <th class="sticky left-0 z-20 px-4 py-3 text-left border-b border-slate-200 bg-white/95 backdrop-blur min-w-[200px]">
-                  <div class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Empleado</div>
-                  <div class="mt-0.5 text-sm font-bold text-slate-700">Equipo activo</div>
+    <!-- Cuadrícula semanal -->
+    <div x-show="!planCargando && _empleadosSemana.length > 0" x-cloak>
+      <div class="glass-panel rounded-2xl overflow-x-auto border border-white/60">
+        <table class="w-full min-w-[900px] text-sm border-separate border-spacing-0">
+          <thead>
+            <tr>
+              <!-- Columna empleado sticky -->
+              <th class="sticky left-0 z-20 px-4 py-4 text-left border-b border-slate-200 bg-white/95 backdrop-blur min-w-[200px]">
+                <div class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Empleado</div>
+                <div class="mt-0.5 text-sm font-bold text-slate-700">Equipo</div>
+              </th>
+              <!-- 7 columnas de días -->
+              <template x-for="dia in _diasSemana" :key="formatISO(dia)">
+                <th class="px-2 py-3 text-center border-b border-slate-200 min-w-[120px] transition"
+                  :class="esHoy(dia) ? 'bg-[#0f4c81] text-white' : 'bg-slate-50/80 text-slate-600'">
+                  <!-- Nombre día abreviado -->
+                  <div class="text-[11px] font-semibold uppercase tracking-wide"
+                    x-text="['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'][dia.getDay() === 0 ? 6 : dia.getDay() - 1]"></div>
+                  <!-- Número de día -->
+                  <div class="mt-0.5 text-3xl font-extrabold leading-none" x-text="dia.getDate()"></div>
+                  <!-- Badge cobertura -->
+                  <div class="mt-1.5 flex justify-center">
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold leading-none transition"
+                      :class="
+                        (resumenRolesDia(dia).pickers + resumenRolesDia(dia).repartidores) >= 2
+                          ? (esHoy(dia) ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700')
+                          : (resumenRolesDia(dia).pickers + resumenRolesDia(dia).repartidores) === 1
+                            ? (esHoy(dia) ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700')
+                            : (esHoy(dia) ? 'bg-white/10 text-white/60' : 'bg-slate-100 text-slate-400')"
+                      x-text="(resumenRolesDia(dia).pickers + resumenRolesDia(dia).repartidores) === 0
+                        ? 'sin cobertura'
+                        : (resumenRolesDia(dia).pickers + resumenRolesDia(dia).repartidores) + ((resumenRolesDia(dia).pickers + resumenRolesDia(dia).repartidores) === 1 ? ' persona' : ' personas')">
+                    </span>
+                  </div>
                 </th>
-                <!-- 7 columnas de días -->
+              </template>
+            </tr>
+          </thead>
+          <tbody class="bg-white/50">
+            <template x-for="emp in _empleadosSemana" :key="emp.id">
+              <tr class="group">
+                <!-- Columna empleado sticky -->
+                <td class="sticky left-0 z-10 px-4 py-3 align-top border-b border-slate-100 bg-white/96 backdrop-blur group-hover:bg-slate-50/96 transition">
+                  <div class="flex items-center gap-3">
+                    <!-- Avatar coloreado por rol -->
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
+                      :class="{
+                        'bg-blue-100 text-blue-700':     emp.rol === 'picker',
+                        'bg-orange-100 text-orange-700': emp.rol === 'repartidor',
+                        'bg-violet-100 text-violet-700': emp.rol === 'manager',
+                        'bg-slate-100 text-slate-600':   !['picker','repartidor','manager'].includes(emp.rol)
+                      }"
+                      x-text="inicialesEmpleado(emp.nombre)">
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="font-bold text-slate-800 text-sm truncate" x-text="emp.nombre"></div>
+                      <div class="mt-0.5 flex items-center gap-1.5">
+                        <span class="text-[11px] text-slate-400 capitalize" x-text="emp.rol || '—'"></span>
+                      </div>
+                    </div>
+                    <!-- Badge número de turnos semana -->
+                    <div class="flex-shrink-0 w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[11px] font-bold"
+                      x-text="turnosEmpleadoSemana(emp.id)">
+                    </div>
+                  </div>
+                </td>
+                <!-- Celda por día -->
                 <template x-for="dia in _diasSemana" :key="formatISO(dia)">
-                  <th class="px-2 py-3 text-center border-b border-slate-200 min-w-[112px]"
-                    :class="esHoy(dia) ? 'bg-blue-50/90 text-blue-700' : 'bg-slate-50/70 text-slate-500'">
-                    <div class="text-[11px] font-semibold uppercase tracking-[0.18em]"
-                      x-text="['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][dia.getDay() === 0 ? 6 : dia.getDay() - 1]"></div>
-                    <div class="mt-0.5 text-xl font-extrabold leading-none" x-text="dia.getDate()"></div>
-                    <div class="mt-1 flex flex-col gap-0.5 text-[10px] font-medium">
-                      <span x-text="resumenRolesDia(dia).pickers + ' pickers'"></span>
-                      <span x-text="resumenRolesDia(dia).repartidores + ' repartidores'"></span>
-                    </div>
-                  </th>
-                </template>
-              </tr>
-            </thead>
-            <tbody class="bg-white/50">
-              <template x-for="emp in _empleadosSemana" :key="emp.id">
-                <tr class="group">
-                  <!-- Nombre -->
-                  <td class="sticky left-0 z-10 px-4 py-3 align-top border-b border-slate-100 bg-white/96 backdrop-blur group-hover:bg-slate-50/96 transition">
-                    <div class="flex items-start gap-3">
-                      <div class="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-700">
-                        <span x-text="inicialesEmpleado(emp.nombre)"></span>
-                      </div>
-                      <div class="min-w-0">
-                        <div class="font-bold text-slate-800 text-sm leading-tight" x-text="emp.nombre"></div>
-                        <div class="mt-0.5 text-[11px] text-slate-500">
-                          <span x-text="turnosEmpleadoSemana(emp.id)"></span> turno<span x-text="turnosEmpleadoSemana(emp.id) === 1 ? '' : 's'"></span> esta semana
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <!-- Celda por día -->
-                  <template x-for="dia in _diasSemana" :key="formatISO(dia)">
-                    <td class="px-2 py-2 align-top border-b border-slate-100"
-                      :class="esHoy(dia) ? 'bg-blue-50/35' : 'bg-white/35'">
-                      <div class="min-h-[58px] rounded-xl border p-1.5 transition"
-                        :class="cellTurnos(emp.id, dia).length
-                          ? (esHoy(dia) ? 'border-blue-200 bg-white shadow-sm shadow-blue-100/70' : 'border-slate-200 bg-white/90')
-                          : (esHoy(dia) ? 'border-dashed border-blue-200 bg-blue-50/40' : 'border-dashed border-slate-200 bg-slate-50/70')">
-                      <template x-if="(_semanaTurnos[String(emp.id)] || {})[formatISO(dia)]">
-                        <!-- Uno o más chips de turno -->
-                        <div class="flex flex-col gap-1.5">
-                          <template x-for="t in cellTurnos(emp.id, dia)" :key="t.id">
-                            <div
-                              class="w-full rounded-lg border px-2 py-1.5 transition hover:-translate-y-0.5 hover:shadow-sm"
-                              :class="{
-                                'border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100/70':       t.tipo === 'mañana',
-                                'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100/70':   t.tipo === 'tarde',
-                                'border-indigo-200 bg-indigo-50 text-indigo-800 hover:bg-indigo-100/70': t.tipo === 'noche',
-                                'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100/70': t.tipo === 'partido',
-                                'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100/80': !t.tipo,
-                              }">
-                              <div class="flex items-start justify-between gap-2">
-                                <button
-                                  @click="abrirModalEditar(t)"
-                                  class="min-w-0 flex-1 text-left"
-                                  title="Editar turno">
-                                  <div class="font-mono text-[12px] font-bold tracking-tight leading-none" x-text="(t.hora_inicio || '?') + '–' + (t.hora_fin || '?')"></div>
-                                </button>
-                                <div class="flex items-center gap-1">
-                                  <button
-                                    @click="abrirModalEditar(t)"
-                                    class="flex h-5 w-5 items-center justify-center rounded-full bg-white/80 text-[10px] font-bold leading-none"
-                                    title="Editar turno">
-                                    ✎
-                                  </button>
-                                  <button
-                                    @click="confirmarEliminar(t.id)"
-                                    class="flex h-5 w-5 items-center justify-center rounded-full bg-white/80 text-[10px] font-bold leading-none text-red-600 hover:bg-red-50"
-                                    title="Eliminar turno">
-                                    ✕
-                                  </button>
-                                </div>
+                  <td class="px-2 py-2 align-top border-b border-slate-100"
+                    :class="esHoy(dia) ? 'bg-blue-50/35' : 'bg-white/20'">
+                    <template x-if="(_semanaTurnos[String(emp.id)] || {})[formatISO(dia)]">
+                      <!-- Uno o más chips de turno -->
+                      <div class="flex flex-col gap-1.5">
+                        <template x-for="t in cellTurnos(emp.id, dia)" :key="t.id">
+                          <div class="w-full rounded-xl border px-2.5 py-2 transition hover:-translate-y-0.5 hover:shadow-sm"
+                            :class="{
+                              'border-blue-200 bg-blue-50 text-blue-800':       t.tipo === 'mañana',
+                              'border-amber-200 bg-amber-50 text-amber-800':     t.tipo === 'tarde',
+                              'border-indigo-200 bg-indigo-50 text-indigo-800':  t.tipo === 'noche',
+                              'border-emerald-200 bg-emerald-50 text-emerald-800': t.tipo === 'partido',
+                              'border-slate-200 bg-slate-50 text-slate-700':    !t.tipo,
+                            }">
+                            <div class="flex items-start justify-between gap-1">
+                              <div class="min-w-0">
+                                <div class="font-mono font-bold text-[13px] leading-tight" x-text="(t.hora_inicio||'?')+'–'+(t.hora_fin||'?')"></div>
+                                <div class="mt-0.5 text-[11px] capitalize opacity-75" x-text="t.tipo || '—'"></div>
+                              </div>
+                              <div class="flex items-center gap-0.5 flex-shrink-0">
+                                <button @click.stop="abrirModalEditar(t)"
+                                  class="w-6 h-6 flex items-center justify-center rounded-lg text-[11px] hover:bg-black/10 transition"
+                                  title="Editar">✎</button>
+                                <button @click.stop="confirmarEliminar(t.id)"
+                                  class="w-6 h-6 flex items-center justify-center rounded-lg text-[11px] text-red-500 hover:bg-red-100 transition"
+                                  title="Eliminar">✕</button>
                               </div>
                             </div>
-                          </template>
-                          <button
-                            @click="abrirModalCrear(emp.id, formatISO(dia))"
-                            class="flex h-6 w-full items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white/70 text-slate-400 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
-                            title="Añadir otro turno">
-                            <span class="text-sm leading-none">+</span>
-                          </button>
-                        </div>
-                      </template>
-                      <template x-if="!(_semanaTurnos[String(emp.id)] || {})[formatISO(dia)]">
-                        <!-- Celda vacía: botón + -->
+                          </div>
+                        </template>
+                        <!-- Botón añadir turno adicional -->
                         <button
                           @click="abrirModalCrear(emp.id, formatISO(dia))"
-                          class="flex min-h-[54px] w-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 text-slate-400 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
-                          title="Crear turno">
-                          <span class="text-lg leading-none">+</span>
-                          <span class="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em]">Crear</span>
+                          class="mt-1.5 flex h-7 w-full items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white/60 text-slate-400 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
+                          title="Añadir otro turno">
+                          <span class="text-sm leading-none">+</span>
                         </button>
-                      </template>
                       </div>
-                    </td>
-                  </template>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-          </div>
-        </div>
+                    </template>
+                    <template x-if="!(_semanaTurnos[String(emp.id)] || {})[formatISO(dia)]">
+                      <!-- Celda vacía: botón + grande -->
+                      <button
+                        @click="abrirModalCrear(emp.id, formatISO(dia))"
+                        class="flex min-h-[72px] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 text-slate-400 transition hover:border-blue-400 hover:bg-blue-50/60 hover:text-blue-600"
+                        title="Crear turno">
+                        <span class="text-2xl leading-none">+</span>
+                        <span class="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em]">Añadir</span>
+                      </button>
+                    </template>
+                  </td>
+                </template>
+              </tr>
+            </template>
+          </tbody>
+        </table>
       </div>
-    </template>
+    </div>
 
   </div><!-- end tab plan -->
 
@@ -846,15 +712,10 @@ function turnosApp() {
 
     // ── Planificación ──
     planTurnos: [],
-    planTotal: 0,
-    planPage: 1,
-    planPages: 1,
     planCargando: false,
     planCargado: false,
-    planFiltros: { desde: '', hasta: '', rol: '' },
 
     // ── Vista semana ──
-    vistaGrid: true,
     semanaBase: null,
     _diasSemana: [],
     _semanaTurnos: {},
@@ -872,10 +733,6 @@ function turnosApp() {
 
     init() {
       this.cargarHoy();
-      const hoy = new Date().toISOString().slice(0, 10);
-      const en2semanas = new Date(Date.now() + 13 * 86400000).toISOString().slice(0, 10);
-      this.planFiltros.desde = hoy;
-      this.planFiltros.hasta = en2semanas;
       this._pollTimer = setInterval(() => {
         this.segundosParaActualizar--;
         if (this.segundosParaActualizar <= 0) {
@@ -1084,37 +941,29 @@ function turnosApp() {
     async cargarPlan() {
       this.planCargando = true;
       try {
-        const params = new URLSearchParams();
-        if (this.vistaGrid) {
-          const dias = this.diasSemana();
-          params.set('desde',    this.formatISO(dias[0]));
-          params.set('hasta',    this.formatISO(dias[6]));
-          params.set('per_page', 200);
-          // rol filter intentionally omitted in week view — shows all roles
-        } else {
-          if (this.planFiltros.desde) params.set('desde', this.planFiltros.desde);
-          if (this.planFiltros.hasta) params.set('hasta', this.planFiltros.hasta);
-          if (this.planFiltros.rol)   params.set('rol',   this.planFiltros.rol);
-          params.set('page',     this.planPage);
-          params.set('per_page', 25);
-        }
+        this._diasSemana = this.diasSemana();
+        const desde = this.formatISO(this._diasSemana[0]);
+        const hasta  = this.formatISO(this._diasSemana[6]);
+        const params = new URLSearchParams({ desde, hasta, per_page: 200 });
         const resp = await fetch('/dashboard/turnos/planificacion?' + params.toString());
         if (!resp.ok) throw new Error('Error ' + resp.status);
         const data = await resp.json();
-        this.planTurnos  = data.turnos;
-        this.planTotal   = data.total;
-        if (this.vistaGrid) {
-          // Actualizar caches de cuadrícula una vez tras la carga (evita recálculo por celda)
-          this._diasSemana      = this.diasSemana();
-          this._semanaTurnos    = this.semanaTurnos();
-          this._empleadosSemana = this.empleadosSemana();
-        } else {
-          this.planPage  = data.page;
-          this.planPages = data.pages;
+        this.planTurnos = data.turnos || [];
+        // Reconstruir índice por empleado+fecha
+        const idx = {};
+        const emps = {};
+        for (const t of this.planTurnos) {
+          const eid = String(t.empleado_id);
+          if (!idx[eid]) idx[eid] = {};
+          if (!idx[eid][t.fecha]) idx[eid][t.fecha] = [];
+          idx[eid][t.fecha].push(t);
+          if (!emps[eid]) emps[eid] = { id: t.empleado_id, nombre: t.empleado, rol: t.rol };
         }
+        this._semanaTurnos    = idx;
+        this._empleadosSemana = Object.values(emps).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
         this.planCargado = true;
       } catch (e) {
-        this.error = 'No se pudo cargar la planificación. ' + e.message;
+        this.error = 'No se pudo cargar el plan. ' + e.message;
       } finally {
         this.planCargando = false;
       }
@@ -1138,7 +987,7 @@ function turnosApp() {
       this.formError    = null;
       this.form = {
         empleado_id: '',
-        fecha: this.planFiltros.desde || this.formatISO(new Date()),
+        fecha: this.formatISO(new Date()),
         hora_inicio: '',
         hora_fin: '',
         tipo: '',
