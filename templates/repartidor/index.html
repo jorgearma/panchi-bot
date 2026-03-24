@@ -641,7 +641,7 @@
            :class="actual?.estado_reparto === 'entregado' ? 'text-green-700' : 'text-red-700'"
            x-text="actual?.estado_reparto === 'entregado' ? 'Entregado' : 'No entregado'"></div>
       <div x-show="actual?.hora_entrega_real" class="text-sm text-gray-500 mt-0.5"
-           x-text="'a las ' + formatHora(actual?.hora_entrega_real)"></div>
+           x-text="formatFechaHora(actual?.hora_entrega_real)"></div>
       <div x-show="actual?.motivo_no_entrega" class="text-sm text-red-600 mt-1 font-medium"
            x-text="actual?.motivo_no_entrega"></div>
     </div>
@@ -1873,6 +1873,14 @@
         formatHora(ts) {
           if (!ts) return '—';
           return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        },
+
+        formatFechaHora(ts) {
+          if (!ts) return '—';
+          const d = new Date(ts);
+          const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          const hora = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+          return fecha + ' a las ' + hora;
         },
 
         mostrarToast(msg, error = false) {
