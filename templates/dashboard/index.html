@@ -373,257 +373,175 @@
       </main>
 
       <aside class="space-y-5">
-        <div class="glass-panel rounded-[24px] p-5">
-          <div class="flex items-center justify-between">
+        <div class="glass-panel rounded-[24px] overflow-hidden">
+
+          <!-- Header -->
+          <div class="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
             <div>
               <p class="section-title text-[11px] font-bold uppercase text-slate-500">Equipo</p>
-              <h2 class="mt-1 text-lg font-extrabold text-slate-950">Capacidad actual</h2>
+              <h2 class="mt-1 text-lg font-extrabold text-slate-950">Asignaciones activas</h2>
             </div>
-            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600" x-text="pickersEquipo.length + repartidoresEquipo.length"></span>
-          </div>
-
-          <div class="mt-4 rounded-2xl bg-slate-950 px-4 py-4 text-white">
-            <div class="grid grid-cols-2 gap-4 text-center">
-              <div>
-                <p class="text-2xl font-extrabold" x-text="metricas.pickers_activos ?? 0"></p>
-                <p class="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">Pickers activos</p>
-              </div>
-              <div>
-                <p class="text-2xl font-extrabold" x-text="metricas.repartidores_activos ?? 0"></p>
-                <p class="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">Repartidores</p>
-              </div>
+            <div class="flex items-center gap-2">
+              <span class="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800"
+                    x-text="pickersEquipo.length + ' pick.'"></span>
+              <span class="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-800"
+                    x-text="repartidoresEquipo.length + ' rep.'"></span>
             </div>
           </div>
 
-          <div class="mt-4 space-y-5 max-h-[760px] overflow-y-auto">
-            <section>
-              <div class="mb-3 flex items-center justify-between">
-                <div>
-                  <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Pickers</p>
-                  <p class="mt-1 text-sm font-semibold text-slate-700">Carga de preparaci&oacute;n</p>
-                </div>
-                <span class="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800" x-text="pickersEquipo.length"></span>
-              </div>
+          <div class="max-h-[820px] overflow-y-auto divide-y divide-slate-100">
 
-              <div class="space-y-3">
-                <template x-for="picker in pickersEquipo" :key="'picker-'+picker.empleado_id">
-                  <div class="rounded-[26px] border-2 p-4 shadow-sm transition"
-                       :class="workerLoadBorder(picker.carga, 'picker')">
-                    <div class="flex items-start justify-between gap-3">
-                      <div>
-                        <p class="font-bold text-slate-900" x-text="picker.nombre"></p>
-                        <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Picker</p>
-                        <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                          <span class="rounded-full px-2 py-1 font-bold"
+            <!-- ── PICKERS ── -->
+            <div class="px-4 pt-4 pb-3">
+              <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Pickers · Preparación</p>
+              <div class="space-y-4">
+                <template x-for="picker in pickersEquipo" :key="'p-'+picker.empleado_id">
+                  <div>
+                    <!-- Worker row -->
+                    <div class="flex items-center gap-3 mb-2">
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black"
+                           :class="picker.carga.score >= 3 ? 'bg-red-100 text-red-700' : picker.carga.score === 2 ? 'bg-amber-100 text-amber-700' : picker.carga.score === 1 ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-700'"
+                           x-text="picker.nombre.charAt(0).toUpperCase()"></div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm font-bold text-slate-900 truncate" x-text="picker.nombre"></span>
+                          <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
                                 :class="picker.carga.score >= 3 ? 'bg-red-100 text-red-700' : picker.carga.score === 2 ? 'bg-amber-100 text-amber-700' : picker.carga.score === 1 ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-700'"
                                 x-text="picker.carga.label"></span>
-                          <span class="rounded-full bg-white px-2 py-1 font-medium text-slate-500 shadow-sm"
-                                x-text="picker.max_minutos_activo > 0 ? 'máx ' + formatMinutos(picker.max_minutos_activo) : 'sin carga activa'"></span>
                         </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5"
+                           x-text="picker.pedidos_activos + ' pedido(s) · ' + picker.items_pendientes + ' items pend.'"></p>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <div class="min-w-[86px] rounded-2xl px-3 py-2 text-center shadow-sm"
-                             :class="workerLoadTone(picker.carga, 'picker')">
-                          <p class="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80"
-                             x-text="picker.pedidos_activos > 0 ? 'Activos' : 'Estado'"></p>
-                          <p class="mt-1 text-lg font-black leading-none"
-                             x-text="picker.pedidos_activos > 0 ? picker.pedidos_activos : 'OK'"></p>
-                        </div>
-                        <button @click="togglePickerCollapse(picker.empleado_id)"
-                                class="h-8 w-8 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                                :title="isPickerCollapsed(picker.empleado_id) ? 'Expandir picker' : 'Minimizar picker'">
-                          <span x-text="isPickerCollapsed(picker.empleado_id) ? '+' : '−'"></span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div class="mt-3 grid grid-cols-3 gap-2 text-center" x-show="!isPickerCollapsed(picker.empleado_id)" x-cloak>
-                      <div class="rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
-                        <p class="text-lg font-extrabold text-slate-900" x-text="picker.items_total"></p>
-                        <p class="text-[10px] uppercase tracking-wide text-slate-400">items</p>
-                      </div>
-                      <div class="rounded-xl border border-emerald-200 bg-emerald-50/70 px-2 py-2 shadow-sm">
-                        <p class="text-lg font-extrabold text-emerald-600" x-text="picker.items_completados"></p>
-                        <p class="text-[10px] uppercase tracking-wide text-slate-400">hechos</p>
-                      </div>
-                      <div class="rounded-xl border border-amber-200 bg-amber-50/80 px-2 py-2 shadow-sm">
-                        <p class="text-lg font-extrabold text-amber-600" x-text="picker.items_pendientes"></p>
-                        <p class="text-[10px] uppercase tracking-wide text-slate-400">pendientes</p>
-                      </div>
-                    </div>
-
-                    <div class="mt-3 flex gap-2" x-show="!isPickerCollapsed(picker.empleado_id)" x-cloak>
                       <button @click="asignarSiguienteAPicker(picker.empleado_id)"
-                              class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                        Tomar siguiente pendiente
+                              class="shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                              title="Asignar siguiente pedido pendiente">
+                        + sig.
                       </button>
                     </div>
 
-                    <div class="mt-3 space-y-2" x-show="picker.pickings.length > 0 && !isPickerCollapsed(picker.empleado_id)" x-cloak>
+                    <!-- Pickings del picker -->
+                    <div class="ml-11 space-y-1.5">
                       <template x-for="pk in picker.pickings" :key="'pk-'+pk.picking_id">
-                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                          <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                              <button @click="filtrarPorPedido(pk.pedido_id)"
-                                      class="text-sm font-bold text-slate-900 hover:text-sky-700"
-                                      x-text="'#' + pk.pedido_id"></button>
-                              <p class="mt-1 text-xs text-slate-500 truncate" x-text="pk.cliente_nombre || pk.direccion_entrega || 'Pedido en preparación'"></p>
-                            </div>
-                            <span class="rounded-full px-2 py-1 text-[11px] font-semibold"
+                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                          <div class="flex items-center gap-2">
+                            <button @click="filtrarPorPedido(pk.pedido_id)"
+                                    class="text-sm font-black text-slate-900 hover:text-sky-700 shrink-0"
+                                    x-text="'#' + pk.pedido_id"></button>
+                            <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                   :class="badgePickingClass(pk.estado_picking)"
                                   x-text="pk.estado_picking"></span>
+                            <span class="ml-auto text-[11px] tabular-nums text-slate-500 shrink-0"
+                                  x-text="pk.items_completados + '/' + pk.items_total + ' items'"></span>
                           </div>
-                          <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
-                            <span x-text="pk.items_completados + '/' + pk.items_total + ' items'"></span>
-                            <span x-text="pk.items_pendientes + ' pend.'"></span>
+                          <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100">
+                            <div class="h-1 rounded-full bg-sky-500 transition-all"
+                                 :style="'width:' + (pk.items_total ? (pk.items_completados / pk.items_total * 100) : 0) + '%'"></div>
                           </div>
-                          <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
-                            <span x-text="pk.minutos_activos > 0 ? 'activo ' + formatMinutos(pk.minutos_activos) : 'recién asignado'"></span>
-                            <span x-show="pk.iniciado_en" x-text="'inicio ' + horaCorta(pk.iniciado_en)"></span>
-                          </div>
-                          <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                            <div class="h-1.5 rounded-full bg-sky-500" :style="'width:' + (pk.items_total ? (pk.items_completados / pk.items_total * 100) : 0) + '%'"></div>
-                          </div>
-                          <div class="mt-3 flex gap-2">
+                          <div class="mt-2 flex gap-1.5">
                             <button @click="abrirModalReasignar(pk.picking_id)"
-                                    class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                              Cambiar picker
+                                    class="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100">
+                              Reasignar
                             </button>
                             <button @click="filtrarPorPedido(pk.pedido_id)"
-                                    class="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800">
-                              Ver pedido
+                                    class="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-700">
+                              Ver
                             </button>
                           </div>
                         </div>
                       </template>
-                    </div>
-
-                    <div x-show="picker.pickings.length === 0 && !isPickerCollapsed(picker.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-800 shadow-sm">
-                      Sin pickings asignados ahora mismo.
-                    </div>
-
-                    <div x-show="isPickerCollapsed(picker.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-500 shadow-sm">
-                      <span x-text="picker.pedidos_activos > 0 ? picker.pedidos_activos + ' pedidos activos · ' + picker.items_pendientes + ' items pendientes' : 'Disponible para asignar'"></span>
+                      <div x-show="picker.pickings.length === 0"
+                           class="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[11px] text-emerald-700">
+                        Sin pickings — disponible
+                      </div>
                     </div>
                   </div>
                 </template>
-                <div x-show="pickersEquipo.length === 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
-                  No hay pickers activos o visibles en este momento.
+                <div x-show="pickersEquipo.length === 0"
+                     class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-400">
+                  No hay pickers activos.
                 </div>
               </div>
-            </section>
+            </div>
 
-            <section>
-              <div class="mb-3 flex items-center justify-between">
-                <div>
-                  <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Repartidores</p>
-                  <p class="mt-1 text-sm font-semibold text-slate-700">Carga de calle</p>
-                </div>
-                <span class="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-800" x-text="repartidoresEquipo.length"></span>
-              </div>
-
-              <div class="space-y-3">
-                <template x-for="emp in repartidoresEquipo" :key="'rep-'+emp.empleado_id">
-                  <div class="rounded-[26px] border-2 p-4 shadow-sm transition"
-                       :class="workerLoadBorder(emp.carga, 'repartidor')">
-                    <div class="flex items-start justify-between gap-3">
-                      <div>
-                        <p class="font-bold text-slate-900" x-text="emp.nombre"></p>
-                        <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Repartidor</p>
-                        <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                          <span class="rounded-full px-2 py-1 font-bold"
+            <!-- ── REPARTIDORES ── -->
+            <div class="px-4 pt-4 pb-3">
+              <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Repartidores · Calle</p>
+              <div class="space-y-4">
+                <template x-for="emp in repartidoresEquipo" :key="'r-'+emp.empleado_id">
+                  <div>
+                    <!-- Worker row -->
+                    <div class="flex items-center gap-3 mb-2">
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black"
+                           :class="emp.carga.score >= 3 ? 'bg-red-100 text-red-700' : emp.carga.score === 2 ? 'bg-amber-100 text-amber-700' : emp.carga.score === 1 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'"
+                           x-text="emp.nombre.charAt(0).toUpperCase()"></div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm font-bold text-slate-900 truncate" x-text="emp.nombre"></span>
+                          <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
                                 :class="emp.carga.score >= 3 ? 'bg-red-100 text-red-700' : emp.carga.score === 2 ? 'bg-amber-100 text-amber-700' : emp.carga.score === 1 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'"
                                 x-text="emp.carga.label"></span>
-                          <span class="rounded-full bg-white px-2 py-1 font-medium text-slate-500 shadow-sm"
-                                x-text="emp.max_minutos_activo > 0 ? 'máx ruta ' + formatMinutos(emp.max_minutos_activo) : 'sin ruta activa'"></span>
                         </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5"
+                           x-text="emp.pedidos_activos.length + ' en ruta · ' + emp.entregados_hoy + ' entregados hoy'"></p>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <div class="min-w-[86px] rounded-2xl px-3 py-2 text-center shadow-sm"
-                             :class="workerLoadTone(emp.carga, 'repartidor')">
-                          <p class="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80"
-                             x-text="emp.pedidos_activos.length > 0 ? 'Activos' : 'Estado'"></p>
-                          <p class="mt-1 text-lg font-black leading-none"
-                             x-text="emp.pedidos_activos.length > 0 ? emp.pedidos_activos.length : 'OK'"></p>
-                        </div>
-                        <button @click="toggleRepartidorCollapse(emp.empleado_id)"
-                                class="h-8 w-8 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                                :title="isRepartidorCollapsed(emp.empleado_id) ? 'Expandir repartidor' : 'Minimizar repartidor'">
-                          <span x-text="isRepartidorCollapsed(emp.empleado_id) ? '+' : '−'"></span>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm" x-show="!isRepartidorCollapsed(emp.empleado_id)" x-cloak>
-                      <span x-text="emp.telefono || 'sin tel.'"></span>
-                      <span x-text="emp.entregados_hoy + ' hoy'"></span>
-                    </div>
-
-                    <div class="mt-3 flex gap-2" x-show="!isRepartidorCollapsed(emp.empleado_id)" x-cloak>
                       <button @click="asignarSiguienteARepartidor(emp.empleado_id)"
-                              class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                        Tomar siguiente pendiente
+                              class="shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                              title="Asignar siguiente pedido pendiente">
+                        + sig.
                       </button>
                     </div>
 
-                    <div class="mt-3 space-y-2" x-show="emp.pedidos_activos.length > 0 && !isRepartidorCollapsed(emp.empleado_id)" x-cloak>
-                      <template x-for="r in emp.pedidos_activos" :key="'r-'+r.reparto_id">
-                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                          <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                              <button @click="filtrarPorPedido(r.pedido_id)"
-                                      class="text-sm font-bold text-slate-900 hover:text-orange-700"
-                                      x-text="'#' + r.pedido_id"></button>
-                              <p class="mt-1 truncate text-xs text-slate-500" x-text="r.direccion"></p>
-                            </div>
-                            <span class="rounded-full px-2 py-1 text-[11px] font-semibold"
+                    <!-- Pedidos del repartidor -->
+                    <div class="ml-11 space-y-1.5">
+                      <template x-for="r in emp.pedidos_activos" :key="'rp-'+r.reparto_id">
+                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                          <div class="flex items-center gap-2">
+                            <button @click="abrirPedidoPorId(r.pedido_id)"
+                                    class="text-sm font-black text-slate-900 hover:text-orange-700 shrink-0"
+                                    x-text="'#' + r.pedido_id"></button>
+                            <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                   :class="badgeRepartoClass(r.estado_reparto)"
-                                  x-text="r.estado_reparto === 'asignado' ? 'En tienda' : r.estado_reparto === 'en_camino' ? 'En reparto' : r.estado_reparto"></span>
+                                  x-text="r.estado_reparto === 'asignado' ? 'En tienda' : r.estado_reparto === 'en_camino' ? 'En ruta' : r.estado_reparto"></span>
+                            <span class="ml-auto text-[11px] font-semibold tabular-nums text-slate-700 shrink-0"
+                                  x-text="r.total.toFixed(2) + '€'"></span>
                           </div>
-                          <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
-                            <span x-text="r.total.toFixed(2) + '€'"></span>
-                            <span x-text="r.estado_reparto === 'en_camino' ? 'ya salió' : 'pendiente salida'"></span>
-                          </div>
-                          <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
-                            <span x-text="r.minutos_activos > 0 ? 'ruta ' + formatMinutos(r.minutos_activos) : 'sin salida marcada'"></span>
-                            <span x-show="r.hora_salida" x-text="'salida ' + horaCorta(r.hora_salida)"></span>
-                          </div>
-                          <div class="mt-3 flex gap-2">
+                          <p class="mt-1 text-[11px] text-slate-400 truncate" x-text="r.direccion"></p>
+                          <div class="mt-2 flex gap-1.5">
                             <button @click="abrirModalRepartidor(r.pedido_id, emp.nombre)"
-                                    class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                              Cambiar repartidor
+                                    class="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100">
+                              Cambiar
                             </button>
                             <button x-show="r.estado_reparto === 'asignado'"
                                     @click="marcarSalida(r.reparto_id)"
-                                    class="rounded-xl bg-orange-500 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-600">
+                                    class="rounded-lg bg-orange-500 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-orange-600">
                               Salida
                             </button>
                             <button x-show="r.estado_reparto === 'en_camino'"
                                     @click="abrirPedidoPorId(r.pedido_id)"
-                                    class="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800">
-                              Ver pedido
+                                    class="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-700">
+                              Ver
                             </button>
                           </div>
                         </div>
                       </template>
-                    </div>
-
-                    <div x-show="emp.pedidos_activos.length === 0 && !isRepartidorCollapsed(emp.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-800 shadow-sm">
-                      Disponible para nuevas asignaciones.
-                    </div>
-
-                    <div x-show="isRepartidorCollapsed(emp.empleado_id)" x-cloak class="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-500 shadow-sm">
-                      <span x-text="emp.pedidos_activos.length > 0 ? emp.pedidos_activos.length + ' pedidos activos' : 'Disponible para nuevas asignaciones'"></span>
+                      <div x-show="emp.pedidos_activos.length === 0"
+                           class="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[11px] text-emerald-700">
+                        Disponible para nuevas rutas
+                      </div>
                     </div>
                   </div>
                 </template>
-                <div x-show="repartidoresEquipo.length === 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
-                  No hay repartidores visibles en este momento.
+                <div x-show="repartidoresEquipo.length === 0"
+                     class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-400">
+                  No hay repartidores activos.
                 </div>
               </div>
-            </section>
+            </div>
+
           </div>
         </div>
       </aside>
+
     </section>
   </div>
 
