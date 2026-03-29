@@ -1,5 +1,6 @@
 # /services/registro_usuario.py
 import logging
+import re
 from services.whatsapp_service import enviar_mensaje_whatsapp
 from services.maps_service import validar_direccion
 from managers.estado_usuario import EstadoUsuario
@@ -86,23 +87,11 @@ def _enviar_direccion_invalida(numero_cliente):
         numero_cliente
     )
 
-_nlp = None
-
-
-def _get_nlp():
-    global _nlp
-    if _nlp is None:
-        import spacy
-        _nlp = spacy.load("es_core_news_sm")
-    return _nlp
-
-
 def _es_nombre_valido(nombre):
-    doc = _get_nlp()(nombre)
-    for ent in doc.ents:
-        if ent.label_ == "PER":
-            return True
-    return False
+    nombre = nombre.strip()
+    if len(nombre) < 2 or len(nombre) > 60:
+        return False
+    return bool(re.match(r"^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ\s'\-]+$", nombre))
 
 
 def _validar_y_confirmar_direccion(numero_cliente, direccion):
