@@ -1,0 +1,768 @@
+{
+  "endpoints": [
+    {
+      "method": "GET",
+      "full_path": "/health",
+      "owner": "main.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/operacion/resumen",
+      "owner": "blueprints/metricas_operacion.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/operacion/asistencia",
+      "owner": "blueprints/metricas_operacion.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/operacion/colas",
+      "owner": "blueprints/metricas_operacion.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/operacion/pedidos-estado",
+      "owner": "blueprints/metricas_operacion.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/operacion/alertas",
+      "owner": "blueprints/metricas_operacion.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/perfil",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/empleado/estado",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/turno-hoy",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/puede-iniciar",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/metricas",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/capacidades",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/carga-operativa",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/empleado/cambiar-rol",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/checkin",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/empleado/fichaje",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/empleado/fichaje/cerrar",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/fichaje/hoy",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/turnos",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/empleado/turnos/datos",
+      "owner": "blueprints/empleado.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/picker",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/favicon.ico",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/picker/manifest.json",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/picker/sw.js",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/picker/mis-pedidos",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/picker/item/<int:item_id>/estado",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/picker/buscar-productos",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/picker/picking/<int:picking_id>/finalizar",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/picker/cola",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/picker/cola/coger/<int:picking_id>",
+      "owner": "blueprints/picker.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/monitor",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/monitor/datos",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/metricas",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/pedidos-activos",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/picking",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/repartidores",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/alertas",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/eventos",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/mapa",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/empleados",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/historial",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/historial-pedidos",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/pedido/<int:pedido_id>/detalle",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/turnos",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/turnos/hoy",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/turnos/historial",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/rendimiento",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/rendimiento-datos",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/rendimiento/<int:empleado_id>",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/estadisticas",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/estadisticas-datos",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/turnos/planificacion",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/turnos/crear",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/turnos/<int:turno_id>/editar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/turnos/<int:turno_id>/cancelar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/turnos/<int:turno_id>/eliminar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/picking/asignar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/picking/<int:picking_id>/reasignar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/picking/<int:picking_id>/completar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/reparto/asignar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/reparto/<int:reparto_id>/salida",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/reparto/<int:reparto_id>/entregar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/pedido/<int:pedido_id>/cancelar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/sustituir",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/productos",
+      "owner": "blueprints/dashboard.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/productos-admin",
+      "owner": "blueprints/productos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/productos-admin/lista",
+      "owner": "blueprints/productos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "PATCH",
+      "full_path": "/productos-admin/<int:producto_id>/stock",
+      "owner": "blueprints/productos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "PATCH",
+      "full_path": "/productos-admin/<int:producto_id>/disponible",
+      "owner": "blueprints/productos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "PATCH",
+      "full_path": "/productos-admin/<int:producto_id>/precio",
+      "owner": "blueprints/productos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/menu/<token>",
+      "owner": "blueprints/menu.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/confirmacion_pago",
+      "owner": "blueprints/menu.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/pago_confirmado",
+      "owner": "blueprints/menu.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/repartidor",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/repartidor/apple-touch-icon-180x180.png",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/repartidor/manifest.json",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/repartidor/sw.js",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/repartidor/mis-pedidos",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/repartidor/reparto/<int:reparto_id>/salida",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/repartidor/reparto/<int:reparto_id>/entregar",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/repartidor/reparto/<int:reparto_id>/no-entregar",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/repartidor/reparto/<int:reparto_id>/registrar-cobro",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/repartidor/cierre",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/repartidor/cierre/datos",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/repartidor/cola",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/repartidor/cola/coger/<int:pedido_id>",
+      "owner": "blueprints/repartidor.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/webhook",
+      "owner": "blueprints/webhook.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/webhook/monei",
+      "owner": "blueprints/webhook.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/webhook/meta",
+      "owner": "blueprints/webhook.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/webhook/meta",
+      "owner": "blueprints/webhook.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/analitica/resumen",
+      "owner": "blueprints/metricas_analitica.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/analitica/pedidos",
+      "owner": "blueprints/metricas_analitica.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/analitica/picking",
+      "owner": "blueprints/metricas_analitica.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/analitica/reparto",
+      "owner": "blueprints/metricas_analitica.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/analitica/empleados",
+      "owner": "blueprints/metricas_analitica.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/analitica/empleado/<int:empleado_id>",
+      "owner": "blueprints/metricas_analitica.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/analitica/comparativa",
+      "owner": "blueprints/metricas_analitica.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/analitica/asistencia",
+      "owner": "blueprints/metricas_analitica.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/metricas/analitica/incidencias",
+      "owner": "blueprints/metricas_analitica.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/auth/login",
+      "owner": "blueprints/auth.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/auth/login",
+      "owner": "blueprints/auth.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/auth/logout",
+      "owner": "blueprints/auth.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/api/confirmacion",
+      "owner": "blueprints/api.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/api/agregar_pedido",
+      "owner": "blueprints/api.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/api/cambiar_estado_a_enlace",
+      "owner": "blueprints/api.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/api/agregar_pedido_efectivo",
+      "owner": "blueprints/api.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/api/volver_al_menu",
+      "owner": "blueprints/api.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/api/productos",
+      "owner": "blueprints/api.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/api/seguimiento/<redis_id>",
+      "owner": "blueprints/api.py",
+      "breaking_if_changed": true
+    }
+  ],
+  "payload_schemas": [
+    {
+      "file": "schemas/usuario.py",
+      "classes": [
+        "UsuarioDatos"
+      ],
+      "used_by": [
+        "blueprints/menu.py",
+        "controllers/registro.py",
+        "services/token_service.py",
+        "services/__init__.py",
+        "tests/test_gestor_usuarios.py",
+        "tests/test_registro.py"
+      ],
+      "breaking_if_changed": true
+    },
+    {
+      "file": "schemas/twilio.py",
+      "classes": [
+        "WebhookRequest",
+        "PedidoInput"
+      ],
+      "used_by": [
+        "blueprints/webhook.py",
+        "controllers/pedido.py"
+      ],
+      "breaking_if_changed": true
+    }
+  ],
+  "events": [],
+  "env_vars": [
+    {
+      "name": "GOOGLE_MAPS_API_KEY",
+      "owner": "config.py"
+    },
+    {
+      "name": "INTERNAL_API_TOKEN",
+      "owner": "config.py"
+    },
+    {
+      "name": "META_ACCESS_TOKEN",
+      "owner": "config.py"
+    },
+    {
+      "name": "META_APP_SECRET",
+      "owner": "config.py"
+    },
+    {
+      "name": "META_VERIFY_TOKEN",
+      "owner": "config.py"
+    },
+    {
+      "name": "MONEI_API_KEY",
+      "owner": "config.py"
+    },
+    {
+      "name": "MONEI_WEBHOOK_SECRET",
+      "owner": "config.py"
+    },
+    {
+      "name": "OPENAI_API_KEY",
+      "owner": "config.py"
+    },
+    {
+      "name": "PUBLIC_URL",
+      "owner": "config.py"
+    },
+    {
+      "name": "SECRET_KEY",
+      "owner": "config.py"
+    },
+    {
+      "name": "TWILIO_ACCOUNT_SID",
+      "owner": "config.py"
+    },
+    {
+      "name": "TWILIO_AUTH_TOKEN",
+      "owner": "config.py"
+    }
+  ],
+  "legacy_contracts": [
+    {
+      "description": "— usar categoria_id en código nuevo",
+      "file": "models.py",
+      "line": 45
+    },
+    {
+      "description": "— usar rol_id en código nuevo",
+      "file": "models.py",
+      "line": 190
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CONTRACT_MAP",
+  "description": "Contratos públicos del sistema — lo que no se puede romper sin coordinación",
+  "type": "object",
+  "required": ["endpoints", "payload_schemas", "env_vars", "legacy_contracts"],
+  "additionalProperties": false,
+  "properties": {
+    "endpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["method", "full_path", "owner", "breaking_if_changed"],
+        "properties": {
+          "method":              { "type": "string" },
+          "full_path":           { "type": "string" },
+          "owner":               { "type": "string" },
+          "breaking_if_changed": { "type": "boolean" }
+        }
+      }
+    },
+    "payload_schemas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "classes"],
+        "properties": {
+          "file":               { "type": "string" },
+          "classes":            { "type": "array", "items": { "type": "string" } },
+          "used_by":            { "type": "array", "items": { "type": "string" } },
+          "breaking_if_changed":{ "type": "boolean" }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "env_vars": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name":  { "type": "string" },
+          "owner": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "legacy_contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["description", "file"],
+        "properties": {
+          "description": { "type": "string" },
+          "file":        { "type": "string" },
+          "line":        { "type": "integer" }
+        }
+      }
+    }
+  }
+}

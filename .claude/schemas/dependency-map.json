@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DependencyMap",
+  "description": "Grafo bidireccional de dependencias entre archivos. Generado por analyzers/dependency.py. El reader hace BFS desde archivos semilla para construir el subgrafo que le pasa al planner.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entry_points", "forward", "reverse", "nodes", "cycles", "stats"],
+  "properties": {
+    "entry_points": {
+      "type": "array",
+      "description": "Archivos con role=entry_point — punto de inicio del grafo.",
+      "items": { "type": "string" }
+    },
+    "forward": {
+      "type": "object",
+      "description": "A → [B, C]: el archivo A importa a B y C.",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "reverse": {
+      "type": "object",
+      "description": "A → [B, C]: el archivo A es importado por B y C.",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "nodes": {
+      "type": "object",
+      "description": "Metadatos por archivo: role y símbolos con rangos de línea para lectura quirúrgica.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["role", "symbols"],
+        "additionalProperties": false,
+        "properties": {
+          "role": { "type": "string" },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "line", "kind"],
+              "additionalProperties": false,
+              "properties": {
+                "name":     { "type": "string" },
+                "line":     { "type": "integer" },
+                "end_line": { "type": "integer" },
+                "kind":     { "type": "string", "enum": ["class", "function"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "cycles": {
+      "type": "array",
+      "description": "Ciclos de importación detectados, en formato 'A → B → A'.",
+      "items": { "type": "string" }
+    },
+    "stats": {
+      "type": "object",
+      "required": ["total_files", "connected_files", "edges", "cycles_found"],
+      "additionalProperties": false,
+      "properties": {
+        "total_files":     { "type": "integer" },
+        "connected_files": { "type": "integer" },
+        "edges":           { "type": "integer" },
+        "cycles_found":    { "type": "integer" }
+      }
+    }
+  }
+}

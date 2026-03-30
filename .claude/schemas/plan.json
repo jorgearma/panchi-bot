@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaudePlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task", "steps", "risks", "done_criteria", "context_inputs", "rollback_plan"],
+  "properties": {
+    "task": {
+      "type": "string"
+    },
+    "context_inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selected_readers", "maps_used", "files_to_open", "files_to_review"],
+      "properties": {
+        "selected_readers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["api", "data", "ui", "services", "jobs"]
+          }
+        },
+        "maps_used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files_to_open": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "files_to_review": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dependency_graph": {
+          "type": "object",
+          "description": "Grafo de dependencias forward filtrado del reader. Clave: ruta del archivo. Valor: array de rutas que importa. Usalo para identificar qué cambios se propagan hacia dónde.",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        },
+        "constraints": {
+          "type": "array",
+          "description": "Restricciones del reader que el plan debe respetar.",
+          "items": { "type": "string" }
+        },
+        "key_facts": {
+          "type": "array",
+          "description": "Datos clave del dominio extraidos de los MAPs.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "title", "owner"],
+        "properties": {
+          "id": {
+            "type": ["string", "integer"]
+          },
+          "title": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string",
+            "enum": ["frontend", "backend", "test-runner"]
+          },
+          "depends_on": {
+            "type": "array",
+            "description": "IDs de pasos que deben completarse antes de ejecutar este. Vacio significa sin dependencias.",
+            "items": { "type": ["string", "integer"] }
+          },
+          "files": {
+            "type": "array",
+            "description": "Archivos que este paso modifica.",
+            "items": { "type": "string" }
+          },
+          "description": {
+            "type": "string",
+            "description": "Instrucciones detalladas para el writer/agente ejecutor."
+          },
+          "acceptance": {
+            "type": "string",
+            "description": "Criterio concreto de aceptacion para este paso."
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "required": ["id", "severity", "description"],
+            "properties": {
+              "id":          { "type": "string" },
+              "severity":    { "type": "string", "enum": ["low", "medium", "high"] },
+              "description": { "type": "string" },
+              "mitigation":  { "type": "string" }
+            }
+          }
+        ]
+      }
+    },
+    "done_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "impact_analysis": {
+      "type": "object",
+      "description": "Analisis de impacto generado por el planner tras leer el codigo real.",
+      "additionalProperties": true,
+      "required": ["files_affected", "breaking_changes", "migration_needed"],
+      "properties": {
+        "files_affected":   { "type": "integer", "description": "Numero de archivos que el cambio modifica directamente." },
+        "files_modified":   { "type": "array", "items": { "type": "string" }, "description": "Paths de archivos modificados." },
+        "files_created":    { "type": "array", "items": { "type": "string" }, "description": "Paths de archivos nuevos creados." },
+        "endpoints_affected": {
+          "type": "array",
+          "description": "Endpoints o rutas publicas que cambian de contrato.",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["route", "change"],
+                "properties": {
+                  "route":  { "type": "string" },
+                  "change": { "type": "string" }
+                }
+              }
+            ]
+          }
+        },
+        "breaking_changes": { "type": "array", "items": { "type": "string" }, "description": "Cambios incompatibles hacia atras." },
+        "migration_needed": { "type": "boolean", "description": "true si el cambio requiere migracion de datos o schema." },
+        "notes":            { "type": "string" }
+      }
+    },
+    "rollback_plan": {
+      "type": "object",
+      "description": "Plan de rollback para revertir el cambio si algo falla en produccion.",
+      "additionalProperties": false,
+      "required": ["enabled", "steps"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["action", "owner"],
+            "properties": {
+              "action": { "type": "string" },
+              "owner":  { "type": "string", "enum": ["frontend", "backend"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

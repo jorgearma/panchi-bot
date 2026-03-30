@@ -1,0 +1,20 @@
+{
+  "task": "",
+  "approval_status": "pending_operator_review",
+  "target_agents": [],
+  "context_summary": "",
+  "files_to_open": [],
+  "files_to_review": [],
+  "implementation_steps": [
+    {
+      "id": "pending-brief",
+      "owner": "frontend",
+      "instruction": "Esperando que writer genere el execution brief definitivo."
+    }
+  ],
+  "done_criteria": [
+    "Writer debe reemplazar este archivo con un execution brief valido antes de ejecutar."
+  ],
+  "notes": "Plantilla inicial del execution brief.",
+  "operator_action": "Esperar generacion del brief y revisar antes de aprobar."
+}

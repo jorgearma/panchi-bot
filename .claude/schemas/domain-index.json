@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DOMAIN_INDEX",
+  "description": "Índice uniforme de candidatos para un dominio. Mismo schema para api, data, ui, services, jobs.",
+  "type": "object",
+  "required": ["domain", "candidates"],
+  "additionalProperties": false,
+  "properties": {
+    "domain": { "type": "string" },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "role", "open_priority"],
+        "additionalProperties": false,
+        "properties": {
+          "path":               { "type": "string" },
+          "role":               { "type": "string" },
+          "purpose":            { "type": "string" },
+          "key_symbols":        { "type": "array", "items": { "type": "string" } },
+          "test_files":         { "type": "array", "items": { "type": "string" } },
+          "related_paths":      { "type": "array", "items": { "type": "string" } },
+          "contracts":          { "type": "array", "items": { "type": "string" } },
+          "open_priority":      { "type": "string", "enum": ["seed", "review"] },
+          "confidence_signals": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
