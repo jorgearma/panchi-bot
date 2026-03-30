@@ -1,0 +1,53 @@
+{
+  "name": "losgretis-claude-plugin",
+  "version": "0.1.0",
+  "description": "Plugin base para Claude con un agente reader que enruta peticiones a subagentes segun mapas del proyecto.",
+  "entry_agent": "reader",
+  "agents_dir": ".claude/agents",
+  "maps_dir": ".claude/maps",
+  "commands_dir": ".claude/commands",
+  "schemas_dir": ".claude/schemas",
+  "hooks_dir": ".claude/hooks",
+  "agents": [
+    "reader",
+    "planner",
+    "writer",
+    "frontend",
+    "backend"
+  ],
+  "commands": [
+    "start-cycle"
+  ],
+  "hooks": [
+    "pre-commit.py",
+    "analyze-repo.py",
+    "build-subgraph.py",
+    "validate.py"
+  ],
+  "maps": [
+    "ROUTING_MAP.json",
+    "DOMAIN_INDEX_api.json",
+    "DOMAIN_INDEX_data.json",
+    "DOMAIN_INDEX_ui.json",
+    "DOMAIN_INDEX_services.json",
+    "DOMAIN_INDEX_jobs.json",
+    "CONTRACT_MAP.json",
+    "DEPENDENCY_MAP.json"
+  ],
+  "schemas": {
+    "reader_context":     ".claude/schemas/reader-context.json",
+    "plan":               ".claude/schemas/plan.json",
+    "execution_brief":    ".claude/schemas/execution-brief.json",
+    "execution_dispatch": ".claude/schemas/execution-dispatch.json",
+    "operator_approval":  ".claude/schemas/operator-approval.json",
+    "result":             ".claude/schemas/result.json"
+  },
+  "runtime": {
+    "reader_context":     ".claude/runtime/reader-context.json",
+    "plan":               ".claude/runtime/plan.json",
+    "execution_brief":    ".claude/runtime/execution-brief.json",
+    "execution_dispatch": ".claude/runtime/execution-dispatch.json",
+    "operator_approval":  ".claude/runtime/operator-approval.json",
+    "result":             ".claude/runtime/result.json"
+  }
+}

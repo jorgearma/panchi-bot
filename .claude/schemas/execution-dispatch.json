@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaudeExecutionDispatch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "approved", "selected_agents", "task", "step_ids"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["ready", "blocked"]
+    },
+    "approved": {
+      "type": "boolean"
+    },
+    "task": {
+      "type": "string"
+    },
+    "selected_agents": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["frontend", "backend", "test-runner"]
+      }
+    },
+    "rollback_plan": {
+      "type": "object",
+      "description": "Plan de rollback propagado desde plan.json. Presente solo si el plan lo define.",
+      "additionalProperties": false,
+      "required": ["enabled", "steps"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["action", "owner"],
+            "properties": {
+              "action": { "type": "string" },
+              "owner":  { "type": "string", "enum": ["frontend", "backend"] }
+            }
+          }
+        }
+      }
+    },
+    "step_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "execution_order": {
+      "type": "array",
+      "description": "Grupos de pasos ordenados por dependencias. Cada grupo puede ejecutarse en paralelo; los grupos deben ejecutarse en orden.",
+      "items": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "reason": {
+      "type": "string"
+    }
+  }
+}

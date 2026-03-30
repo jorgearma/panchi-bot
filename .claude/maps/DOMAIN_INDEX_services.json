@@ -1,0 +1,222 @@
+{
+  "domain": "services",
+  "candidates": [
+    {
+      "path": "main.py",
+      "role": "entry_point",
+      "purpose": "Punto de entrada de la aplicación main",
+      "key_symbols": [
+        "create_app",
+        "health",
+        "manejar_errores_globales"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/api.py",
+        "blueprints/auth.py",
+        "blueprints/dashboard.py",
+        "blueprints/empleado.py",
+        "blueprints/menu.py",
+        "blueprints/metricas_analitica.py"
+      ],
+      "contracts": [
+        "integration:Sentry"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_sdk_import"
+      ]
+    },
+    {
+      "path": "blueprints/menu.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para menu",
+      "key_symbols": [
+        "quiniela",
+        "mostrar_confirmacion",
+        "mostrar_confirmacion_depago"
+      ],
+      "test_files": [
+        "tests/test_menu.py"
+      ],
+      "related_paths": [
+        "managers/gestor_redis.py",
+        "schemas/usuario.py",
+        "services/__init__.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "integration:Redis"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_sdk_import"
+      ]
+    },
+    {
+      "path": "blueprints/webhook.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para webhook",
+      "key_symbols": [
+        "webhook",
+        "webhook_monei",
+        "webhook_meta_verify",
+        "webhook_meta"
+      ],
+      "test_files": [
+        "tests/test_webhook.py"
+      ],
+      "related_paths": [
+        "controllers/mensajes_registrados.py",
+        "controllers/registro.py",
+        "managers/gestor_redis.py",
+        "schemas/twilio.py",
+        "services/__init__.py",
+        "services/whatsapp_service.py"
+      ],
+      "contracts": [
+        "integration:Twilio"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_sdk_import"
+      ]
+    },
+    {
+      "path": "controllers/pago.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para pago",
+      "key_symbols": [
+        "iniciar_pago",
+        "iniciar_pago_efectivo"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "services/whatsapp_service.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "integration:Monei"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_sdk_import"
+      ]
+    },
+    {
+      "path": "managers/gestor_redis.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de redis",
+      "key_symbols": [
+        "get",
+        "set",
+        "delete",
+        "esta_bloqueado"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "integration:Redis"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_sdk_import"
+      ]
+    },
+    {
+      "path": "services/whatsapp_service.py",
+      "role": "service",
+      "purpose": "Adapta el servicio externo de service",
+      "key_symbols": [
+        "enviar_mensaje_whatsapp"
+      ],
+      "test_files": [
+        "tests/test_whatsapp_service.py"
+      ],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "integration:requests",
+        "integration:Twilio"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_sdk_import"
+      ]
+    },
+    {
+      "path": "services/__init__.py",
+      "role": "service",
+      "purpose": "Adapta el servicio externo de init",
+      "key_symbols": [
+        "get_monei"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py",
+        "managers/gestor_empleado.py",
+        "managers/gestor_pedidos.py",
+        "managers/gestor_productos.py",
+        "managers/gestor_redis.py",
+        "managers/gestor_usuarios.py"
+      ],
+      "contracts": [
+        "integration:Monei",
+        "env:MONEI_API_KEY"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_sdk_import"
+      ]
+    },
+    {
+      "path": "services/maps_service.py",
+      "role": "service",
+      "purpose": "Adapta el servicio externo de service",
+      "key_symbols": [
+        "limpiar_direccion",
+        "construir_url",
+        "validar_coordenadas",
+        "geocodificar_direccion"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "integration:requests"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_sdk_import"
+      ]
+    },
+    {
+      "path": "tests/test_api_pedido.py",
+      "role": "test",
+      "purpose": "Módulo de api pedido",
+      "key_symbols": [
+        "make_pedido",
+        "make_cache",
+        "make_gestor_pedidos",
+        "test_agregar_pedido_carrito_vacio"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "integration:Monei"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_sdk_import"
+      ]
+    }
+  ]
+}
