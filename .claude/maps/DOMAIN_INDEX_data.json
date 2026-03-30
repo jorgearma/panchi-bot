@@ -1,0 +1,454 @@
+{
+  "domain": "data",
+  "candidates": [
+    {
+      "path": "managers/gestor_dashboard.py",
+      "role": "data_access",
+      "purpose": "GestorDashboard — Public API",
+      "key_symbols": [],
+      "test_files": [
+        "tests/test_gestor_dashboard.py"
+      ],
+      "related_paths": [
+        "managers/dashboard/_base.py",
+        "managers/dashboard/gestor_empleados_mixin.py",
+        "managers/dashboard/gestor_estadisticas_mixin.py",
+        "managers/dashboard/gestor_pedidos_mixin.py",
+        "managers/dashboard/gestor_picking_mixin.py",
+        "managers/dashboard/gestor_reparto_mixin.py"
+      ],
+      "contracts": [
+        "model:GestorDashboard"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/gestor_pedidos.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de pedidos",
+      "key_symbols": [
+        "session",
+        "iniciar_pedido",
+        "guardar_enlace",
+        "hay_pedido_pendiente"
+      ],
+      "test_files": [
+        "tests/test_gestor_pedidos.py"
+      ],
+      "related_paths": [
+        "database.py",
+        "models.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/__init__.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de init",
+      "key_symbols": [],
+      "test_files": [],
+      "related_paths": [],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/gestor_usuarios.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de usuarios",
+      "key_symbols": [
+        "session",
+        "obtener_usuario",
+        "guardar_usuario",
+        "obtener_usuario_completo"
+      ],
+      "test_files": [
+        "tests/test_gestor_usuarios.py"
+      ],
+      "related_paths": [
+        "database.py",
+        "models.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/gestor_redis.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de redis",
+      "key_symbols": [
+        "get",
+        "set",
+        "delete",
+        "esta_bloqueado"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/gestor_productos.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de productos",
+      "key_symbols": [
+        "session",
+        "obtener_productos",
+        "obtener_producto_por_codigo",
+        "productos_admin"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "database.py",
+        "models.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/gestor_empleado.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de empleado",
+      "key_symbols": [
+        "session",
+        "perfil",
+        "cambiar_estado",
+        "turno_hoy"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "database.py",
+        "models.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/estado_usuario.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de usuario",
+      "key_symbols": [
+        "obtener_estado",
+        "actualizar_estado"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/gestor_metricas.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de metricas",
+      "key_symbols": [
+        "session",
+        "resumen_operacion",
+        "asistencia_hoy",
+        "colas_detalle"
+      ],
+      "test_files": [
+        "tests/test_gestor_metricas.py"
+      ],
+      "related_paths": [
+        "database.py",
+        "managers/gestor_empleado.py",
+        "models.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/dashboard/gestor_estadisticas_mixin.py",
+      "role": "data_access",
+      "purpose": "Mixin: analítica histórica de ventas y operaciones",
+      "key_symbols": [
+        "estadisticas"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "models.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/dashboard/__init__.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de init",
+      "key_symbols": [],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/dashboard/gestor_empleados_mixin.py",
+      "role": "data_access",
+      "purpose": "Mixin: monitorización de empleados y rendimiento individual/colectivo",
+      "key_symbols": [
+        "empleados_disponibles",
+        "monitor_empleados",
+        "rendimiento_resumen",
+        "rendimiento_empleado"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/dashboard/_helpers.py",
+        "models.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/dashboard/gestor_picking_mixin.py",
+      "role": "data_access",
+      "purpose": "Mixin: operaciones de picking — asignación, reclamación, completado",
+      "key_symbols": [
+        "picking_activo",
+        "buscar_productos",
+        "asignar_picker",
+        "reasignar_picker"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "database.py",
+        "managers/dashboard/_helpers.py",
+        "models.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/dashboard/_base.py",
+      "role": "data_access",
+      "purpose": "Gestiona acceso a datos de base",
+      "key_symbols": [
+        "session"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "database.py",
+        "models.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/dashboard/gestor_reparto_mixin.py",
+      "role": "data_access",
+      "purpose": "Mixin: operaciones de reparto — asignación, entrega, cobro, cierre de caja",
+      "key_symbols": [
+        "repartidores",
+        "mapa",
+        "asignar_repartidor",
+        "marcar_salida_reparto"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "database.py",
+        "managers/dashboard/_helpers.py",
+        "models.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/dashboard/gestor_turnos_mixin.py",
+      "role": "data_access",
+      "purpose": "Mixin: gestión de turnos y asistencia — consultas, creación, edición, cancelación",
+      "key_symbols": [
+        "turnos_hoy",
+        "turnos_historial",
+        "turnos_planificacion",
+        "crear_turno"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/dashboard/_helpers.py",
+        "models.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "managers/dashboard/gestor_pedidos_mixin.py",
+      "role": "data_access",
+      "purpose": "Mixin: consultas de pedidos activos, métricas diarias, alertas e historial",
+      "key_symbols": [
+        "metricas",
+        "pedidos_activos",
+        "alertas",
+        "eventos"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/dashboard/_helpers.py",
+        "models.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_data_access_role"
+      ]
+    },
+    {
+      "path": "main.py",
+      "role": "entry_point",
+      "purpose": "Punto de entrada de la aplicación main",
+      "key_symbols": [
+        "create_app",
+        "health",
+        "manejar_errores_globales"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/api.py",
+        "blueprints/auth.py",
+        "blueprints/dashboard.py",
+        "blueprints/empleado.py",
+        "blueprints/menu.py",
+        "blueprints/metricas_analitica.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_db_access"
+      ]
+    },
+    {
+      "path": "models.py",
+      "role": "model",
+      "purpose": "Define los modelos ORM de models",
+      "key_symbols": [],
+      "test_files": [],
+      "related_paths": [
+        "database.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "model:Usuario",
+        "model:Categoria",
+        "model:Producto",
+        "model:Pedido",
+        "model:PedidoDetalle",
+        "model:Pago",
+        "model:AuditLog",
+        "model:HistorialEstadoPedido",
+        "model:Rol",
+        "model:Empleado",
+        "model:EmpleadoCapacidad",
+        "model:Ausencia",
+        "model:SolicitudCambioTurno",
+        "model:MetricaDiariaEmpleado",
+        "model:PickingPedido",
+        "model:PickingItem",
+        "model:Reparto",
+        "model:Incidencia",
+        "model:Turno",
+        "model:CheckIn",
+        "model:TramoTurno"
+      ],
+      "open_priority": "review",
+      "confidence_signals": [
+        "is_model"
+      ]
+    },
+    {
+      "path": "database.py",
+      "role": "db_connection",
+      "purpose": "Gestiona la conexión a la base de datos database",
+      "key_symbols": [
+        "get_db",
+        "close_db",
+        "conectar_bd1"
+      ],
+      "test_files": [
+        "tests/test_database.py"
+      ],
+      "related_paths": [
+        "models.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "review",
+      "confidence_signals": [
+        "is_db_connection"
+      ]
+    }
+  ]
+}

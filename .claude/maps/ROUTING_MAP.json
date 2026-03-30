@@ -1,0 +1,255 @@
+{
+  "project_summary": {
+    "name": "panchi-bot",
+    "description": "Bot de WhatsApp para gestión de pedidos de un restaurante en Tarancón (España). Los clientes interactúan por WhatsApp, seleccionan productos desde un menú web y pagan con Monei.",
+    "languages": [
+      "python",
+      "javascript"
+    ],
+    "stack": {
+      "Sentry": "2.54.0",
+      "SQLAlchemy": "2.0.38",
+      "Tenacity": "9.1.4",
+      "aiohttp": "3.11.13",
+      "Flask": "3.1.0",
+      "httpx": "0.28.1",
+      "Pydantic": "2.10.6",
+      "Redis": "5.2.1",
+      "requests": "2.32.3",
+      "Twilio": "9.4.6"
+    },
+    "architecture": "CONTROLLERS → SERVICES → MANAGERS → [DB | Redis | APIs externas]",
+    "entry_points": [
+      "main.py"
+    ]
+  },
+  "glossary": {
+    "database": [
+      "databases"
+    ],
+    "states": [
+      "state"
+    ],
+    "metricas": [
+      "metrica"
+    ],
+    "empleado": [
+      "empleados"
+    ],
+    "dashboard": [
+      "dashboards"
+    ],
+    "productos": [
+      "producto"
+    ],
+    "init": [
+      "inits"
+    ],
+    "menu": [
+      "menus"
+    ],
+    "pedidos": [
+      "pedido"
+    ],
+    "usuarios": [
+      "usuario"
+    ],
+    "usuario": [
+      "usuarios"
+    ],
+    "mixin": [
+      "mixins"
+    ],
+    "crear": [
+      "crears"
+    ],
+    "demo": [
+      "demos"
+    ],
+    "migrar": [
+      "migrars"
+    ],
+    "token": [
+      "tokens"
+    ],
+    "whatsapp": [
+      "whatsapps"
+    ],
+    "test": [
+      "tests"
+    ],
+    "sentry": [],
+    "sqlalchemy": [],
+    "tenacity": [],
+    "aiohttp": [],
+    "flask": [],
+    "httpx": [],
+    "pydantic": [],
+    "redis": [],
+    "requests": [],
+    "twilio": []
+  },
+  "domains": [
+    {
+      "name": "api",
+      "keywords": [
+        "endpoint",
+        "ruta",
+        "blueprint",
+        "HTTP",
+        "request",
+        "response",
+        "webhook",
+        "API",
+        "route",
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "REST",
+        "controller",
+        "handler",
+        "middleware"
+      ],
+      "negative_keywords": [
+        "migration",
+        "seed",
+        "test"
+      ],
+      "priority": 1,
+      "preferred_indexes": [
+        "DOMAIN_INDEX_api.json"
+      ]
+    },
+    {
+      "name": "data",
+      "keywords": [
+        "modelo",
+        "tabla",
+        "migración",
+        "campo",
+        "relación",
+        "ORM",
+        "schema",
+        "base de datos",
+        "database",
+        "model",
+        "table",
+        "field",
+        "relationship",
+        "consulta",
+        "query",
+        "filtro",
+        "join",
+        "repository",
+        "manager",
+        "acceso a datos",
+        "data access"
+      ],
+      "negative_keywords": [
+        "test",
+        "fixture"
+      ],
+      "priority": 2,
+      "preferred_indexes": [
+        "DOMAIN_INDEX_data.json",
+        "DATA_MODEL_MAP.json"
+      ]
+    },
+    {
+      "name": "services",
+      "keywords": [
+        "servicio",
+        "integración",
+        "externo",
+        "Twilio",
+        "Stripe",
+        "Redis",
+        "Monei",
+        "SMS",
+        "email",
+        "pago",
+        "payment",
+        "service",
+        "integration",
+        "external",
+        "SDK",
+        "tercero",
+        "third-party",
+        "webhook"
+      ],
+      "negative_keywords": [
+        "test",
+        "mock"
+      ],
+      "priority": 3,
+      "preferred_indexes": [
+        "DOMAIN_INDEX_services.json"
+      ]
+    },
+    {
+      "name": "ui",
+      "keywords": [
+        "vista",
+        "componente",
+        "pantalla",
+        "formulario",
+        "plantilla",
+        "frontend",
+        "view",
+        "component",
+        "template",
+        "page",
+        "layout",
+        "UI",
+        "interfaz",
+        "interface",
+        "render",
+        "HTML",
+        "CSS"
+      ],
+      "negative_keywords": [
+        "test",
+        "migration"
+      ],
+      "priority": 4,
+      "preferred_indexes": [
+        "DOMAIN_INDEX_ui.json"
+      ]
+    },
+    {
+      "name": "jobs",
+      "keywords": [
+        "tarea",
+        "job",
+        "celery",
+        "queue",
+        "cola",
+        "cron",
+        "programado",
+        "worker",
+        "scheduled",
+        "task",
+        "background",
+        "periodic",
+        "interval"
+      ],
+      "negative_keywords": [
+        "test"
+      ],
+      "priority": 5,
+      "preferred_indexes": [
+        "DOMAIN_INDEX_jobs.json"
+      ]
+    }
+  ],
+  "entry_points": [
+    "main.py"
+  ],
+  "default_constraints": [
+    "No romper endpoints públicos documentados en CONTRACT_MAP.json",
+    "No modificar migraciones ya aplicadas",
+    "No cambiar env vars sin actualizar .env.example"
+  ]
+}

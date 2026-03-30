@@ -1,0 +1,497 @@
+{
+  "domain": "api",
+  "candidates": [
+    {
+      "path": "main.py",
+      "role": "entry_point",
+      "purpose": "Punto de entrada de la aplicación main",
+      "key_symbols": [
+        "create_app",
+        "health",
+        "manejar_errores_globales"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/api.py",
+        "blueprints/auth.py",
+        "blueprints/dashboard.py",
+        "blueprints/empleado.py",
+        "blueprints/menu.py",
+        "blueprints/metricas_analitica.py"
+      ],
+      "contracts": [
+        "GET /health"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/metricas_operacion.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para operacion",
+      "key_symbols": [
+        "resumen",
+        "asistencia",
+        "colas",
+        "pedidos_estado"
+      ],
+      "test_files": [
+        "tests/test_metricas_operacion.py"
+      ],
+      "related_paths": [
+        "blueprints/auth.py",
+        "managers/gestor_metricas.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /metricas/operacion/resumen",
+        "GET /metricas/operacion/asistencia",
+        "GET /metricas/operacion/colas",
+        "GET /metricas/operacion/pedidos-estado",
+        "GET /metricas/operacion/alertas"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/empleado.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para empleado",
+      "key_symbols": [
+        "index",
+        "perfil",
+        "estado",
+        "turno_hoy"
+      ],
+      "test_files": [
+        "tests/test_empleado.py"
+      ],
+      "related_paths": [
+        "blueprints/auth.py",
+        "database.py",
+        "models.py",
+        "services/__init__.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /empleado",
+        "GET /empleado/perfil",
+        "POST /empleado/estado",
+        "GET /empleado/turno-hoy",
+        "GET /empleado/puede-iniciar",
+        "GET /empleado/metricas",
+        "GET /empleado/capacidades",
+        "GET /empleado/carga-operativa",
+        "POST /empleado/cambiar-rol",
+        "GET /empleado/checkin",
+        "POST /empleado/fichaje",
+        "POST /empleado/fichaje/cerrar",
+        "GET /empleado/fichaje/hoy",
+        "GET /empleado/turnos",
+        "GET /empleado/turnos/datos"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/picker.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para picker",
+      "key_symbols": [
+        "index",
+        "apple_touch_icon",
+        "manifest",
+        "service_worker"
+      ],
+      "test_files": [
+        "tests/test_picker_cola.py"
+      ],
+      "related_paths": [
+        "blueprints/auth.py",
+        "services/__init__.py",
+        "services/whatsapp_service.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /picker",
+        "GET /favicon.ico",
+        "GET /picker/manifest.json",
+        "GET /picker/sw.js",
+        "GET /picker/mis-pedidos",
+        "POST /picker/item/<int:item_id>/estado",
+        "GET /picker/buscar-productos",
+        "POST /picker/picking/<int:picking_id>/finalizar",
+        "GET /picker/cola",
+        "POST /picker/cola/coger/<int:picking_id>"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/dashboard.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para dashboard",
+      "key_symbols": [
+        "index",
+        "monitor",
+        "monitor_datos",
+        "metricas"
+      ],
+      "test_files": [
+        "tests/test_dashboard_sprint3.py"
+      ],
+      "related_paths": [
+        "blueprints/auth.py",
+        "services/__init__.py",
+        "services/whatsapp_service.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /dashboard",
+        "GET /dashboard/monitor",
+        "GET /dashboard/monitor/datos",
+        "GET /dashboard/metricas",
+        "GET /dashboard/pedidos-activos",
+        "GET /dashboard/picking",
+        "GET /dashboard/repartidores",
+        "GET /dashboard/alertas",
+        "GET /dashboard/eventos",
+        "GET /dashboard/mapa",
+        "GET /dashboard/empleados",
+        "GET /dashboard/historial",
+        "GET /dashboard/historial-pedidos",
+        "GET /dashboard/pedido/<int:pedido_id>/detalle",
+        "GET /dashboard/turnos",
+        "GET /dashboard/turnos/hoy",
+        "GET /dashboard/turnos/historial",
+        "GET /dashboard/rendimiento",
+        "GET /dashboard/rendimiento-datos",
+        "GET /dashboard/rendimiento/<int:empleado_id>",
+        "GET /dashboard/estadisticas",
+        "GET /dashboard/estadisticas-datos",
+        "GET /dashboard/turnos/planificacion",
+        "POST /dashboard/turnos/crear",
+        "POST /dashboard/turnos/<int:turno_id>/editar",
+        "POST /dashboard/turnos/<int:turno_id>/cancelar",
+        "POST /dashboard/turnos/<int:turno_id>/eliminar",
+        "POST /dashboard/picking/asignar",
+        "POST /dashboard/picking/<int:picking_id>/reasignar",
+        "POST /dashboard/picking/<int:picking_id>/completar",
+        "POST /dashboard/reparto/asignar",
+        "POST /dashboard/reparto/<int:reparto_id>/salida",
+        "POST /dashboard/reparto/<int:reparto_id>/entregar",
+        "POST /dashboard/pedido/<int:pedido_id>/cancelar",
+        "POST /dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar",
+        "POST /dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/sustituir",
+        "GET /dashboard/productos"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/productos.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para productos",
+      "key_symbols": [
+        "index",
+        "lista",
+        "actualizar_stock",
+        "toggle_disponible"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "services/__init__.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /productos-admin",
+        "GET /productos-admin/lista",
+        "PATCH /productos-admin/<int:producto_id>/stock",
+        "PATCH /productos-admin/<int:producto_id>/disponible",
+        "PATCH /productos-admin/<int:producto_id>/precio"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/menu.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para menu",
+      "key_symbols": [
+        "quiniela",
+        "mostrar_confirmacion",
+        "mostrar_confirmacion_depago"
+      ],
+      "test_files": [
+        "tests/test_menu.py"
+      ],
+      "related_paths": [
+        "managers/gestor_redis.py",
+        "schemas/usuario.py",
+        "services/__init__.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /menu/<token>",
+        "GET /confirmacion_pago",
+        "GET /pago_confirmado"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/repartidor.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para repartidor",
+      "key_symbols": [
+        "index",
+        "apple_touch_icon",
+        "manifest",
+        "service_worker"
+      ],
+      "test_files": [
+        "tests/test_repartidor.py"
+      ],
+      "related_paths": [
+        "blueprints/auth.py",
+        "services/__init__.py",
+        "services/whatsapp_service.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /repartidor",
+        "GET /repartidor/apple-touch-icon-180x180.png",
+        "GET /repartidor/manifest.json",
+        "GET /repartidor/sw.js",
+        "GET /repartidor/mis-pedidos",
+        "POST /repartidor/reparto/<int:reparto_id>/salida",
+        "POST /repartidor/reparto/<int:reparto_id>/entregar",
+        "POST /repartidor/reparto/<int:reparto_id>/no-entregar",
+        "POST /repartidor/reparto/<int:reparto_id>/registrar-cobro",
+        "GET /repartidor/cierre",
+        "GET /repartidor/cierre/datos",
+        "GET /repartidor/cola",
+        "POST /repartidor/cola/coger/<int:pedido_id>"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/webhook.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para webhook",
+      "key_symbols": [
+        "webhook",
+        "webhook_monei",
+        "webhook_meta_verify",
+        "webhook_meta"
+      ],
+      "test_files": [
+        "tests/test_webhook.py"
+      ],
+      "related_paths": [
+        "controllers/mensajes_registrados.py",
+        "controllers/registro.py",
+        "managers/gestor_redis.py",
+        "schemas/twilio.py",
+        "services/__init__.py",
+        "services/whatsapp_service.py"
+      ],
+      "contracts": [
+        "POST /webhook",
+        "POST /webhook/monei",
+        "GET /webhook/meta",
+        "POST /webhook/meta"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators",
+        "has_webhook_route"
+      ]
+    },
+    {
+      "path": "blueprints/metricas_analitica.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para analitica",
+      "key_symbols": [
+        "resumen",
+        "pedidos",
+        "picking",
+        "reparto"
+      ],
+      "test_files": [
+        "tests/test_metricas_analitica.py"
+      ],
+      "related_paths": [
+        "blueprints/auth.py",
+        "managers/gestor_metricas.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /metricas/analitica/resumen",
+        "GET /metricas/analitica/pedidos",
+        "GET /metricas/analitica/picking",
+        "GET /metricas/analitica/reparto",
+        "GET /metricas/analitica/empleados",
+        "GET /metricas/analitica/empleado/<int:empleado_id>",
+        "GET /metricas/analitica/comparativa",
+        "GET /metricas/analitica/asistencia",
+        "GET /metricas/analitica/incidencias"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/auth.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para auth",
+      "key_symbols": [
+        "login",
+        "logout",
+        "requiere_rol",
+        "requiere_autenticacion"
+      ],
+      "test_files": [
+        "tests/test_auth.py"
+      ],
+      "related_paths": [
+        "database.py",
+        "models.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /auth/login",
+        "POST /auth/login",
+        "POST /auth/logout"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/api.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para api",
+      "key_symbols": [
+        "agregar_pedido_confirmacion",
+        "agregar_pedido",
+        "cambiar_estado_a_enlace",
+        "agregar_pedido_efectivo"
+      ],
+      "test_files": [
+        "tests/test_api_pedido.py"
+      ],
+      "related_paths": [
+        "controllers/pago.py",
+        "controllers/pedido.py",
+        "database.py",
+        "models.py",
+        "services/__init__.py",
+        "states.py"
+      ],
+      "contracts": [
+        "POST /api/confirmacion",
+        "POST /api/agregar_pedido",
+        "POST /api/cambiar_estado_a_enlace",
+        "POST /api/agregar_pedido_efectivo",
+        "POST /api/volver_al_menu",
+        "GET /api/productos",
+        "GET /api/seguimiento/<redis_id>"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "schemas/usuario.py",
+      "role": "schema",
+      "purpose": "Valida el esquema de entrada para usuario",
+      "key_symbols": [],
+      "test_files": [
+        "tests/test_gestor_usuarios.py"
+      ],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "review",
+      "confidence_signals": [
+        "is_schema_file"
+      ]
+    },
+    {
+      "path": "schemas/twilio.py",
+      "role": "schema",
+      "purpose": "Valida el esquema de entrada para twilio",
+      "key_symbols": [
+        "validate_phone_number",
+        "validate_body"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "review",
+      "confidence_signals": [
+        "is_schema_file"
+      ]
+    },
+    {
+      "path": "templates/auth/login.html",
+      "role": "template",
+      "purpose": "Plantilla HTML de login",
+      "key_symbols": [],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "review",
+      "confidence_signals": [
+        "is_middleware"
+      ]
+    },
+    {
+      "path": "tests/test_auth.py",
+      "role": "test",
+      "purpose": "Módulo de auth",
+      "key_symbols": [
+        "test_login_sin_credenciales_devuelve_400",
+        "test_login_credenciales_invalidas_devuelve_401",
+        "test_dashboard_sin_sesion_redirige_a_login",
+        "test_picker_sin_sesion_redirige_a_login"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "review",
+      "confidence_signals": [
+        "is_middleware"
+      ]
+    }
+  ]
+}

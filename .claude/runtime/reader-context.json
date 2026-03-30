@@ -1,0 +1,347 @@
+{
+  "improved_prompt": "Añadir validación de dirección de entrega mediante Google Maps en tres endpoints: POST /api/confirmacion, POST /api/agregar_pedido y POST /api/agregar_pedido_efectivo. Si la dirección no es geocodificable o está fuera del área de servicio, bloquear el flujo y devolver error HTTP 422 con mensaje localizable al cliente. La lógica de validación debe implementarse en controllers/pedido.py (nunca añadir más lógica de negocio a blueprints/api.py — known issue). En caso de éxito, guardar lat_entrega y lng_entrega en el modelo Pedido. En caso de fallo antes de crear el pedido, registrar en AuditLog (accion='DIRECCION_INVALIDA', detalles con la dirección rechazada y código de error Maps). Cuando la validación falla en POST /api/confirmacion (etapa pre-Monei), persistir una flag de error en la entrada Redis del token para que GET /menu/<token> la lea y la pase a quiniela.html. El webhook POST /webhook/monei, el HMAC de Monei, y las estructuras de Redis existentes no deben alterarse.",
+  "selected_readers": [
+    "api",
+    "services",
+    "data",
+    "ui"
+  ],
+  "maps_used": [
+    "ROUTING_MAP.json",
+    "DOMAIN_INDEX_api.json",
+    "DOMAIN_INDEX_services.json",
+    "DOMAIN_INDEX_data.json",
+    "DOMAIN_INDEX_ui.json",
+    "CONTRACT_MAP.json",
+    "DATA_MODEL_MAP.json"
+  ],
+  "files_to_open": [
+    {
+      "path": "blueprints/api.py",
+      "hint": "Contiene los tres endpoints a modificar: agregar_pedido_confirmacion (POST /api/confirmacion), agregar_pedido (POST /api/agregar_pedido) y agregar_pedido_efectivo (POST /api/agregar_pedido_efectivo). El punto de entrada donde se debe invocar la validación de dirección antes de continuar el flujo de pago.",
+      "key_symbols": [
+        "agregar_pedido_confirmacion",
+        "agregar_pedido",
+        "agregar_pedido_efectivo",
+        "cambiar_estado_a_enlace"
+      ],
+      "test_file": "tests/test_api_pedido.py"
+    },
+    {
+      "path": "services/maps_service.py",
+      "hint": "Adaptador ya existente para Google Maps con geocodificar_direccion, validar_coordenadas y limpiar_direccion. Es el único punto donde llamar a la API de Maps — no reimplementar la llamada HTTP en otro lugar.",
+      "key_symbols": [
+        "geocodificar_direccion",
+        "validar_coordenadas",
+        "limpiar_direccion",
+        "construir_url"
+      ],
+      "test_file": null
+    },
+    {
+      "path": "blueprints/menu.py",
+      "hint": "Define GET /menu/<token> que renderiza quiniela.html. Debe leer la flag de error de dirección desde Redis (misma clave de token) y pasarla al contexto del template para mostrar el mensaje al cliente.",
+      "key_symbols": [
+        "quiniela",
+        "mostrar_confirmacion",
+        "mostrar_confirmacion_depago"
+      ],
+      "test_file": "tests/test_menu.py"
+    },
+    {
+      "path": "managers/gestor_pedidos.py",
+      "hint": "Gestor de acceso a datos de pedidos. Aquí se debe añadir la escritura de lat_entrega y lng_entrega al crear el pedido (cuando la geocodificación es exitosa) y el registro en AuditLog para trazabilidad de validaciones fallidas.",
+      "key_symbols": [
+        "iniciar_pedido",
+        "guardar_enlace",
+        "hay_pedido_pendiente",
+        "session"
+      ],
+      "test_file": "tests/test_gestor_pedidos.py"
+    }
+  ],
+  "files_to_review": [
+    {
+      "path": "controllers/pedido.py",
+      "hint": "Lógica de negocio del pedido extraída de blueprints/api.py. La nueva función de validación de dirección debe implementarse aquí (no en el blueprint) para respetar la arquitectura CONTROLLERS → SERVICES → MANAGERS.",
+      "key_symbols": [],
+      "test_file": null
+    },
+    {
+      "path": "controllers/pago.py",
+      "hint": "Orquesta la creación del pago Monei (iniciar_pago) y el flujo efectivo (iniciar_pago_efectivo). La validación de dirección debe completarse ANTES de llegar a este controlador — no modificar su interfaz.",
+      "key_symbols": [
+        "iniciar_pago",
+        "iniciar_pago_efectivo"
+      ],
+      "test_file": null
+    },
+    {
+      "path": "models.py",
+      "hint": "Pedido ya tiene DireccionEntrega, lat_entrega:Float y lng_entrega:Float para almacenar coordenadas. AuditLog tiene pedido_id, accion y detalles:Text para trazabilidad de validaciones fallidas. HistorialEstadoPedido es el mecanismo de audit trail estándar del sistema.",
+      "key_symbols": [],
+      "test_file": null
+    },
+    {
+      "path": "managers/gestor_redis.py",
+      "hint": "Gestiona las claves Redis de tokens de menú, bloqueos anti-spam y estado de usuario. La flag de error de dirección se debe almacenar en la misma clave del token (o una sub-clave) sin romper el TTL ni los patrones existentes.",
+      "key_symbols": [
+        "get",
+        "set",
+        "delete",
+        "esta_bloqueado"
+      ],
+      "test_file": null
+    },
+    {
+      "path": "templates/quiniela.html",
+      "hint": "Template principal del menú del cliente (GET /menu/<token>). Debe renderizar el mensaje de error de dirección inválida cuando blueprints/menu.py lo pase en el contexto de Jinja2.",
+      "key_symbols": [],
+      "test_file": null
+    },
+    {
+      "path": "managers/dashboard/gestor_pedidos_mixin.py",
+      "hint": "Mixin de dashboard con pedidos_activos, alertas y eventos. Revisar si alertas o eventos debe exponer los intentos de pedido con dirección inválida para que el operador tenga visibilidad.",
+      "key_symbols": [
+        "pedidos_activos",
+        "alertas",
+        "eventos",
+        "metricas"
+      ],
+      "test_file": null
+    },
+    {
+      "path": "managers/estado_usuario.py",
+      "hint": "Gestiona el estado de registro del usuario en Redis (obtener_estado, actualizar_estado). Revisar si la dirección guardada en el registro es la misma que se va a validar en el pedido — posible reutilización.",
+      "key_symbols": [
+        "obtener_estado",
+        "actualizar_estado"
+      ],
+      "test_file": null
+    },
+    {
+      "path": "controllers/registro.py",
+      "hint": "Importa directamente maps_service.py — revisar si cambia la firma pública de maps_service",
+      "test_file": null,
+      "key_symbols": [
+        "_enviar_mensaje_registro",
+        "confirmar_direccion",
+        "_enviar_bienvenida"
+      ]
+    },
+    {
+      "path": "database.py",
+      "hint": "Depende directamente de api.py — api lo importa, contexto de implementación",
+      "test_file": null,
+      "key_symbols": [
+        "get_db",
+        "close_db",
+        "conectar_bd1"
+      ]
+    },
+    {
+      "path": "schemas/usuario.py",
+      "hint": "Depende directamente de menu.py — menu lo importa, contexto de implementación",
+      "test_file": null,
+      "key_symbols": [
+        "UsuarioDatos"
+      ]
+    },
+    {
+      "path": "services/whatsapp_service.py",
+      "hint": "Dep. transitiva de api.py via pago.py — revisar solo si se modifica pago",
+      "test_file": null,
+      "key_symbols": [
+        "_get_client",
+        "_enviar_twilio",
+        "_enviar_meta"
+      ]
+    },
+    {
+      "path": "states.py",
+      "hint": "Depende directamente de api.py — api lo importa, contexto de implementación",
+      "test_file": null,
+      "key_symbols": [
+        "EstadoRegistro",
+        "__str__",
+        "EstadoPedido"
+      ]
+    }
+  ],
+  "constraints": [
+    "No romper endpoints públicos documentados en CONTRACT_MAP.json",
+    "No modificar migraciones ya aplicadas",
+    "No cambiar env vars sin actualizar .env.example",
+    "POST /api/confirmacion (blueprints/api.py) — no cambiar firma del endpoint ni tipo de respuesta exitosa",
+    "POST /api/agregar_pedido (blueprints/api.py) — no cambiar firma; la validación de precio contra DB debe mantenerse intacta",
+    "POST /api/agregar_pedido_efectivo (blueprints/api.py) — no cambiar firma del endpoint",
+    "GET /menu/<token> (blueprints/menu.py) — no cambiar firma; la flag de error es contexto adicional, no un redirect",
+    "POST /webhook/monei (blueprints/webhook.py) — no tocar; la verificación HMAC de Monei debe quedar intacta",
+    "POST /webhook (blueprints/webhook.py) — no tocar; flujo WhatsApp independiente",
+    "env:GOOGLE_MAPS_API_KEY requerida en config.py — ya existe, no redefinir",
+    "env:MONEI_API_KEY requerida en config.py — no alterar",
+    "env:MONEI_WEBHOOK_SECRET requerida en config.py — no alterar",
+    "Schema UsuarioDatos en schemas/usuario.py — no cambiar campos públicos (breaking_if_changed)",
+    "Schema WebhookRequest, PedidoInput en schemas/twilio.py — no cambiar campos públicos (breaking_if_changed)",
+    "No añadir lógica de negocio a blueprints/api.py — known issue; extraer a controllers/pedido.py",
+    "No añadir lógica a gestor_dashboard.py directamente — known issue (121 KB god object); si se requiere visibilidad en dashboard, añadir al mixin gestor_pedidos_mixin.py",
+    "usar categoria_id en código nuevo (no el campo legacy Categoria de texto)",
+    "usar rol_id en código nuevo (no campo legacy de texto)"
+  ],
+  "key_facts": [
+    "Stack: Flask 3.1 · SQLAlchemy 2.0 · Redis 5.2 · Pydantic 2.10 · Tenacity 9.1 · DB: SQL Server vía pyodbc",
+    "Arquitectura: CONTROLLERS → SERVICES → MANAGERS → [DB | Redis | APIs externas]; los blueprints son solo routing",
+    "Patrón de acceso a datos: Manager / Repository",
+    "Modelo Pedido: campos DireccionEntrega (texto), lat_entrega:Float y lng_entrega:Float ya existen — no requiere migración para almacenar coordenadas",
+    "Modelo AuditLog: campos pedido_id:Integer, accion, detalles:Text, created_at:DateTime — mecanismo estándar para trazabilidad de operaciones en pedidos",
+    "Modelo HistorialEstadoPedido: pedido_id, estado_anterior, estado_nuevo, notas, empleado_id — registro de transiciones de estado",
+    "Modelo Usuario: campos id, nombre, numero_cliente, direccion — la dirección del usuario registrado puede precargar la validación",
+    "services/maps_service.py ya existe con geocodificar_direccion y validar_coordenadas — no crear un nuevo adaptador",
+    "Flujo de pago online: POST /api/confirmacion guarda carrito en Redis (estado ENLACE2) → POST /api/agregar_pedido crea pedido + llama Monei → POST /webhook/monei confirma pago",
+    "Flujo de pago efectivo: POST /api/agregar_pedido_efectivo crea pedido con estado CONTRA_REEMBOLSO (omite Monei completamente)",
+    "Redis: token de menú tiene TTL propio gestionado por token_service; la flag de error de dirección debe respetar ese TTL o tener uno menor",
+    "WhatsApp provider switchable via WHATSAPP_PROVIDER env var (twilio/meta); abstracción en services/whatsapp_service.py",
+    "Calls críticas a DB y APIs externas usan decoradores @tenacity — añadir @retry a la llamada de geocodificación",
+    "blueprints/api.py contiene lógica de negocio que pertenece a controllers/ (known issue) — la validación de dirección va en controllers/pedido.py"
+  ],
+  "status": "ready",
+  "dependency_graph": {
+    "blueprints/api.py": [
+      "config.py",
+      "controllers/pago.py",
+      "controllers/pedido.py",
+      "database.py",
+      "models.py",
+      "services/__init__.py",
+      "states.py"
+    ],
+    "services/maps_service.py": [
+      "config.py"
+    ],
+    "blueprints/menu.py": [
+      "config.py",
+      "managers/gestor_redis.py",
+      "schemas/usuario.py",
+      "services/__init__.py",
+      "states.py"
+    ],
+    "managers/gestor_pedidos.py": [
+      "database.py",
+      "models.py",
+      "states.py"
+    ],
+    "controllers/pago.py": [
+      "services/whatsapp_service.py",
+      "states.py"
+    ],
+    "database.py": [
+      "models.py"
+    ],
+    "models.py": [
+      "database.py"
+    ],
+    "managers/gestor_redis.py": [
+      "config.py"
+    ],
+    "main.py": [
+      "blueprints/api.py"
+    ],
+    "controllers/pedido.py": [
+      "services/maps_service.py"
+    ],
+    "controllers/registro.py": [
+      "services/maps_service.py"
+    ]
+  },
+  "dependency_context": {
+    "seeds": [
+      "blueprints/api.py",
+      "blueprints/menu.py",
+      "managers/gestor_pedidos.py",
+      "services/maps_service.py"
+    ],
+    "callers_of_seeds": [
+      {
+        "file": "controllers/pedido.py",
+        "calls_into": "services/maps_service.py",
+        "risk": "puede romper si cambia la firma pública de maps_service"
+      },
+      {
+        "file": "controllers/registro.py",
+        "calls_into": "services/maps_service.py",
+        "risk": "puede romper si cambia la firma pública de maps_service"
+      },
+      {
+        "file": "main.py",
+        "calls_into": "blueprints/api.py",
+        "risk": "puede romper si cambia la firma pública de api"
+      }
+    ],
+    "seed_dependencies": [
+      {
+        "file": "config.py",
+        "used_by": [
+          "blueprints/api.py",
+          "services/maps_service.py",
+          "blueprints/menu.py"
+        ]
+      },
+      {
+        "file": "controllers/pago.py",
+        "used_by": "blueprints/api.py"
+      },
+      {
+        "file": "controllers/pedido.py",
+        "used_by": "blueprints/api.py"
+      },
+      {
+        "file": "database.py",
+        "used_by": [
+          "blueprints/api.py",
+          "managers/gestor_pedidos.py"
+        ]
+      },
+      {
+        "file": "managers/gestor_redis.py",
+        "used_by": "blueprints/menu.py"
+      },
+      {
+        "file": "models.py",
+        "used_by": [
+          "blueprints/api.py",
+          "managers/gestor_pedidos.py"
+        ]
+      },
+      {
+        "file": "schemas/usuario.py",
+        "used_by": "blueprints/menu.py"
+      },
+      {
+        "file": "services/__init__.py",
+        "used_by": [
+          "blueprints/api.py",
+          "blueprints/menu.py"
+        ]
+      },
+      {
+        "file": "states.py",
+        "used_by": [
+          "blueprints/api.py",
+          "blueprints/menu.py",
+          "managers/gestor_pedidos.py"
+        ]
+      }
+    ],
+    "hubs_not_expanded": [
+      "controllers/pedido.py",
+      "services/__init__.py"
+    ]
+  },
+  "_subgraph_added": [
+    "controllers/registro.py",
+    "database.py",
+    "schemas/usuario.py",
+    "services/whatsapp_service.py",
+    "states.py"
+  ]
+}

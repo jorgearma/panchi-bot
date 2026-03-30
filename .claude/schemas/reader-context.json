@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaudeReaderContext",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "improved_prompt",
+    "selected_readers",
+    "maps_used",
+    "files_to_open",
+    "files_to_review"
+  ],
+  "properties": {
+    "improved_prompt": {
+      "type": "string",
+      "description": "Version mejorada y tecnicamente precisa del prompt original del operador."
+    },
+    "selected_readers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": ["api", "data", "ui", "services", "jobs"]
+      }
+    },
+    "maps_used": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "ROUTING_MAP.json",
+          "DOMAIN_INDEX_api.json",
+          "DOMAIN_INDEX_data.json",
+          "DOMAIN_INDEX_ui.json",
+          "DOMAIN_INDEX_services.json",
+          "DOMAIN_INDEX_jobs.json",
+          "CONTRACT_MAP.json",
+          "DATA_MODEL_MAP.json",
+          "DEPENDENCY_MAP.json",
+          "TEST_MAP.json"
+        ]
+      }
+    },
+    "files_to_open": {
+      "type": "array",
+      "description": "Archivos principales donde ocurre el cambio, con hints para el planner.",
+      "items": { "$ref": "#/$defs/file_hint" }
+    },
+    "files_to_review": {
+      "type": "array",
+      "description": "Archivos de soporte, dependencias o referencias, con hints para el planner.",
+      "items": { "$ref": "#/$defs/file_hint" }
+    },
+    "constraints": {
+      "type": "array",
+      "description": "Restricciones que el planner debe respetar: campos legacy a evitar, contratos que no romper, limites tecnicos.",
+      "items": { "type": "string" }
+    },
+    "key_facts": {
+      "type": "array",
+      "description": "Datos clave extraidos de los MAPs que el planner necesita para planificar: relaciones entre modelos, campos relevantes, patrones existentes.",
+      "items": { "type": "string" }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ready", "blocked_no_maps", "blocked_pending_clarification"]
+    },
+    "dependency_graph": {
+      "type": "object",
+      "description": "Grafo forward de dependencias: clave es un archivo, valor es array de archivos que importa/usa. A -> [B,C] significa A depende de B y C. Solo incluye arcos de seeds y sus deps directas (hubs excluidos).",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "_subgraph_added": {
+      "type": "array",
+      "description": "Paths añadidos por build-subgraph.py en la última ejecución. Uso interno: permite limpiar entradas stale al re-correr el script (idempotencia).",
+      "items": { "type": "string" }
+    },
+    "dependency_context": {
+      "type": "object",
+      "description": "Resumen pre-digerido para el planner: callers de seeds (riesgo de rotura), deps directas de seeds, hubs no expandidos y ciclos relevantes.",
+      "additionalProperties": false,
+      "properties": {
+        "seeds": {
+          "type": "array",
+          "description": "Archivos semilla del BFS (coinciden con files_to_open).",
+          "items": { "type": "string" }
+        },
+        "callers_of_seeds": {
+          "type": "array",
+          "description": "Archivos que importan directamente algún seed. Riesgo: pueden romperse si cambia la API pública del seed.",
+          "items": {
+            "type": "object",
+            "required": ["file", "calls_into", "risk"],
+            "additionalProperties": false,
+            "properties": {
+              "file":       { "type": "string" },
+              "calls_into": { "type": "string" },
+              "risk":       { "type": "string" }
+            }
+          }
+        },
+        "seed_dependencies": {
+          "type": "array",
+          "description": "Archivos importados directamente por los seeds. Contexto de implementación: el planner debe entender qué usan los seeds.",
+          "items": {
+            "type": "object",
+            "required": ["file", "used_by"],
+            "additionalProperties": false,
+            "properties": {
+              "file":    { "type": "string" },
+              "used_by": {}
+            }
+          }
+        },
+        "hubs_not_expanded": {
+          "type": "array",
+          "description": "Nodos con out-degree alto o __init__.py: importados por seeds pero sus vecinos no se expanden para evitar ruido.",
+          "items": { "type": "string" }
+        },
+        "cycles_involving_seeds": {
+          "type": "array",
+          "description": "Ciclos de importación que incluyen algún seed. Dato crítico para evitar imports circulares al modificar.",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "file_hint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Ruta relativa al archivo."
+        },
+        "hint": {
+          "type": "string",
+          "description": "Descripcion breve del rol del archivo en el contexto de esta tarea."
+        },
+        "key_symbols": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Funciones, clases o constantes que el planner debe buscar en este archivo. Obligatorio para files_to_open (excepto templates HTML)."
+        },
+        "test_file": {
+          "type": ["string", "null"],
+          "description": "Ruta del archivo de test asociado, extraida del MAP."
+        }
+      }
+    }
+  }
+}

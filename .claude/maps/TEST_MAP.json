@@ -1,0 +1,258 @@
+{
+  "source_to_tests": {
+    "database.py": [
+      "tests/test_database.py"
+    ],
+    "states.py": [
+      "tests/test_states.py"
+    ],
+    "blueprints/metricas_operacion.py": [
+      "tests/test_metricas_operacion.py"
+    ],
+    "blueprints/empleado.py": [
+      "tests/test_empleado.py"
+    ],
+    "blueprints/picker.py": [
+      "tests/test_picker_cola.py"
+    ],
+    "blueprints/dashboard.py": [
+      "tests/test_dashboard_sprint3.py"
+    ],
+    "blueprints/menu.py": [
+      "tests/test_menu.py"
+    ],
+    "blueprints/repartidor.py": [
+      "tests/test_repartidor.py"
+    ],
+    "blueprints/webhook.py": [
+      "tests/test_webhook.py"
+    ],
+    "blueprints/metricas_analitica.py": [
+      "tests/test_metricas_analitica.py"
+    ],
+    "blueprints/auth.py": [
+      "tests/test_auth.py"
+    ],
+    "blueprints/api.py": [
+      "tests/test_api_pedido.py"
+    ],
+    "controllers/mensajes_registrados.py": [
+      "tests/test_mensajes_registrados.py"
+    ],
+    "controllers/pedido.py": [
+      "tests/test_gestor_pedidos.py"
+    ],
+    "controllers/registro.py": [
+      "tests/test_registro.py"
+    ],
+    "managers/gestor_dashboard.py": [
+      "tests/test_gestor_dashboard.py"
+    ],
+    "managers/gestor_pedidos.py": [
+      "tests/test_gestor_pedidos.py"
+    ],
+    "managers/gestor_usuarios.py": [
+      "tests/test_gestor_usuarios.py"
+    ],
+    "managers/gestor_metricas.py": [
+      "tests/test_gestor_metricas.py"
+    ],
+    "schemas/usuario.py": [
+      "tests/test_gestor_usuarios.py"
+    ],
+    "services/token_service.py": [
+      "tests/test_token_service.py"
+    ],
+    "services/whatsapp_service.py": [
+      "tests/test_whatsapp_service.py"
+    ],
+    "templates/empleado/checkin.html": [
+      "tests/test_checkin_empleado.py"
+    ],
+    "templates/macros/ui.html": [
+      "tests/test_seguimiento.py"
+    ]
+  },
+  "test_to_sources": {
+    "tests/test_mensajes_registrados.py": [
+      "controllers/mensajes_registrados.py",
+      "states.py"
+    ],
+    "tests/test_startup.py": [
+      "blueprints/productos.py",
+      "controllers/mensajes_registrados.py",
+      "managers/gestor_pedidos.py",
+      "managers/gestor_usuarios.py",
+      "managers/gestor_productos.py",
+      "scripts/crear_pedidos_demo_pagados.py"
+    ],
+    "tests/test_webhook.py": [
+      "blueprints/webhook.py",
+      "states.py"
+    ],
+    "tests/test_auth.py": [
+      "blueprints/auth.py"
+    ],
+    "tests/test_whatsapp_service.py": [
+      "services/whatsapp_service.py",
+      "blueprints/productos.py",
+      "controllers/mensajes_registrados.py",
+      "managers/gestor_pedidos.py",
+      "managers/gestor_usuarios.py",
+      "managers/gestor_productos.py"
+    ],
+    "tests/test_gestor_dashboard.py": [
+      "managers/gestor_dashboard.py"
+    ],
+    "tests/test_gestor_usuarios.py": [
+      "managers/gestor_usuarios.py"
+    ],
+    "tests/test_empleado.py": [
+      "blueprints/empleado.py"
+    ],
+    "tests/test_states.py": [
+      "states.py"
+    ],
+    "tests/test_registro.py": [
+      "controllers/registro.py",
+      "states.py"
+    ],
+    "tests/test_metricas_analitica.py": [
+      "blueprints/metricas_analitica.py"
+    ],
+    "tests/test_gestor_metricas.py": [
+      "managers/gestor_metricas.py"
+    ],
+    "tests/test_gestor_pedidos.py": [
+      "managers/gestor_pedidos.py",
+      "states.py"
+    ],
+    "tests/test_menu.py": [
+      "blueprints/menu.py",
+      "states.py"
+    ],
+    "tests/test_api_pedido.py": [
+      "states.py",
+      "config.py"
+    ],
+    "tests/test_repartidor.py": [
+      "blueprints/repartidor.py",
+      "managers/gestor_dashboard.py"
+    ],
+    "tests/test_token_service.py": [
+      "services/token_service.py"
+    ],
+    "tests/test_metricas_operacion.py": [
+      "blueprints/metricas_operacion.py"
+    ],
+    "tests/test_database.py": [
+      "database.py",
+      "models.py"
+    ]
+  },
+  "fixtures_by_test": {
+    "tests/test_mensajes_registrados.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_startup.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_webhook.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_auth.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_dashboard_sprint3.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_whatsapp_service.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_dashboard_sprint2.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_gestor_dashboard.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_gestor_usuarios.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_repartidor_cola.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_empleado.py": [
+      "tests/conftest.py"
+    ],
+    "tests/__init__.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_seguimiento.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_states.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_registro.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_checkin_empleado.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_metricas_analitica.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_dashboard_sprint5.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_gestor_metricas.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_gestor_pedidos.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_menu.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_api_pedido.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_health.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_repartidor.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_token_service.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_dashboard_sprint4.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_picker_cola.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_metricas_operacion.py": [
+      "tests/conftest.py"
+    ],
+    "tests/conftest.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_dashboard_sprint6.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_migracion_bd_dashboard.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_database.py": [
+      "tests/conftest.py"
+    ],
+    "tests/test_dashboard_sprint1.py": [
+      "tests/conftest.py"
+    ]
+  },
+  "integration_tests": [],
+  "smoke_tests": [
+    "tests/test_health.py"
+  ]
+}

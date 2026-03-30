@@ -1,0 +1,8 @@
+{
+  "status": "blocked",
+  "approved": false,
+  "task": "",
+  "selected_agents": [],
+  "step_ids": [],
+  "reason": "Execution requires a newly approved plan."
+}
