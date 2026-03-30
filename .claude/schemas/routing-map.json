@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ROUTING_MAP",
+  "description": "Mapa de routing de dominio — primer archivo que lee el reader",
+  "type": "object",
+  "required": ["project_summary", "domains", "entry_points"],
+  "additionalProperties": true,
+  "properties": {
+    "project_summary": {
+      "type": "object",
+      "required": ["name", "languages", "entry_points"],
+      "properties": {
+        "name":         { "type": "string" },
+        "description":  { "type": "string" },
+        "languages":    { "type": "array", "items": { "type": "string" } },
+        "stack":        { "type": "object" },
+        "architecture": { "type": "string" },
+        "entry_points": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "glossary": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "keywords", "preferred_indexes"],
+        "properties": {
+          "name":              { "type": "string" },
+          "keywords":          { "type": "array", "items": { "type": "string" } },
+          "negative_keywords": { "type": "array", "items": { "type": "string" } },
+          "priority":          { "type": "integer" },
+          "preferred_indexes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "entry_points":        { "type": "array", "items": { "type": "string" } },
+    "default_constraints": { "type": "array", "items": { "type": "string" } }
+  }
+}
