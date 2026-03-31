@@ -324,12 +324,13 @@
                     <div class="text-sm font-bold text-white truncate" x-text="p.cliente_nombre"></div>
                     <div class="text-xs text-gray-400 truncate mt-0.5">📍 <span x-text="p.direccion_entrega"></span></div>
                   </div>
-                  <!-- Timer -->
-                  <div class="flex flex-col items-center rounded-xl px-3 py-2 min-w-[64px] flex-shrink-0"
-                       :class="priorityColor(calculateRemainingMinutes(p.fecha_creacion))">
-                    <span class="text-xs font-medium opacity-70 leading-none mb-0.5"
+                  <!-- Timer esquina recortada -->
+                  <div class="flex-shrink-0 flex flex-col items-center justify-center px-3 py-2.5 min-w-[60px]"
+                       :class="priorityTextColor(calculateRemainingMinutes(p.fecha_creacion))"
+                       :style="`background:${priorityStroke(calculateRemainingMinutes(p.fecha_creacion))}22;border:1.5px solid ${priorityStroke(calculateRemainingMinutes(p.fecha_creacion))}88;border-radius:10px;box-shadow:0 0 12px 2px ${priorityStroke(calculateRemainingMinutes(p.fecha_creacion))}22`">
+                    <span class="text-[10px] font-bold text-white leading-none mb-1 uppercase tracking-widest"
                           x-text="formatPromisedTime(p.fecha_creacion)"></span>
-                    <span class="text-2xl font-black leading-none"
+                    <span class="text-lg font-black leading-none tracking-tight"
                           x-text="formatRemaining(calculateRemainingMinutes(p.fecha_creacion))"></span>
                   </div>
                   <span class="text-blue-400 flex-shrink-0">›</span>
@@ -1935,6 +1936,18 @@
           if (minutes >= 3) return 'bg-yellow-100 text-yellow-800';
           if (minutes >= 0) return 'bg-orange-900 text-orange-300';
           return 'bg-red-900 text-red-300';
+        },
+        priorityStroke(minutes) {
+          if (minutes > 8)  return '#4ade80';
+          if (minutes >= 3) return '#fbbf24';
+          if (minutes >= 0) return '#f97316';
+          return '#f87171';
+        },
+        priorityTextColor(minutes) {
+          if (minutes > 8)  return 'text-green-400';
+          if (minutes >= 3) return 'text-amber-400';
+          if (minutes >= 0) return 'text-orange-400';
+          return 'text-red-400';
         },
 
         formatRemaining(minutes) {
