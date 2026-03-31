@@ -21,8 +21,10 @@ La idea es que sirva para:
 docs/
 ├── README.md
 └── backend/
+    ├── overview.md
     ├── blueprints.md
-    └── controllers.md
+    ├── controllers.md
+    └── services.md
 ```
 
 ## Regla de estilo
@@ -42,10 +44,20 @@ Cada documento de `docs/` debería ser:
 - `managers/`: acceso a datos.
 - `services/`: integración con sistemas externos.
 
+## Lectura recomendada
+
+Si quieres entender el sistema rápido:
+
+1. `docs/backend/overview.md`
+2. `docs/backend/blueprints.md`
+3. `docs/backend/controllers.md`
+4. `docs/backend/services.md`
+5. `maps/PROJECT_MAP.md` si necesitas más profundidad
+
 ## Siguiente ampliación sugerida
 
 Cuando quieras seguir, tiene sentido documentar en este orden:
 
 1. `managers/`
-2. `services/`
-3. flujos completos (`registro`, `pedido`, `pago`, `operación interna`)
+2. flujos completos (`registro`, `pedido`, `pago`, `operación interna`)
+3. reglas sensibles (`seguridad`, `webhooks`, `permisos`)

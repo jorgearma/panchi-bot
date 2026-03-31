@@ -6,7 +6,7 @@ from flask import Blueprint, jsonify, redirect, render_template, request, sessio
 from blueprints.auth import requiere_autenticacion, requiere_rol
 from database import get_db
 from models import Empleado as _Empleado
-from services import gestor_empleado
+from container import gestor_empleado
 
 logger = logging.getLogger(__name__)
 

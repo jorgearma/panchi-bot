@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 class GestorPickingFlujoMixin:
 
     def asignar_picker(self, pedido_id: int, empleado_id: int) -> tuple:
+        """Asigna un picker al pedido e inicia el picking."""
         s = self.session
         try:
             pedido = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
@@ -73,6 +74,7 @@ class GestorPickingFlujoMixin:
             return False, "Error de base de datos"
 
     def reasignar_picker(self, picking_id: int, nuevo_empleado_id: int | None) -> tuple:
+        """Cambia el picker asignado o deja el picking libre."""
         s = self.session
         _ESTADOS_REASIGNABLES = {
             EstadoPicking.PENDIENTE.value,
@@ -197,6 +199,7 @@ class GestorPickingFlujoMixin:
             ]
             if items_para_stock:
                 def _descontar(items=items_para_stock):
+                    """Descuenta stock de los items confirmados en background."""
                     from database import SessionLocal
                     from models import Producto
                     from sqlalchemy.exc import SQLAlchemyError
@@ -226,6 +229,7 @@ class GestorPickingFlujoMixin:
             _picker_id = picking.empleado_id
             if _picker_id:
                 def _actualizar_disponibilidad_picker(emp_id=_picker_id):
+                    """Marca disponible al picker si ya no tiene pickings activos."""
                     from database import SessionLocal
                     _s = SessionLocal()
                     try:

@@ -3,7 +3,7 @@ import logging
 from flask import jsonify, request
 
 from blueprints.auth import requiere_rol
-from services import gestor_dashboard
+from container import gestor_dashboard
 from blueprints.dashboard._common import _ok, _err, _notificar
 
 logger = logging.getLogger(__name__)

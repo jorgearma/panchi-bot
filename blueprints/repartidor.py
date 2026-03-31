@@ -6,7 +6,7 @@ from threading import Thread
 from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, session
 
 from blueprints.auth import requiere_rol
-from services import gestor_dashboard
+from container import gestor_dashboard
 from services.whatsapp_service import enviar_mensaje_whatsapp
 
 logger = logging.getLogger(__name__)

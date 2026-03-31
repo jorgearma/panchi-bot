@@ -10,6 +10,7 @@ class ProductoManager:
 
     @property
     def session(self):
+        """Devuelve la sesión activa de base de datos."""
         from database import get_db
         return get_db()
     
@@ -122,6 +123,7 @@ class ProductoManager:
             return False, "Error de base de datos"
 
     def toggle_disponible(self, producto_id: int, disponible: bool) -> tuple:
+        """Activa o desactiva un producto en catalogo."""
         s = self.session
         try:
             p = s.query(Producto).filter_by(ProductoID=producto_id).first()
@@ -136,6 +138,7 @@ class ProductoManager:
             return False, "Error de base de datos"
 
     def actualizar_precio(self, producto_id: int, nuevo_precio: float) -> tuple:
+        """Actualiza el precio de venta del producto."""
         if nuevo_precio <= 0:
             return False, "El precio debe ser mayor que 0"
         s = self.session
@@ -173,4 +176,3 @@ class ProductoManager:
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error descontando stock en picking: %s", e)
-

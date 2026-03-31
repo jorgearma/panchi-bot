@@ -4,6 +4,7 @@ from datetime import date, datetime
 
 class GestorMetricasAnaliticaMixin:
     def resumen_periodo(self, desde: date, hasta: date) -> dict:
+        """Resume los KPIs globales del periodo."""
         from models import Pedido, Reparto
         from sqlalchemy import func
 
@@ -76,6 +77,7 @@ class GestorMetricasAnaliticaMixin:
         }
 
     def metricas_pedidos(self, desde: date, hasta: date) -> dict:
+        """Agrupa throughput y tiempos por fase del pedido."""
         from models import HistorialEstadoPedido, Pedido
         from sqlalchemy import Date, func
 
@@ -174,6 +176,7 @@ class GestorMetricasAnaliticaMixin:
         }
 
     def metricas_picking(self, desde: date, hasta: date) -> dict:
+        """Resume tiempos e incidencias del picking."""
         from models import PickingItem, PickingPedido, Producto
         from sqlalchemy import func
 
@@ -243,6 +246,7 @@ class GestorMetricasAnaliticaMixin:
         }
 
     def _picking_tiempos(self, desde_dt: datetime, hasta_dt: datetime):
+        """Calcula tiempos medios de picking y espera de asignación."""
         from models import PickingPedido
 
         s = self.session
@@ -269,6 +273,7 @@ class GestorMetricasAnaliticaMixin:
         return tiempo_medio_picking, tiempo_espera_asig
 
     def metricas_reparto(self, desde: date, hasta: date) -> dict:
+        """Resume tiempos, éxito y reparto por repartidor."""
         from models import Empleado, Reparto
 
         s = self.session
@@ -350,6 +355,7 @@ class GestorMetricasAnaliticaMixin:
         }
 
     def metricas_incidencias(self, desde: date, hasta: date) -> dict:
+        """Agrupa incidencias operativas por tipo y empleado."""
         from models import Empleado, PickingItem, PickingPedido, Reparto
         from sqlalchemy import func
 

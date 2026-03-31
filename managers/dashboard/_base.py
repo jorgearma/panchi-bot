@@ -12,6 +12,7 @@ class GestorDashboardBase:
 
     @property
     def session(self):
+        """Devuelve la sesión activa de base de datos."""
         from database import get_db
         return get_db()
 
@@ -28,6 +29,7 @@ class GestorDashboardBase:
         estados_protegidos = self._ESTADOS_PROTEGIDOS
 
         def _ejecutar():
+            """Aplica el cambio de estado sin bloquear la petición."""
             from database import SessionLocal
             s = SessionLocal()
             try:
@@ -44,6 +46,7 @@ class GestorDashboardBase:
         Thread(target=_ejecutar, daemon=True).start()
 
     def _tiempo_medio(self, desde: datetime, estado_inicio: EstadoPedido, estado_fin: EstadoPedido):
+        """Calcula el tiempo medio en minutos entre dos estados."""
         s = self.session
         finales = s.query(HistorialEstadoPedido).filter(
             HistorialEstadoPedido.estado_nuevo == estado_fin.value,

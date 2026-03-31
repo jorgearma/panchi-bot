@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def confirmar_direccion(numero_cliente, mensaje_cliente, data_redis):
     """Confirma la dirección validada y completa el alta del usuario."""
     if mensaje_cliente.lower() == 'si':
-        from services import gestor_usuarios, gestor_pedidos
+        from container import gestor_usuarios, gestor_pedidos
         estado = data_redis
         gestor_usuarios.guardar_usuario(numero_cliente, estado["nombre"], estado["direccion"])
         logger.info("REGISTRO_COMPLETADO usuario=%s", numero_cliente)

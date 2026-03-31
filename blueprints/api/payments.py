@@ -3,7 +3,7 @@ import logging
 import config
 from flask import jsonify, request
 
-from services import gestor_pedidos, gestor_productos, get_monei, cache
+from container import gestor_pedidos, gestor_productos, get_monei, cache
 from controllers.pago import iniciar_pago, iniciar_pago_efectivo
 
 logger = logging.getLogger(__name__)

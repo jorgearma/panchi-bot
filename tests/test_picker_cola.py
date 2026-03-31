@@ -23,7 +23,7 @@ def _mock_session(manager):
 class TestGestorDashboardCola:
 
     def setup_method(self):
-        from services import gestor_dashboard
+        from container import gestor_dashboard
         self.gd = gestor_dashboard
 
     def test_pickings_sin_asignar_devuelve_lista(self, app):
@@ -179,7 +179,7 @@ class TestBlueprintPickerCola:
 
     def test_cola_devuelve_json(self, client, app):
         from unittest.mock import patch
-        from services import gestor_dashboard
+        from container import gestor_dashboard
 
         with client.session_transaction() as sess:
             sess['empleado_id'] = 1
@@ -199,7 +199,7 @@ class TestBlueprintPickerCola:
 
     def test_coger_ok(self, client, app):
         from unittest.mock import patch
-        from services import gestor_dashboard
+        from container import gestor_dashboard
 
         with client.session_transaction() as sess:
             sess['empleado_id'] = 3
@@ -216,7 +216,7 @@ class TestBlueprintPickerCola:
 
     def test_coger_409_ya_cogido(self, client, app):
         from unittest.mock import patch
-        from services import gestor_dashboard
+        from container import gestor_dashboard
 
         with client.session_transaction() as sess:
             sess['empleado_id'] = 3
@@ -230,7 +230,7 @@ class TestBlueprintPickerCola:
 
     def test_coger_404_no_encontrado(self, client, app):
         from unittest.mock import patch
-        from services import gestor_dashboard
+        from container import gestor_dashboard
 
         with client.session_transaction() as sess:
             sess['empleado_id'] = 3

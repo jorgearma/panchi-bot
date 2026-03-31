@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 class GestorPickingBasicoMixin:
 
     def picking_activo(self) -> list:
+        """Lista pedidos listos para picking y pickings en curso."""
         s = self.session
         resultado = []
 

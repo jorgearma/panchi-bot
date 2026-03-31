@@ -4,7 +4,7 @@ import logging
 from flask import jsonify, render_template, request
 
 import config
-from services import cache
+from container import cache
 from blueprints.menu._helpers import _extraer_calle
 
 logger = logging.getLogger(__name__)

@@ -15,6 +15,7 @@ class GestorPedidosLifecycleMixin:
         retry=retry_if_exception_type((SQLAlchemyError, OperationalError)),
     )
     def iniciar_pedido(self, id, direccion, telefono):
+        """Crea un pedido base para iniciar el flujo."""
         try:
             nuevo_pedido = Pedido(
                 ClienteID=id,
@@ -30,6 +31,7 @@ class GestorPedidosLifecycleMixin:
             raise
 
     def guardar_enlace(self, pedido_id, enlace):
+        """Guarda el enlace asociado a un pedido."""
         pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
         if pedido:
             pedido.enlace = enlace
@@ -92,19 +94,21 @@ class GestorPedidosLifecycleMixin:
             )
             raise
 
-    def agregar_productos_a_pedido(self, pedido_id, productos):
+    def _reemplazar_detalles(self, pedido, productos) -> bool:
         """
-        Agrega múltiples productos a un pedido en una sola transacción.
+        Stages the replacement of order lines without committing.
 
-        :param pedido_id: ID del pedido al que se agregarán los productos.
-        :param productos: Lista de tuplas con (producto_id, cantidad).
-        :return: True si la operación fue exitosa, False en caso contrario.
+        Deletes any existing PedidoDetalle for the order (idempotency) and
+        inserts the new ones. The caller is responsible for committing.
+
+        :param pedido: Pedido ORM instance.
+        :param productos: List of (product_id, quantity) tuples.
+        :return: True if lines were staged, False if no valid products were found.
         """
-        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-        if not pedido:
-            return False
+        self.session.query(PedidoDetalle).filter_by(PedidoID=pedido.PedidoID).delete()
+        pedido.Total = self._to_decimal("0.0")
 
-        total_agregado = self._to_decimal("0.0")
+        total = self._to_decimal("0.0")
         detalles = []
 
         for producto_id, cantidad in productos:
@@ -114,23 +118,40 @@ class GestorPedidosLifecycleMixin:
             if producto:
                 precio_unitario = self._to_decimal(producto.Precio)
                 subtotal = precio_unitario * cantidad
-                detalle = PedidoDetalle(
-                    PedidoID=pedido_id,
+                detalles.append(PedidoDetalle(
+                    PedidoID=pedido.PedidoID,
                     ProductoID=producto_id,
                     Cantidad=cantidad,
                     PrecioUnitario=precio_unitario,
                     NombreProducto=producto.Nombre,
                     Subtotal=subtotal,
-                )
-                detalles.append(detalle)
-                total_agregado += subtotal
+                ))
+                total += subtotal
 
         if not detalles:
             return False
 
+        self.session.add_all(detalles)
+        pedido.Total = total
+        return True
+
+    def agregar_productos_a_pedido(self, pedido_id, productos):
+        """
+        Idempotent: replaces order lines and commits. Existing lines are deleted
+        first so retries never produce duplicates.
+
+        :param pedido_id: ID del pedido al que se agregarán los productos.
+        :param productos: Lista de tuplas con (producto_id, cantidad).
+        :return: True si la operación fue exitosa, False en caso contrario.
+        """
+        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+        if not pedido:
+            return False
+
+        if not self._reemplazar_detalles(pedido, productos):
+            return False
+
         try:
-            self.session.add_all(detalles)
-            pedido.Total += total_agregado
             self.session.commit()
             return True
         except (SQLAlchemyError, OperationalError) as error:
@@ -142,7 +163,83 @@ class GestorPedidosLifecycleMixin:
             )
             raise
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type((SQLAlchemyError, OperationalError)),
+    )
+    def confirmar_pago_online(
+        self, pedido_id, productos, redirect_url, notas=None
+    ) -> bool:
+        """
+        Atomic: replace order lines + transition to CONFIRMANDO_PAGO + save URL.
+
+        Must be called AFTER the Monei payment has been created successfully so
+        that a DB failure does not leave a committed payment without a matching
+        order state.
+        """
+        try:
+            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido:
+                logger.warning("confirmar_pago_online: pedido %s no encontrado", pedido_id)
+                return False
+            if not self._reemplazar_detalles(pedido, productos):
+                logger.error("confirmar_pago_online: no se encontraron productos válidos")
+                return False
+            if notas:
+                pedido.Notas = notas
+            pedido.enlace = redirect_url
+            if not self._set_estado(pedido, EstadoPedido.CONFIRMANDO_PAGO):
+                return False
+            self.session.commit()
+            return True
+        except (SQLAlchemyError, OperationalError) as error:
+            self.session.rollback()
+            logger.error(
+                "Error al confirmar pago online del pedido %s: %s",
+                pedido_id,
+                error,
+            )
+            raise
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type((SQLAlchemyError, OperationalError)),
+    )
+    def confirmar_pago_efectivo(
+        self, pedido_id, productos, notas=None
+    ) -> bool:
+        """
+        Atomic: replace order lines + set forma_pago + transition to
+        CONTRA_REEMBOLSO in one commit.
+        """
+        try:
+            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido:
+                logger.warning("confirmar_pago_efectivo: pedido %s no encontrado", pedido_id)
+                return False
+            if not self._reemplazar_detalles(pedido, productos):
+                logger.error("confirmar_pago_efectivo: no se encontraron productos válidos")
+                return False
+            if notas:
+                pedido.Notas = notas
+            pedido.forma_pago = "efectivo"
+            if not self._set_estado(pedido, EstadoPedido.CONTRA_REEMBOLSO):
+                return False
+            self.session.commit()
+            return True
+        except (SQLAlchemyError, OperationalError) as error:
+            self.session.rollback()
+            logger.error(
+                "Error al confirmar pago efectivo del pedido %s: %s",
+                pedido_id,
+                error,
+            )
+            raise
+
     def obtener_pedido(self, pedido_id):
+        """Recupera un pedido por id."""
         try:
             pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
             if not pedido:

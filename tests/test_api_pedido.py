@@ -41,6 +41,9 @@ def make_gestor_pedidos(pedido: MagicMock) -> MagicMock:
     g.actualizar_estado.return_value = True
     g.agregar_productos_a_pedido.return_value = True
     g.guardar_enlace.return_value = True
+    g.fijar_carrito_confirmado.return_value = True
+    g.confirmar_pago_online.return_value = True
+    g.confirmar_pago_efectivo.return_value = True
     return g
 
 
@@ -138,9 +141,12 @@ class TestConfirmarCarrito:
             public_url=PUBLIC_URL,
         )
 
-        gestor.actualizar_estado.assert_called_once_with(pedido.PedidoID, EstadoPedido.ENLACE2)
+        gestor.fijar_carrito_confirmado.assert_called_once()
+        call_args = gestor.fijar_carrito_confirmado.call_args
+        assert call_args.args[0] == pedido.PedidoID
+        assert call_args.args[1] == "uuid-003"
 
-    def test_wrong_state_does_not_call_actualizar_estado(self):
+    def test_wrong_state_does_not_call_fijar_carrito_confirmado(self):
         """If the order is not in ENLACE state, no state transition is attempted."""
         from controllers.pedido import confirmar_carrito
 
@@ -161,7 +167,7 @@ class TestConfirmarCarrito:
             public_url=PUBLIC_URL,
         )
 
-        gestor.actualizar_estado.assert_not_called()
+        gestor.fijar_carrito_confirmado.assert_not_called()
 
     def test_no_active_order_returns_false(self):
         from controllers.pedido import confirmar_carrito
@@ -387,7 +393,9 @@ class TestIniciarPago:
             public_url=PUBLIC_URL,
         )
 
-        gestor.actualizar_estado.assert_called_once_with(pedido.PedidoID, EstadoPedido.CONFIRMANDO_PAGO)
+        gestor.confirmar_pago_online.assert_called_once()
+        call_args = gestor.confirmar_pago_online.call_args
+        assert call_args.args[0] == pedido.PedidoID
 
     def test_product_not_found_returns_false(self):
         from controllers.pago import iniciar_pago
@@ -508,8 +516,8 @@ class TestIniciarPago:
         assert success is False
         assert "redirección" in msg.lower()
 
-    def test_notas_se_asigna_al_pedido(self):
-        """iniciar_pago debe asignar notas al objeto pedido."""
+    def test_notas_se_pasan_a_confirmar_pago_online(self):
+        """iniciar_pago debe pasar notas al método atómico de confirmación."""
         from controllers.pago import iniciar_pago
 
         pedido = make_pedido(EstadoPedido.ENLACE2)
@@ -529,7 +537,8 @@ class TestIniciarPago:
             public_url=PUBLIC_URL,
         )
 
-        assert pedido.Notas == "No tocar el timbre"
+        gestor.confirmar_pago_online.assert_called_once()
+        assert gestor.confirmar_pago_online.call_args.kwargs.get("notas") == "No tocar el timbre"
 
     def test_notas_vacio_por_defecto(self):
         """iniciar_pago sin notas no debe fallar (backward compat)."""
@@ -564,7 +573,7 @@ class TestIniciarPagoEfectivo:
         gp.obtener_producto_por_codigo.return_value = {"Precio": precio}
         return gp
 
-    def test_notas_se_asigna_al_pedido(self):
+    def test_notas_se_pasan_a_confirmar_pago_efectivo(self):
         from controllers.pago import iniciar_pago_efectivo
 
         pedido = make_pedido(EstadoPedido.ENLACE2)
@@ -584,7 +593,8 @@ class TestIniciarPagoEfectivo:
                 public_url=PUBLIC_URL,
             )
 
-        assert pedido.Notas == "Dejar en portería"
+        gestor.confirmar_pago_efectivo.assert_called_once()
+        assert gestor.confirmar_pago_efectivo.call_args.kwargs.get("notas") == "Dejar en portería"
 
     def test_notas_vacio_por_defecto(self):
         from controllers.pago import iniciar_pago_efectivo

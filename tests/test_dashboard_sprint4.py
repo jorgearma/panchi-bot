@@ -6,7 +6,7 @@ from unittest.mock import patch, PropertyMock, MagicMock
 
 def test_rendimiento_resumen_devuelve_claves_esperadas(app):
     """rendimiento_resumen() devuelve dict con empleados list."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -24,7 +24,7 @@ def test_rendimiento_resumen_devuelve_claves_esperadas(app):
 
 def test_rendimiento_resumen_acepta_filtro_rol(app):
     """rendimiento_resumen() acepta filtro por rol sin error."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -43,7 +43,7 @@ def test_rendimiento_resumen_acepta_filtro_rol(app):
 
 def test_rendimiento_empleado_devuelve_none_si_no_existe(app):
     """rendimiento_empleado() devuelve None si el empleado no existe."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -56,7 +56,7 @@ def test_rendimiento_empleado_devuelve_none_si_no_existe(app):
 
 def test_rendimiento_empleado_devuelve_claves_esperadas(app):
     """rendimiento_empleado() devuelve kpis, pedidos_por_dia, turnos_recientes, ultimos_pedidos."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         emp_mock = MagicMock()
         emp_mock.EmpleadoID = 1
@@ -108,7 +108,7 @@ def test_rendimiento_html_requiere_auth(client):
 def test_rendimiento_resumen_json_devuelve_estructura(client):
     """GET /dashboard/rendimiento-datos devuelve {empleados}."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -124,7 +124,7 @@ def test_rendimiento_resumen_json_devuelve_estructura(client):
 def test_rendimiento_resumen_json_pasa_filtros(client):
     """GET /dashboard/rendimiento-datos pasa periodo y rol al manager."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -140,7 +140,7 @@ def test_rendimiento_resumen_json_pasa_filtros(client):
 def test_rendimiento_empleado_json_devuelve_404_si_no_existe(client):
     """GET /dashboard/rendimiento/<id> devuelve 404 si no existe."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -154,7 +154,7 @@ def test_rendimiento_empleado_json_devuelve_404_si_no_existe(client):
 def test_rendimiento_empleado_json_devuelve_datos(client):
     """GET /dashboard/rendimiento/<id> devuelve los datos del empleado."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     fake = {
         'nombre': 'Ana García',

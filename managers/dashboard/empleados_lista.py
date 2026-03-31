@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 class GestorEmpleadosListaMixin:
 
     def empleados_disponibles(self, rol: str = None) -> list:
+        """Lista empleados activos, con filtro opcional por rol."""
         query = self.session.query(Empleado).filter(Empleado.activo == True)
         if rol:
             query = query.join(Rol, Empleado.rol_id == Rol.id).filter(Rol.nombre == rol)

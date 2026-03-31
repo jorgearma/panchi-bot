@@ -6,7 +6,7 @@ from unittest.mock import patch, PropertyMock
 
 def test_historial_pedidos_devuelve_claves_esperadas(app):
     """historial_pedidos() devuelve dict con pedidos, total, page, pages."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -31,7 +31,7 @@ def test_historial_pedidos_devuelve_claves_esperadas(app):
 
 def test_historial_pedidos_paginacion_por_defecto(app):
     """historial_pedidos() usa page=1 y per_page=25 por defecto."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -52,7 +52,7 @@ def test_historial_pedidos_paginacion_por_defecto(app):
 
 def test_detalle_pedido_devuelve_none_si_no_existe(app):
     """detalle_pedido() devuelve None cuando el pedido_id no existe."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -67,7 +67,7 @@ def test_detalle_pedido_devuelve_none_si_no_existe(app):
 def test_detalle_pedido_devuelve_claves_esperadas(app):
     """detalle_pedido() devuelve dict con pedido, items, historial, picking, reparto."""
     from unittest.mock import MagicMock
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with app.app_context():
         pedido_mock = MagicMock()
@@ -123,7 +123,7 @@ def test_historial_html_requiere_auth(client):
 def test_historial_pedidos_json_devuelve_estructura(client):
     """GET /dashboard/historial-pedidos devuelve {pedidos, total, page, pages}."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -145,7 +145,7 @@ def test_historial_pedidos_json_devuelve_estructura(client):
 def test_historial_pedidos_json_pasa_filtros(client):
     """GET /dashboard/historial-pedidos pasa query params al manager."""
     from unittest.mock import patch, call
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -165,7 +165,7 @@ def test_historial_pedidos_json_pasa_filtros(client):
 def test_detalle_pedido_json_devuelve_404_si_no_existe(client):
     """GET /dashboard/pedido/<id>/detalle devuelve 404 si no existe."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -179,7 +179,7 @@ def test_detalle_pedido_json_devuelve_404_si_no_existe(client):
 def test_detalle_pedido_json_devuelve_datos(client):
     """GET /dashboard/pedido/<id>/detalle devuelve los datos del pedido."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     fake_detalle = {
         "pedido": {"pedido_id": 2001, "estado": "ENTREGADO"},

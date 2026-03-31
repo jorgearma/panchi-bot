@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 class GestorRepartoTrackingMixin:
 
     def mapa(self) -> dict:
+        """Devuelve los puntos activos para el mapa operativo."""
         pedidos = self.session.query(Pedido).filter(
             Pedido.Estado.in_(_ESTADOS_OPERATIVOS)
         ).all()
@@ -232,6 +233,7 @@ class GestorRepartoTrackingMixin:
             _repartidor_id = reparto.repartidor_id
             if _repartidor_id:
                 def _actualizar_disponibilidad(emp_id=_repartidor_id):
+                    """Marca disponible al repartidor si ya no tiene rutas activas."""
                     from database import SessionLocal
                     _s = SessionLocal()
                     try:

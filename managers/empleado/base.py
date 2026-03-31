@@ -10,4 +10,5 @@ class GestorEmpleadoBase:
 
     @property
     def session(self):
+        """Devuelve la sesión activa de base de datos."""
         return get_db()
