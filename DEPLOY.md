@@ -9,7 +9,8 @@ Stack completo en un solo VPS: App + Redis + SQL Server + Nginx con HTTPS.
 | Componente | Estado |
 |---|---|
 | `docker-compose.yml` | ✅ Actualizado (incluye SQL Server) |
-| `nginx.conf` | ⚠️ Hay que actualizarlo para HTTPS |
+| `nginx.local.conf` | ✅ Listo para pruebas locales por HTTP |
+| `nginx.prod.conf` | ⚠️ Hay que personalizarlo para HTTPS |
 | `gunicorn.conf.py` | ✅ Listo |
 | `.env.example` | ✅ Listo |
 | `Dockerfile` | ❌ **Falta — paso 1** |
@@ -95,6 +96,9 @@ REDIS_DB=0
 # URL pública con https
 PUBLIC_URL=https://tudominio.com
 
+# Nginx que montará docker compose en el contenedor
+NGINX_CONF=nginx.prod.conf
+
 # WhatsApp — elige uno
 WHATSAPP_PROVIDER=meta   # o twilio
 
@@ -151,9 +155,14 @@ sudo certbot certonly --standalone -d tudominio.com
 
 ---
 
-## Paso 4 — Actualizar nginx.conf para HTTPS
+## Paso 4 — Preparar nginx para producción
 
-Reemplaza el contenido de `nginx.conf` con esto:
+El proyecto ahora usa dos configuraciones separadas:
+
+- `nginx.local.conf`: para pruebas locales por HTTP
+- `nginx.prod.conf`: para el VPS con dominio y HTTPS
+
+Para producción, edita `nginx.prod.conf` y deja este contenido:
 
 ```nginx
 server {
@@ -186,6 +195,7 @@ server {
 ```
 
 > Sustituye `tudominio.com` por tu dominio real en los 4 sitios donde aparece.
+> En `.env`, deja `NGINX_CONF=nginx.prod.conf` cuando despliegues en el VPS.
 
 ---
 
@@ -198,66 +208,155 @@ cd panchi-bot
 
 # O si ya está clonado
 git pull origin master
+
+# Crea la carpeta donde pondrás el backup .bak
+mkdir -p backups
 ```
 
 ---
 
-## Paso 6 — Primera construcción y arranque
+## Paso 6 — Arrancar primero solo SQL Server
 
 ```bash
-# Construye la imagen (tarda ~5-8 min la primera vez: ODBC Driver + spaCy)
-docker compose up --build -d
+# Levanta solo SQL Server
+docker compose up -d sqlserver
 
-# Sigue los logs para ver si todo arranca bien
-docker compose logs -f
+# Sigue los logs hasta que quede sano
+docker compose logs -f sqlserver
 ```
 
-El orden de arranque es:
+SQL Server tarda en iniciar. Espera a que el healthcheck pase antes de seguir.
+
+---
+
+## Paso 7 — Restaurar el backup o crear la base
+
+El contenedor monta automáticamente:
+
+- `./backups` en `/var/opt/mssql/backup`
+- `./migrations` en `/migrations`
+
+### Opción A — Tienes un backup `.bak`
+
+Sube tu backup al VPS dentro de `backups/`, por ejemplo:
+
+```bash
+scp mi_backup.bak usuario@tu-vps:/home/ubuntu/panchi-bot/backups/
+```
+
+Bloque recomendado de variables para no repetir valores a mano:
+
+```bash
+export DB_NAME=panchibot
+export BACKUP_FILE=mi_backup.bak
+export SA_PASSWORD='TuPassword!'
+```
+
+Comprueba que el backup existe dentro del contenedor:
+
+```bash
+docker compose exec sqlserver ls -lh /var/opt/mssql/backup
+```
+
+Valida que SQL Server puede leer el backup:
+
+```bash
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$SA_PASSWORD" -C \
+  -Q "RESTORE VERIFYONLY FROM DISK = N'/var/opt/mssql/backup/${BACKUP_FILE}'"
+```
+
+Consulta primero los nombres lógicos del backup:
+
+```bash
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$SA_PASSWORD" -C \
+  -Q "RESTORE FILELISTONLY FROM DISK = N'/var/opt/mssql/backup/${BACKUP_FILE}'"
+```
+
+Luego restaura la BD. Sustituye `LogicalDataName` y `LogicalLogName` por los nombres
+que te haya devuelto el comando anterior:
+
+```bash
+export LOGICAL_DATA_NAME='LogicalDataName'
+export LOGICAL_LOG_NAME='LogicalLogName'
+
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$SA_PASSWORD" -C \
+  -Q "RESTORE DATABASE ${DB_NAME}
+      FROM DISK = N'/var/opt/mssql/backup/${BACKUP_FILE}'
+      WITH MOVE '${LOGICAL_DATA_NAME}' TO '/var/opt/mssql/data/${DB_NAME}.mdf',
+           MOVE '${LOGICAL_LOG_NAME}' TO '/var/opt/mssql/data/${DB_NAME}_log.ldf',
+           REPLACE, RECOVERY"
+```
+
+Comprueba que la base quedó restaurada y accesible:
+
+```bash
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$SA_PASSWORD" -C \
+  -Q "SELECT name, state_desc FROM sys.databases WHERE name = '${DB_NAME}'"
+```
+
+Prueba una consulta simple ya dentro de la base restaurada:
+
+```bash
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$SA_PASSWORD" -d "$DB_NAME" -C \
+  -Q "SELECT TOP 1 name FROM sys.tables ORDER BY name"
+```
+
+### Opción B — No tienes backup
+
+SQL Server Express arranca vacío. Crea la BD manualmente:
+
+```bash
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "TuPassword!" -C \
+  -Q "CREATE DATABASE panchibot"
+```
+
+> Recomendación: si tienes backup, restáuralo antes de arrancar la app.
+> Así evitas una BD a medias o diferencias de esquema.
+
+---
+
+## Paso 8 — Arrancar el resto del stack
+
+Cuando la base ya exista y esté restaurada, levanta el resto:
+
+```bash
+# Construye la imagen de la app y levanta todo lo demás
+docker compose up --build -d redis app nginx
+
+# Sigue los logs de la app
+docker compose logs -f app
+```
+
+El orden de arranque será:
 1. `redis` arranca y pasa el healthcheck (~5s)
-2. `sqlserver` arranca y pasa el healthcheck (~30-60s, SQL Server es lento al iniciar)
+2. `sqlserver` ya está levantado y sano
 3. `app` arranca una vez Redis y SQL Server están sanos
 4. `nginx` arranca
 
-Si ves errores de conexión a SQL Server en los primeros 60s, es normal — SQL Server
-tarda en iniciar. La app reintenta automáticamente (tenacity).
-
 ---
 
-## Paso 7 — Crear la base de datos y ejecutar migraciones
+## Paso 9 — Ejecutar migraciones SQL adicionales (si aplican)
 
-SQL Server Express arranca vacío. Hay que crear la BD y las tablas:
+Si has restaurado un backup reciente, puede que no necesites esto.
+Si arrancas con una base nueva o tu backup está desactualizado, aplica los SQL de
+`migrations/` manualmente desde el contenedor de SQL Server:
 
 ```bash
-# Accede al contenedor de SQL Server
+# Ejemplo: ejecutar una migración concreta
 docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
-  -S localhost -U sa -P "TuPassword!" -No
-
-# Dentro de sqlcmd, crea la base de datos:
-CREATE DATABASE panchibot;
-GO
-exit
-```
-
-Luego ejecuta las migraciones desde el contenedor de la app:
-
-```bash
-docker compose exec app bash
-
-# Ejecuta los scripts de migración en orden
-python scripts/run_migrations.py
-
-# Si es la primera vez y necesitas todos los sprints:
-# python scripts/migrar_sprint2.py
-# python scripts/migrar_sprint3.py
-# python scripts/migrar_categorias.py
-# python scripts/migrar_empleado.py
-
-exit
+  -S localhost -U sa -P "TuPassword!" -d panchibot -C \
+  -i /migrations/002_turno_campos_dashboard.sql
 ```
 
 ---
 
-## Paso 8 — Verificar que todo funciona
+## Paso 10 — Verificar que todo funciona
 
 ```bash
 # Health check — debe devolver {"status":"ok","redis":"ok","database":"ok"}
@@ -272,7 +371,7 @@ docker compose logs app --tail=50
 
 ---
 
-## Paso 9 — Configurar webhooks externos
+## Paso 11 — Configurar webhooks externos
 
 ### Meta / WhatsApp Cloud API
 
@@ -337,7 +436,7 @@ docker compose exec app bash
 # Acceder a SQL Server
 docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TuPassword!" -No
 
-# Reiniciar solo nginx (tras cambiar nginx.conf)
+# Reiniciar solo nginx (tras cambiar nginx.local.conf o nginx.prod.conf)
 docker compose restart nginx
 
 # Parar todo (Redis y SQL Server siguen con sus datos en volúmenes)
