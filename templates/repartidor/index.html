@@ -310,7 +310,7 @@
             <template x-for="p in pedidosEnReparto" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
                    :id="'card-' + p.reparto_id"
-                   :class="pedidoDestacado === p.reparto_id ? 'border-2 border-orange-400 scale-[1.02] shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_4px_rgba(234,88,12,0.3),inset_0_1px_0_rgba(251,146,60,0.15)]' : 'border border-blue-800 border-l-4 border-l-blue-500 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'"
+                   :class="pedidoDestacado === p.reparto_id ? 'border-2 border-orange-400 scale-[1.02] shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_4px_rgba(234,88,12,0.3),inset_0_1px_0_rgba(251,146,60,0.15)]' : 'border-2 border-blue-800 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'"
                    class="rounded-xl bg-blue-950 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
                 <div class="px-4 py-3 flex items-center gap-3">
                   <!-- Info principal -->
@@ -353,7 +353,7 @@
             <template x-for="p in pedidosNuevosEnCalle" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
                    :id="'card-' + p.reparto_id"
-                   :class="pedidoDestacado === p.reparto_id ? 'border-2 border-orange-400 scale-[1.02] shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_4px_rgba(234,88,12,0.3),inset_0_1px_0_rgba(251,146,60,0.15)]' : 'border border-red-800 border-l-4 border-l-red-500 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'"
+                   :class="pedidoDestacado === p.reparto_id ? 'border-2 border-orange-400 scale-[1.02] shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_4px_rgba(234,88,12,0.3),inset_0_1px_0_rgba(251,146,60,0.15)]' : 'border-2 border-red-800 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'"
                    class="card-nuevo rounded-xl bg-red-950 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
                 <div class="px-4 py-3 flex items-center gap-3">
                   <div class="flex-1 min-w-0">
@@ -393,7 +393,7 @@
             <template x-for="p in pedidosEnTiendaConocidos" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
                    :id="'card-' + p.reparto_id"
-                   :class="pedidoDestacado === p.reparto_id ? 'border-2 border-orange-400 scale-[1.02] shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_4px_rgba(234,88,12,0.3),inset_0_1px_0_rgba(251,146,60,0.15)]' : 'border border-amber-800 border-l-4 border-l-amber-500 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'"
+                   :class="pedidoDestacado === p.reparto_id ? 'border-2 border-orange-400 scale-[1.02] shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_4px_rgba(234,88,12,0.3),inset_0_1px_0_rgba(251,146,60,0.15)]' : 'border-2 border-amber-800 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'"
                    class="rounded-xl bg-amber-950 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
                 <div class="px-4 py-3 flex items-center gap-3">
                   <div class="flex-1 min-w-0">
