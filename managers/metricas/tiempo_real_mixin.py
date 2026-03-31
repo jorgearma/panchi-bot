@@ -144,7 +144,7 @@ class GestorMetricasTiempoRealMixin:
         for pp in pickings:
             ultimo_hist = (
                 s.query(HistorialEstadoPedido)
-                .filter(HistorialEstadoPedido.pedido_id == pp.PedidoID)
+                .filter(HistorialEstadoPedido.pedido_id == pp.pedido_id)
                 .order_by(HistorialEstadoPedido.cambiado_en.desc())
                 .first()
             )
@@ -154,12 +154,12 @@ class GestorMetricasTiempoRealMixin:
                 mins = round(delta.total_seconds() / 60)
             num_items = (
                 s.query(func.count(PedidoDetalle.DetalleID))
-                .filter(PedidoDetalle.PedidoID == pp.PedidoID)
+                .filter(PedidoDetalle.PedidoID == pp.pedido_id)
                 .scalar()
             ) or 0
             cola_picking.append(
                 {
-                    'pedido_id': pp.PedidoID,
+                    'pedido_id': pp.pedido_id,
                     'minutos_esperando': mins,
                     'num_items': num_items,
                 }
@@ -270,7 +270,7 @@ class GestorMetricasTiempoRealMixin:
         alertas = []
 
         ids_picking = [
-            r.PedidoID
+            r.pedido_id
             for r in s.query(PickingPedido)
             .filter(PickingPedido.estado == 'pendiente', PickingPedido.empleado_id.is_(None))
             .all()
@@ -392,7 +392,7 @@ class GestorMetricasTiempoRealMixin:
             reparto_activo = (
                 s.query(Reparto)
                 .filter(
-                    Reparto.empleado_id == empleado.EmpleadoID,
+                    Reparto.repartidor_id == empleado.EmpleadoID,
                     Reparto.estado.in_(['asignado', 'en_camino']),
                 )
                 .first()
@@ -401,7 +401,7 @@ class GestorMetricasTiempoRealMixin:
                 continue
             ultimo_reparto = (
                 s.query(Reparto)
-                .filter(Reparto.empleado_id == empleado.EmpleadoID)
+                .filter(Reparto.repartidor_id == empleado.EmpleadoID)
                 .order_by(Reparto.updated_at.desc())
                 .first()
             )

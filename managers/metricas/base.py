@@ -67,15 +67,15 @@ class GestorMetricasBase:
                 .filter(
                     PickingPedido.empleado_id == empleado_id,
                     PickingPedido.estado == 'completado',
-                    PickingPedido.updated_at >= datetime.combine(desde, datetime.min.time()),
-                    PickingPedido.updated_at <= datetime.combine(hasta, datetime.max.time()),
+                    PickingPedido.completado_en >= datetime.combine(desde, datetime.min.time()),
+                    PickingPedido.completado_en <= datetime.combine(hasta, datetime.max.time()),
                 )
                 .all()
             )
         return (
             s.query(Reparto)
             .filter(
-                Reparto.empleado_id == empleado_id,
+                Reparto.repartidor_id == empleado_id,
                 Reparto.estado == 'entregado',
                 Reparto.updated_at >= datetime.combine(desde, datetime.min.time()),
                 Reparto.updated_at <= datetime.combine(hasta, datetime.max.time()),
