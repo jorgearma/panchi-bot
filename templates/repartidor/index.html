@@ -116,10 +116,46 @@
   <header class="px-3 pt-3 pb-1">
   <div class="bg-gray-800 border border-gray-700 rounded-2xl text-white shadow-sm overflow-hidden relative">
 
-    <!-- Arte CSS: fondo con ruta animada -->
+    <!-- Arte CSS: skyline + glow -->
     <div class="absolute inset-0 pointer-events-none overflow-hidden">
       <!-- Gradiente naranja pulsante -->
       <div class="header-glow absolute right-0 inset-y-0 w-32 bg-gradient-to-l from-orange-500/20 to-transparent"></div>
+      <!-- Skyline minimalista -->
+      <div style="position:absolute;bottom:0;right:10px;display:flex;align-items:flex-end;gap:2px;opacity:0.45">
+        <!-- B1 -->
+        <div style="width:9px;height:22px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:4px;left:2px;width:2px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 5px 3px rgba(249,115,22,0.55)"></div>
+        </div>
+        <!-- B2 -->
+        <div style="width:14px;height:38px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:5px;left:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.5)"></div>
+          <div style="position:absolute;top:5px;right:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.5)"></div>
+          <div style="position:absolute;top:13px;left:2px;width:3px;height:2px;background:#ea580c;border-radius:1px;box-shadow:0 0 5px 2px rgba(234,88,12,0.4)"></div>
+        </div>
+        <!-- B3 -->
+        <div style="width:8px;height:28px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+        </div>
+        <!-- B4 tall -->
+        <div style="width:11px;height:50px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:6px;left:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 7px 3px rgba(249,115,22,0.6)"></div>
+          <div style="position:absolute;top:6px;right:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 7px 3px rgba(249,115,22,0.6)"></div>
+          <div style="position:absolute;top:16px;left:2px;width:3px;height:2px;background:#ea580c;border-radius:1px;box-shadow:0 0 5px 2px rgba(234,88,12,0.35)"></div>
+          <div style="position:absolute;top:26px;right:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.5)"></div>
+        </div>
+        <!-- B5 -->
+        <div style="width:16px;height:32px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:5px;left:3px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.55)"></div>
+          <div style="position:absolute;top:5px;right:3px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.55)"></div>
+          <div style="position:absolute;top:14px;left:3px;width:3px;height:2px;background:#ea580c;border-radius:1px;box-shadow:0 0 5px 2px rgba(234,88,12,0.4)"></div>
+        </div>
+        <!-- B6 -->
+        <div style="width:9px;height:42px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:7px;left:2px;width:4px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 8px 4px rgba(249,115,22,0.6)"></div>
+          <div style="position:absolute;top:18px;left:2px;width:4px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.45)"></div>
+        </div>
+        <!-- B7 short -->
+        <div style="width:12px;height:18px;background:#0f172a;border-radius:2px 2px 0 0"></div>
+      </div>
     </div>
 
     <!-- Contenido del header -->
@@ -141,9 +177,6 @@
       <!-- Derecha: estado + recargar -->
       <div class="flex items-center gap-2">
         <span x-show="!conexionOk" class="text-xs text-red-400 font-medium" x-cloak>Sin conexión</span>
-        <button @click="recargar()"
-                class="p-2 -mr-1 text-gray-400 active:text-white transition text-xl leading-none"
-                :class="cargando ? 'animate-spin' : ''">↻</button>
       </div>
     </div>
 
