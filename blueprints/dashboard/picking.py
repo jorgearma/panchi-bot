@@ -10,9 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 def register(bp):
+    """Registra las rutas de supervisión y gestión del picking."""
     @bp.route("/dashboard/picking")
     @requiere_rol('manager', 'admin')
     def picking():
+        """Devuelve el estado actual del picking en curso."""
         try:
             return _ok(gestor_dashboard.picking_activo())
         except Exception as e:
@@ -22,6 +24,7 @@ def register(bp):
     @bp.route("/dashboard/picking/asignar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def asignar_picker():
+        """Asigna un picker a un pedido pendiente."""
         data = request.get_json(silent=True) or {}
         pedido_id   = data.get("pedido_id")
         empleado_id = data.get("empleado_id")
@@ -37,6 +40,7 @@ def register(bp):
     @bp.route("/dashboard/picking/<int:picking_id>/reasignar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def reasignar_picker(picking_id: int):
+        """Cambia o libera el picker asignado a un picking."""
         data = request.get_json(silent=True) or {}
         empleado_id_raw   = data.get("empleado_id")
         nuevo_empleado_id = int(empleado_id_raw) if empleado_id_raw is not None else None
@@ -49,6 +53,7 @@ def register(bp):
     @bp.route("/dashboard/picking/<int:picking_id>/completar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def completar_picking(picking_id: int):
+        """Cierra el picking y notifica al cliente que el pedido ya va en camino."""
         ok, msg, telefono = gestor_dashboard.completar_picking(picking_id)
         if not ok:
             return _err(msg)

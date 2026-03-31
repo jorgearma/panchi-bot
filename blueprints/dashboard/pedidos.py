@@ -10,14 +10,17 @@ logger = logging.getLogger(__name__)
 
 
 def register(bp):
+    """Registra las rutas de consulta y edición de pedidos desde el dashboard."""
     @bp.route("/dashboard/historial")
     @requiere_rol('manager', 'admin')
     def historial():
+        """Renderiza la vista de historial de pedidos."""
         return render_template("dashboard/historial.html")
 
     @bp.route("/dashboard/historial-pedidos")
     @requiere_rol('manager', 'admin')
     def historial_pedidos():
+        """Devuelve el historial paginado de pedidos con filtros."""
         try:
             desde     = request.args.get("desde")
             hasta     = request.args.get("hasta")
@@ -37,6 +40,7 @@ def register(bp):
     @bp.route("/dashboard/pedidos-activos")
     @requiere_rol('manager', 'admin')
     def pedidos_activos():
+        """Lista los pedidos activos visibles en operación."""
         try:
             estado = request.args.get("estado")
             return _ok(gestor_dashboard.pedidos_activos(estado=estado))
@@ -47,6 +51,7 @@ def register(bp):
     @bp.route("/dashboard/pedido/<int:pedido_id>/detalle")
     @requiere_rol('manager', 'admin')
     def detalle_pedido(pedido_id):
+        """Devuelve el detalle completo de un pedido."""
         try:
             data = gestor_dashboard.detalle_pedido(pedido_id)
             if data is None:
@@ -59,6 +64,7 @@ def register(bp):
     @bp.route("/dashboard/pedido/<int:pedido_id>/cancelar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def cancelar_pedido(pedido_id: int):
+        """Cancela un pedido, registra el motivo y avisa al cliente."""
         data = request.get_json(silent=True) or {}
         motivo = data.get("motivo")
         empleado_id = session.get('empleado_id')
@@ -81,6 +87,7 @@ def register(bp):
     @bp.route("/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def eliminar_item(pedido_id: int, detalle_id: int):
+        """Elimina una línea concreta del pedido."""
         empleado_id = session.get('empleado_id')
         ok, msg = gestor_pedidos.eliminar_item(pedido_id, detalle_id, empleado_id)
         if not ok:
@@ -90,6 +97,7 @@ def register(bp):
     @bp.route("/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/sustituir", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def sustituir_item(pedido_id: int, detalle_id: int):
+        """Sustituye un producto del pedido por otro disponible."""
         data = request.get_json(silent=True) or {}
         producto_sustituto_id = data.get("producto_sustituto_id")
         cantidad_a_sustituir  = data.get("cantidad_a_sustituir")
@@ -112,6 +120,7 @@ def register(bp):
     @bp.route("/dashboard/productos")
     @requiere_rol('manager', 'admin')
     def productos_disponibles():
+        """Busca productos para sustituciones o ajustes manuales."""
         try:
             q = request.args.get("q", "").strip()
             return _ok(gestor_dashboard.buscar_productos(q))

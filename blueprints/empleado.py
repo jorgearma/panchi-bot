@@ -18,6 +18,7 @@ _ROLES_HUB = ('picker', 'repartidor', 'manager', 'admin')
 @blueprint_empleado.route('/empleado', strict_slashes=False)
 @requiere_rol(*_ROLES_HUB)
 def index():
+    """Carga el hub del empleado o lo redirige al check-in si aún no eligió rol."""
     empleado_id = session.get('empleado_id')
     rol = session.get('rol')
     # Redirigir a check-in si polivalente y sin rol_activo en BD
@@ -32,6 +33,7 @@ def index():
 @blueprint_empleado.route('/empleado/perfil')
 @requiere_rol(*_ROLES_HUB)
 def perfil():
+    """Devuelve el perfil operativo del empleado autenticado."""
     empleado_id = session.get('empleado_id')
     try:
         datos = gestor_empleado.perfil(empleado_id)
@@ -46,6 +48,7 @@ def perfil():
 @blueprint_empleado.route('/empleado/estado', methods=['POST'])
 @requiere_rol(*_ROLES_HUB)
 def estado():
+    """Actualiza el estado operativo actual del empleado."""
     data         = request.get_json(silent=True) or {}
     nuevo_estado = (data.get('estado') or '').strip()
     if not nuevo_estado:
@@ -60,6 +63,7 @@ def estado():
 @blueprint_empleado.route('/empleado/turno-hoy')
 @requiere_rol(*_ROLES_HUB)
 def turno_hoy():
+    """Consulta el turno programado del empleado para hoy."""
     empleado_id = session.get('empleado_id')
     try:
         turno = gestor_empleado.turno_hoy(empleado_id)
@@ -72,6 +76,7 @@ def turno_hoy():
 @blueprint_empleado.route('/empleado/puede-iniciar')
 @requiere_rol(*_ROLES_HUB)
 def puede_iniciar():
+    """Indica si el empleado puede abrir su turno en este momento."""
     empleado_id = session.get('empleado_id')
     try:
         resultado = gestor_empleado.puede_iniciar_turno(empleado_id)
@@ -84,6 +89,7 @@ def puede_iniciar():
 @blueprint_empleado.route('/empleado/metricas')
 @requiere_rol(*_ROLES_HUB)
 def metricas():
+    """Devuelve las métricas del día adaptadas al rol activo del empleado."""
     empleado_id = session.get('empleado_id')
     rol         = session.get('rol', '')
     try:
@@ -97,6 +103,7 @@ def metricas():
 @blueprint_empleado.route('/empleado/capacidades')
 @requiere_rol(*_ROLES_HUB)
 def capacidades():
+    """Lista los roles que puede asumir el empleado y cuál tiene activo."""
     empleado_id = session.get('empleado_id')
     try:
         caps = gestor_empleado.capacidades(empleado_id)
@@ -111,6 +118,7 @@ def capacidades():
 @blueprint_empleado.route('/empleado/carga-operativa')
 @requiere_rol(*_ROLES_HUB)
 def carga_operativa():
+    """Resume la carga actual de picking y reparto para apoyar el check-in."""
     try:
         return jsonify(gestor_empleado.carga_operativa())
     except Exception as e:
@@ -122,6 +130,7 @@ def carga_operativa():
 @blueprint_empleado.route('/empleado/cambiar-rol', methods=['POST'])
 @requiere_rol(*_ROLES_HUB)
 def cambiar_rol():
+    """Cambia el rol activo del empleado si no hay bloqueantes operativos."""
     data = request.get_json(silent=True) or {}
     nuevo_rol = (data.get('rol') or '').strip()
     if not nuevo_rol:
@@ -142,6 +151,7 @@ def cambiar_rol():
 @blueprint_empleado.route('/empleado/checkin')
 @requiere_autenticacion
 def checkin():
+    """Muestra la selección de rol cuando el empleado tiene varias capacidades."""
     empleado_id = session.get('empleado_id')
     try:
         caps = gestor_empleado.capacidades(empleado_id)
@@ -162,6 +172,7 @@ def checkin():
 @blueprint_empleado.route('/empleado/fichaje', methods=['POST'])
 @requiere_rol(*_ROLES_HUB)
 def fichaje_iniciar():
+    """Abre el turno del empleado si cumple las condiciones de entrada."""
     empleado_id = session.get('empleado_id')
     try:
         puede_result = gestor_empleado.puede_iniciar_turno(empleado_id)
@@ -182,6 +193,7 @@ def fichaje_iniciar():
 @blueprint_empleado.route('/empleado/fichaje/cerrar', methods=['POST'])
 @requiere_rol(*_ROLES_HUB)
 def fichaje_cerrar():
+    """Cierra el turno abierto y devuelve su resumen de jornada."""
     empleado_id = session.get('empleado_id')
     try:
         resumen = gestor_empleado.cerrar_turno(empleado_id)
@@ -198,6 +210,7 @@ def fichaje_cerrar():
 @blueprint_empleado.route('/empleado/fichaje/hoy')
 @requiere_rol(*_ROLES_HUB)
 def fichaje_hoy():
+    """Consulta si el empleado tiene un fichaje abierto hoy."""
     empleado_id = session.get('empleado_id')
     try:
         return jsonify(gestor_empleado.checkin_hoy(empleado_id))
@@ -209,6 +222,7 @@ def fichaje_hoy():
 @blueprint_empleado.route('/empleado/turnos')
 @requiere_rol(*_ROLES_HUB)
 def turnos_page():
+    """Renderiza la vista del calendario de turnos del empleado."""
     empleado_id = session.get('empleado_id')
     rol = session.get('rol')
     return render_template('empleado/turnos.html', empleado_id=empleado_id, rol=rol)
@@ -217,6 +231,7 @@ def turnos_page():
 @blueprint_empleado.route('/empleado/turnos/datos')
 @requiere_rol(*_ROLES_HUB)
 def turnos_datos():
+    """Devuelve los próximos turnos del empleado en el rango solicitado."""
     empleado_id = session.get('empleado_id')
     hoy = date.today()
     try:

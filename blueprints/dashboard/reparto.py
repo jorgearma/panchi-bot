@@ -10,9 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 def register(bp):
+    """Registra las rutas de supervisión y gestión del reparto."""
     @bp.route("/dashboard/repartidores")
     @requiere_rol('manager', 'admin')
     def repartidores():
+        """Devuelve el estado operativo de los repartidores."""
         try:
             return _ok(gestor_dashboard.repartidores())
         except Exception as e:
@@ -22,6 +24,7 @@ def register(bp):
     @bp.route("/dashboard/reparto/asignar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def asignar_repartidor():
+        """Asigna un repartidor a un pedido listo para entregar."""
         data = request.get_json(silent=True) or {}
         pedido_id   = data.get("pedido_id")
         empleado_id = data.get("empleado_id")
@@ -37,6 +40,7 @@ def register(bp):
     @bp.route("/dashboard/reparto/<int:reparto_id>/salida", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def marcar_salida(reparto_id: int):
+        """Marca el reparto como salido y avisa al cliente."""
         ok, msg, telefono = gestor_dashboard.marcar_salida_reparto(reparto_id)
         if not ok:
             return _err(msg)
@@ -46,6 +50,7 @@ def register(bp):
     @bp.route("/dashboard/reparto/<int:reparto_id>/entregar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def marcar_entregado(reparto_id: int):
+        """Marca el reparto como entregado y cierra la comunicación con el cliente."""
         ok, msg, telefono = gestor_dashboard.marcar_entregado(reparto_id)
         if not ok:
             return _err(msg)

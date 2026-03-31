@@ -21,6 +21,7 @@ _MOTIVOS_LABEL = {
 
 
 def _notificar(telefono: str, mensaje: str) -> None:
+    """Envía un WhatsApp en segundo plano desde el dashboard."""
     if not telefono:
         return
 
@@ -34,7 +35,7 @@ def _notificar(telefono: str, mensaje: str) -> None:
 
 
 def _serial(obj):
-    """JSON serializer for datetime and Decimal objects."""
+    """Serializa tipos no JSON nativos usados por el dashboard."""
     if isinstance(obj, datetime):
         return obj.isoformat()
     if isinstance(obj, Decimal):
@@ -43,6 +44,7 @@ def _serial(obj):
 
 
 def _ok(data):
+    """Devuelve respuestas JSON usando el serializador común del dashboard."""
     return current_app.response_class(
         json.dumps(data, default=_serial),
         mimetype="application/json",
@@ -50,4 +52,5 @@ def _ok(data):
 
 
 def _err(msg, code=400):
+    """Devuelve errores JSON con un formato homogéneo."""
     return jsonify({"error": msg}), code

@@ -9,8 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 def register(bp):
+    """Registra la ruta pública de seguimiento del pedido."""
     @bp.route('/api/seguimiento/<redis_id>', methods=['GET'])
     def seguimiento_pedido(redis_id):
+        """Devuelve el estado del pedido y, si existe, su reparto asociado."""
         pedido = get_db().query(Pedido).filter_by(redisID=redis_id).first()
         if not pedido:
             return jsonify({"error": "Pedido no encontrado"}), 404
