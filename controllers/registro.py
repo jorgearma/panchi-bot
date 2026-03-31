@@ -1,25 +1,28 @@
-# /services/registro_usuario.py
+# Orquestador de la máquina de estados de registro
 import logging
 import re
-from services.whatsapp_service import enviar_mensaje_whatsapp
 from services.maps_service import validar_direccion
 from managers.estado_usuario import EstadoUsuario
 from states import EstadoRegistro
 from utils.menu_opciones import mostrar_menu
+from controllers.registro_notifier import (
+    _enviar_bienvenida,
+    _enviar_cancelacion_registro,
+    _solicitar_nombre,
+    _solicitar_direccion,
+    _enviar_confirmacion_direccion,
+    _enviar_direccion_invalida,
+    _enviar_mensaje_registro,
+    _enviar_nombre_invalido,
+    _enviar_registro_pendiente,
+    _enviar_pedir_confirmacion,
+    _enviar_reintentar_direccion,
+)
 
 logger = logging.getLogger(__name__)
 
 
 
-
-
-
-
-def _enviar_mensaje_registro(numero_cliente, nombre, menu_despues_registro):
-    mensaje = (f"¡Gracias {nombre}! Ahora estás registrado. {menu_despues_registro} "
-               "\nescribe el *numero* para elegir\n  "
-               )
-    enviar_mensaje_whatsapp(mensaje, numero_cliente)
 
 
 def confirmar_direccion(numero_cliente, mensaje_cliente, data_redis):
@@ -37,71 +40,12 @@ def confirmar_direccion(numero_cliente, mensaje_cliente, data_redis):
     else:
         return False
 
-
-def _enviar_bienvenida(numero_cliente):
-    enviar_mensaje_whatsapp(
-        "*Registro en el Sistema*💻\n\n"
-        "¡Hola!👋 Aun no estás registrado en nuestro sistema. "
-        "¿Te gustaría continuar con tu registro? 📝\n\n"
-        "▪️Escribe: *Si*",
-        numero_cliente
-    )
-
-
-def _enviar_cancelacion_registro(numero_cliente):
-    enviar_mensaje_whatsapp(
-        "No se ha realizado el registro , escriba si para continuar. 😊",
-        numero_cliente
-    )
-
-
-def _solicitar_nombre(numero_cliente):
-    enviar_mensaje_whatsapp(
-        "▪️ *Registro de Usuario* 👤\n\nEscribe tu 🫵 *Nombre* \nPara continuar",
-        numero_cliente
-    )
-
-
-def _solicitar_direccion(numero_cliente):
-    enviar_mensaje_whatsapp(
-        "📍 *Registro de Dirección* 📍\n\nGracias. Ahora, por favor envía tu *Dirección Completa* 🏠.\n\n"
-        "👇 *Ejemplos:* 👇 \n\n🔹_Calle Labradores, 3, 1B_\n🔹_Avenida Pablo Iglesias, 79, 1B_\n\n",
-        numero_cliente
-    )
-
-
-def _enviar_confirmacion_direccion(numero_cliente, direccion):
-    enviar_mensaje_whatsapp(
-        f"{direccion} \n\n ⬆️ *Verifica tu Ubicación* ⬆️\n\n"
-        "👉 *Escribe:* *Si* para confirmar\n"
-        "👉 *Escribe:* *No* para corregir\n\n",
-        numero_cliente
-    )
-
-
-def _enviar_direccion_invalida(numero_cliente):
-    enviar_mensaje_whatsapp(
-        "⛔ *La dirección no es válida* ⛔\n\nPor favor, revisa los *detalles* 📝.\n"
-        "¡Gracias por tu ayuda! 😊 \n\n 👇 *Ejemplos:* 👇 \n\n"
-        "•_Calle Los Labradores 3, 1B_\n•_Avenida Pablo Iglesias 79, 1B_",
-        numero_cliente
-    )
-
 def _es_nombre_valido(nombre):
     nombre = nombre.strip()
     if len(nombre) < 2 or len(nombre) > 60:
         return False
     return bool(re.match(r"^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ\s'\-]+$", nombre))
 
-
-def _validar_y_confirmar_direccion(numero_cliente, direccion):
-    validar, direccion_resultante = validar_direccion(direccion)
-    if validar:
-        _enviar_confirmacion_direccion(numero_cliente, direccion_resultante)
-        return direccion_resultante
-    else:
-        _enviar_direccion_invalida(numero_cliente)
-        return None
 
 class RegistroUsuario:
     """Clase principal para gestionar el registro del usuario usando Redis."""
@@ -124,11 +68,7 @@ class RegistroUsuario:
                 self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_NOMBRE)
                 return "Solicitud de nombre enviada", 200
             else:
-                enviar_mensaje_whatsapp(
-                    "Para comenzar tu registro escribe *Si* ✅\n"
-                    "Si no quieres registrarte ahora, simplemente ignora este mensaje.",
-                    self.numero_cliente
-                )
+                _enviar_registro_pendiente(self.numero_cliente)
                 return "Registro cancelado", 200
 
         elif estado_actual == EstadoRegistro.ESPERANDO_NOMBRE:
@@ -137,20 +77,17 @@ class RegistroUsuario:
                 _solicitar_direccion(self.numero_cliente)
                 return "Solicitud de dirección enviada", 200
             else:
-                enviar_mensaje_whatsapp(
-                    "⛔ *El nombre ingresado no es válido* ⛔\n\nPor favor, escribe tu *Nombre Completo* 📝.\n"
-                    "Ejemplo: _Juan Pérez_ o _María López_",
-                    self.numero_cliente
-                )
+                _enviar_nombre_invalido(self.numero_cliente)
                 return "Nombre inválido", 400
 
         elif estado_actual == EstadoRegistro.ESPERANDO_DIRECCION:
-            direccion_validada = _validar_y_confirmar_direccion(self.numero_cliente, mensaje_cliente)
-            if direccion_validada:
-                # Se actualiza el estado en Redis guardando la dirección validada
-                self.estado_usuario.actualizar_estado(EstadoRegistro.CONFIRMANDO_DIRECCION, {"direccion": direccion_validada})
+            validada, direccion_resultante = validar_direccion(mensaje_cliente)
+            if validada:
+                _enviar_confirmacion_direccion(self.numero_cliente, direccion_resultante)
+                self.estado_usuario.actualizar_estado(EstadoRegistro.CONFIRMANDO_DIRECCION, {"direccion": direccion_resultante})
                 return "Solicitud de confirmación de dirección enviada", 200
             else:
+                _enviar_direccion_invalida(self.numero_cliente)
                 return "Dirección inválida", 400
 
         elif estado_actual == EstadoRegistro.CONFIRMANDO_DIRECCION:

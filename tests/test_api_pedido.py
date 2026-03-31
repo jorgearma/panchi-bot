@@ -623,19 +623,19 @@ class TestCambiarEstadoAEnlace:
         )
 
     def test_sin_token_retorna_401(self, client):
-        with patch("blueprints.api.config") as mock_cfg:
+        with patch("blueprints.api.cart.config") as mock_cfg:
             mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
             resp = self._post(client, token=None)
         assert resp.status_code == 401
 
     def test_token_incorrecto_retorna_401(self, client):
-        with patch("blueprints.api.config") as mock_cfg:
+        with patch("blueprints.api.cart.config") as mock_cfg:
             mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
             resp = self._post(client, token="token-equivocado")
         assert resp.status_code == 401
 
     def test_sin_pedido_id_retorna_400(self, client):
-        with patch("blueprints.api.config") as mock_cfg:
+        with patch("blueprints.api.cart.config") as mock_cfg:
             mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
             resp = client.post(
                 "/api/cambiar_estado_a_enlace",
@@ -645,9 +645,9 @@ class TestCambiarEstadoAEnlace:
         assert resp.status_code == 400
 
     def test_pedido_no_encontrado_retorna_404(self, client):
-        with patch("blueprints.api.config") as mock_cfg:
+        with patch("blueprints.api.cart.config") as mock_cfg:
             mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
-            with patch("blueprints.api.gestor_pedidos") as mock_gp:
+            with patch("blueprints.api.cart.gestor_pedidos") as mock_gp:
                 mock_gp.obtener_pedido.return_value = None
                 resp = self._post(client, pedido_id=999)
         assert resp.status_code == 404
@@ -656,9 +656,9 @@ class TestCambiarEstadoAEnlace:
         pedido = MagicMock()
         pedido.Estado = EstadoPedido.CONFIRMANDO_PAGO
         pedido.PedidoID = 5
-        with patch("blueprints.api.config") as mock_cfg:
+        with patch("blueprints.api.cart.config") as mock_cfg:
             mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
-            with patch("blueprints.api.gestor_pedidos") as mock_gp:
+            with patch("blueprints.api.cart.gestor_pedidos") as mock_gp:
                 mock_gp.obtener_pedido.return_value = pedido
                 resp = self._post(client, pedido_id=5)
         assert resp.status_code == 400
@@ -667,9 +667,9 @@ class TestCambiarEstadoAEnlace:
         pedido = MagicMock()
         pedido.Estado = EstadoPedido.ENLACE2
         pedido.PedidoID = 7
-        with patch("blueprints.api.config") as mock_cfg:
+        with patch("blueprints.api.cart.config") as mock_cfg:
             mock_cfg.INTERNAL_API_TOKEN = INTERNAL_TOKEN
-            with patch("blueprints.api.gestor_pedidos") as mock_gp:
+            with patch("blueprints.api.cart.gestor_pedidos") as mock_gp:
                 mock_gp.obtener_pedido.return_value = pedido
                 mock_gp.actualizar_estado.return_value = True
                 resp = self._post(client, pedido_id=7)
