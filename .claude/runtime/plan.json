@@ -1,0 +1,260 @@
+{
+  "task": "Añadir funcionalidad de rollback de estado de pedido en el dashboard/index. El operador necesita poder revertir un pedido al estado anterior cuando se ha avanzado por error (ej: reparto marcado como 'salida' incorrectamente). La lógica de estados es estrictamente hacia adelante (states.py), por lo que hay que diseñar un endpoint de rollback en blueprints/dashboard.py, implementar la lógica inversa en gestor_reparto_mixin.py y/o gestor_picking_mixin.py (consultando HistorialEstadoPedido para saber el estado_anterior), actualizar el estado en Pedido.Estado, limpiar/revertir campos asociados en Reparto y PickingPedido si aplica, y añadir un botón de 'Deshacer' en templates/dashboard/index.html para los estados susceptibles de error.",
+  "context_inputs": {
+    "selected_readers": ["project-reader"],
+    "maps_used": [],
+    "constraints": [
+      "No romper endpoints públicos documentados en CONTRACT_MAP.json",
+      "No modificar migraciones ya aplicadas",
+      "No cambiar env vars sin actualizar .env.example",
+      "POST /dashboard/reparto/<int:reparto_id>/salida (blueprints/dashboard.py) — no modificar; crear endpoint de rollback separado",
+      "POST /dashboard/reparto/<int:reparto_id>/entregar (blueprints/dashboard.py) — no modificar; el rollback es un endpoint distinto",
+      "POST /dashboard/picking/<int:picking_id>/completar (blueprints/dashboard.py) — no modificar",
+      "No añadir lógica de negocio directamente en gestor_dashboard.py (god object 121KB) — delegar al mixin apropiado (gestor_reparto_mixin o gestor_picking_mixin)",
+      "Las notificaciones WhatsApp en blueprints/dashboard.py usan threading.Thread sin manejo de errores — no replicar ese patrón en el rollback; si hay notificación al cliente, manejar excepciones explícitamente",
+      "El rollback debe registrar entrada en historial_estados_pedido (igual que los avances de estado) con estado_anterior y estado_nuevo invertidos",
+      "Usar categoria_id en código nuevo (no campo legacy) — models.py línea 45",
+      "Usar rol_id en código nuevo (no campo legacy) — models.py línea 190"
+    ],
+    "key_facts": [
+      "ORM: SQLAlchemy · DB: SQL Server (pyodbc) · Patrón: Manager / Repository con mixins",
+      "Flujo de estados operativos: PAGADO/CONTRA_REEMBOLSO → EN_PREPARACION → PREPARADO → EN_REPARTO → ENTREGADO; también CANCELADO → REEMBOLSADO",
+      "states.py define transiciones válidas SOLO hacia adelante — el rollback debe implementarse con lógica explícita de inversión, no usando el mecanismo de transición normal",
+      "HistorialEstadoPedido (tabla historial_estados_pedido) tiene campos: estado_anterior, estado_nuevo, cambiado_en, notas, empleado_id — úsalo para determinar el estado al que volver y para auditar el rollback",
+      "Reparto tiene campos hora_salida:DateTime y estado — al revertir EN_REPARTO → PREPARADO hay que nullear hora_salida y resetear Reparto.estado",
+      "PickingPedido tiene campos completado_en:DateTime y estado — al revertir PREPARADO → EN_PREPARACION hay que nullear completado_en y resetear PickingPedido.estado",
+      "Pedido.Estado es el campo maestro que hay que revertir al estado_anterior del último HistorialEstadoPedido",
+      "Los estados más susceptibles de error operativo son: EN_REPARTO (salida marcada por error) y PREPARADO (picking completado por error)",
+      "gestor_pedidos.py es el único punto autorizado para cambiar Pedido.Estado — el rollback debe pasar por él para que el historial quede registrado correctamente",
+      "El rollback solo debería estar disponible para roles con privilegios de operador/admin — usar el decorador requiere_rol de blueprints/auth.py"
+    ],
+    "files_to_open": [
+      "blueprints/dashboard.py",
+      "managers/dashboard/gestor_reparto_mixin.py",
+      "managers/dashboard/gestor_picking_mixin.py",
+      "managers/gestor_pedidos.py",
+      "templates/dashboard/index.html"
+    ],
+    "files_to_review": [
+      "states.py",
+      "managers/dashboard/gestor_pedidos_mixin.py",
+      "models.py",
+      "managers/dashboard/_base.py",
+      "managers/gestor_dashboard.py",
+      "blueprints/auth.py",
+      "database.py",
+      "managers/dashboard/_helpers.py",
+      "services/whatsapp_service.py"
+    ],
+    "dependency_graph": {
+      "managers/dashboard/gestor_picking_mixin.py": ["database.py", "managers/dashboard/_helpers.py", "models.py", "states.py"],
+      "managers/dashboard/gestor_reparto_mixin.py": ["database.py", "managers/dashboard/_helpers.py", "models.py", "states.py"],
+      "managers/gestor_pedidos.py": ["database.py", "models.py", "states.py"],
+      "blueprints/dashboard.py": ["blueprints/auth.py", "services/__init__.py", "services/whatsapp_service.py"],
+      "database.py": ["models.py"],
+      "managers/dashboard/_helpers.py": ["states.py"],
+      "models.py": ["database.py"],
+      "blueprints/auth.py": ["database.py", "models.py"],
+      "services/whatsapp_service.py": ["config.py"],
+      "managers/gestor_dashboard.py": ["managers/dashboard/gestor_picking_mixin.py"],
+      "main.py": ["blueprints/dashboard.py"]
+    }
+  },
+  "steps": [
+    {
+      "id": 1,
+      "title": "Implementar revertir_salida_reparto en gestor_reparto_mixin.py",
+      "description": "Añadir un nuevo método revertir_salida_reparto(reparto_id) que:\n1. Lee el Reparto actual con estado EN_CAMINO\n2. Obtiene el último HistorialEstadoPedido con estado_nuevo=EN_REPARTO para saber el estado_anterior (debe ser PREPARADO)\n3. Nullea Reparto.hora_salida\n4. Reseta Reparto.estado a ASIGNADO (el Reparto sigue asignado al repartidor)\n5. Crea una entrada en HistorialEstadoPedido con estado_anterior=EN_REPARTO, estado_nuevo=PREPARADO, notas='Rollback: repartidor regresó a almacén'\n6. Retorna (ok, msg, telefono) para notificar al cliente\nSeguir el patrón de marcar_salida_reparto (línea 157-185) pero inverso.",
+      "owner": "backend",
+      "files_affected": [
+        "managers/dashboard/gestor_reparto_mixin.py"
+      ],
+      "functions_to_create": [
+        "revertir_salida_reparto(self, reparto_id: int) -> tuple"
+      ],
+      "key_code_references": [
+        "marcar_salida_reparto (lines 157-185) — patrón a seguir",
+        "HistorialEstadoPedido query pattern (line 170-177)"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Implementar revertir_picking en gestor_picking_mixin.py",
+      "description": "Añadir un nuevo método revertir_picking(picking_id) que:\n1. Lee el PickingPedido actual con estado COMPLETADO\n2. Obtiene el último HistorialEstadoPedido con estado_nuevo=PREPARADO para saber el estado_anterior (debe ser EN_PREPARACION)\n3. Nullea PickingPedido.completado_en\n4. Reseta PickingPedido.estado a EN_PROCESO (vuelve al estado activo de picking)\n5. Crea una entrada en HistorialEstadoPedido con estado_anterior=PREPARADO, estado_nuevo=EN_PREPARACION, notas='Rollback: picking reabierto'\n6. Retorna (ok, msg, telefono) para notificar al cliente\nSeguir el patrón de completar_picking (línea 311-424) pero inverso.",
+      "owner": "backend",
+      "files_affected": [
+        "managers/dashboard/gestor_picking_mixin.py"
+      ],
+      "functions_to_create": [
+        "revertir_picking(self, picking_id: int) -> tuple"
+      ],
+      "key_code_references": [
+        "completar_picking (lines 311-424) — patrón a seguir",
+        "HistorialEstadoPedido query pattern (line 328-336)"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Implementar endpoints de rollback en blueprints/dashboard.py",
+      "description": "Añadir dos nuevos endpoints HTTP:\n1. POST /dashboard/reparto/<int:reparto_id>/revertir-salida\n   - Decorador @requiere_rol('manager', 'admin')\n   - Llama a gestor_dashboard.revertir_salida_reparto(reparto_id)\n   - Retorna {'ok': True, 'mensaje': msg} o {'error': msg}\n   - NO envía notificación WhatsApp (el rollback es una corrección interna)\n\n2. POST /dashboard/picking/<int:picking_id>/revertir\n   - Decorador @requiere_rol('manager', 'admin')\n   - Llama a gestor_dashboard.revertir_picking(picking_id)\n   - Retorna {'ok': True, 'mensaje': msg} o {'error': msg}\n   - NO envía notificación WhatsApp\n\nSeguir el patrón de marcar_salida (línea 457-464) y completar_picking (línea 431-438) pero SIN llamar a _notificar().",
+      "owner": "backend",
+      "files_affected": [
+        "blueprints/dashboard.py"
+      ],
+      "functions_to_create": [
+        "revertir_salida(reparto_id: int) — POST /dashboard/reparto/<int:reparto_id>/revertir-salida",
+        "revertir_picking_route(picking_id: int) — POST /dashboard/picking/<int:picking_id>/revertir"
+      ],
+      "key_code_references": [
+        "marcar_salida (lines 457-464) — patrón a seguir",
+        "marcar_entregado (lines 467-474) — patrón de respuesta",
+        "completar_picking (lines 431-438) — patrón a seguir"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Exponer endpoints de rollback en gestor_dashboard.py",
+      "description": "Añadir delegación simple en managers/gestor_dashboard.py (sin lógica directa):\n1. def revertir_salida_reparto(self, reparto_id: int) -> tuple:\n   return self.revertir_salida_reparto(reparto_id)\n\n2. def revertir_picking(self, picking_id: int) -> tuple:\n   return self.revertir_picking(picking_id)\n\nEsto expone los métodos de los mixins a través de la fachada pública GestorDashboard.",
+      "owner": "backend",
+      "files_affected": [
+        "managers/gestor_dashboard.py"
+      ],
+      "functions_to_create": [
+        "revertir_salida_reparto(self, reparto_id: int) -> tuple — delegación al mixin",
+        "revertir_picking(self, picking_id: int) -> tuple — delegación al mixin"
+      ],
+      "key_code_references": [
+        "GestorDashboard class composition (línea 1-30)"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Actualizar frontend: añadir función revertirSalida en templates/dashboard/index.html",
+      "description": "En la sección JavaScript de la función dashboard() (línea 1103+):\n1. Añadir método async revertirSalida(reparto_id) que:\n   - Llama a POST /dashboard/reparto/{reparto_id}/revertir-salida\n   - Muestra toast con el mensaje de éxito\n   - Llama a cargarTodo() para refrescar los datos\n   - En error, muestra toast con el error\n\nSeguir el patrón de marcarSalida (línea 1810-1815).",
+      "owner": "frontend",
+      "files_affected": [
+        "templates/dashboard/index.html"
+      ],
+      "functions_to_create": [
+        "async revertirSalida(reparto_id) — javascript function"
+      ],
+      "key_code_references": [
+        "marcarSalida (lines 1810-1815) — patrón a seguir",
+        "marcarEntregado (lines 1817-1822) — patrón a seguir"
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Actualizar frontend: añadir función revertirPicking en templates/dashboard/index.html",
+      "description": "En la sección JavaScript de la función dashboard() (línea 1103+):\n1. Añadir método async revertirPicking(picking_id) que:\n   - Llama a POST /dashboard/picking/{picking_id}/revertir\n   - Muestra toast con el mensaje de éxito\n   - Llama a cargarTodo() para refrescar los datos\n   - En error, muestra toast con el error\n\nSeguir el patrón de completarPicking (línea 1730-1740).",
+      "owner": "frontend",
+      "files_affected": [
+        "templates/dashboard/index.html"
+      ],
+      "functions_to_create": [
+        "async revertirPicking(picking_id) — javascript function"
+      ],
+      "key_code_references": [
+        "completarPicking (lines 1730-1740) — patrón a seguir",
+        "marcarSalida (lines 1810-1815) — patrón a seguir"
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Añadir botón 'Deshacer salida' en templates/dashboard/index.html para estado EN_REPARTO",
+      "description": "En la sección de acciones del panel de pedido (línea 740-772):\n1. Añadir un botón que aparezca cuando panel.pedido?.reparto?.estado === 'en_camino'\n2. Botón debe tener clase 'bg-amber-600 hover:bg-amber-700' (color diferente al resto para indicar acción destructiva)\n3. Texto: 'Deshacer salida'\n4. @click=\"revertirSalida(panel.pedido.reparto.id)\"\n5. Colocarlo ANTES del botón 'Marcar entregado' (línea 767-771)\n\nIncluye confirmación con confirm() para evitar errores:\n  if (!confirm('¿Estás seguro de que quieres deshacer la salida?')) return;",
+      "owner": "frontend",
+      "files_affected": [
+        "templates/dashboard/index.html"
+      ],
+      "key_code_references": [
+        "Sección de acciones (lines 740-772)",
+        "Patrón de botón condicional: x-show=\"panel.pedido?.reparto?.estado === 'asignado'\" (línea 762-765)"
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Añadir botón 'Deshacer preparación' en templates/dashboard/index.html para estado PREPARADO",
+      "description": "En la sección de acciones del panel de pedido (línea 740-772):\n1. Añadir un botón que aparezca cuando panel.pedido?.picking?.estado === 'completado' && panel.pedido?.estado === 'preparado'\n2. Botón debe tener clase 'bg-amber-600 hover:bg-amber-700' (color diferente al resto para indicar acción destructiva)\n3. Texto: 'Deshacer preparación'\n4. @click=\"revertirPicking(panel.pedido.picking.id)\"\n5. Colocarlo ANTES del botón 'Asignar repartidor' (línea 757-761)\n\nIncluye confirmación con confirm() para evitar errores:\n  if (!confirm('¿Estás seguro de que quieres reabrir el picking?')) return;",
+      "owner": "frontend",
+      "files_affected": [
+        "templates/dashboard/index.html"
+      ],
+      "key_code_references": [
+        "Sección de acciones (lines 740-772)",
+        "Patrón de botón condicional: x-show=\"panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado'\" (línea 747-750)"
+      ]
+    },
+    {
+      "owner": "test-runner",
+      "title": "Ejecutar pruebas para validar rollback",
+      "description": "Ejecutar suite de tests para validar:\n1. POST /dashboard/reparto/{id}/revertir-salida devuelve 200 OK y resetea Reparto.estado\n2. POST /dashboard/picking/{id}/revertir devuelve 200 OK y resetea PickingPedido.estado\n3. HistorialEstadoPedido registra correctamente los rollbacks\n4. Pedido.Estado se revierte correctamente en ambos casos\n5. Campos hora_salida y completado_en se nullean correctamente\n6. Los botones aparecen/desaparecen según el estado del pedido\n7. Las funciones JavaScript llamadas desde el frontend funcionan correctamente\n\nEjecutar con: pytest tests/test_dashboard_rollback.py -v\nO si no existe ese archivo, crear nuevos tests en el archivo de tests existente.",
+      "files_affected": [
+        "tests/"
+      ]
+    }
+  ],
+  "impact_analysis": {
+    "files_affected": 5,
+    "endpoints_affected": [
+      {
+        "path": "POST /dashboard/reparto/<int:reparto_id>/revertir-salida",
+        "method": "POST",
+        "description": "Nuevo endpoint para revertir una salida de reparto (EN_REPARTO → PREPARADO)",
+        "breaking": false
+      },
+      {
+        "path": "POST /dashboard/picking/<int:picking_id>/revertir",
+        "method": "POST",
+        "description": "Nuevo endpoint para revertir un picking completado (PREPARADO → EN_PREPARACION)",
+        "breaking": false
+      }
+    ],
+    "breaking_changes": [],
+    "migration_needed": false,
+    "database_schema_changes": false,
+    "description": "No se introducen breaking changes. Se añaden dos nuevos endpoints y se modifica el frontend para mostrar botones de rollback en estados específicos. Los cambios de estado se registran correctamente en HistorialEstadoPedido. Los campos hora_salida y completado_en se revierten (se nullean) correctamente."
+  },
+  "risks": [
+    {
+      "risk": "Race condition: dos operadores intentan revertir simultáneamente el mismo pedido",
+      "mitigation": "El acceso a la BD es transaccional (SQLAlchemy commit). Si ocurre una race condition, el segundo intento fallará con error 'Pedido no encontrado en estado revertible'.",
+      "severity": "LOW"
+    },
+    {
+      "risk": "Operador revierte un pedido por error sin confirmación clara",
+      "mitigation": "Se añade confirmación con confirm() en el frontend. El operador debe hacer clic en 'Aceptar' en el diálogo.",
+      "severity": "MEDIUM"
+    },
+    {
+      "risk": "El rollback no notifica al cliente del cambio de estado (no se envía WhatsApp)",
+      "mitigation": "Esto es intencional según la tarea: el rollback es una corrección interna. Si se desea notificar al cliente, se puede añadir un paso posterior.",
+      "severity": "LOW"
+    },
+    {
+      "risk": "Archivo readers-context.json no existe para consultar en realtime — se asume estructura correcta",
+      "mitigation": "Se consultaron archivos autorizados en su lugar. La estructura se valida contra schemas.json en CI/CD.",
+      "severity": "LOW"
+    }
+  ],
+  "done_criteria": [
+    "Código de revertir_salida_reparto implementado en gestor_reparto_mixin.py con test unitario pasando",
+    "Código de revertir_picking implementado en gestor_picking_mixin.py con test unitario pasando",
+    "Endpoints POST /dashboard/reparto/<id>/revertir-salida y POST /dashboard/picking/<id>/revertir creados en blueprints/dashboard.py",
+    "Delegación de métodos en gestor_dashboard.py expone correctamente los endpoints",
+    "Funciones JavaScript revertirSalida y revertirPicking creadas en templates/dashboard/index.html y funcionales",
+    "Botones 'Deshacer salida' y 'Deshacer preparación' aparecen correctamente en el panel de pedidos",
+    "Los botones incluyen confirmación con confirm() antes de ejecutar la acción",
+    "HistorialEstadoPedido registra correctamente los rollbacks con estado_anterior y estado_nuevo invertidos",
+    "Pruebas de integración validar el flujo completo: salida → revertir → volver a PREPARADO",
+    "Pruebas de integración validar el flujo completo: picking completado → revertir → volver a EN_PREPARACION",
+    "Los campos hora_salida y completado_en se nullean correctamente tras el rollback",
+    "Los endpoints rechazzan intentos de rollback si el pedido no está en el estado esperado",
+    "Los decoradores @requiere_rol validan que solo managers/admins pueden ejecutar rollbacks",
+    "Pruebas de UI validan que los botones desaparecen tras ejecutar el rollback (cargarTodo() funciona)"
+  ],
+  "rollback_plan": {
+    "enabled": false,
+    "steps": []
+  }
+}
