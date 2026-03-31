@@ -19,6 +19,7 @@ class EstadoUsuario:
 
     @retry(wait=wait_fixed(2), stop=stop_after_attempt(3))
     def obtener_estado(self):
+        """Recupera el estado conversacional del usuario desde Redis."""
         try:
             estado = self.redismanager.get(self.numero_cliente)
         except Exception as e:
@@ -34,6 +35,7 @@ class EstadoUsuario:
 
     @retry(wait=wait_fixed(2), stop=stop_after_attempt(3))
     def actualizar_estado(self, nuevo_estado, datos_adicionales=None):
+        """Valida y persiste la siguiente transición del usuario."""
         try:
             estado_actual = self.obtener_estado()
         except Exception as e:

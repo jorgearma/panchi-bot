@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 class RedisManager:
     def __init__(self, host='localhost', port=6379, db=0):
+        """Inicializa la conexión con Redis y valida disponibilidad."""
 
         try:
             self.client = redis.Redis(
@@ -24,6 +25,7 @@ class RedisManager:
             raise Exception("Error al conectar a Redis") from e
         
     def get(self, key):
+        """Recupera una clave de Redis de forma segura."""
         try:
             return self.client.get(key)
         except redis.RedisError as e:
@@ -61,6 +63,7 @@ class RedisManager:
             raise Exception("Error en operación DELETE") from e
 
     def esta_bloqueado(self, numero):
+        """Comprueba si el usuario tiene un bloqueo temporal."""
         key = f"bloqueo:{numero}"
         bloqueado = self.get(key)
         return bloqueado is not None
@@ -75,6 +78,7 @@ class RedisManager:
         return self.set(key, "1", ex=duracion)
 
     def desbloquear_usuario(self, numero):
+        """Elimina el bloqueo temporal de un usuario."""
         key = f"bloqueo:{numero}"
         logger.debug("Desbloqueando usuario %s", numero)
         return self.delete(key)
@@ -86,5 +90,4 @@ redismanager = RedisManager(
     db=config.REDIS_DB,
 )
   
-
 

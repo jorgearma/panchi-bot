@@ -59,13 +59,10 @@ def iniciar_pago(
     pedido_activo_id = pedido_activo.PedidoID
     redis_id = pedido_activo.redisID
 
-    gestor_pedidos.agregar_productos_a_pedido(pedido_activo_id, productos_validos)
-
-    if notas:
-        pedido_activo.Notas = notas
-
     amount_in_cents = int(round(total_calculado * 100))
 
+    # Call Monei BEFORE writing to DB: if payment creation fails, the order
+    # stays in ENLACE2 with no committed products, so retries are clean.
     redirect_url, error = monei_crear_pago(
         monei=monei,
         amount_cents=amount_in_cents,
@@ -80,8 +77,14 @@ def iniciar_pago(
     if error:
         return False, error
 
-    gestor_pedidos.actualizar_estado(pedido_activo_id, EstadoPedido.CONFIRMANDO_PAGO)
-    gestor_pedidos.guardar_enlace(pedido_activo_id, redirect_url)
+    # Single atomic commit: replace order lines + state transition + URL.
+    # Idempotent: re-running after a partial failure won't duplicate lines.
+    ok = gestor_pedidos.confirmar_pago_online(
+        pedido_activo_id, productos_validos, redirect_url, notas=notas or None
+    )
+    if not ok:
+        return False, "Error al registrar el pedido tras el pago"
+
     logger.info(
         "PAGO_INICIADO pedido_id=%s importe=%s",
         pedido_activo_id, amount_in_cents,
@@ -121,13 +124,12 @@ def iniciar_pago_efectivo(
     pedido_id = pedido_activo.PedidoID
     redis_id = pedido_activo.redisID
 
-    gestor_pedidos.agregar_productos_a_pedido(pedido_id, productos_validos)
-
-    if notas:
-        pedido_activo.Notas = notas
-
-    gestor_pedidos.guardar_forma_pago(pedido_id, "efectivo")
-    gestor_pedidos.actualizar_estado(pedido_id, EstadoPedido.CONTRA_REEMBOLSO)
+    # Single atomic commit: replace order lines + forma_pago + state transition.
+    ok = gestor_pedidos.confirmar_pago_efectivo(
+        pedido_id, productos_validos, notas=notas or None
+    )
+    if not ok:
+        return False, "Error al registrar el pedido contra reembolso"
 
     total_euros = round(total_calculado, 2)
     _enviar_confirmacion_efectivo(numero_cliente, nombre_cliente, total_euros, pedido_id, direccion_cliente)

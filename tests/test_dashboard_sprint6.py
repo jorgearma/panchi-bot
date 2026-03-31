@@ -7,7 +7,7 @@ import pytest
 
 def test_turnos_planificacion_devuelve_claves_esperadas(app):
     """turnos_planificacion() devuelve {turnos, total, page, pages}."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -32,7 +32,7 @@ def test_turnos_planificacion_devuelve_claves_esperadas(app):
 
 def test_crear_turno_devuelve_ok_con_datos_validos(app):
     """crear_turno() devuelve {ok: True, turno_id} cuando el empleado existe."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         emp_mock = MagicMock()
         emp_mock.EmpleadoID = 1
@@ -67,7 +67,7 @@ def test_crear_turno_devuelve_ok_con_datos_validos(app):
 
 def test_crear_turno_devuelve_error_si_empleado_no_existe(app):
     """crear_turno() devuelve {ok: False} si el empleado no existe."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -87,7 +87,7 @@ def test_crear_turno_devuelve_error_si_empleado_no_existe(app):
 
 def test_editar_turno_devuelve_ok_si_turno_existe(app):
     """editar_turno() devuelve {ok: True} cuando el turno existe y no está cancelado."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         turno_mock = MagicMock()
         turno_mock.estado = 'planificado'
@@ -110,7 +110,7 @@ def test_editar_turno_devuelve_ok_si_turno_existe(app):
 
 def test_editar_turno_devuelve_error_si_no_existe(app):
     """editar_turno() devuelve {ok: False} si el turno no existe."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -125,7 +125,7 @@ def test_editar_turno_devuelve_error_si_no_existe(app):
 
 def test_cancelar_turno_devuelve_ok_si_turno_existe(app):
     """cancelar_turno() devuelve {ok: True} cuando el turno existe."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         turno_mock = MagicMock()
         turno_mock.estado = 'planificado'
@@ -148,7 +148,7 @@ def test_cancelar_turno_devuelve_ok_si_turno_existe(app):
 def test_turnos_planificacion_json_devuelve_estructura(client):
     """GET /dashboard/turnos/planificacion devuelve {turnos, total, page, pages}."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     fake = {'turnos': [], 'total': 0, 'page': 1, 'pages': 1}
 
@@ -167,7 +167,7 @@ def test_turnos_planificacion_json_devuelve_estructura(client):
 def test_crear_turno_route_devuelve_ok(client):
     """POST /dashboard/turnos/crear devuelve {ok: True}."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -196,7 +196,7 @@ def test_crear_turno_route_400_si_faltan_campos(client):
 def test_editar_turno_route_devuelve_ok(client):
     """POST /dashboard/turnos/<id>/editar devuelve {ok: True}."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -212,7 +212,7 @@ def test_editar_turno_route_devuelve_ok(client):
 def test_cancelar_turno_route_devuelve_ok(client):
     """POST /dashboard/turnos/<id>/cancelar devuelve {ok: True}."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1

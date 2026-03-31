@@ -6,6 +6,7 @@ from managers.dashboard._helpers import _dur_picking, _dur_reparto
 
 class GestorMetricasEmpleadosMixin:
     def rendimiento_empleados(self, desde: date, hasta: date, rol: str | None = None) -> list[dict]:
+        """Calcula KPIs de rendimiento por empleado."""
         from models import Empleado, PickingItem, PickingPedido, Reparto, Rol
 
         s = self.session
@@ -94,6 +95,7 @@ class GestorMetricasEmpleadosMixin:
         return result
 
     def comparativa_empleados(self, desde: date, hasta: date, rol: str) -> dict:
+        """Genera ranking y medias del equipo por rol."""
         empleados_data = self.rendimiento_empleados(desde, hasta, rol=rol)
         ranking = sorted(
             empleados_data,
@@ -132,6 +134,7 @@ class GestorMetricasEmpleadosMixin:
         }
 
     def ficha_empleado(self, empleado_id: int, desde: date, hasta: date) -> dict:
+        """Construye la ficha operativa de un empleado."""
         from managers.gestor_empleado import GestorEmpleado
         from models import Ausencia, CheckIn, Empleado, Turno
 
@@ -225,6 +228,7 @@ class GestorMetricasEmpleadosMixin:
         return semanas
 
     def asistencia_periodo(self, desde: date, hasta: date) -> dict:
+        """Resume asistencia y puntualidad del equipo en el rango."""
         from models import Ausencia, CheckIn, Empleado, Turno
 
         s = self.session

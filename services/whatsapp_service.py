@@ -12,6 +12,7 @@ _client = None
 
 
 def _get_client():
+    """Inicializa y reutiliza el cliente de Twilio."""
     global _client
     if _client is None:
         _client = Client(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN)
@@ -25,6 +26,7 @@ def _get_client():
     reraise=True,
 )
 def _enviar_twilio(mensaje: str, destinatario: str) -> None:
+    """Envia un mensaje usando el proveedor Twilio."""
     _get_client().messages.create(
         body=mensaje,
         from_=config.TWILIO_WHATSAPP_NUMBER,
@@ -40,6 +42,7 @@ def _enviar_twilio(mensaje: str, destinatario: str) -> None:
     reraise=True,
 )
 def _enviar_meta(mensaje: str, destinatario: str) -> None:
+    """Envia un mensaje usando la API de WhatsApp de Meta."""
     numero = destinatario.replace("whatsapp:+", "")
     url = f"https://graph.facebook.com/v21.0/{config.META_PHONE_NUMBER_ID}/messages"
     payload = {
@@ -61,6 +64,7 @@ def _enviar_meta(mensaje: str, destinatario: str) -> None:
 
 
 def enviar_mensaje_whatsapp(mensaje: str, destinatario: str) -> None:
+    """Selecciona proveedor y envia el mensaje de WhatsApp."""
     provider = os.getenv("WHATSAPP_PROVIDER", "twilio")
     if provider == "meta":
         _enviar_meta(mensaje, destinatario)

@@ -130,7 +130,7 @@ class TestBlueprintEmpleadoEstado:
             sess['empleado_id'] = 1
             sess['rol'] = 'picker'
         with app.app_context():
-            from services import gestor_empleado
+            from container import gestor_empleado
             with patch.object(gestor_empleado, 'cambiar_estado', return_value=(True, 'ok')):
                 resp = client.post('/empleado/estado',
                                    json={'estado': 'en_pausa'},
@@ -147,7 +147,7 @@ class TestHooksEstadoOperativo:
     """_actualizar_estado_operativo no sobreescribe en_pausa ni desconectado."""
 
     def _gestor_con_empleado(self, estado_actual):
-        from services import gestor_dashboard
+        from container import gestor_dashboard
         empleado_mock = MagicMock()
         empleado_mock.estado_operativo = estado_actual
         session_mock = MagicMock()
@@ -173,7 +173,7 @@ class TestHooksEstadoOperativo:
         assert empleado_mock.estado_operativo == 'desconectado'
 
     def test_empleado_none_no_lanza_excepcion(self):
-        from services import gestor_dashboard
+        from container import gestor_dashboard
         session_mock = MagicMock()
         session_mock.query.return_value.filter_by.return_value.first.return_value = None
         with patch.object(type(gestor_dashboard), 'session', new_callable=PropertyMock, return_value=session_mock):

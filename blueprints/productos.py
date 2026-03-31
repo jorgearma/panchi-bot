@@ -1,6 +1,6 @@
 import logging
 from flask import Blueprint, jsonify, render_template, request
-from services import gestor_productos
+from container import gestor_productos
 
 logger = logging.getLogger(__name__)
 

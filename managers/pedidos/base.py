@@ -21,8 +21,10 @@ class GestorPedidosBase:
 
     @property
     def session(self):
+        """Devuelve la sesión activa de base de datos."""
         return get_db()
 
     @staticmethod
     def _to_decimal(value) -> Decimal:
+        """Normaliza un valor numerico a Decimal."""
         return Decimal(str(value or 0))

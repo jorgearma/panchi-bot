@@ -14,7 +14,7 @@ def _mock_session(manager):
 class TestRepartosSinAsignar:
 
     def setup_method(self):
-        from services import gestor_dashboard
+        from container import gestor_dashboard
         self.gd = gestor_dashboard
 
     def _mock_q_vacio(self):
@@ -88,7 +88,7 @@ class TestRepartosSinAsignar:
 class TestReclamarReparto:
 
     def setup_method(self):
-        from services import gestor_dashboard
+        from container import gestor_dashboard
         self.gd = gestor_dashboard
 
     def _mock_combined_query(self, mock_sess, first_return):
@@ -187,7 +187,7 @@ class TestReclamarReparto:
 class TestCompletarPickingCreaReparto:
 
     def setup_method(self):
-        from services import gestor_dashboard
+        from container import gestor_dashboard
         self.gd = gestor_dashboard
 
     def test_crea_reparto_si_no_existe(self, app):
@@ -343,7 +343,7 @@ class TestBlueprintRepartidorCola:
 
     def test_cola_devuelve_json(self, client, app):
         from unittest.mock import patch
-        from services import gestor_dashboard
+        from container import gestor_dashboard
 
         with client.session_transaction() as sess:
             sess['empleado_id'] = 1
@@ -364,7 +364,7 @@ class TestBlueprintRepartidorCola:
 
     def test_coger_ok(self, client, app):
         from unittest.mock import patch
-        from services import gestor_dashboard
+        from container import gestor_dashboard
 
         with client.session_transaction() as sess:
             sess['empleado_id'] = 7
@@ -381,7 +381,7 @@ class TestBlueprintRepartidorCola:
 
     def test_coger_409_ya_cogido(self, client, app):
         from unittest.mock import patch
-        from services import gestor_dashboard
+        from container import gestor_dashboard
 
         with client.session_transaction() as sess:
             sess['empleado_id'] = 7
@@ -395,7 +395,7 @@ class TestBlueprintRepartidorCola:
 
     def test_coger_404_no_encontrado(self, client, app):
         from unittest.mock import patch
-        from services import gestor_dashboard
+        from container import gestor_dashboard
 
         with client.session_transaction() as sess:
             sess['empleado_id'] = 7

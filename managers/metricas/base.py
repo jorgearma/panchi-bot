@@ -17,9 +17,11 @@ class GestorMetricasBase:
 
     @property
     def session(self):
+        """Devuelve la sesión activa de base de datos."""
         return get_db()
 
     def _horas_trabajadas(self, empleado_id: int, desde: date, hasta: date) -> float:
+        """Suma las horas trabajadas por un empleado en el rango."""
         from models import CheckIn
 
         s = self.session
@@ -39,6 +41,7 @@ class GestorMetricasBase:
         return round(total_min / 60, 2)
 
     def _tiempo_entre_estados(self, pedido_id: int, estado_a: str, estado_b: str) -> int | None:
+        """Calcula minutos entre dos estados de un pedido."""
         from models import HistorialEstadoPedido
 
         s = self.session
@@ -58,6 +61,7 @@ class GestorMetricasBase:
         return max(0, round(delta.total_seconds() / 60))
 
     def _operaciones_empleado(self, empleado_id: int, rol: str, desde: date, hasta: date) -> list:
+        """Devuelve operaciones cerradas por empleado y rol."""
         from models import PickingPedido, Reparto
 
         s = self.session

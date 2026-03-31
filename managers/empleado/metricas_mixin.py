@@ -44,6 +44,7 @@ class GestorEmpleadoMetricasMixin:
             }
 
     def _colas_globales(self) -> dict:
+        """Cuenta los pedidos pendientes de asignación por cola."""
         from sqlalchemy import func
 
         s = self.session

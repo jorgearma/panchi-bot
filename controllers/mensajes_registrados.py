@@ -1,5 +1,5 @@
 import logging
-from services import gestor_pedidos, gestor_usuarios
+from container import gestor_pedidos, gestor_usuarios
 from utils.menu_opciones import mostrar_menu
 from controllers.pedido import procesar_pedido
 from controllers.mensajes_registrados_notifier import (

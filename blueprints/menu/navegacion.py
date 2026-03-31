@@ -11,7 +11,7 @@ import redis
 import config
 from schemas.usuario import UsuarioDatos
 from managers.gestor_redis import redismanager
-from services import gestor_pedidos
+from container import gestor_pedidos
 from states import EstadoPedido
 from blueprints.menu._helpers import _extraer_calle
 

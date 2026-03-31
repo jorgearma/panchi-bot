@@ -4,7 +4,7 @@ import logging
 import config
 from flask import jsonify, request
 
-from services import gestor_pedidos, gestor_productos, cache
+from container import gestor_pedidos, gestor_productos, cache
 from states import EstadoPedido
 from controllers.pedido import confirmar_carrito
 

@@ -15,7 +15,7 @@ from utils.text_utils import limpiar_texto
 from services.whatsapp_service import enviar_mensaje_whatsapp
 from schemas.twilio import WebhookRequest
 from managers.gestor_redis import redismanager
-from services import gestor_usuarios, gestor_pedidos
+from container import gestor_usuarios, gestor_pedidos
 from states import EstadoPedido
 
 blueprint_webhook = Blueprint('webhook', __name__)

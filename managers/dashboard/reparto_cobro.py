@@ -99,6 +99,7 @@ class GestorRepartoCobroMixin:
         )
 
         def _detalle(r):
+            """Normaliza el detalle de cobro de un reparto."""
             pedido = r.pedido
             return {
                 "reparto_id":    r.id,

@@ -3,7 +3,7 @@ import logging
 
 from pydantic import ValidationError
 from utils.es_pregunta import es_pregunta
-from services import gestor_pedidos
+from container import gestor_pedidos
 from services.token_service import generar_enlace
 from services.whatsapp_service import enviar_mensaje_whatsapp
 from services.maps_service import geocodificar_direccion
@@ -153,15 +153,13 @@ def confirmar_carrito(
         ex=3600,
     )
 
-    gestor_pedidos.guardar_redis_id(pedido_id_db, pedido_id_redis)
-
     coords = geocodificar_direccion(direccion)
-    if coords:
-        gestor_pedidos.guardar_coordenadas(pedido_id_db, coords[0], coords[1])
-    else:
+    lat, lng = (coords[0], coords[1]) if coords else (None, None)
+    if not coords:
         logger.warning("confirmar_carrito: no se pudieron geocodificar las coordenadas del pedido %s", pedido_id_db)
 
-    gestor_pedidos.actualizar_estado(pedido_id_db, EstadoPedido.ENLACE2)
+    # Single atomic commit: redisID + coordinates + state transition to ENLACE2.
+    gestor_pedidos.fijar_carrito_confirmado(pedido_id_db, pedido_id_redis, lat=lat, lng=lng)
     logger.info("CARRITO_CONFIRMADO pedido_id=%s", pedido_id_db)
 
     confirmacion_url = f"{public_url}/confirmacion_pago?pedido_id={pedido_id_redis}"

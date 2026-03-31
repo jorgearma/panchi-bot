@@ -9,6 +9,7 @@ class GestorUsuarios:
 
     @property
     def session(self):
+        """Devuelve la sesión activa de base de datos."""
         from database import get_db
         return get_db()
        
@@ -54,6 +55,7 @@ class GestorUsuarios:
     
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
     def verificar_usuario(self, numero_cliente):
+        """Comprueba si existe un usuario por su numero."""
 
         try:
             usuario = self.session.query(Usuario).filter_by(numero_cliente=numero_cliente).scalar()

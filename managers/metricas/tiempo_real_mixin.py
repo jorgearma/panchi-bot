@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 class GestorMetricasTiempoRealMixin:
     def resumen_operacion(self) -> dict:
+        """Resume el estado operativo actual del sistema."""
         from models import CheckIn, Pedido, PickingPedido, Reparto
 
         s = self.session
@@ -95,6 +96,7 @@ class GestorMetricasTiempoRealMixin:
         return round(statistics.median(tiempos)) if tiempos else None
 
     def asistencia_hoy(self) -> list[dict]:
+        """Lista la asistencia planificada y real de hoy."""
         from models import CheckIn, Empleado, Turno
 
         s = self.session
@@ -127,6 +129,7 @@ class GestorMetricasTiempoRealMixin:
         return result
 
     def colas_detalle(self) -> dict:
+        """Detalla las colas activas de picking y reparto."""
         from models import HistorialEstadoPedido, PedidoDetalle, PickingPedido, Reparto
         from sqlalchemy import func
 
@@ -196,6 +199,7 @@ class GestorMetricasTiempoRealMixin:
         return {'cola_picking': cola_picking, 'cola_reparto': cola_reparto}
 
     def pedidos_por_estado(self) -> dict:
+        """Cuenta pedidos activos agrupados por estado."""
         from models import Pedido
         from sqlalchemy import func
 
@@ -209,6 +213,7 @@ class GestorMetricasTiempoRealMixin:
         return {estado: count for estado, count in rows}
 
     def alertas_tiempo_real(self) -> list[dict]:
+        """Combina y ordena las alertas operativas actuales."""
         alertas = []
         alertas.extend(self._alertas_ausencia())
         alertas.extend(self._alertas_colas())
@@ -219,6 +224,7 @@ class GestorMetricasTiempoRealMixin:
         return alertas
 
     def _alertas_ausencia(self) -> list[dict]:
+        """Detecta turnos iniciados sin fichaje."""
         from models import CheckIn, Empleado, Turno
 
         s = self.session
@@ -263,6 +269,7 @@ class GestorMetricasTiempoRealMixin:
         return alertas
 
     def _alertas_colas(self) -> list[dict]:
+        """Detecta saturación en colas de picking o reparto."""
         from models import PickingPedido, Reparto
 
         s = self.session
@@ -300,6 +307,7 @@ class GestorMetricasTiempoRealMixin:
         return alertas
 
     def _alertas_pedidos_bloqueados(self) -> list[dict]:
+        """Detecta pedidos que avanzan más lento de lo normal."""
         from models import HistorialEstadoPedido, Pedido
 
         s = self.session
@@ -343,6 +351,7 @@ class GestorMetricasTiempoRealMixin:
         return alertas
 
     def _tiempo_medio_ciclo_periodo(self, desde: date, hasta: date) -> int | None:
+        """Calcula la mediana del ciclo completo en un rango."""
         from models import HistorialEstadoPedido
 
         s = self.session
@@ -369,6 +378,7 @@ class GestorMetricasTiempoRealMixin:
         return round(statistics.median(tiempos)) if tiempos else None
 
     def _alertas_repartidores_inactivos(self) -> list[dict]:
+        """Detecta repartidores en turno sin actividad reciente."""
         from models import CheckIn, Empleado, Reparto, Rol
 
         s = self.session

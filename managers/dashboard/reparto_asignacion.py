@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 class GestorRepartoAsignacionMixin:
 
     def repartidores(self) -> dict:
+        """Resume repartidores y pedidos listos para asignar."""
         s = self.session
         hoy = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -83,6 +84,7 @@ class GestorRepartoAsignacionMixin:
         }
 
     def asignar_repartidor(self, pedido_id: int, empleado_id: int) -> tuple:
+        """Asigna un repartidor a un pedido preparado."""
         s = self.session
         try:
             pedido = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
