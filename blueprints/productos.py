@@ -9,11 +9,13 @@ blueprint_productos = Blueprint("productos_admin", __name__)
 
 @blueprint_productos.route("/productos-admin")
 def index():
+    """Renderiza la vista de administración de productos."""
     return render_template("productos/index.html")
 
 
 @blueprint_productos.route("/productos-admin/lista")
 def lista():
+    """Devuelve el catálogo preparado para el panel de productos."""
     try:
         return jsonify(gestor_productos.productos_admin())
     except Exception as e:
@@ -23,6 +25,7 @@ def lista():
 
 @blueprint_productos.route("/productos-admin/<int:producto_id>/stock", methods=["PATCH"])
 def actualizar_stock(producto_id: int):
+    """Actualiza el stock con un valor absoluto o con un delta."""
     data = request.get_json(silent=True) or {}
 
     # Accepts absolute value {"stock": 10} or delta {"delta": -1}
@@ -40,6 +43,7 @@ def actualizar_stock(producto_id: int):
 
 @blueprint_productos.route("/productos-admin/<int:producto_id>/disponible", methods=["PATCH"])
 def toggle_disponible(producto_id: int):
+    """Activa o desactiva la disponibilidad comercial de un producto."""
     data = request.get_json(silent=True) or {}
     if "disponible" not in data:
         return jsonify({"error": "Falta campo: disponible"}), 400
@@ -51,6 +55,7 @@ def toggle_disponible(producto_id: int):
 
 @blueprint_productos.route("/productos-admin/<int:producto_id>/precio", methods=["PATCH"])
 def actualizar_precio(producto_id: int):
+    """Actualiza el precio de venta de un producto."""
     data = request.get_json(silent=True) or {}
     if "precio" not in data:
         return jsonify({"error": "Falta campo: precio"}), 400

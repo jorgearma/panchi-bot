@@ -10,8 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 def register(bp):
+    """Registra las rutas de creación de pedidos con pago online o efectivo."""
     @bp.route('/api/agregar_pedido', methods=['POST'])
     def agregar_pedido():
+        """Inicia el flujo de pago online para el carrito recibido."""
         data = request.json
         logger.debug("Datos recibidos en agregar pedido: %s", data)
 
@@ -53,6 +55,7 @@ def register(bp):
 
     @bp.route('/api/agregar_pedido_efectivo', methods=['POST'])
     def agregar_pedido_efectivo():
+        """Confirma un pedido con pago contra entrega."""
         data = request.json
         logger.debug("Datos recibidos en agregar_pedido_efectivo: %s", data)
 

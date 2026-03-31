@@ -19,8 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 def register(bp):
+    """Registra la entrada al menú web a partir del token enviado por WhatsApp."""
     @bp.route('/menu/<token>', methods=['GET'])
     def quiniela(token=None):
+        """Valida el token, recupera el pedido activo y decide qué pantalla mostrar."""
         logger.debug("token recibido: %s", token)
         try:
             try:

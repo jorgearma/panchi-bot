@@ -11,8 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 def register(bp):
+    """Registra las pantallas de confirmación y seguimiento postpedido."""
     @bp.route('/confirmacion_pago')
     def mostrar_confirmacion():
+        """Renderiza la confirmación previa al pago usando datos temporales en caché."""
         pedido_id = request.args.get("pedido_id")
         if not pedido_id:
             return jsonify({"error": "Pedido no encontrado"}), 404
@@ -38,6 +40,7 @@ def register(bp):
 
     @bp.route('/pago_confirmado')
     def mostrar_confirmacion_depago():
+        """Renderiza la vista final del pedido ya confirmado o pagado."""
         pedido_id = request.args.get("pedido_id")
         if not pedido_id:
             return jsonify({"error": "Pedido no encontrado"}), 404

@@ -10,14 +10,17 @@ logger = logging.getLogger(__name__)
 
 
 def register(bp):
+    """Registra las vistas y acciones relacionadas con turnos y rendimiento."""
     @bp.route("/dashboard/turnos")
     @requiere_rol('manager', 'admin')
     def turnos():
+        """Renderiza la vista de gestión de turnos."""
         return render_template("dashboard/turnos.html")
 
     @bp.route("/dashboard/turnos/hoy")
     @requiere_rol('manager', 'admin')
     def turnos_hoy():
+        """Devuelve los turnos programados para hoy."""
         try:
             return _ok(gestor_dashboard.turnos_hoy())
         except Exception as e:
@@ -27,6 +30,7 @@ def register(bp):
     @bp.route("/dashboard/turnos/historial")
     @requiere_rol('manager', 'admin')
     def turnos_historial():
+        """Devuelve el historial paginado de turnos ejecutados."""
         try:
             desde       = request.args.get("desde")
             hasta       = request.args.get("hasta")
@@ -45,6 +49,7 @@ def register(bp):
     @bp.route("/dashboard/turnos/planificacion")
     @requiere_rol('manager', 'admin')
     def turnos_planificacion():
+        """Devuelve la planificación futura de turnos con filtros."""
         try:
             desde       = request.args.get('desde') or None
             hasta       = request.args.get('hasta') or None
@@ -63,6 +68,7 @@ def register(bp):
     @bp.route("/dashboard/turnos/crear", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def crear_turno():
+        """Crea un turno nuevo para un empleado."""
         data = request.get_json(silent=True) or {}
         empleado_id = data.get('empleado_id')
         fecha       = data.get('fecha')
@@ -89,6 +95,7 @@ def register(bp):
     @bp.route("/dashboard/turnos/<int:turno_id>/editar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def editar_turno(turno_id):
+        """Edita los campos permitidos de un turno existente."""
         data = request.get_json(silent=True) or {}
         try:
             result = gestor_dashboard.editar_turno(
@@ -108,6 +115,7 @@ def register(bp):
     @bp.route("/dashboard/turnos/<int:turno_id>/cancelar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def cancelar_turno_route(turno_id):
+        """Cancela un turno manteniendo su rastro histórico."""
         try:
             result = gestor_dashboard.cancelar_turno(turno_id=turno_id)
             if not result['ok']:
@@ -120,6 +128,7 @@ def register(bp):
     @bp.route("/dashboard/turnos/<int:turno_id>/eliminar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def eliminar_turno_route(turno_id):
+        """Elimina un turno cuando ya no debe conservarse en planificación."""
         try:
             result = gestor_dashboard.eliminar_turno(turno_id=turno_id)
             if not result['ok']:
@@ -132,11 +141,13 @@ def register(bp):
     @bp.route("/dashboard/rendimiento")
     @requiere_rol('manager', 'admin')
     def rendimiento():
+        """Renderiza la vista de rendimiento por empleado."""
         return render_template("dashboard/rendimiento.html")
 
     @bp.route("/dashboard/rendimiento-datos")
     @requiere_rol('manager', 'admin')
     def rendimiento_datos():
+        """Resume el rendimiento de la plantilla para el periodo elegido."""
         try:
             periodo = request.args.get("periodo", "hoy")
             rol     = request.args.get("rol") or None
@@ -148,6 +159,7 @@ def register(bp):
     @bp.route("/dashboard/rendimiento/<int:empleado_id>")
     @requiere_rol('manager', 'admin')
     def rendimiento_empleado(empleado_id):
+        """Devuelve el detalle de rendimiento de un empleado concreto."""
         try:
             periodo = request.args.get("periodo", "semana")
             data = gestor_dashboard.rendimiento_empleado(empleado_id, periodo=periodo)
@@ -161,11 +173,13 @@ def register(bp):
     @bp.route("/dashboard/estadisticas")
     @requiere_rol('manager', 'admin')
     def estadisticas():
+        """Renderiza la vista de estadísticas agregadas."""
         return render_template("dashboard/estadisticas.html")
 
     @bp.route("/dashboard/estadisticas-datos")
     @requiere_rol('manager', 'admin')
     def estadisticas_datos():
+        """Devuelve series agregadas para la vista de estadísticas."""
         desde        = request.args.get('desde') or None
         hasta        = request.args.get('hasta') or None
         granularidad = request.args.get('granularidad', 'dia')

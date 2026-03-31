@@ -15,11 +15,13 @@ _ROLES_VALIDOS = {'manager', 'picker', 'repartidor', 'admin'}
 
 
 def _get_empleado_by_email(email: str):
+    """Busca un empleado activo por email para iniciar sesión."""
     return get_db().query(Empleado).filter_by(Email=email, activo=True).first()
 
 
 @blueprint_auth.route('/auth/login', methods=['GET', 'POST'])
 def login():
+    """Autentica al empleado y decide su destino inicial según su rol."""
     if request.method == 'GET':
         return render_template('auth/login.html')
 
@@ -90,6 +92,7 @@ def login():
 
 @blueprint_auth.route('/auth/logout', methods=['POST'])
 def logout():
+    """Cierra la sesión y limpia el rol activo persistido del empleado."""
     empleado_id = session.get('empleado_id')
     # Nular rol_activo en BD para forzar check-in en el próximo turno
     if empleado_id:
@@ -108,7 +111,7 @@ def logout():
 
 
 def requiere_rol(*roles_permitidos):
-    """Decorator that requires an active session with one of the given roles."""
+    """Restringe una ruta a empleados autenticados con uno de los roles indicados."""
     def decorator(f):
         @wraps(f)
         def wrapped(*args, **kwargs):
@@ -124,10 +127,7 @@ def requiere_rol(*roles_permitidos):
 
 
 def requiere_autenticacion(f):
-    """Decorator que solo verifica que hay sesión activa, sin chequear rol.
-    Usar en rutas como /empleado/checkin donde el empleado puede tener
-    rol temporal o estar en proceso de selección.
-    """
+    """Exige sesión activa sin validar rol, útil en flujos previos al check-in."""
     @wraps(f)
     def wrapped(*args, **kwargs):
         if 'empleado_id' not in session:

@@ -12,8 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 def register(bp):
+    """Registra las rutas de confirmación y recuperación del carrito."""
     @bp.route('/api/confirmacion', methods=['POST'])
     def agregar_pedido_confirmacion():
+        """Convierte el carrito validado en un pedido listo para confirmar."""
         data = request.json
         logger.debug("Datos recibidos en confirmacion: %s", data)
 
@@ -43,7 +45,7 @@ def register(bp):
 
     @bp.route('/api/volver_al_menu', methods=['POST'])
     def volver_al_menu():
-        """Resets an ENLACE2 order back to ENLACE when the user presses back on the confirmation page."""
+        """Revierte un pedido en confirmación para que el usuario vuelva al menú."""
         data = request.json
         token = data.get("token", "")
         if not token or not cache.get(token):
@@ -64,6 +66,7 @@ def register(bp):
 
     @bp.route('/api/cambiar_estado_a_enlace', methods=['POST'])
     def cambiar_estado_a_enlace():
+        """Fuerza internamente el estado del pedido de vuelta a ENLACE."""
         token = request.headers.get("X-Internal-Token", "")
         if not config.INTERNAL_API_TOKEN or token != config.INTERNAL_API_TOKEN:
             return jsonify({"error": "No autorizado"}), 401
@@ -86,6 +89,7 @@ def register(bp):
 
     @bp.route('/api/productos', methods=['GET'])
     def obtener_productos():
+        """Devuelve el catálogo agrupado por categoría para el menú web."""
         try:
             productos = gestor_productos.obtener_productos()
             logger.debug("Productos obtenidos: %s", productos)
