@@ -1,6 +1,22 @@
 """Constantes y helpers de módulo compartidos por todos los mixins del dashboard."""
+# También importados por managers/metricas/empleados_mixin.py para evitar divergencias
+# en el cálculo de tiempos de operación.
 
 from states import EstadoPedido
+
+
+def _dur_picking(pk) -> float | None:
+    """Duración de un PickingPedido en minutos (iniciado_en → completado_en), o None."""
+    if pk.iniciado_en and pk.completado_en:
+        return (pk.completado_en - pk.iniciado_en).total_seconds() / 60
+    return None
+
+
+def _dur_reparto(r) -> float | None:
+    """Duración de un Reparto en minutos (hora_salida → hora_entrega_real), o None."""
+    if r.hora_salida and r.hora_entrega_real:
+        return (r.hora_entrega_real - r.hora_salida).total_seconds() / 60
+    return None
 
 
 def _iso(dt) -> str | None:

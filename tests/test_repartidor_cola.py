@@ -91,6 +91,15 @@ class TestReclamarReparto:
         from services import gestor_dashboard
         self.gd = gestor_dashboard
 
+    def _mock_combined_query(self, mock_sess, first_return):
+        """Mock para query(Pedido, Reparto).outerjoin(...).filter(...).first()."""
+        mock_q = MagicMock()
+        mock_q.outerjoin.return_value = mock_q
+        mock_q.filter.return_value = mock_q
+        mock_q.first.return_value = first_return
+        mock_sess.query.return_value = mock_q
+        return mock_q
+
     def test_ok(self, app):
         """Reparto ya existe con repartidor_id=None — UPDATE atómico."""
         with app.app_context():
@@ -103,19 +112,18 @@ class TestReclamarReparto:
                 mock_rep = MagicMock()
                 mock_rep.repartidor_id = None
 
-                mock_q_pedido = MagicMock()
-                mock_q_pedido.filter_by.return_value = mock_q_pedido
-                mock_q_pedido.first.return_value = mock_pedido
+                # Primera query: outerjoin (Pedido, Reparto) → tupla
+                mock_q_combined = MagicMock()
+                mock_q_combined.outerjoin.return_value = mock_q_combined
+                mock_q_combined.filter.return_value = mock_q_combined
+                mock_q_combined.first.return_value = (mock_pedido, mock_rep)
 
-                mock_q_reparto = MagicMock()
-                mock_q_reparto.filter_by.return_value = mock_q_reparto
-                mock_q_reparto.first.return_value = mock_rep
-
+                # Segunda query: UPDATE atómico WHERE repartidor_id IS NULL
                 mock_q_update = MagicMock()
                 mock_q_update.filter.return_value = mock_q_update
                 mock_q_update.update.return_value = 1
 
-                mock_sess.query.side_effect = [mock_q_pedido, mock_q_reparto, mock_q_update]
+                mock_sess.query.side_effect = [mock_q_combined, mock_q_update]
 
                 with patch.object(self.gd, '_actualizar_estado_operativo') as mock_aso:
                     ok, msg = self.gd.reclamar_reparto(42, empleado_id=7)
@@ -130,10 +138,7 @@ class TestReclamarReparto:
         with app.app_context():
             patcher, mock_sess = _mock_session(self.gd)
             try:
-                mock_q = MagicMock()
-                mock_q.filter_by.return_value = mock_q
-                mock_q.first.return_value = None
-                mock_sess.query.return_value = mock_q
+                self._mock_combined_query(mock_sess, first_return=None)
 
                 ok, msg = self.gd.reclamar_reparto(999, empleado_id=7)
                 assert ok is False
@@ -153,15 +158,7 @@ class TestReclamarReparto:
                 mock_rep = MagicMock()
                 mock_rep.repartidor_id = 99  # ya asignado
 
-                mock_q_pedido = MagicMock()
-                mock_q_pedido.filter_by.return_value = mock_q_pedido
-                mock_q_pedido.first.return_value = mock_pedido
-
-                mock_q_reparto = MagicMock()
-                mock_q_reparto.filter_by.return_value = mock_q_reparto
-                mock_q_reparto.first.return_value = mock_rep
-
-                mock_sess.query.side_effect = [mock_q_pedido, mock_q_reparto]
+                self._mock_combined_query(mock_sess, first_return=(mock_pedido, mock_rep))
 
                 ok, msg = self.gd.reclamar_reparto(42, empleado_id=7)
                 assert ok is False
@@ -175,8 +172,8 @@ class TestReclamarReparto:
             patcher, mock_sess = _mock_session(self.gd)
             try:
                 mock_q = MagicMock()
-                mock_q.filter_by.return_value = mock_q
-                mock_q.first.side_effect = SQLAlchemyError("DB error")
+                mock_q.outerjoin.return_value = mock_q
+                mock_q.filter.side_effect = SQLAlchemyError("DB error")
                 mock_sess.query.return_value = mock_q
 
                 ok, msg = self.gd.reclamar_reparto(42, empleado_id=7)

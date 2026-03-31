@@ -1,6 +1,8 @@
 import statistics
 from datetime import date, datetime, timedelta
 
+from managers.dashboard._helpers import _dur_picking, _dur_reparto
+
 
 class GestorMetricasEmpleadosMixin:
     def rendimiento_empleados(self, desde: date, hasta: date, rol: str | None = None) -> list[dict]:
@@ -23,18 +25,10 @@ class GestorMetricasEmpleadosMixin:
             productividad = round(num_ops / horas, 2) if horas > 0 else 0
 
             if rol_nombre == 'picker' and ops:
-                tiempos = [
-                    round((op.completado_en - op.created_at).total_seconds() / 60)
-                    for op in ops
-                    if op.created_at and op.completado_en
-                ]
+                tiempos = [t for t in (_dur_picking(op) for op in ops) if t is not None]
                 tiempo_medio = round(statistics.mean(tiempos)) if tiempos else None
             elif rol_nombre == 'repartidor' and ops:
-                tiempos = [
-                    round((op.hora_entrega_real - op.hora_salida).total_seconds() / 60)
-                    for op in ops
-                    if op.hora_salida and op.hora_entrega_real
-                ]
+                tiempos = [t for t in (_dur_reparto(op) for op in ops) if t is not None]
                 tiempo_medio = round(statistics.mean(tiempos)) if tiempos else None
             else:
                 tiempo_medio = None
@@ -176,17 +170,9 @@ class GestorMetricasEmpleadosMixin:
         num_ops = len(ops)
         productividad = round(num_ops / horas, 2) if horas > 0 else 0
         if rol_nombre == 'picker' and ops:
-            tiempos = [
-                round((op.completado_en - op.created_at).total_seconds() / 60)
-                for op in ops
-                if op.created_at and op.completado_en
-            ]
+            tiempos = [t for t in (_dur_picking(op) for op in ops) if t is not None]
         elif rol_nombre == 'repartidor' and ops:
-            tiempos = [
-                round((op.hora_entrega_real - op.hora_salida).total_seconds() / 60)
-                for op in ops
-                if op.hora_salida and op.hora_entrega_real
-            ]
+            tiempos = [t for t in (_dur_reparto(op) for op in ops) if t is not None]
         else:
             tiempos = []
         tiempo_medio = round(statistics.mean(tiempos)) if tiempos else None
@@ -222,17 +208,9 @@ class GestorMetricasEmpleadosMixin:
             ops = self._operaciones_empleado(empleado_id, rol, lunes, fin_semana)
             if ops:
                 if rol == 'picker':
-                    tiempos = [
-                        round((op.completado_en - op.created_at).total_seconds() / 60)
-                        for op in ops
-                        if op.created_at and op.completado_en
-                    ]
+                    tiempos = [t for t in (_dur_picking(op) for op in ops) if t is not None]
                 else:
-                    tiempos = [
-                        round((op.hora_entrega_real - op.hora_salida).total_seconds() / 60)
-                        for op in ops
-                        if op.hora_salida and op.hora_entrega_real
-                    ]
+                    tiempos = [t for t in (_dur_reparto(op) for op in ops) if t is not None]
                 tiempo_medio = round(statistics.mean(tiempos)) if tiempos else None
             else:
                 tiempo_medio = None
