@@ -1,11 +1,26 @@
 import logging
 
-from Monei import ApiException
-
 from states import EstadoPedido
-from services.whatsapp_service import enviar_mensaje_whatsapp
+from services.monei_service import crear_pago as monei_crear_pago
+from controllers.pago_notifier import _enviar_confirmacion_efectivo
 
 logger = logging.getLogger(__name__)
+
+
+def _validar_carrito(productos_recibidos, gestor_productos):
+    """Recalcula el carrito con datos de BD para evitar importes manipulados."""
+    productos_validos = []
+    total = 0.0
+    for item in productos_recibidos:
+        codigo = item.get("codigo")
+        cantidad = item.get("cantidad", 1)
+        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
+        if not producto_db:
+            logger.error("_validar_carrito: producto %s no encontrado en BD", codigo)
+            return None, None, f"Producto con código {codigo} no encontrado"
+        total += float(producto_db["Precio"]) * cantidad
+        productos_validos.append([codigo, cantidad])
+    return productos_validos, total, None
 
 
 def iniciar_pago(
@@ -21,12 +36,7 @@ def iniciar_pago(
     public_url: str,
     notas: str = "",
 ) -> tuple:
-    """
-    Validates cart prices against DB, creates a Monei payment, and transitions
-    the order to CONFIRMANDO_PAGO.
-
-    Returns (success: bool, redirect_url_or_error: str).
-    """
+    """Crea el pago online y mueve el pedido al estado de confirmación de pago."""
     pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
 
     if not pedido_activo:
@@ -42,21 +52,9 @@ def iniciar_pago(
         )
         return False, "El pedido no está listo para procesar el pago"
 
-    productos_validos = []
-    total_calculado = 0.0
-
-    for item in productos_recibidos:
-        codigo = item.get("codigo")
-        cantidad = item.get("cantidad", 1)
-
-        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
-        if not producto_db:
-            logger.error("iniciar_pago: product with code %s not found in DB", codigo)
-            return False, f"Producto con código {codigo} no encontrado"
-
-        precio_db = float(producto_db["Precio"])
-        total_calculado += precio_db * cantidad
-        productos_validos.append([codigo, cantidad])
+    productos_validos, total_calculado, error = _validar_carrito(productos_recibidos, gestor_productos)
+    if error:
+        return False, error
 
     pedido_activo_id = pedido_activo.PedidoID
     redis_id = pedido_activo.redisID
@@ -68,48 +66,27 @@ def iniciar_pago(
 
     amount_in_cents = int(round(total_calculado * 100))
 
-    payment_data = {
-        "amount": amount_in_cents,
-        "order_id": str(pedido_activo_id),
-        "currency": "EUR",
-        "description": nombre_cliente,
-        "completeUrl": f"{public_url}/pago_confirmado?pedido_id={redis_id}",
-        "customer": {
-            "email": f"whatsapp_{numero_cliente.replace('+', '').replace('whatsapp:', '')}@noreply.panchibot.internal",
-            "name": nombre_cliente,
-            "phone": numero_cliente,
-        },
-        "billingDetails": {
-            "address": {
-                "line1": direccion_cliente,
-                "city": "tarancon",
-                "postalCode": "16400",
-                "country": "ES",
-            }
-        },
-    }
+    redirect_url, error = monei_crear_pago(
+        monei=monei,
+        amount_cents=amount_in_cents,
+        pedido_id=pedido_activo_id,
+        redis_id=redis_id,
+        nombre_cliente=nombre_cliente,
+        numero_cliente=numero_cliente,
+        direccion_cliente=direccion_cliente,
+        public_url=public_url,
+    )
 
-    try:
-        result = monei.payments.create(payment_data)
-        logger.info("iniciar_pago: Monei response for order %s: %s", pedido_activo_id, result)
+    if error:
+        return False, error
 
-        redirect_url = result.get("next_action", {}).get("redirect_url")
-
-        gestor_pedidos.actualizar_estado(pedido_activo_id, EstadoPedido.CONFIRMANDO_PAGO)
-        gestor_pedidos.guardar_enlace(pedido_activo_id, redirect_url)
-        logger.info(
-            "PAGO_INICIADO pedido_id=%s importe=%s",
-            pedido_activo_id, amount_in_cents,
-        )
-
-        if redirect_url:
-            return True, redirect_url
-        else:
-            return False, "No se encontró la URL de redirección en la respuesta"
-
-    except ApiException as exc:
-        logger.error("iniciar_pago: Monei ApiException: %s", exc)
-        return False, str(exc)
+    gestor_pedidos.actualizar_estado(pedido_activo_id, EstadoPedido.CONFIRMANDO_PAGO)
+    gestor_pedidos.guardar_enlace(pedido_activo_id, redirect_url)
+    logger.info(
+        "PAGO_INICIADO pedido_id=%s importe=%s",
+        pedido_activo_id, amount_in_cents,
+    )
+    return True, redirect_url
 
 
 def iniciar_pago_efectivo(
@@ -124,13 +101,7 @@ def iniciar_pago_efectivo(
     public_url: str,
     notas: str = "",
 ) -> tuple:
-    """
-    Confirma el pedido con pago en efectivo a la entrega.
-    Valida precios contra BD (misma protección antifraude que iniciar_pago),
-    no llama a Monei, y transiciona el pedido a CONTRA_REEMBOLSO.
-
-    Returns (success: bool, redirect_url_or_error: str).
-    """
+    """Confirma un pedido contra reembolso sin pasar por Monei."""
     pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
 
     if not pedido_activo:
@@ -143,21 +114,9 @@ def iniciar_pago_efectivo(
         )
         return False, "El pedido no está listo para confirmar"
 
-    productos_validos = []
-    total_calculado = 0.0
-
-    for item in productos_recibidos:
-        codigo = item.get("codigo")
-        cantidad = item.get("cantidad", 1)
-
-        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
-        if not producto_db:
-            logger.error("iniciar_pago_efectivo: producto con código %s no encontrado en BD", codigo)
-            return False, f"Producto con código {codigo} no encontrado"
-
-        precio_db = float(producto_db["Precio"])
-        total_calculado += precio_db * cantidad
-        productos_validos.append([codigo, cantidad])
+    productos_validos, total_calculado, error = _validar_carrito(productos_recibidos, gestor_productos)
+    if error:
+        return False, error
 
     pedido_id = pedido_activo.PedidoID
     redis_id = pedido_activo.redisID
@@ -171,16 +130,7 @@ def iniciar_pago_efectivo(
     gestor_pedidos.actualizar_estado(pedido_id, EstadoPedido.CONTRA_REEMBOLSO)
 
     total_euros = round(total_calculado, 2)
-    mensaje = (
-        f"❕*Pedido confirmado*❕\n      ------------------  \n"
-        f"▪️Nombre: *{nombre_cliente}*\n"
-        f"▪️Importe: *{total_euros}*€\n"
-        f"▪️ID pedido: *#{pedido_id}*\n"
-        f"▪️Forma de pago: *Efectivo (a la entrega)*\n"
-        f"▪️Tiempo estimado: *15m*\n"
-        f"▪️Dirección: 👇🏼 \n\n{direccion_cliente}"
-    )
-    enviar_mensaje_whatsapp(mensaje, numero_cliente)
+    _enviar_confirmacion_efectivo(numero_cliente, nombre_cliente, total_euros, pedido_id, direccion_cliente)
     logger.info("iniciar_pago_efectivo: pedido %s confirmado contra reembolso", pedido_id)
 
     return True, f"{public_url}/pago_confirmado?pedido_id={redis_id}"

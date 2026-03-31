@@ -7,7 +7,6 @@ from states import EstadoRegistro
 from utils.menu_opciones import mostrar_menu
 from controllers.registro_notifier import (
     _enviar_bienvenida,
-    _enviar_cancelacion_registro,
     _solicitar_nombre,
     _solicitar_direccion,
     _enviar_confirmacion_direccion,
@@ -26,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def confirmar_direccion(numero_cliente, mensaje_cliente, data_redis):
+    """Confirma la dirección validada y completa el alta del usuario."""
     if mensaje_cliente.lower() == 'si':
         from services import gestor_usuarios, gestor_pedidos
         estado = data_redis
@@ -41,6 +41,7 @@ def confirmar_direccion(numero_cliente, mensaje_cliente, data_redis):
         return False
 
 def _es_nombre_valido(nombre):
+    """Valida nombres simples permitiendo letras, espacios y apellidos compuestos."""
     nombre = nombre.strip()
     if len(nombre) < 2 or len(nombre) > 60:
         return False
@@ -48,12 +49,14 @@ def _es_nombre_valido(nombre):
 
 
 class RegistroUsuario:
-    """Clase principal para gestionar el registro del usuario usando Redis."""
+    """Orquesta el registro conversacional del usuario usando estado en Redis."""
     def __init__(self, numero_cliente, redismanager):
+        """Prepara el gestor de estado para un número concreto de WhatsApp."""
         self.numero_cliente = numero_cliente
         self.estado_usuario = EstadoUsuario(numero_cliente, redismanager)
 
     def manejar_registro(self, mensaje_cliente):
+        """Avanza la máquina de estados del registro según el mensaje recibido."""
         # Se obtiene el estado actual del usuario desde Redis.
         estado_actual = self.estado_usuario.obtener_estado()["estado"]
 
@@ -94,22 +97,17 @@ class RegistroUsuario:
             data_redis = self.estado_usuario.obtener_estado()
             logger.debug("data redis: %s", data_redis)
             if mensaje_cliente.lower() not in {"si", "sí", "no"}:
-                enviar_mensaje_whatsapp(
-                    "Escribe *Si* para confirmar tu dirección, o *No* para escribirla de nuevo.",
-                    self.numero_cliente
-                )
+                _enviar_pedir_confirmacion(self.numero_cliente)
                 return "Respuesta inválida en confirmación", 200
             respuesta = confirmar_direccion(self.numero_cliente, mensaje_cliente, data_redis)
             if respuesta is False:
                 self.estado_usuario.actualizar_estado(EstadoRegistro.ESPERANDO_DIRECCION)
-                enviar_mensaje_whatsapp(
-                    "😊 *¡Vale!* Vamos a intentarlo de nuevo.\nPor favor, *ingresa una dirección* \n\n👇 *Ejemplos:* 👇 \n\n•Calle Los Labradores 3, 1B\n•avenida pablo iglecias 79, 1b",
-                    self.numero_cliente
-                )
+                _enviar_reintentar_direccion(self.numero_cliente)
                 return "paso atras", 200
 
             return respuesta
 
 def manejar_registro(numero_cliente, mensaje_cliente, redismanager):
+    """Punto de entrada del flujo de registro para mensajes entrantes."""
     registro_usuario = RegistroUsuario(numero_cliente, redismanager)
     return registro_usuario.manejar_registro(mensaje_cliente)
