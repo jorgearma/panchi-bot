@@ -431,7 +431,7 @@ class GestorRepartoMixin:
             elif getattr(pedido, 'forma_pago', None) == 'efectivo':
                 info_pago = {
                     "estado": "cobrar_efectivo",
-                    "label": "Cobrar en efectivo",
+                    "label": "Cobrar",
                     "importe": float(pedido.Total) if pedido.Total else 0.0,
                     "proveedor": None,
                 }
