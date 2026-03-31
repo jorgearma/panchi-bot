@@ -570,7 +570,7 @@ class TestIniciarPagoEfectivo:
         pedido = make_pedido(EstadoPedido.ENLACE2)
         gestor = make_gestor_pedidos(pedido)
 
-        with patch("controllers.pago.enviar_mensaje_whatsapp"):
+        with patch("controllers.pago_notifier.enviar_mensaje_whatsapp"):
             iniciar_pago_efectivo(
                 user_id=10,
                 productos_recibidos=PRODUCTOS_VALIDOS_PAGO,
@@ -592,7 +592,7 @@ class TestIniciarPagoEfectivo:
         pedido = make_pedido(EstadoPedido.ENLACE2)
         gestor = make_gestor_pedidos(pedido)
 
-        with patch("controllers.pago.enviar_mensaje_whatsapp"):
+        with patch("controllers.pago_notifier.enviar_mensaje_whatsapp"):
             success, _ = iniciar_pago_efectivo(
                 user_id=10,
                 productos_recibidos=PRODUCTOS_VALIDOS_PAGO,

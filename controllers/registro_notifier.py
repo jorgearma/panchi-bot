@@ -7,7 +7,7 @@ from services.whatsapp_service import enviar_mensaje_whatsapp
 # Notificaciones del flujo principal
 
 def _enviar_bienvenida(numero_cliente):
-    """Mensaje inicial de bienvenida al registro."""
+    """Abre la conversación de registro e invita al usuario a continuar."""
     enviar_mensaje_whatsapp(
         "*Registro en el Sistema*💻\n\n"
         "¡Hola!👋 Aun no estás registrado en nuestro sistema. "
@@ -18,7 +18,7 @@ def _enviar_bienvenida(numero_cliente):
 
 
 def _enviar_cancelacion_registro(numero_cliente):
-    """Mensaje cuando el usuario no confirma el registro."""
+    """Recuerda cómo retomar el registro si el usuario no lo confirma."""
     enviar_mensaje_whatsapp(
         "No se ha realizado el registro , escriba si para continuar. 😊",
         numero_cliente
@@ -26,7 +26,7 @@ def _enviar_cancelacion_registro(numero_cliente):
 
 
 def _solicitar_nombre(numero_cliente):
-    """Solicitud del nombre del usuario."""
+    """Pide el nombre que se guardará en el perfil del cliente."""
     enviar_mensaje_whatsapp(
         "▪️ *Registro de Usuario* 👤\n\nEscribe tu 🫵 *Nombre* \nPara continuar",
         numero_cliente
@@ -34,7 +34,7 @@ def _solicitar_nombre(numero_cliente):
 
 
 def _solicitar_direccion(numero_cliente):
-    """Solicitud de la dirección del usuario."""
+    """Pide la dirección completa con ejemplos del formato esperado."""
     enviar_mensaje_whatsapp(
         "📍 *Registro de Dirección* 📍\n\nGracias. Ahora, por favor envía tu *Dirección Completa* 🏠.\n\n"
         "👇 *Ejemplos:* 👇 \n\n🔹_Calle Labradores, 3, 1B_\n🔹_Avenida Pablo Iglesias, 79, 1B_\n\n",
@@ -43,7 +43,7 @@ def _solicitar_direccion(numero_cliente):
 
 
 def _enviar_confirmacion_direccion(numero_cliente, direccion):
-    """Solicitud de confirmación de la dirección validada."""
+    """Muestra la dirección interpretada y pide confirmación explícita."""
     enviar_mensaje_whatsapp(
         f"{direccion} \n\n ⬆️ *Verifica tu Ubicación* ⬆️\n\n"
         "👉 *Escribe:* *Si* para confirmar\n"
@@ -53,7 +53,7 @@ def _enviar_confirmacion_direccion(numero_cliente, direccion):
 
 
 def _enviar_direccion_invalida(numero_cliente):
-    """Aviso de dirección inválida."""
+    """Explica que la dirección no pudo validarse y da ejemplos correctos."""
     enviar_mensaje_whatsapp(
         "⛔ *La dirección no es válida* ⛔\n\nPor favor, revisa los *detalles* 📝.\n"
         "¡Gracias por tu ayuda! 😊 \n\n 👇 *Ejemplos:* 👇 \n\n"
@@ -63,7 +63,7 @@ def _enviar_direccion_invalida(numero_cliente):
 
 
 def _enviar_mensaje_registro(numero_cliente, nombre, menu_despues_registro):
-    """Confirmación final del registro completado."""
+    """Confirma el alta y enlaza directamente con el menú de compra."""
     mensaje = (f"¡Gracias {nombre}! Ahora estás registrado. {menu_despues_registro} "
                "\nescribe el *numero* para elegir\n  "
                )
@@ -73,7 +73,7 @@ def _enviar_mensaje_registro(numero_cliente, nombre, menu_despues_registro):
 # Notificaciones de errores de validación
 
 def _enviar_nombre_invalido(numero_cliente):
-    """Aviso cuando el nombre es inválido."""
+    """Pide repetir el nombre cuando no cumple el formato esperado."""
     enviar_mensaje_whatsapp(
         "⛔ *El nombre ingresado no es válido* ⛔\n\nPor favor, escribe tu *Nombre Completo* 📝.\n"
         "Ejemplo: _Juan Pérez_ o _María López_",
@@ -82,7 +82,7 @@ def _enviar_nombre_invalido(numero_cliente):
 
 
 def _enviar_registro_pendiente(numero_cliente):
-    """Recordatorio para confirmar el registro."""
+    """Recuerda al usuario que el registro sigue pendiente de confirmación."""
     enviar_mensaje_whatsapp(
         "Para comenzar tu registro escribe *Si* ✅\n"
         "Si no quieres registrarte ahora, simplemente ignora este mensaje.",
@@ -91,7 +91,7 @@ def _enviar_registro_pendiente(numero_cliente):
 
 
 def _enviar_pedir_confirmacion(numero_cliente):
-    """Solicitud de confirmación de la dirección nuevamente."""
+    """Repite las opciones válidas para confirmar o corregir la dirección."""
     enviar_mensaje_whatsapp(
         "Escribe *Si* para confirmar tu dirección, o *No* para escribirla de nuevo.",
         numero_cliente
@@ -99,7 +99,7 @@ def _enviar_pedir_confirmacion(numero_cliente):
 
 
 def _enviar_reintentar_direccion(numero_cliente):
-    """Mensaje para reintentar la dirección después de "No"."""
+    """Invita a reenviar la dirección cuando el usuario la rechaza."""
     enviar_mensaje_whatsapp(
         "😊 *¡Vale!* Vamos a intentarlo de nuevo.\nPor favor, *ingresa una dirección* \n\n"
         "👇 *Ejemplos:* 👇 \n\n•Calle Los Labradores 3, 1B\n•avenida pablo iglecias 79, 1b",

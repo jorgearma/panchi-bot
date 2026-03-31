@@ -16,9 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
-    """
-    Procesa un pedido realizado por un cliente y genera una respuesta adecuada.
-    """
+    """Interpreta la opción elegida por el cliente y responde según el menú."""
     try:
         # Validar los datos de entrada con Pydantic
         datos = PedidoInput(pedido=pedido, numero_cliente=numero_cliente, id_pedido_actual=id_pedido_actual)
@@ -79,13 +77,7 @@ def confirmar_carrito(
     gestor_productos,
     public_url: str,
 ) -> tuple:
-    """
-    Stores the assembled cart in Redis and transitions the order to ENLACE2.
-
-    Returns (success: bool, redirect_url_or_error: str).
-    The caller is responsible for obtaining pedido_id_redis (a UUID string)
-    and passing all injected dependencies.
-    """
+    """Guarda el carrito validado, calcula su total y lo deja listo para confirmar."""
     productos = []
     total = 0.0
 
