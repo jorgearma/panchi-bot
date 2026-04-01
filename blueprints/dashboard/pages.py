@@ -2,6 +2,7 @@ import logging
 
 from flask import render_template, request
 
+import config as app_config
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard
 from blueprints.dashboard._common import _ok, _err
@@ -15,6 +16,8 @@ def register(bp):
     @requiere_rol('manager', 'admin')
     def index():
         """Renderiza la portada principal del dashboard."""
+        if app_config.APP_MODE == 'restaurant':
+            return render_template("dashboard/index_restaurant.html")
         return render_template("dashboard/index.html")
 
     @bp.route("/dashboard/monitor")
@@ -86,10 +89,17 @@ def register(bp):
     @bp.route("/dashboard/empleados")
     @requiere_rol('manager', 'admin')
     def empleados():
-        """Lista empleados disponibles, opcionalmente filtrados por rol."""
+        """Lista empleados disponibles, opcionalmente filtrados por rol.
+
+        Parámetros:
+        - rol: filtrar por rol (picker, repartidor, etc.)
+        - operacion: si es "true", solo muestra empleados con turno hoy (para asignación operativa)
+        """
         try:
             rol = request.args.get("rol")
-            return _ok(gestor_dashboard.empleados_disponibles(rol=rol))
+            operacion = request.args.get("operacion", "").lower() == "true"
+            resultado = gestor_dashboard.empleados_disponibles(rol=rol, solo_con_turno=operacion)
+            return _ok(resultado)
         except Exception as e:
-            logger.error("Error en /dashboard/empleados: %s", e)
-            return _err("Error interno", 500)
+            logger.error("Error en /dashboard/empleados: %s", str(e), exc_info=True)
+            return _err(f"Error al cargar empleados: {str(e)}", 500)

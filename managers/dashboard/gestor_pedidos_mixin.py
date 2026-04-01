@@ -131,6 +131,7 @@ class GestorPedidosMixin:
                     "asignado_en": _iso(p.picking.created_at),
                     "iniciado_en": _iso(p.picking.iniciado_en),
                     "completado_en": _iso(p.picking.completado_en),
+                    "notas": p.picking.notas,
                 }
 
             reparto_data = None

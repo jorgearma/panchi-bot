@@ -1,6 +1,6 @@
 """Mixin: gestión de turnos y asistencia — consultas, creación, edición, cancelación."""
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -32,7 +32,7 @@ class GestorTurnosMixin:
         from models import CheckIn
         from models import Turno as TurnoModel
 
-        hoy = datetime.utcnow().date()
+        hoy = date.today()
         ahora = datetime.utcnow()
         s = self.session
 
@@ -63,18 +63,27 @@ class GestorTurnosMixin:
                     checkins_hoy[ci.empleado_id] = ci
 
         # Build dict empleado_id → turno planificado de hoy (no cancelado)
+        # Si un empleado tiene múltiples turnos, se guarda el primero (por hora de inicio)
         turnos_hoy_map = {}
         for t in (
             s.query(TurnoModel)
             .filter(TurnoModel.fecha == hoy, TurnoModel.estado != 'cancelado')
+            .order_by(TurnoModel.hora_inicio)
             .all()
         ):
-            turnos_hoy_map[t.empleado_id] = t
+            # Solo guardar el primer turno del empleado para este día
+            if t.empleado_id not in turnos_hoy_map:
+                turnos_hoy_map[t.empleado_id] = t
 
         resultado = []
         for emp in empleados:
-            ci = checkins_hoy.get(emp.EmpleadoID)
             turno = turnos_hoy_map.get(emp.EmpleadoID)
+
+            # Solo incluir empleados con turno hoy
+            if not turno:
+                continue
+
+            ci = checkins_hoy.get(emp.EmpleadoID)
             minutos_activo = None
             if ci:
                 fin_efectivo = ci.fin or ahora
@@ -92,7 +101,7 @@ class GestorTurnosMixin:
                 'activo':           ci is not None and ci.fin is None,
                 'minutos_tarde':    ci.minutos_tarde if ci else None,
                 # Turno planificado
-                'tiene_turno':      turno is not None,
+                'tiene_turno':      True,  # Ya filtramos arriba
                 'turno_id':         turno.id if turno else None,
                 'turno_hora_inicio': str(turno.hora_inicio)[:5] if turno and turno.hora_inicio else None,
                 'turno_hora_fin':    str(turno.hora_fin)[:5] if turno and turno.hora_fin else None,
@@ -102,6 +111,9 @@ class GestorTurnosMixin:
                     if turno and turno.hora_inicio else False
                 ),
             })
+
+        # Ordenar alfabéticamente por nombre
+        resultado.sort(key=lambda e: e['nombre'])
 
         n_con_checkin   = sum(1 for e in resultado if e['activo'])
         n_pausa         = sum(1 for e in resultado if e['estado_operativo'] == 'en_pausa')
@@ -220,7 +232,7 @@ class GestorTurnosMixin:
     ) -> dict:
         """Lista de turnos planificados (pasados y futuros), paginada."""
         from models import Turno as TurnoModel
-        hoy = datetime.utcnow().date()
+        hoy = date.today()
         fecha_desde = datetime.strptime(desde, '%Y-%m-%d').date() if desde else hoy
         fecha_hasta = datetime.strptime(hasta, '%Y-%m-%d').date() if hasta else hoy + timedelta(days=13)
         page = max(page, 1)

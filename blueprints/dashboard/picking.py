@@ -50,6 +50,19 @@ def register(bp):
             return _err(msg)
         return jsonify({"ok": True, "mensaje": msg})
 
+    @bp.route("/dashboard/picking/asignar-cocina", methods=["POST"])
+    @requiere_rol('manager', 'admin')
+    def asignar_cocina_equipo():
+        """Restaurant mode: acepta el pedido en nombre de todo el equipo de cocina."""
+        data = request.get_json(silent=True) or {}
+        pedido_id = data.get("pedido_id")
+        if not pedido_id:
+            return _err("Falta pedido_id")
+        ok, msg, equipo = gestor_dashboard.asignar_cocina_equipo(int(pedido_id))
+        if not ok:
+            return _err(msg)
+        return jsonify({"ok": True, "mensaje": msg, "equipo": equipo})
+
     @bp.route("/dashboard/picking/<int:picking_id>/completar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def completar_picking(picking_id: int):

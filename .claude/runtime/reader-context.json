@@ -1,102 +1,245 @@
 {
-  "improved_prompt": "Añadir funcionalidad de rollback de estado de pedido en el dashboard/index. El operador necesita poder revertir un pedido al estado anterior cuando se ha avanzado por error (ej: reparto marcado como 'salida' incorrectamente). La lógica de estados es estrictamente hacia adelante (states.py), por lo que hay que diseñar un endpoint de rollback en blueprints/dashboard.py, implementar la lógica inversa en gestor_reparto_mixin.py y/o gestor_picking_mixin.py (consultando HistorialEstadoPedido para saber el estado_anterior), actualizar el estado en Pedido.Estado, limpiar/revertir campos asociados en Reparto y PickingPedido si aplica, y añadir un botón de 'Deshacer' en templates/dashboard/index.html para los estados susceptibles de error.",
-  "selected_readers": ["api", "data", "ui"],
+  "improved_prompt": "Añadir validación en el flujo de check-in de empleados (GET /empleado/checkin y POST /empleado/fichaje) para que solo puedan fichar los empleados que tienen un Turno asignado para la fecha de hoy con estado activo/válido. La lógica de consulta debe residir en managers/gestor_empleado.py (consulta sobre tabla `turnos` filtrando por empleado_id y fecha==hoy). El blueprint blueprints/empleado.py actúa solo como enrutador y debe llamar al manager para obtener el turno del día antes de permitir el fichaje. Si no existe turno, devolver error apropiado (403 o redirect con mensaje). El campo CheckIn.turno_id ya existe como FK.",
+  "selected_readers": [
+    "api",
+    "data"
+  ],
   "maps_used": [
     "ROUTING_MAP.json",
     "DOMAIN_INDEX_api.json",
     "DOMAIN_INDEX_data.json",
-    "DOMAIN_INDEX_ui.json",
     "CONTRACT_MAP.json",
     "DATA_MODEL_MAP.json"
   ],
   "files_to_open": [
     {
-      "path": "blueprints/dashboard.py",
-      "hint": "Define rutas HTTP del dashboard — aquí se añade el nuevo endpoint POST /dashboard/pedido/<pedido_id>/revertir-estado",
-      "key_symbols": ["index", "monitor_datos", "marcar_salida_reparto"],
-      "test_file": "tests/test_dashboard_sprint3.py"
+      "path": "blueprints/empleado.py",
+      "hint": "Define rutas HTTP del módulo empleado — aquí viven GET /empleado/checkin y POST /empleado/fichaje. Es el punto de entrada donde debe añadirse la guardia de turno antes de permitir el fichaje.",
+      "key_symbols": [
+        "index",
+        "turno_hoy"
+      ],
+      "test_file": "tests/test_empleado.py"
     },
     {
-      "path": "managers/dashboard/gestor_reparto_mixin.py",
-      "hint": "Mixin de operaciones de reparto — contiene marcar_salida_reparto y asignar_repartidor; aquí se implementa la lógica de rollback para EN_REPARTO → PREPARADO (revertir hora_salida en Reparto)",
-      "key_symbols": ["repartidores", "mapa", "asignar_repartidor", "marcar_salida_reparto"],
+      "path": "managers/gestor_empleado.py",
+      "hint": "Manager de datos de empleado — ya expone turno_hoy(). Aquí debe implementarse la consulta que verifica si el empleado tiene turno asignado para hoy con estado válido, devolviendo el Turno o None.",
+      "key_symbols": [
+        "session",
+        "perfil",
+        "cambiar_estado",
+        "turno_hoy"
+      ],
       "test_file": null
     },
     {
-      "path": "managers/dashboard/gestor_picking_mixin.py",
-      "hint": "Mixin de operaciones de picking — contiene asignar_picker y reasignar_picker; aquí se implementa rollback para PREPARADO → EN_PREPARACION (revertir completado_en en PickingPedido)",
-      "key_symbols": ["picking_activo", "buscar_productos", "asignar_picker", "reasignar_picker"],
-      "test_file": null
-    },
-    {
-      "path": "managers/gestor_pedidos.py",
-      "hint": "Gestiona acceso a datos de pedidos y aplica transiciones de estado con registro en historial_estados_pedido — punto central para leer el estado_anterior y ejecutar el rollback",
-      "key_symbols": ["session", "iniciar_pedido", "guardar_enlace", "hay_pedido_pendiente"],
-      "test_file": "tests/test_gestor_pedidos.py"
-    },
-    {
-      "path": "templates/dashboard/index.html",
-      "hint": "Plantilla principal del dashboard — debe añadir botón 'Deshacer' visible solo en estados susceptibles de rollback (EN_REPARTO, PREPARADO)",
-      "key_symbols": [],
+      "path": "managers/dashboard/gestor_turnos_mixin.py",
+      "hint": "Mixin con la lógica de turnos — contiene turnos_hoy() y utilidades de consulta sobre la tabla turnos. Revisar implementación existente para reutilizar o extraer la query de turno-por-empleado.",
+      "key_symbols": [
+        "turnos_hoy",
+        "turnos_historial",
+        "turnos_planificacion",
+        "crear_turno"
+      ],
       "test_file": null
     }
   ],
   "files_to_review": [
     {
-      "path": "states.py",
-      "hint": "Define enums de estado y reglas de transición válidas — el rollback debe conocer qué estados son reversibles y cuál es el estado anterior permitido",
-      "key_symbols": [],
-      "test_file": null
-    },
-    {
-      "path": "managers/dashboard/gestor_pedidos_mixin.py",
-      "hint": "Mixin de consultas de pedidos activos — pedidos_activos construye el payload que renderiza el index; hay que asegurarse de que expone el estado actual para que el frontend sepa cuándo mostrar el botón de rollback",
-      "key_symbols": ["metricas", "pedidos_activos", "alertas", "eventos"],
-      "test_file": null
-    },
-    {
       "path": "models.py",
-      "hint": "Modelos ORM relevantes: Pedido (campo Estado), HistorialEstadoPedido (estado_anterior, estado_nuevo, empleado_id), Reparto (hora_salida, estado), PickingPedido (estado, completado_en) — revisar campos a revertir",
+      "hint": "Contiene los modelos ORM Turno (tabla turnos: empleado_id, fecha:Date, hora_inicio, hora_fin, estado) y CheckIn (tabla check_ins: turno_id FK ya existe). El planner necesita conocer los campos de estado válidos del Turno para construir el filtro.",
       "key_symbols": [],
       "test_file": null
     },
     {
-      "path": "managers/dashboard/_base.py",
-      "hint": "Gestiona la sesión SQLAlchemy base de todos los mixins — revisar para entender cómo acceder a la sesión en el nuevo método de rollback",
-      "key_symbols": ["session"],
+      "path": "managers/dashboard/gestor_empleados_mixin.py",
+      "hint": "Mixin de monitorización de empleados — empleados_disponibles() y monitor_empleados() pueden verse afectados si el estado operativo cambia al bloquear el check-in.",
+      "key_symbols": [
+        "empleados_disponibles",
+        "monitor_empleados"
+      ],
       "test_file": null
+    },
+    {
+      "path": "managers/dashboard/_helpers.py",
+      "hint": "Helpers compartidos por los mixins de dashboard — puede contener utilidades de fecha/hora relevantes para filtrar turnos de hoy.",
+      "key_symbols": [],
+      "test_file": null
+    },
+    {
+      "path": "blueprints/auth.py",
+      "hint": "Depende directamente de empleado.py — empleado lo importa, contexto de implementación",
+      "test_file": null,
+      "key_symbols": [
+        "_get_empleado_by_email",
+        "login",
+        "logout"
+      ]
+    },
+    {
+      "path": "database.py",
+      "hint": "Depende directamente de gestor_empleado.py — gestor_empleado lo importa, contexto de implementación",
+      "test_file": null,
+      "key_symbols": [
+        "get_db",
+        "close_db",
+        "conectar_bd1"
+      ]
     },
     {
       "path": "managers/gestor_dashboard.py",
-      "hint": "GestorDashboard — fachada pública que compone todos los mixins; el nuevo método de rollback debe exponerse aquí (sin añadir lógica, solo delegación al mixin correspondiente)",
-      "key_symbols": [],
-      "test_file": "tests/test_gestor_dashboard.py"
+      "hint": "Importa directamente gestor_turnos_mixin.py — revisar si cambia la firma pública de gestor_turnos_mixin",
+      "test_file": null,
+      "key_symbols": [
+        "GestorDashboard"
+      ]
+    },
+    {
+      "path": "managers/gestor_metricas.py",
+      "hint": "Importa directamente gestor_empleado.py — revisar si cambia la firma pública de gestor_empleado",
+      "test_file": null,
+      "key_symbols": [
+        "GestorMetricas",
+        "session",
+        "resumen_operacion"
+      ]
+    },
+    {
+      "path": "states.py",
+      "hint": "Depende directamente de gestor_empleado.py — gestor_empleado lo importa, contexto de implementación",
+      "test_file": null,
+      "key_symbols": [
+        "EstadoRegistro",
+        "__str__",
+        "EstadoPedido"
+      ]
     }
   ],
   "constraints": [
     "No romper endpoints públicos documentados en CONTRACT_MAP.json",
     "No modificar migraciones ya aplicadas",
     "No cambiar env vars sin actualizar .env.example",
-    "POST /dashboard/reparto/<int:reparto_id>/salida (blueprints/dashboard.py) — no modificar; crear endpoint de rollback separado",
-    "POST /dashboard/reparto/<int:reparto_id>/entregar (blueprints/dashboard.py) — no modificar; el rollback es un endpoint distinto",
-    "POST /dashboard/picking/<int:picking_id>/completar (blueprints/dashboard.py) — no modificar",
-    "No añadir lógica de negocio directamente en gestor_dashboard.py (god object 121KB) — delegar al mixin apropiado (gestor_reparto_mixin o gestor_picking_mixin)",
-    "Las notificaciones WhatsApp en blueprints/dashboard.py usan threading.Thread sin manejo de errores — no replicar ese patrón en el rollback; si hay notificación al cliente, manejar excepciones explícitamente",
-    "El rollback debe registrar entrada en historial_estados_pedido (igual que los avances de estado) con estado_anterior y estado_nuevo invertidos",
-    "Usar categoria_id en código nuevo (no campo legacy) — models.py línea 45",
-    "Usar rol_id en código nuevo (no campo legacy) — models.py línea 190"
+    "GET /empleado/checkin (blueprints/empleado.py) — no cambiar firma de ruta ni método HTTP",
+    "POST /empleado/fichaje (blueprints/empleado.py) — no cambiar firma de ruta ni método HTTP",
+    "GET /empleado/turno-hoy (blueprints/empleado.py) — no cambiar firma de ruta ni método HTTP",
+    "GET /empleado/puede-iniciar (blueprints/empleado.py) — no cambiar firma de ruta ni método HTTP",
+    "No añadir lógica de negocio en el blueprint — solo routing; la validación de turno va en managers/gestor_empleado.py",
+    "— usar rol_id en código nuevo (legacy contract models.py línea 190)"
   ],
   "key_facts": [
-    "ORM: SQLAlchemy · DB: SQL Server (pyodbc) · Patrón: Manager / Repository con mixins",
-    "Flujo de estados operativos: PAGADO/CONTRA_REEMBOLSO → EN_PREPARACION → PREPARADO → EN_REPARTO → ENTREGADO; también CANCELADO → REEMBOLSADO",
-    "states.py define transiciones válidas SOLO hacia adelante — el rollback debe implementarse con lógica explícita de inversión, no usando el mecanismo de transición normal",
-    "HistorialEstadoPedido (tabla historial_estados_pedido) tiene campos: estado_anterior, estado_nuevo, cambiado_en, notas, empleado_id — úsalo para determinar el estado al que volver y para auditar el rollback",
-    "Reparto tiene campos hora_salida:DateTime y estado — al revertir EN_REPARTO → PREPARADO hay que nullear hora_salida y resetear Reparto.estado",
-    "PickingPedido tiene campos completado_en:DateTime y estado — al revertir PREPARADO → EN_PREPARACION hay que nullear completado_en y resetear PickingPedido.estado",
-    "Pedido.Estado es el campo maestro que hay que revertir al estado_anterior del último HistorialEstadoPedido",
-    "Los estados más susceptibles de error operativo son: EN_REPARTO (salida marcada por error) y PREPARADO (picking completado por error)",
-    "gestor_pedidos.py es el único punto autorizado para cambiar Pedido.Estado — el rollback debe pasar por él para que el historial quede registrado correctamente",
-    "El rollback solo debería estar disponible para roles con privilegios de operador/admin — usar el decorador requiere_rol de blueprints/auth.py"
+    "ORM: SQLAlchemy · DB: SQL Server · Patrón: Manager / Repository",
+    "Modelo Turno (tabla: turnos): campos empleado_id, fecha:Date, hora_inicio:Time, hora_fin:Time, estado — filtrar por empleado_id + fecha==hoy + estado activo para validar permiso de check-in",
+    "Modelo CheckIn (tabla: check_ins): ya tiene FK turno_id:Integer — al crear el check-in se debe rellenar turno_id con el turno del día",
+    "Relación Empleado → turnos es 1:N; Empleado → check_ins es 1:N",
+    "Ya existe endpoint GET /empleado/turno-hoy y GET /empleado/puede-iniciar en blueprints/empleado.py — posibles puntos de reutilización o extensión",
+    "manager gestor_empleado.py ya expone turno_hoy() — verificar si ya consulta el estado del turno o solo retorna el turno independientemente del estado",
+    "gestor_turnos_mixin.py tiene turnos_hoy() — puede servir como referencia de la query de turnos del día"
   ],
-  "status": "ready"
+  "status": "ready",
+  "dependency_graph": {
+    "managers/gestor_empleado.py": [
+      "database.py",
+      "models.py",
+      "states.py"
+    ],
+    "managers/dashboard/gestor_turnos_mixin.py": [
+      "managers/dashboard/_helpers.py",
+      "models.py"
+    ],
+    "blueprints/empleado.py": [
+      "blueprints/auth.py",
+      "database.py",
+      "models.py",
+      "services/__init__.py"
+    ],
+    "database.py": [
+      "models.py"
+    ],
+    "models.py": [
+      "database.py"
+    ],
+    "managers/dashboard/_helpers.py": [
+      "states.py"
+    ],
+    "blueprints/auth.py": [
+      "database.py",
+      "models.py"
+    ],
+    "managers/gestor_metricas.py": [
+      "managers/gestor_empleado.py"
+    ],
+    "managers/gestor_dashboard.py": [
+      "managers/dashboard/gestor_turnos_mixin.py"
+    ],
+    "main.py": [
+      "blueprints/empleado.py"
+    ]
+  },
+  "dependency_context": {
+    "seeds": [
+      "blueprints/empleado.py",
+      "managers/dashboard/gestor_turnos_mixin.py",
+      "managers/gestor_empleado.py"
+    ],
+    "callers_of_seeds": [
+      {
+        "file": "main.py",
+        "calls_into": "blueprints/empleado.py",
+        "risk": "puede romper si cambia la firma pública de empleado"
+      },
+      {
+        "file": "managers/gestor_dashboard.py",
+        "calls_into": "managers/dashboard/gestor_turnos_mixin.py",
+        "risk": "puede romper si cambia la firma pública de gestor_turnos_mixin"
+      },
+      {
+        "file": "managers/gestor_metricas.py",
+        "calls_into": "managers/gestor_empleado.py",
+        "risk": "puede romper si cambia la firma pública de gestor_empleado"
+      }
+    ],
+    "seed_dependencies": [
+      {
+        "file": "blueprints/auth.py",
+        "used_by": "blueprints/empleado.py"
+      },
+      {
+        "file": "database.py",
+        "used_by": [
+          "managers/gestor_empleado.py",
+          "blueprints/empleado.py"
+        ]
+      },
+      {
+        "file": "managers/dashboard/_helpers.py",
+        "used_by": "managers/dashboard/gestor_turnos_mixin.py"
+      },
+      {
+        "file": "models.py",
+        "used_by": [
+          "managers/gestor_empleado.py",
+          "managers/dashboard/gestor_turnos_mixin.py",
+          "blueprints/empleado.py"
+        ]
+      },
+      {
+        "file": "services/__init__.py",
+        "used_by": "blueprints/empleado.py"
+      },
+      {
+        "file": "states.py",
+        "used_by": "managers/gestor_empleado.py"
+      }
+    ],
+    "hubs_not_expanded": [
+      "services/__init__.py"
+    ]
+  },
+  "_subgraph_added": [
+    "blueprints/auth.py",
+    "database.py",
+    "managers/gestor_dashboard.py",
+    "managers/gestor_metricas.py",
+    "states.py"
+  ]
 }

@@ -331,7 +331,9 @@ class TestModoRestaurant:
                 mock_q.all.return_value = [mock_picking]
                 mock_sess.query.return_value = mock_q
 
-                result = self.gd.pickings_del_picker(2)
+                import managers.dashboard.picking_basico as pb
+                with patch.object(pb.app_config, 'APP_MODE', 'warehouse', create=True):
+                    result = self.gd.pickings_del_picker(2)
 
                 assert len(result) == 1
                 assert result[0]['listo_para_finalizar'] is False

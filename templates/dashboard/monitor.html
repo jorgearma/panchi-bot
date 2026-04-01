@@ -236,7 +236,7 @@
 
       <template x-for="emp in pickers" :key="emp.empleado_id">
         <div class="rounded-xl border fade-in transition-all"
-             :class="[employeeCardClass(emp.estado), isColapsada('p', emp.empleado_id) ? 'px-4 py-2.5' : 'p-4']">
+             :class="[employeeCardClass(empEstado(emp)), isColapsada('p', emp.empleado_id) ? 'px-4 py-2.5' : 'p-4']">
 
           <!-- Row 1: Name + status + collapse toggle -->
           <div class="flex items-center justify-between"
@@ -245,8 +245,8 @@
                style="cursor:pointer">
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full shrink-0"
-                    :class="statusDotClass(emp.estado)"
-                    :style="emp.estado === 'activo' || emp.estado === 'sobrecargado' ? 'animation: pulse-dot 1.8s ease-in-out infinite' : ''">
+                    :class="statusDotClass(empEstado(emp))"
+                    :style="empEstado(emp) === 'activo' || empEstado(emp) === 'sobrecargado' ? 'animation: pulse-dot 1.8s ease-in-out infinite' : ''">
               </span>
               <span class="font-semibold text-sm text-white" x-text="emp.nombre"></span>
               <!-- Compact summary when collapsed -->
@@ -261,8 +261,8 @@
                       x-text="rendimientoLabel(emp.rendimiento)"></span>
               </template>
               <span class="text-xs px-2 py-0.5 rounded font-medium border"
-                    :class="statusBadgeClass(emp.estado)"
-                    x-text="estadoLabel(emp.estado)"></span>
+                    :class="statusBadgeClass(empEstado(emp))"
+                    x-text="estadoLabel(empEstado(emp))"></span>
               <span class="text-gray-600 text-sm transition-transform duration-200 ml-1"
                     :class="isColapsada('p', emp.empleado_id) ? '' : 'rotate-90'">›</span>
             </div>
@@ -400,7 +400,7 @@
 
       <template x-for="emp in repartidores" :key="emp.empleado_id">
         <div class="rounded-xl border fade-in transition-all"
-             :class="[employeeCardClass(emp.estado), isColapsada('r', emp.empleado_id) ? 'px-4 py-2.5' : 'p-4']">
+             :class="[employeeCardClass(empEstado(emp)), isColapsada('r', emp.empleado_id) ? 'px-4 py-2.5' : 'p-4']">
 
           <!-- Row 1: Name + status + load + collapse toggle -->
           <div class="flex items-center justify-between"
@@ -409,8 +409,8 @@
                style="cursor:pointer">
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full shrink-0"
-                    :class="statusDotClass(emp.estado)"
-                    :style="emp.estado === 'activo' || emp.estado === 'sobrecargado' ? 'animation: pulse-dot 1.8s ease-in-out infinite' : ''">
+                    :class="statusDotClass(empEstado(emp))"
+                    :style="empEstado(emp) === 'activo' || empEstado(emp) === 'sobrecargado' ? 'animation: pulse-dot 1.8s ease-in-out infinite' : ''">
               </span>
               <span class="font-semibold text-sm text-white" x-text="emp.nombre"></span>
               <!-- Compact summary when collapsed -->
@@ -428,8 +428,8 @@
                     :class="cargaClass(emp.carga)"
                     x-text="cargaLabel(emp.carga)"></span>
               <span class="text-xs px-2 py-0.5 rounded font-medium border"
-                    :class="statusBadgeClass(emp.estado)"
-                    x-text="estadoLabel(emp.estado)"></span>
+                    :class="statusBadgeClass(empEstado(emp))"
+                    x-text="estadoLabel(empEstado(emp))"></span>
               <span class="text-gray-600 text-sm transition-transform duration-200 ml-1"
                     :class="isColapsada('r', emp.empleado_id) ? '' : 'rotate-90'">›</span>
             </div>
@@ -752,12 +752,17 @@
           return 'hace ' + Math.floor(diff / 3600) + 'h';
         },
 
+        empEstado(emp) {
+          return emp.has_checked_in ? emp.estado : 'sin_checkin';
+        },
+
         employeeCardClass(estado) {
           return {
-            'activo':       'bg-gray-800/70 border-gray-700',
-            'sobrecargado': 'bg-red-950/50 border-red-800',
-            'inactivo':     'bg-gray-800/40 border-gray-700/50',
-            'sin_carga':    'bg-gray-900/50 border-gray-800 opacity-60',
+            'activo':        'bg-gray-800/70 border-gray-700',
+            'sobrecargado':  'bg-red-950/50 border-red-800',
+            'inactivo':      'bg-gray-800/40 border-gray-700/50',
+            'sin_carga':     'bg-gray-900/50 border-gray-800 opacity-60',
+            'sin_checkin':   'bg-gray-900/30 border-gray-800/50 opacity-50 grayscale',
           }[estado] || 'bg-gray-800 border-gray-700';
         },
 
@@ -767,6 +772,7 @@
             'sobrecargado': 'bg-red-500',
             'inactivo':     'bg-yellow-400',
             'sin_carga':    'bg-gray-600',
+            'sin_checkin':  'bg-gray-700',
           }[estado] || 'bg-gray-600';
         },
 
@@ -776,11 +782,12 @@
             'sobrecargado': 'border-red-700 bg-red-950/60 text-red-400',
             'inactivo':     'border-yellow-700/50 bg-yellow-950/40 text-yellow-400',
             'sin_carga':    'border-gray-700 bg-gray-800 text-gray-500',
+            'sin_checkin':  'border-gray-700 bg-gray-900 text-gray-600',
           }[estado] || 'border-gray-700 text-gray-500';
         },
 
         estadoLabel(estado) {
-          return { activo: 'Activo', sobrecargado: 'Sobrecargado', inactivo: 'Libre', sin_carga: 'Sin carga' }[estado] || estado;
+          return { activo: 'Activo', sobrecargado: 'Sobrecargado', inactivo: 'Libre', sin_carga: 'Sin carga', sin_checkin: 'Sin fichar' }[estado] || estado;
         },
 
         rendimientoClass(r) {
