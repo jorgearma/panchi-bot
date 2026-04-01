@@ -237,7 +237,7 @@ img { display: block; max-width: 100%; }
 
 .hero-showcase {
   display: grid;
-  grid-template-columns: 100px minmax(540px, 620px) 100px;
+  grid-template-columns: 100px minmax(0, 620px) 100px;
   gap: 0;
   align-items: center;
   justify-content: center;
@@ -1363,39 +1363,24 @@ img { display: block; max-width: 100%; }
 /* ============================================================
    RESPONSIVE
    ============================================================ */
-@media (max-width: 1200px) {
+@media (max-width: 719px) {
   .hero-showcase {
-    grid-template-columns: 84px minmax(500px, 580px) 84px;
-  }
-  .hero-phone-wrap {
-    width: 84px;
-    height: 154px;
-  }
-  .hero-phone--left {
-    transform: translateX(-50%) translateY(2px) rotate(-8deg) scale(.3);
-  }
-  .hero-phone--right {
-    transform: translateX(-50%) translateY(2px) rotate(8deg) scale(.3);
-  }
-  .hero-side--left {
-    margin-right: -10px;
-  }
-  .hero-side--right {
-    margin-left: -10px;
-  }
-}
-
-@media (max-width: 920px) {
-  .hero-showcase {
-    grid-template-columns: 1fr;
-    gap: 0;
+    grid-template-columns: repeat(2, minmax(0, 120px));
+    justify-content: center;
+    gap: 14px 10px;
   }
   .hero-copy {
-    grid-column: auto;
-    max-width: 680px;
+    order: -1;
+    grid-column: 1 / -1;
+    max-width: 520px;
   }
   .hero-side {
-    display: none;
+    display: flex;
+  }
+  .hero-side--left,
+  .hero-side--right {
+    justify-self: center;
+    margin: 0;
   }
   .features-grid { grid-template-columns: 1fr 1fr; }
   .pricing-grid { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; }
@@ -1422,8 +1407,6 @@ img { display: block; max-width: 100%; }
   .nav-toggle { display: flex; }
 
   .hero { padding: 110px 0 60px; }
-  .hero-showcase { grid-template-columns: 1fr; gap: 0; }
-  .hero-copy { grid-column: auto; }
 
   .features-grid { grid-template-columns: 1fr; }
 

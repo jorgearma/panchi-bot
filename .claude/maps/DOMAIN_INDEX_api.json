@@ -7,17 +7,18 @@
       "purpose": "Punto de entrada de la aplicación main",
       "key_symbols": [
         "create_app",
+        "inject_app_mode",
         "health",
         "manejar_errores_globales"
       ],
       "test_files": [],
       "related_paths": [
-        "blueprints/api.py",
+        "blueprints/api/__init__.py",
         "blueprints/auth.py",
-        "blueprints/dashboard.py",
+        "blueprints/cocina.py",
+        "blueprints/dashboard/__init__.py",
         "blueprints/empleado.py",
-        "blueprints/menu.py",
-        "blueprints/metricas_analitica.py"
+        "blueprints/menu/__init__.py"
       ],
       "contracts": [
         "GET /health"
@@ -72,9 +73,7 @@
       ],
       "related_paths": [
         "blueprints/auth.py",
-        "database.py",
-        "models.py",
-        "services/__init__.py",
+        "container.py",
         "managers/gestor_dashboard.py"
       ],
       "contracts": [
@@ -114,7 +113,7 @@
       ],
       "related_paths": [
         "blueprints/auth.py",
-        "services/__init__.py",
+        "container.py",
         "services/whatsapp_service.py",
         "managers/gestor_dashboard.py"
       ],
@@ -136,69 +135,6 @@
       ]
     },
     {
-      "path": "blueprints/dashboard.py",
-      "role": "controller",
-      "purpose": "Define rutas HTTP para dashboard",
-      "key_symbols": [
-        "index",
-        "monitor",
-        "monitor_datos",
-        "metricas"
-      ],
-      "test_files": [
-        "tests/test_dashboard_sprint3.py"
-      ],
-      "related_paths": [
-        "blueprints/auth.py",
-        "services/__init__.py",
-        "services/whatsapp_service.py",
-        "managers/gestor_dashboard.py"
-      ],
-      "contracts": [
-        "GET /dashboard",
-        "GET /dashboard/monitor",
-        "GET /dashboard/monitor/datos",
-        "GET /dashboard/metricas",
-        "GET /dashboard/pedidos-activos",
-        "GET /dashboard/picking",
-        "GET /dashboard/repartidores",
-        "GET /dashboard/alertas",
-        "GET /dashboard/eventos",
-        "GET /dashboard/mapa",
-        "GET /dashboard/empleados",
-        "GET /dashboard/historial",
-        "GET /dashboard/historial-pedidos",
-        "GET /dashboard/pedido/<int:pedido_id>/detalle",
-        "GET /dashboard/turnos",
-        "GET /dashboard/turnos/hoy",
-        "GET /dashboard/turnos/historial",
-        "GET /dashboard/rendimiento",
-        "GET /dashboard/rendimiento-datos",
-        "GET /dashboard/rendimiento/<int:empleado_id>",
-        "GET /dashboard/estadisticas",
-        "GET /dashboard/estadisticas-datos",
-        "GET /dashboard/turnos/planificacion",
-        "POST /dashboard/turnos/crear",
-        "POST /dashboard/turnos/<int:turno_id>/editar",
-        "POST /dashboard/turnos/<int:turno_id>/cancelar",
-        "POST /dashboard/turnos/<int:turno_id>/eliminar",
-        "POST /dashboard/picking/asignar",
-        "POST /dashboard/picking/<int:picking_id>/reasignar",
-        "POST /dashboard/picking/<int:picking_id>/completar",
-        "POST /dashboard/reparto/asignar",
-        "POST /dashboard/reparto/<int:reparto_id>/salida",
-        "POST /dashboard/reparto/<int:reparto_id>/entregar",
-        "POST /dashboard/pedido/<int:pedido_id>/cancelar",
-        "POST /dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar",
-        "POST /dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/sustituir",
-        "GET /dashboard/productos"
-      ],
-      "open_priority": "seed",
-      "confidence_signals": [
-        "has_route_decorators"
-      ]
-    },
-    {
       "path": "blueprints/productos.py",
       "role": "controller",
       "purpose": "Define rutas HTTP para productos",
@@ -210,7 +146,7 @@
       ],
       "test_files": [],
       "related_paths": [
-        "services/__init__.py",
+        "container.py",
         "managers/gestor_dashboard.py"
       ],
       "contracts": [
@@ -226,28 +162,29 @@
       ]
     },
     {
-      "path": "blueprints/menu.py",
+      "path": "blueprints/cocina.py",
       "role": "controller",
-      "purpose": "Define rutas HTTP para menu",
+      "purpose": "Blueprint para el modo restaurant: PWA de cocina en /cocina",
       "key_symbols": [
-        "quiniela",
-        "mostrar_confirmacion",
-        "mostrar_confirmacion_depago"
+        "index",
+        "manifest",
+        "service_worker",
+        "mis_pedidos"
       ],
-      "test_files": [
-        "tests/test_menu.py"
-      ],
+      "test_files": [],
       "related_paths": [
-        "managers/gestor_redis.py",
-        "schemas/usuario.py",
-        "services/__init__.py",
-        "states.py",
+        "blueprints/auth.py",
+        "container.py",
         "managers/gestor_dashboard.py"
       ],
       "contracts": [
-        "GET /menu/<token>",
-        "GET /confirmacion_pago",
-        "GET /pago_confirmado"
+        "GET /cocina",
+        "GET /cocina/manifest.json",
+        "GET /cocina/sw.js",
+        "GET /cocina/mis-pedidos",
+        "GET /cocina/cola",
+        "POST /cocina/cola/coger/<int:picking_id>",
+        "POST /cocina/preparacion/<int:picking_id>/finalizar"
       ],
       "open_priority": "seed",
       "confidence_signals": [
@@ -269,7 +206,7 @@
       ],
       "related_paths": [
         "blueprints/auth.py",
-        "services/__init__.py",
+        "container.py",
         "services/whatsapp_service.py",
         "managers/gestor_dashboard.py"
       ],
@@ -307,11 +244,11 @@
         "tests/test_webhook.py"
       ],
       "related_paths": [
+        "container.py",
         "controllers/mensajes_registrados.py",
         "controllers/registro.py",
         "managers/gestor_redis.py",
         "schemas/twilio.py",
-        "services/__init__.py",
         "services/whatsapp_service.py"
       ],
       "contracts": [
@@ -374,6 +311,7 @@
         "tests/test_auth.py"
       ],
       "related_paths": [
+        "container.py",
         "database.py",
         "models.py",
         "managers/gestor_dashboard.py"
@@ -389,34 +327,281 @@
       ]
     },
     {
-      "path": "blueprints/api.py",
+      "path": "blueprints/api/tracking.py",
       "role": "controller",
-      "purpose": "Define rutas HTTP para api",
+      "purpose": "Define rutas HTTP para tracking",
       "key_symbols": [
-        "agregar_pedido_confirmacion",
-        "agregar_pedido",
-        "cambiar_estado_a_enlace",
-        "agregar_pedido_efectivo"
+        "register",
+        "seguimiento_pedido"
       ],
-      "test_files": [
-        "tests/test_api_pedido.py"
-      ],
+      "test_files": [],
       "related_paths": [
-        "controllers/pago.py",
+        "container.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /api/seguimiento/<redis_id>"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/api/cart.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para cart",
+      "key_symbols": [
+        "register",
+        "agregar_pedido_confirmacion",
+        "volver_al_menu",
+        "cambiar_estado_a_enlace"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "container.py",
         "controllers/pedido.py",
-        "database.py",
-        "models.py",
-        "services/__init__.py",
-        "states.py"
+        "states.py",
+        "managers/gestor_dashboard.py"
       ],
       "contracts": [
         "POST /api/confirmacion",
-        "POST /api/agregar_pedido",
-        "POST /api/cambiar_estado_a_enlace",
-        "POST /api/agregar_pedido_efectivo",
         "POST /api/volver_al_menu",
-        "GET /api/productos",
-        "GET /api/seguimiento/<redis_id>"
+        "POST /api/cambiar_estado_a_enlace",
+        "GET /api/productos"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/api/payments.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para payments",
+      "key_symbols": [
+        "register",
+        "agregar_pedido",
+        "agregar_pedido_efectivo"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "container.py",
+        "controllers/pago.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "POST /api/agregar_pedido",
+        "POST /api/agregar_pedido_efectivo"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/dashboard/picking.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para picking",
+      "key_symbols": [
+        "register",
+        "picking",
+        "asignar_picker",
+        "reasignar_picker"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/auth.py",
+        "blueprints/dashboard/_common.py",
+        "container.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /dashboard/picking",
+        "POST /dashboard/picking/asignar",
+        "POST /dashboard/picking/<int:picking_id>/reasignar",
+        "POST /dashboard/picking/asignar-cocina",
+        "POST /dashboard/picking/<int:picking_id>/completar"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/dashboard/pedidos.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para pedidos",
+      "key_symbols": [
+        "register",
+        "historial",
+        "historial_pedidos",
+        "pedidos_activos"
+      ],
+      "test_files": [
+        "tests/test_gestor_pedidos.py"
+      ],
+      "related_paths": [
+        "blueprints/auth.py",
+        "blueprints/dashboard/_common.py",
+        "container.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /dashboard/historial",
+        "GET /dashboard/historial-pedidos",
+        "GET /dashboard/pedidos-activos",
+        "GET /dashboard/pedido/<int:pedido_id>/detalle",
+        "POST /dashboard/pedido/<int:pedido_id>/cancelar",
+        "POST /dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar",
+        "POST /dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/sustituir",
+        "GET /dashboard/productos"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/dashboard/reparto.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para reparto",
+      "key_symbols": [
+        "register",
+        "repartidores",
+        "asignar_repartidor",
+        "marcar_salida"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/auth.py",
+        "blueprints/dashboard/_common.py",
+        "container.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /dashboard/repartidores",
+        "POST /dashboard/reparto/asignar",
+        "POST /dashboard/reparto/<int:reparto_id>/salida",
+        "POST /dashboard/reparto/<int:reparto_id>/entregar"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/dashboard/turnos.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para turnos",
+      "key_symbols": [
+        "register",
+        "turnos",
+        "turnos_hoy",
+        "turnos_historial"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/auth.py",
+        "blueprints/dashboard/_common.py",
+        "container.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /dashboard/turnos",
+        "GET /dashboard/turnos/hoy",
+        "GET /dashboard/turnos/historial",
+        "GET /dashboard/turnos/planificacion",
+        "POST /dashboard/turnos/crear",
+        "POST /dashboard/turnos/<int:turno_id>/editar",
+        "POST /dashboard/turnos/<int:turno_id>/cancelar",
+        "POST /dashboard/turnos/<int:turno_id>/eliminar",
+        "GET /dashboard/rendimiento",
+        "GET /dashboard/rendimiento-datos",
+        "GET /dashboard/rendimiento/<int:empleado_id>",
+        "GET /dashboard/estadisticas",
+        "GET /dashboard/estadisticas-datos"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/dashboard/pages.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para pages",
+      "key_symbols": [
+        "register",
+        "index",
+        "monitor",
+        "monitor_datos"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/auth.py",
+        "blueprints/dashboard/_common.py",
+        "container.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /dashboard",
+        "GET /dashboard/monitor",
+        "GET /dashboard/monitor/datos",
+        "GET /dashboard/metricas",
+        "GET /dashboard/alertas",
+        "GET /dashboard/eventos",
+        "GET /dashboard/mapa",
+        "GET /dashboard/empleados"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/menu/navegacion.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para navegacion",
+      "key_symbols": [
+        "register",
+        "quiniela"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/menu/_helpers.py",
+        "container.py",
+        "managers/gestor_redis.py",
+        "schemas/usuario.py",
+        "states.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /menu/<token>"
+      ],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "has_route_decorators"
+      ]
+    },
+    {
+      "path": "blueprints/menu/sesion.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para sesion",
+      "key_symbols": [
+        "register",
+        "mostrar_confirmacion",
+        "mostrar_confirmacion_depago"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/menu/_helpers.py",
+        "container.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [
+        "GET /confirmacion_pago",
+        "GET /pago_confirmado"
       ],
       "open_priority": "seed",
       "confidence_signals": [
@@ -431,9 +616,7 @@
       "test_files": [
         "tests/test_gestor_usuarios.py"
       ],
-      "related_paths": [
-        "managers/gestor_dashboard.py"
-      ],
+      "related_paths": [],
       "contracts": [],
       "open_priority": "review",
       "confidence_signals": [
@@ -449,9 +632,7 @@
         "validate_body"
       ],
       "test_files": [],
-      "related_paths": [
-        "managers/gestor_dashboard.py"
-      ],
+      "related_paths": [],
       "contracts": [],
       "open_priority": "review",
       "confidence_signals": [

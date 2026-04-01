@@ -2,11 +2,11 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy import func
+from sqlalchemy import and_, func
 
 from managers.dashboard._helpers import _iso, _ESTADOS_LISTOS_PARA_PICKING
 from models import (
-    Empleado, Incidencia, PickingItem, PickingPedido, Reparto, Pedido,
+    CheckIn, Empleado, Incidencia, PickingItem, PickingPedido, Reparto, Pedido, Turno,
 )
 from states import EstadoPedido, EstadoPicking, EstadoReparto
 
@@ -28,7 +28,30 @@ class GestorEmpleadosMonitorMixin:
         ]
         estados_activos_reparto = [EstadoReparto.ASIGNADO.value, EstadoReparto.EN_CAMINO.value]
 
-        empleados = s.query(Empleado).filter(Empleado.activo == True).order_by(Empleado.Nombre).all()
+        hoy_date = ahora.date()
+        empleados = (
+            s.query(Empleado)
+            .join(Turno, and_(
+                Turno.empleado_id == Empleado.EmpleadoID,
+                Turno.fecha == hoy_date,
+                Turno.estado != 'cancelado',
+            ))
+            .filter(Empleado.activo == True)
+            .order_by(Empleado.Nombre)
+            .all()
+        )
+
+        ids = [e.EmpleadoID for e in empleados]
+        checked_in_ids = set()
+        if ids:
+            checked_in_ids = {
+                ci.empleado_id
+                for ci in s.query(CheckIn.empleado_id).filter(
+                    CheckIn.empleado_id.in_(ids),
+                    CheckIn.fecha == hoy_date,
+                    CheckIn.fin == None,
+                ).all()
+            }
 
         pickers_data = []
         repartidores_data = []
@@ -150,6 +173,7 @@ class GestorEmpleadosMonitorMixin:
                     "telefono": e.Telefono,
                     "estado": estado,
                     "estado_operativo": e.estado_operativo,
+                    "has_checked_in": e.EmpleadoID in checked_in_ids,
                     "pedidos_activos": n_activos,
                     "completados_hoy": len(completados_hoy),
                     "pickings_activos": pickings_activos_data,
@@ -254,6 +278,7 @@ class GestorEmpleadosMonitorMixin:
                     "telefono": e.Telefono,
                     "estado": estado,
                     "estado_operativo": e.estado_operativo,
+                    "has_checked_in": e.EmpleadoID in checked_in_ids,
                     "pedidos_activos": n_activos,
                     "entregados_hoy": len(entregados_hoy),
                     "entregas_activas": entregas_activas,

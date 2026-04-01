@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panchi Ops</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/features/dashboard/index.css') }}" />
+</head>
+<body class="min-h-screen text-slate-900" x-data="dashboard()" x-init="init()">
+
+  <header class="border-b border-slate-200 bg-white px-4 py-2.5 md:px-6">
+    <div class="w-full">
+      <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between xl:flex-1">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">🍕</span>
+            <span class="font-extrabold text-lg tracking-tight" style="color:var(--brand)">Panchi Ops</span>
+            <span class="hidden sm:inline text-slate-300">|</span>
+            <span class="hidden sm:inline text-sm font-semibold text-slate-500">Centro de Operaciones</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 lg:justify-end">
+            <span class="font-semibold text-slate-700" x-text="horaActual"></span>
+            <span class="hidden md:inline">•</span>
+            <span x-text="pedidosVisibles.length + ' pedidos visibles'"></span>
+            <span class="hidden md:inline">•</span>
+            <span x-text="alertasError.length + ' incidencias cr&iacute;ticas'"></span>
+          </div>
+        </div>
+        <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
+          {% include 'dashboard/_nav.html' %}
+          <div class="flex items-center gap-2">
+            <div class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm text-white shadow-lg shadow-slate-900/10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                <span class="font-semibold">En vivo</span>
+              </div>
+            </div>
+            <button @click="cargarTodo()"
+                    class="rounded-xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              Actualizar
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <div class="space-y-5 px-4 pt-4 pb-4 md:px-6 md:pt-5 md:pb-6">
+    <section class="glass-panel rounded-[24px] p-5">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <label class="relative w-full lg:max-w-xl xl:max-w-2xl">
+          <input x-model.trim="busqueda"
+                 type="text"
+                 placeholder="Buscar pedido, cliente o direcci&oacute;n"
+                 class="w-full rounded-xl border border-slate-200/80 bg-white/90 px-4 py-2.5 pr-10 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100" />
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">⌕</span>
+        </label>
+
+        <div class="flex flex-wrap items-center justify-end gap-2 lg:max-w-[55%]">
+          <template x-for="f in filtrosRapidos" :key="f.id">
+            <button @click="quickFilter = f.id"
+                    class="rounded-full border px-3.5 py-2 text-xs font-semibold transition"
+                    :class="filterClass(f.id)"
+              <span x-text="f.label"></span>
+              <span class="ml-2 rounded-full bg-black/5 px-1.5 py-0.5 text-[11px]" x-text="filterCount(f.id)"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid gap-5 transition-all duration-300"
+             x-data="{ mapaExpandido: false }"
+             :style="mapaExpandido ? 'grid-template-columns: 580px minmax(0,1fr)' : 'grid-template-columns: 320px minmax(0,1fr) 320px'">
+      <aside class="space-y-5">
+        <div class="glass-panel rounded-[24px] overflow-hidden">
+          <div class="flex items-center justify-end border-b border-slate-200/80 px-4 py-3">
+            <button @click="mapaExpandido = !mapaExpandido; $nextTick(() => window.dispatchEvent(new Event('resize')))"
+                    class="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
+              <svg class="w-3.5 h-3.5 transition-transform duration-300" :class="mapaExpandido ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+              </svg>
+              <span x-text="mapaExpandido ? 'Reducir' : 'Ampliar'"></span>
+            </button>
+          </div>
+          <div id="mapa" :class="mapaExpandido ? 'expanded' : ''"></div>
+        </div>
+
+        <div class="glass-panel rounded-[24px] overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200/80">
+            <div>
+              <p class="section-title text-[11px] font-bold uppercase text-slate-500">Acciones Sugeridas</p>
+              <h2 class="mt-0.5 text-lg font-extrabold text-slate-950">Bloqueos del flujo</h2>
+            </div>
+            <span class="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-bold text-white"
+                  x-text="sinPicker.length + sinRepartidor.length"></span>
+          </div>
+
+          <div class="p-4 space-y-2">
+
+            <!-- Sin picker → azul -->
+            <template x-for="pk in sinPicker.slice(0, 3)" :key="'sin-picker-'+pk.pedido_id">
+              <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <!-- icono P -->
+                  <div class="h-8 w-8 shrink-0 rounded-xl bg-sky-500 text-white flex items-center justify-center text-xs font-black">P</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-black text-slate-900">#<span x-text="pk.pedido_id"></span></span>
+                      <span class="rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold text-white">Sin cocinero</span>
+                    </div>
+                  </div>
+                  <button @click="asignarCocinaEquipo(pk.pedido_id)"
+                          class="shrink-0 rounded-xl bg-sky-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-sky-600">
+                    Cocina
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Sin repartidor → naranja -->
+            <template x-for="p in sinRepartidor.slice(0, 3)" :key="'sin-repartidor-'+p.pedido_id">
+              <div class="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <!-- icono R -->
+                  <div class="h-8 w-8 shrink-0 rounded-xl bg-orange-500 text-white flex items-center justify-center text-xs font-black">R</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-black text-slate-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold text-white">Listo</span>
+                    </div>
+                    <p class="mt-0.5 text-[11px] text-orange-700 truncate" x-text="p.direccion"></p>
+                  </div>
+                  <button @click="abrirModalRepartidor(p.pedido_id, p.repartidor_nombre)"
+                          class="shrink-0 rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-orange-600">
+                    Asignar
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <div x-show="sinPicker.length === 0 && sinRepartidor.length === 0"
+                 class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              Flujo despejado — sin bloqueos.
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="space-y-5 min-w-0">
+        <div class="glass-panel rounded-[24px] overflow-hidden">
+          <div class="overflow-y-auto max-h-[760px] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700">
+            <table class="data-table w-full min-w-[780px] text-sm [&_td:not(:last-child)]:border-r [&_td:not(:last-child)]:border-slate-100 [&_th:not(:last-child)]:border-r [&_th:not(:last-child)]:border-slate-800">
+              <thead>
+                <tr>
+                  <th class="bg-slate-950 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.16em] text-slate-400 w-[90px]">#</th>
+                  <th class="bg-slate-950 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Cliente</th>
+                  <th class="bg-slate-950 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Estado · Acci&oacute;n</th>
+                  <th class="bg-slate-950 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Asignaci&oacute;n</th>
+                  <th class="bg-slate-950 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.16em] text-slate-400 w-[90px]">Edad</th>
+                  <th class="bg-slate-950 px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.16em] text-slate-400 w-[90px]">Importe</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <template x-for="p in pedidosVisibles" :key="p.pedido_id">
+                  <tr class="group cursor-pointer transition-all duration-150 hover:bg-sky-50 hover:shadow-[inset_3px_0_0_0_theme(colors.sky.400)] hover:brightness-[0.98]"
+                      :class="p.es_alerta ? 'border-l-4 border-red-500 bg-red-50/30' : p.minutos_en_estado > 30 ? 'border-l-4 border-amber-400 bg-amber-50/20' : 'border-l-4 border-transparent bg-white/60'"
+                      @click="abrirPanel(p)">
+
+                    <!-- #ID -->
+                    <td class="px-4 py-3 align-middle text-center">
+                      <p class="font-mono text-lg font-black tabular-nums text-slate-900 leading-none tracking-tight"
+                         x-text="p.pedido_id"></p>
+                      <p class="mt-1 text-xl leading-none text-center"
+                         x-text="p.forma_pago === 'efectivo' ? '💵' : '💳'"></p>
+                    </td>
+
+                    <!-- Cliente + dirección -->
+                    <td class="px-3 py-3 align-middle max-w-[200px]">
+                      <p class="font-black text-lg text-slate-900 truncate tracking-tight" x-text="p.cliente_nombre"></p>
+                      <p class="mt-0.5 text-[11px] text-slate-400 truncate" x-text="p.direccion_entrega"></p>
+                    </td>
+
+                    <!-- Estado + próxima acción -->
+                    <td class="px-3 py-3 align-middle">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold"
+                            :class="badgePedidoDinamClass(p)"
+                            x-text="badgePedidoDinamLabel(p)"></span>
+                      <p class="mt-1 text-[11px] font-semibold leading-tight"
+                         :class="p.es_alerta ? 'text-red-600' : 'text-slate-400'"
+                         x-text="
+                           p.es_alerta ? '⚠ Requiere atención' :
+                           (p.estado === 'pagado' || p.estado === 'contra_reembolso') ? '→ Aceptar en cocina' :
+                           p.estado === 'en_preparacion' ? '→ Cocina en curso' :
+                           p.estado === 'preparado' ? (p.reparto?.repartidor_nombre ? '→ Listo para salir' : '→ Asignar repartidor') :
+                           p.estado === 'en_reparto' ? '→ En camino al cliente' :
+                           p.estado === 'entregado' ? '✓ Completado' :
+                           p.estado === 'cancelado' ? '✗ Cancelado' : ''
+                         "></p>
+                      <div x-show="!['entregado','cancelado','reembolsado','enlace','enlace2','confirmando-pago'].includes(p.estado)" class="mt-1.5">
+                        <p class="text-xs font-black tabular-nums leading-none"
+                           :class="p.minutos_en_estado > 30 ? 'text-red-600' : p.minutos_en_estado > 20 ? 'text-amber-500' : 'text-slate-700'"
+                           x-text="formatMinutos(p.minutos_en_estado)"></p>
+                        <div class="mt-1 h-1 w-12 overflow-hidden rounded-full bg-slate-100">
+                          <div class="h-1 rounded-full transition-all"
+                               :class="p.minutos_en_estado > 30 ? 'bg-red-500' : p.minutos_en_estado > 20 ? 'bg-amber-400' : 'bg-emerald-400'"
+                               :style="'width:' + Math.min((p.minutos_en_estado / 40) * 100, 100) + '%'"></div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Asignación: picker + repartidor en una celda -->
+                    <td class="px-3 py-3 align-middle">
+                      <div class="space-y-1">
+                        <div class="flex items-center gap-1.5">
+                          <span class="h-4 w-4 rounded-md flex items-center justify-center text-[9px] font-black shrink-0"
+                                :class="p.picking ? 'bg-sky-500 text-white' : 'bg-slate-200 text-slate-400'">P</span>
+                          <span class="truncate max-w-[110px]"
+                                :class="p.picking?.picker_nombre && p.picking?.estado !== 'completado' ? 'text-base font-bold text-slate-900' : (p.reparto?.repartidor_nombre ? 'text-[11px] text-slate-400' : 'text-sm text-slate-300')"
+                                x-text="p.picking?.picker_nombre || 'Sin cocinero'"></span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                          <span class="h-4 w-4 rounded-md flex items-center justify-center text-[9px] font-black shrink-0"
+                                :class="p.reparto?.repartidor_nombre ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-400'">R</span>
+                          <span class="truncate max-w-[110px]"
+                                :class="p.reparto?.repartidor_nombre ? 'text-base font-bold text-slate-900' : 'text-sm text-slate-300'"
+                                x-text="p.reparto?.repartidor_nombre || 'Sin repartidor'"></span>
+                        </div>
+                      </div>
+                    </td>
+
+
+                    <!-- Edad del pedido desde creación -->
+                    <td class="px-3 py-3 align-middle">
+                      <span class="text-sm font-black tabular-nums leading-none"
+                            :class="minutosDesdeCreacion(p) > 60 ? 'text-red-600' : minutosDesdeCreacion(p) > 30 ? 'text-amber-500' : 'text-slate-700'"
+                            x-text="minutosDesde(p.fecha_creacion) || '—'"></span>
+                      <p x-show="minutosDesdeCreacion(p) > 30"
+                         class="mt-1 text-[10px] font-semibold text-red-600 leading-tight">⚠ Atención</p>
+                    </td>
+
+                    <!-- Importe -->
+                    <td class="px-4 py-3 text-right align-middle">
+                      <p class="text-sm font-extrabold tabular-nums text-slate-950"
+                         x-text="p.total.toFixed(2) + '€'"></p>
+                      <p class="mt-0.5 text-[10px] text-slate-400 group-hover:text-sky-500 transition-colors">ver detalle →</p>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="pedidosVisibles.length === 0">
+                  <td colspan="6" class="px-4 py-12 text-center text-sm text-slate-400">
+                    No hay pedidos que coincidan con los filtros actuales.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-[24px] overflow-hidden">
+            <div class="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
+              <div>
+                <p class="section-title text-[11px] font-bold uppercase text-slate-500">Actividad</p>
+                <h3 class="mt-1 text-lg font-extrabold text-slate-950">Cambios recientes</h3>
+              </div>
+              <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600" x-text="eventos.length + ' registros'"></span>
+            </div>
+            <div class="scroll-logs px-5 py-3 space-y-2">
+              <template x-for="e in eventos" :key="e.id">
+                <div class="soft-card rounded-2xl px-4 py-3 text-xs">
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="font-mono text-slate-400" x-text="formatTimestamp(e.timestamp)"></span>
+                    <span class="font-bold text-slate-700" x-text="'#' + e.pedido_id"></span>
+                  </div>
+                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="inline-flex rounded-full px-2 py-0.5 font-semibold" :class="badgePedidoClass(e.estado_anterior)" x-text="e.estado_anterior"></span>
+                    <span class="text-slate-300">→</span>
+                    <span class="inline-flex rounded-full px-2 py-0.5 font-semibold" :class="badgePedidoClass(e.estado_nuevo)" x-text="e.estado_nuevo"></span>
+                  </div>
+                  <p x-show="e.notas" class="mt-2 leading-relaxed text-slate-500" x-text="e.notas"></p>
+                </div>
+              </template>
+              <div x-show="eventos.length === 0" class="px-4 py-10 text-center text-sm text-slate-400">
+                Sin actividad reciente.
+              </div>
+            </div>
+          </div>
+      </main>
+
+      <aside class="space-y-5"
+             x-show="!mapaExpandido"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 translate-x-4"
+             x-transition:enter-end="opacity-100 translate-x-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-x-0"
+             x-transition:leave-end="opacity-0 translate-x-4">
+        <div class="glass-panel rounded-[24px] overflow-hidden">
+
+          <!-- Header -->
+          <div class="flex items-center justify-between border-b border-slate-200/80 px-5 py-4">
+            <div>
+              <h2 class="text-lg font-extrabold text-slate-950">Equipo</h2>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="h-8 w-8 rounded-xl bg-sky-500 flex items-center justify-center">
+                <span class="text-sm font-black text-white" x-text="pickersEquipo.length"></span>
+              </div>
+              <div class="h-8 w-8 rounded-xl bg-orange-500 flex items-center justify-center">
+                <span class="text-sm font-black text-white" x-text="repartidoresEquipo.length"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="max-h-[820px] overflow-y-auto divide-y divide-slate-100">
+
+            <!-- ── PICKERS ── -->
+            <div class="px-4 pt-4 pb-3">
+              <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Cocineros · Preparación</p>
+              <div class="space-y-4">
+                <template x-for="picker in pickersEquipo" :key="'p-'+picker.empleado_id">
+                  <div x-data="{ open: false }">
+                    <!-- Worker row — clic para colapsar -->
+                    <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
+                         :class="open ? 'mb-2' : 'mb-0'"
+                         @click="open = !open">
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black bg-sky-500 text-white">P</div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm font-bold text-slate-900 truncate" x-text="picker.nombre"></span>
+                          <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                :class="picker.carga.score >= 3 ? 'bg-red-100 text-red-700' : picker.carga.score === 2 ? 'bg-amber-100 text-amber-700' : picker.carga.score === 1 ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-700'"
+                                x-text="picker.carga.label"></span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5"
+                           x-text="picker.pedidos_activos + ' pedido(s) activos'"></p>
+                      </div>
+                      <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
+                           :class="open ? '' : '-rotate-90'"
+                           fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </div>
+
+                    <!-- Pickings del picker -->
+                    <div class="ml-11 space-y-1.5"
+                         x-show="open"
+                         x-transition:enter="transition ease-out duration-150"
+                         x-transition:enter-start="opacity-0 -translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-100"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0">
+                      <template x-for="pk in picker.pickings" :key="'pk-'+pk.picking_id">
+                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                          <div class="flex items-center gap-2">
+                            <button @click="filtrarPorPedido(pk.pedido_id)"
+                                    class="text-sm font-black text-slate-900 hover:text-sky-700 shrink-0"
+                                    x-text="'#' + pk.pedido_id"></button>
+                            <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                  :class="badgePickingClass(pk.estado_picking)"
+                                  x-text="pk.estado_picking"></span>
+                          </div>
+                          <div class="mt-2 flex gap-1.5">
+                            <button @click="abrirModalReasignar(pk.picking_id)"
+                                    class="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100">
+                              Reasignar
+                            </button>
+                            <button @click="filtrarPorPedido(pk.pedido_id)"
+                                    class="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-700">
+                              Ver
+                            </button>
+                          </div>
+                        </div>
+                      </template>
+                      <div x-show="picker.pickings.length === 0"
+                           class="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[11px] text-emerald-700">
+                        Sin preparaciones — disponible
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="pickersEquipo.length === 0"
+                     class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-400">
+                  No hay cocineros activos.
+                </div>
+              </div>
+            </div>
+
+            <!-- ── REPARTIDORES ── -->
+            <div class="px-4 pt-4 pb-3">
+              <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Repartidores · Calle</p>
+              <div class="space-y-4">
+                <template x-for="emp in repartidoresEquipo" :key="'r-'+emp.empleado_id">
+                  <div x-data="{ open: false }">
+                    <!-- Worker row — clic para colapsar -->
+                    <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
+                         :class="open ? 'mb-2' : 'mb-0'"
+                         @click="open = !open">
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black bg-orange-500 text-white">R</div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm font-bold text-slate-900 truncate" x-text="emp.nombre"></span>
+                          <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                :class="emp.carga.score >= 3 ? 'bg-red-100 text-red-700' : emp.carga.score === 2 ? 'bg-amber-100 text-amber-700' : emp.carga.score === 1 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'"
+                                x-text="emp.carga.label"></span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5"
+                           x-text="emp.pedidos_activos.length + ' en ruta · ' + emp.entregados_hoy + ' entregados hoy'"></p>
+                      </div>
+                      <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
+                           :class="open ? '' : '-rotate-90'"
+                           fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </div>
+
+                    <!-- Pedidos del repartidor -->
+                    <div class="ml-11 space-y-1.5"
+                         x-show="open"
+                         x-transition:enter="transition ease-out duration-150"
+                         x-transition:enter-start="opacity-0 -translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-100"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0">
+                      <template x-for="r in emp.pedidos_activos" :key="'rp-'+r.reparto_id">
+                        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                          <div class="flex items-center gap-2">
+                            <button @click="abrirPedidoPorId(r.pedido_id)"
+                                    class="text-sm font-black text-slate-900 hover:text-orange-700 shrink-0"
+                                    x-text="'#' + r.pedido_id"></button>
+                            <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                  :class="badgeRepartoClass(r.estado_reparto)"
+                                  x-text="r.estado_reparto === 'asignado' ? 'En tienda' : r.estado_reparto === 'en_camino' ? 'En ruta' : r.estado_reparto"></span>
+                            <span class="ml-auto text-[11px] font-semibold tabular-nums text-slate-700 shrink-0"
+                                  x-text="r.total.toFixed(2) + '€'"></span>
+                          </div>
+                          <p class="mt-1 text-[11px] text-slate-400 truncate" x-text="r.direccion"></p>
+                          <div class="mt-2 flex gap-1.5">
+                            <button @click="abrirModalRepartidor(r.pedido_id, emp.nombre)"
+                                    class="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100">
+                              Cambiar
+                            </button>
+                            <button x-show="r.estado_reparto === 'asignado'"
+                                    @click="marcarSalida(r.reparto_id)"
+                                    class="rounded-lg bg-orange-500 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-orange-600">
+                              Salida
+                            </button>
+                            <button x-show="r.estado_reparto === 'en_camino'"
+                                    @click="abrirPedidoPorId(r.pedido_id)"
+                                    class="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-700">
+                              Ver
+                            </button>
+                          </div>
+                        </div>
+                      </template>
+                      <div x-show="emp.pedidos_activos.length === 0"
+                           class="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[11px] text-emerald-700">
+                        Disponible para nuevas rutas
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="repartidoresEquipo.length === 0"
+                     class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-400">
+                  No hay repartidores activos.
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </aside>
+
+    </section>
+  </div>
+
+  <!-- ======== MODAL ASIGNAR PICKER ======== -->
+  <div x-show="modalPicker.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalPicker.visible = false">
+    <div class="bg-white rounded-2xl shadow-xl w-96 p-6 fade-in">
+      <h3 class="font-bold text-lg mb-1">Asignar picker</h3>
+      <p class="text-gray-500 text-sm mb-4">Pedido #<span x-text="modalPicker.pedido_id"></span></p>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Selecciona un picker</label>
+        <select x-model="modalPicker.empleado_id"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <option value="">— Seleccionar —</option>
+          <template x-for="e in empleadosModal" :key="e.id">
+            <option
+              :value="e.id"
+              :disabled="!e.has_checked_in"
+              x-text="e.nombre + ' (' + e.rol + ')' + (!e.has_checked_in ? ' — sin fichar' : '')">
+            </option>
+          </template>
+        </select>
+      </div>
+
+      <div x-show="modalError" class="text-red-600 text-sm mb-3 bg-red-50 rounded-lg px-3 py-2"
+           x-text="modalError"></div>
+
+      <div class="flex gap-3">
+        <button @click="modalPicker.visible = false"
+                class="flex-1 border border-gray-200 rounded-lg py-2 text-sm hover:bg-gray-50 transition">
+          Cancelar
+        </button>
+        <button @click="confirmarAsignarPicker()"
+                :disabled="!modalPicker.empleado_id"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition">
+          Asignar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== MODAL REASIGNAR PICKER ======== -->
+  <div x-show="modalReasignar.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalReasignar.visible = false">
+    <div class="bg-white rounded-2xl shadow-xl w-96 p-6 fade-in">
+      <h3 class="font-bold text-lg mb-1">Reasignar picker</h3>
+      <p class="text-gray-500 text-sm mb-4">Picking #<span x-text="modalReasignar.picking_id"></span></p>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Selecciona el nuevo picker</label>
+        <select x-model="modalReasignar.empleado_id"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          <option value="">— Seleccionar —</option>
+          <template x-for="e in empleadosModal" :key="e.id">
+            <option
+              :value="e.id"
+              :disabled="!e.has_checked_in"
+              x-text="e.nombre + ' (' + e.rol + ')' + (!e.has_checked_in ? ' — sin fichar' : '')">
+            </option>
+          </template>
+        </select>
+      </div>
+
+      <div x-show="modalError" class="text-red-600 text-sm mb-3 bg-red-50 rounded-lg px-3 py-2"
+           x-text="modalError"></div>
+
+      <div class="flex gap-3">
+        <button @click="modalReasignar.visible = false"
+                class="flex-1 border border-gray-200 rounded-lg py-2 text-sm hover:bg-gray-50 transition">
+          Cancelar
+        </button>
+        <button @click="confirmarReasignarPicker()"
+                :disabled="!modalReasignar.empleado_id"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition">
+          Reasignar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== MODAL ASIGNAR REPARTIDOR ======== -->
+  <div x-show="modalRepartidor.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalRepartidor.visible = false">
+    <div class="bg-white rounded-2xl shadow-xl w-96 p-6 fade-in">
+      <h3 class="font-bold text-lg mb-1" x-text="modalRepartidor.repartidor_actual ? 'Reasignar repartidor' : 'Asignar repartidor'"></h3>
+      <p class="text-gray-500 text-sm mb-1">Pedido #<span x-text="modalRepartidor.pedido_id"></span></p>
+      <p x-show="modalRepartidor.repartidor_actual" class="text-amber-600 text-xs mb-3 bg-amber-50 rounded px-2 py-1">
+        ⚠ Repartidor actual: <span class="font-semibold" x-text="modalRepartidor.repartidor_actual"></span>
+      </p>
+
+      <div class="mb-4" :class="modalRepartidor.repartidor_actual ? '' : 'mt-3'">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Selecciona un repartidor</label>
+        <select x-model="modalRepartidor.empleado_id"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+          <option value="">— Seleccionar —</option>
+          <template x-for="e in empleadosModal" :key="e.id">
+            <option
+              :value="e.id"
+              :disabled="!e.has_checked_in"
+              x-text="e.nombre + ' (' + e.rol + ')' + (!e.has_checked_in ? ' — sin fichar' : '')">
+            </option>
+          </template>
+        </select>
+      </div>
+
+      <div x-show="modalError" class="text-red-600 text-sm mb-3 bg-red-50 rounded-lg px-3 py-2"
+           x-text="modalError"></div>
+
+      <div class="flex gap-3">
+        <button @click="modalRepartidor.visible = false"
+                class="flex-1 border border-gray-200 rounded-lg py-2 text-sm hover:bg-gray-50 transition">
+          Cancelar
+        </button>
+        <button @click="confirmarAsignarRepartidor()"
+                :disabled="!modalRepartidor.empleado_id"
+                class="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white rounded-lg py-2 text-sm font-medium transition">
+          Asignar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== PANEL PEDIDO ======== -->
+  <div x-show="panel.visible" x-cloak
+       class="fixed inset-0 z-40 flex justify-end"
+       @keydown.escape.window="cerrarPanel()">
+
+    <div class="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]" @click="cerrarPanel()"></div>
+
+    <div class="relative w-full max-w-[32rem] bg-slate-50 shadow-2xl flex flex-col h-full overflow-y-auto"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="translate-x-full opacity-0"
+         x-transition:enter-end="translate-x-0 opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="translate-x-0 opacity-100"
+         x-transition:leave-end="translate-x-full opacity-0">
+
+      <div class="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/95 backdrop-blur px-5 py-4">
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-3xl font-black tracking-tight text-slate-950">#<span x-text="panel.pedido?.pedido_id"></span></span>
+              <span class="rounded-full px-2.5 py-1 text-xs font-bold"
+                    :class="panelPrioridadClases(panelMinutos(panel.pedido))"
+                    x-show="panel.pedido?.fecha_creacion"
+                    x-text="panelMinutosTexto(panelMinutos(panel.pedido))"></span>
+              <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                    :class="badgePedidoClass(panel.pedido?.estado)"
+                    x-text="estadoLabel(panel.pedido?.estado)"></span>
+            </div>
+            <p class="mt-2 text-sm font-semibold" :class="panelActionTone(panel.pedido)" x-text="panelActionSummary(panel.pedido)"></p>
+            <p class="mt-1 text-xs text-slate-500">Usa esta ficha como punto de decisión: cliente, tiempos, siguiente paso y trazabilidad en una sola vista.</p>
+          </div>
+          <button @click="cerrarPanel()"
+                  class="h-10 w-10 rounded-2xl border border-slate-200 bg-white text-2xl leading-none text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">×</button>
+        </div>
+      </div>
+
+      <div class="p-5 space-y-5">
+        <section class="rounded-[24px] bg-slate-950 px-4 py-4 text-white shadow-lg shadow-slate-900/10">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/10 px-3 py-3">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-slate-300">Cliente</p>
+              <p class="mt-2 font-bold text-white" x-text="panel.pedido?.cliente_nombre || '—'"></p>
+              <a :href="'tel:' + panel.pedido?.cliente_telefono"
+                 class="mt-1 inline-flex text-xs text-emerald-300 hover:text-emerald-200"
+                 x-show="panel.pedido?.cliente_telefono"
+                 x-text="panel.pedido?.cliente_telefono"></a>
+            </div>
+            <div class="rounded-2xl bg-white/10 px-3 py-3">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-slate-300">Importe</p>
+              <p class="mt-2 text-2xl font-black tabular-nums text-white" x-text="panel.pedido?.total?.toFixed(2) + '€'"></p>
+              <p class="mt-1 text-xs text-slate-300" x-text="panel.pedido?.forma_pago === 'efectivo' ? 'Cobro en entrega' : 'Pago online confirmado'"></p>
+            </div>
+            <div class="rounded-2xl bg-white/10 px-3 py-3">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-slate-300">Tiempo</p>
+              <p class="mt-2 text-2xl font-black tabular-nums text-white" x-text="formatMinutos(panel.pedido?.minutos_en_estado)"></p>
+              <p class="mt-1 text-xs" :class="(panel.pedido?.minutos_en_estado || 0) > 30 ? 'text-amber-300' : 'text-slate-300'">en estado actual</p>
+            </div>
+            <div class="rounded-2xl bg-white/10 px-3 py-3">
+              <p class="text-[11px] uppercase tracking-[0.18em] text-slate-300">Entrega</p>
+              <p class="mt-2 text-sm font-bold text-white" x-text="horaCorta(panel.pedido?.fecha_creacion) || '—'"></p>
+              <p class="mt-1 text-xs text-slate-300">creado / seguimiento activo</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Acción recomendada</p>
+              <h3 class="mt-1 text-lg font-extrabold text-slate-950" x-text="panelActionTitle(panel.pedido)"></h3>
+              <p class="mt-1 text-sm text-slate-500" x-text="panelActionSummary(panel.pedido)"></p>
+            </div>
+            <span class="rounded-full px-2.5 py-1 text-[11px] font-bold"
+                  :class="panelActionBadgeClass(panel.pedido)"
+                  x-text="panelActionBadgeLabel(panel.pedido)"></span>
+          </div>
+
+          <div class="mt-4 grid gap-2">
+            <button x-show="!panel.pedido?.picking && ['pagado','contra_reembolso'].includes(panel.pedido?.estado)"
+                    @click="asignarCocinaEquipo(panel.pedido.pedido_id)"
+                    class="w-full rounded-2xl bg-sky-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-800">
+              Aceptar en cocina
+            </button>
+            <button x-show="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado' && !panel.pedido?.picking?.picker_nombre"
+                    @click="asignarCocinaEquipo(panel.pedido.pedido_id)"
+                    class="w-full rounded-2xl bg-sky-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-800">
+              Aceptar en cocina
+            </button>
+            <button x-show="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado' && panel.pedido?.picking?.picker_nombre"
+                    @click="completarPicking(panel.pedido.picking.id)"
+                    class="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">
+              Listo
+            </button>
+            <button x-show="(!panel.pedido?.reparto || !panel.pedido?.reparto?.repartidor_nombre) && panel.pedido?.estado === 'preparado'"
+                    @click="abrirModalRepartidor(panel.pedido.pedido_id, panel.pedido?.reparto?.repartidor_nombre)"
+                    class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600">
+              Asignar repartidor
+            </button>
+            <button x-show="panel.pedido?.reparto?.estado === 'asignado'"
+                    @click="marcarSalida(panel.pedido.reparto.id)"
+                    class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600">
+              Marcar en camino
+            </button>
+            <button x-show="panel.pedido?.reparto?.estado === 'en_camino'"
+                    @click="marcarEntregado(panel.pedido.reparto.id)"
+                    class="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">
+              Marcar entregado
+            </button>
+          </div>
+        </section>
+
+        <section class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Cliente y entrega</p>
+              <h3 class="mt-1 text-lg font-extrabold text-slate-950">Información práctica</h3>
+            </div>
+            <a :href="'tel:' + panel.pedido?.cliente_telefono"
+               x-show="panel.pedido?.cliente_telefono"
+               class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
+              Llamar cliente
+            </a>
+          </div>
+          <div class="mt-4 space-y-3 text-sm">
+            <div class="rounded-2xl bg-slate-50 px-4 py-3">
+              <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Nombre</p>
+              <p class="mt-1 font-semibold text-slate-900" x-text="panel.pedido?.cliente_nombre"></p>
+            </div>
+            <div class="rounded-2xl bg-slate-50 px-4 py-3">
+              <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Dirección</p>
+              <p class="mt-1 leading-relaxed text-slate-700" x-text="panel.pedido?.direccion_entrega"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Pago</p>
+                <p class="mt-1 font-semibold text-slate-900" x-text="panelPaymentLabel(panel.pedido)"></p>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">SLA actual</p>
+                <p class="mt-1 font-semibold" :class="(panel.pedido?.minutos_en_estado || 0) > 30 ? 'text-red-600' : 'text-slate-900'" x-text="formatMinutos(panel.pedido?.minutos_en_estado)"></p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+          <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Timeline</p>
+          <h3 class="mt-1 text-lg font-extrabold text-slate-950">Trazabilidad del pedido</h3>
+          <div class="mt-4 space-y-3">
+            <template x-for="step in panelTimeline(panel.pedido)" :key="step.key">
+              <div class="flex gap-3">
+                <div class="flex flex-col items-center">
+                  <span class="mt-0.5 h-3 w-3 rounded-full"
+                        :class="step.done ? step.doneClass : 'bg-slate-200'"></span>
+                  <span class="mt-1 h-full w-px bg-slate-200" x-show="!step.last"></span>
+                </div>
+                <div class="flex-1 rounded-2xl px-4 py-3"
+                     :class="step.done ? 'bg-slate-50 border border-slate-200' : 'bg-white border border-dashed border-slate-200'">
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="font-semibold text-slate-900" x-text="step.label"></p>
+                    <span class="text-xs font-medium text-slate-400" x-text="step.time || 'pendiente'"></span>
+                  </div>
+                  <p class="mt-1 text-xs text-slate-500" x-text="step.detail"></p>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <section class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Productos</p>
+              <h3 class="mt-1 text-lg font-extrabold text-slate-950">Contenido del pedido</h3>
+            </div>
+            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600" x-text="(panel.pedido?.items || []).length + ' líneas'"></span>
+          </div>
+          <div class="mt-4 space-y-2">
+            <template x-for="item in panel.pedido?.items" :key="item.detalle_id">
+              <div class="group rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex min-w-0 items-center gap-3">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-xs font-black text-slate-700 shadow-sm"
+                          x-text="item.cantidad"></span>
+                    <div class="min-w-0">
+                      <p class="truncate font-semibold text-slate-900" x-text="item.nombre"></p>
+                      <p class="mt-0.5 text-xs text-slate-400" x-text="'Unitario: ' + item.precio_unitario.toFixed(2) + '€'"></p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-slate-700" x-text="item.subtotal.toFixed(2) + '€'"></span>
+                    <template x-if="puedeModificarItems(panel.pedido?.estado)">
+                      <div class="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button @click="abrirSustituir(item)"
+                                title="Sustituir producto"
+                                class="h-8 w-8 rounded-xl bg-sky-50 text-sky-700 transition hover:bg-sky-100">⇄</button>
+                        <button @click="eliminarItem(item)"
+                                title="Eliminar item"
+                                class="h-8 w-8 rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100">✕</button>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="mt-4 flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white">
+            <span class="text-sm font-semibold">Total del pedido</span>
+            <span class="text-xl font-black tabular-nums" x-text="panel.pedido?.total?.toFixed(2) + '€'"></span>
+          </div>
+        </section>
+
+        <section class="grid gap-5 md:grid-cols-2">
+          <div class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Cocina</p>
+                <h3 class="mt-1 text-lg font-extrabold text-slate-950">Estado de preparación</h3>
+              </div>
+              <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                    :class="panel.pedido?.picking ? badgePickingClass(panel.pedido?.picking?.estado) : 'bg-slate-100 text-slate-500'"
+                    x-text="panel.pedido?.picking ? panel.pedido?.picking?.estado : 'sin asignar'"></span>
+            </div>
+            <div class="mt-4 space-y-3 text-sm">
+              <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.picking?.picker_nombre">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Responsable</p>
+                <p class="mt-1 font-semibold text-slate-900" x-text="panel.pedido?.picking?.picker_nombre"></p>
+              </div>
+              <div class="rounded-2xl bg-sky-50 border border-sky-100 px-4 py-3" x-show="panel.pedido?.picking?.notas">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-400">Equipo cocina</p>
+                <p class="mt-1 text-sm text-sky-800" x-text="panel.pedido?.picking?.notas"></p>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.picking?.asignado_en">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Asignado</p>
+                <p class="mt-1 text-slate-700" x-text="horaCorta(panel.pedido?.picking?.asignado_en) + ' · hace ' + minutosDesde(panel.pedido?.picking?.asignado_en)"></p>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.picking?.iniciado_en">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Inicio preparación</p>
+                <p class="mt-1 text-slate-700" x-text="horaCorta(panel.pedido?.picking?.iniciado_en) + ' · lleva ' + minutosDesde(panel.pedido?.picking?.iniciado_en)"></p>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.picking?.completado_en">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Completado</p>
+                <p class="mt-1 text-slate-700" x-text="horaCorta(panel.pedido?.picking?.completado_en)"></p>
+              </div>
+              <div x-show="!panel.pedido?.picking" class="rounded-2xl border border-dashed border-slate-200 px-4 py-4 text-sm text-slate-400">
+                Pendiente de aceptar en cocina.
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Reparto</p>
+                <h3 class="mt-1 text-lg font-extrabold text-slate-950">Estado de entrega</h3>
+              </div>
+              <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                    :class="panel.pedido?.reparto ? badgeRepartoClass(panel.pedido?.reparto?.estado) : 'bg-slate-100 text-slate-500'"
+                    x-text="panel.pedido?.reparto ? panelDeliveryLabel(panel.pedido?.reparto?.estado) : 'sin reparto'"></span>
+            </div>
+            <div class="mt-4 space-y-3 text-sm">
+              <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.reparto?.repartidor_nombre">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Responsable</p>
+                <p class="mt-1 font-semibold text-slate-900" x-text="panel.pedido?.reparto?.repartidor_nombre"></p>
+                <a :href="'tel:' + panel.pedido.reparto.repartidor_telefono"
+                   x-show="panel.pedido?.reparto?.repartidor_telefono"
+                   class="mt-1 inline-flex text-xs text-sky-700 hover:text-sky-800"
+                   x-text="panel.pedido.reparto.repartidor_telefono"></a>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.reparto?.asignado_en">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Asignado</p>
+                <p class="mt-1 text-slate-700" x-text="horaCorta(panel.pedido?.reparto?.asignado_en) + ' · hace ' + minutosDesde(panel.pedido?.reparto?.asignado_en)"></p>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.reparto?.hora_salida">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Salida</p>
+                <p class="mt-1 text-slate-700" x-text="horaCorta(panel.pedido?.reparto?.hora_salida) + ' · lleva ' + minutosDesde(panel.pedido?.reparto?.hora_salida)"></p>
+              </div>
+              <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.reparto?.hora_estimada_entrega">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Llegada estimada</p>
+                <p class="mt-1 text-slate-700" x-text="horaCorta(panel.pedido?.reparto?.hora_estimada_entrega)"></p>
+              </div>
+              <div x-show="!panel.pedido?.reparto" class="rounded-2xl border border-dashed border-slate-200 px-4 py-4 text-sm text-slate-400">
+                Aún no hay reparto creado para este pedido.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <template x-if="puedeCancel(panel.pedido?.estado)">
+          <section class="rounded-[24px] border border-red-200 bg-white p-4 shadow-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-red-400">Acción sensible</p>
+                <h3 class="mt-1 text-lg font-extrabold text-slate-950">Cancelar pedido</h3>
+                <p class="mt-1 text-sm text-slate-500">Úsalo solo cuando el pedido no pueda seguir el flujo operativo normal.</p>
+              </div>
+              <button @click="abrirCancelacion()"
+                      class="rounded-2xl border border-red-300 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50">
+                Cancelar
+              </button>
+            </div>
+          </section>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== MODAL CANCELAR PEDIDO ======== -->
+  <div x-show="modalCancelacion.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalCancelacion.visible = false">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+      <h3 class="font-bold text-lg mb-1 text-red-700">Cancelar pedido #<span x-text="panel.pedido?.pedido_id"></span></h3>
+      <p class="text-gray-500 text-sm mb-4">Esta acción no se puede deshacer. Selecciona el motivo.</p>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Motivo de cancelación</label>
+        <select x-model="modalCancelacion.motivo"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none">
+          <option value="">— Selecciona un motivo —</option>
+          <option value="cliente_cancelo">El cliente canceló</option>
+          <option value="falta_stock">Falta de stock</option>
+          <option value="direccion_incorrecta">Dirección incorrecta</option>
+          <option value="cliente_no_responde">Cliente no responde</option>
+          <option value="pedido_duplicado">Pedido duplicado</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <p x-show="modalError" class="text-red-600 text-sm mb-3" x-text="modalError"></p>
+      <div class="flex gap-3">
+        <button @click="modalCancelacion.visible = false"
+                class="flex-1 border border-gray-300 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition">
+          Volver
+        </button>
+        <button @click="confirmarCancelacion()"
+                :disabled="!modalCancelacion.motivo"
+                class="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95">
+          Confirmar cancelación
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== MODAL SUSTITUIR PRODUCTO ======== -->
+  <div x-show="modalSustituir.visible" x-cloak
+       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+       @click.self="modalSustituir.visible = false">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+      <h3 class="font-bold text-lg mb-1">Sustituir producto</h3>
+      <p class="text-sm text-gray-500 mb-4">
+        Sustituyendo: <strong x-text="modalSustituir.item?.nombre"></strong>
+        (×<span x-text="modalSustituir.item?.cantidad"></span>)
+      </p>
+      <!-- Quantity selector — only shown when item has more than 1 unit -->
+      <template x-if="modalSustituir.item?.cantidad > 1">
+        <div class="mb-3 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+          <span class="text-sm text-amber-800 flex-1">¿Cuántas unidades sustituir?</span>
+          <div class="flex items-center gap-2">
+            <button @click="if(modalSustituir.cantidadSustituir > 1) modalSustituir.cantidadSustituir--"
+                    class="w-7 h-7 rounded-lg bg-white border border-amber-300 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-100 transition">−</button>
+            <span class="w-6 text-center font-bold text-amber-900 text-sm" x-text="modalSustituir.cantidadSustituir"></span>
+            <button @click="if(modalSustituir.cantidadSustituir < modalSustituir.item.cantidad) modalSustituir.cantidadSustituir++"
+                    class="w-7 h-7 rounded-lg bg-white border border-amber-300 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-100 transition">+</button>
+          </div>
+          <span class="text-xs text-amber-600">de <span x-text="modalSustituir.item?.cantidad"></span></span>
+        </div>
+      </template>
+      <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Buscar producto sustituto</label>
+        <div class="flex gap-2">
+          <input type="text" x-model="modalSustituir.busqueda"
+                 @input.debounce.400ms="buscarProductosSustitucion()"
+                 placeholder="Nombre del producto..."
+                 class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+        </div>
+      </div>
+      <div class="mb-3 max-h-48 overflow-y-auto border border-gray-100 rounded-lg">
+        <template x-if="modalSustituir.productos.length === 0">
+          <p class="text-xs text-gray-400 p-3 text-center">
+            <span x-text="modalSustituir.busqueda ? 'Sin resultados' : 'Escribe para buscar'"></span>
+          </p>
+        </template>
+        <template x-for="p in modalSustituir.productos" :key="p.id">
+          <button @click="modalSustituir.productoSeleccionado = p"
+                  :class="modalSustituir.productoSeleccionado?.id === p.id
+                    ? 'bg-blue-50 border-blue-400 text-blue-800'
+                    : 'hover:bg-gray-50 border-transparent text-gray-700'"
+                  class="w-full text-left px-3 py-2 border-l-4 text-sm transition">
+            <div class="font-medium" x-text="p.nombre"></div>
+            <div class="text-xs text-gray-400">
+              <span x-text="p.precio.toFixed(2) + '€'"></span>
+              · Stock: <span x-text="p.stock"></span>
+            </div>
+          </button>
+        </template>
+      </div>
+      <template x-if="modalSustituir.productoSeleccionado">
+        <div class="mb-3 text-sm bg-blue-50 rounded-lg p-3">
+          <div class="font-medium text-blue-800" x-text="'✓ ' + modalSustituir.productoSeleccionado.nombre"></div>
+          <div class="text-xs text-blue-600 mt-0.5 space-y-0.5">
+            <div>×<span x-text="modalSustituir.cantidadSustituir"></span>
+              → <strong x-text="(modalSustituir.productoSeleccionado.precio * modalSustituir.cantidadSustituir).toFixed(2) + '€'"></strong>
+            </div>
+            <template x-if="modalSustituir.cantidadSustituir < modalSustituir.item?.cantidad">
+              <div class="text-amber-600">
+                Quedan ×<span x-text="modalSustituir.item.cantidad - modalSustituir.cantidadSustituir"></span>
+                <span x-text="modalSustituir.item.nombre"></span> en el pedido
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+      <p x-show="modalError" class="text-red-600 text-sm mb-3" x-text="modalError"></p>
+      <div class="flex gap-3">
+        <button @click="modalSustituir.visible = false"
+                class="flex-1 border border-gray-300 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition">
+          Cancelar
+        </button>
+        <button @click="confirmarSustitucion()"
+                :disabled="!modalSustituir.productoSeleccionado"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95">
+          Confirmar sustitución
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== TOAST ======== -->
+  <div x-show="toast.visible" x-cloak
+       class="fixed bottom-6 right-6 z-50 fade-in"
+       x-transition>
+    <div class="rounded-xl px-5 py-3 shadow-xl text-sm font-medium text-white flex items-center gap-2"
+         :class="toast.error ? 'bg-red-600' : 'bg-gray-900'">
+      <span x-text="toast.error ? '✗' : '✓'"></span>
+      <span x-text="toast.msg"></span>
+    </div>
+  </div>
+
+  <!-- ======== JAVASCRIPT ======== -->
+  <script src="{{ url_for('static', filename='js/features/dashboard/index_restaurant.js') }}"></script>
+</body>
+</html>

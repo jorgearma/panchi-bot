@@ -2,6 +2,21 @@
   "domain": "ui",
   "candidates": [
     {
+      "path": "landing-page/index.html",
+      "role": "template",
+      "purpose": "Plantilla HTML de index",
+      "key_symbols": [],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_template"
+      ]
+    },
+    {
       "path": "templates/quiniela.html",
       "role": "template",
       "purpose": "Plantilla HTML de quiniela",
@@ -62,9 +77,56 @@
       ]
     },
     {
+      "path": "templates/_base/base.html",
+      "role": "template",
+      "purpose": "Plantilla HTML de base",
+      "key_symbols": [],
+      "test_files": [
+        "tests/test_database.py"
+      ],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_template"
+      ]
+    },
+    {
+      "path": "templates/_base/base_tailwind.html",
+      "role": "template",
+      "purpose": "Plantilla HTML de tailwind",
+      "key_symbols": [],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_template"
+      ]
+    },
+    {
       "path": "templates/auth/login.html",
       "role": "template",
       "purpose": "Plantilla HTML de login",
+      "key_symbols": [],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_template"
+      ]
+    },
+    {
+      "path": "templates/cocina/index.html",
+      "role": "template",
+      "purpose": "Plantilla HTML de index",
       "key_symbols": [],
       "test_files": [],
       "related_paths": [
@@ -167,9 +229,37 @@
       ]
     },
     {
+      "path": "templates/dashboard/index_restaurant.html",
+      "role": "template",
+      "purpose": "Plantilla HTML de restaurant",
+      "key_symbols": [],
+      "test_files": [],
+      "related_paths": [],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_template"
+      ]
+    },
+    {
       "path": "templates/dashboard/_nav.html",
       "role": "template",
       "purpose": "Plantilla HTML de nav",
+      "key_symbols": [],
+      "test_files": [],
+      "related_paths": [
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "seed",
+      "confidence_signals": [
+        "is_template"
+      ]
+    },
+    {
+      "path": "templates/dashboard/_base_dashboard.html",
+      "role": "template",
+      "purpose": "Plantilla HTML de dashboard",
       "key_symbols": [],
       "test_files": [],
       "related_paths": [
@@ -303,6 +393,29 @@
       "open_priority": "seed",
       "confidence_signals": [
         "is_template"
+      ]
+    },
+    {
+      "path": "blueprints/dashboard/pages.py",
+      "role": "controller",
+      "purpose": "Define rutas HTTP para pages",
+      "key_symbols": [
+        "register",
+        "index",
+        "monitor",
+        "monitor_datos"
+      ],
+      "test_files": [],
+      "related_paths": [
+        "blueprints/auth.py",
+        "blueprints/dashboard/_common.py",
+        "container.py",
+        "managers/gestor_dashboard.py"
+      ],
+      "contracts": [],
+      "open_priority": "review",
+      "confidence_signals": [
+        "is_view_router"
       ]
     }
   ]
