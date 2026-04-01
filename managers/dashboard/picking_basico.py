@@ -1,6 +1,7 @@
 """Picking — operaciones de consulta: listados y búsquedas."""
 import logging
 
+import config as app_config
 from managers.dashboard._helpers import (
     _iso,
     _ESTADOS_LISTOS_PARA_PICKING,
@@ -222,10 +223,12 @@ class GestorPickingBasicoMixin:
 
             pendientes = sum(1 for i in items_data if i["estado"] == "pendiente")
             listos = len(items_data) - pendientes
+            es_restaurant = app_config.APP_MODE == 'restaurant'
             resultado.append({
                 "picking_id": pk.id,
                 "pedido_id": pk.pedido_id,
                 "estado": pk.estado,
+                "modo": app_config.APP_MODE,
                 "direccion_entrega": pk.pedido.DireccionEntrega if pk.pedido else "—",
                 "cliente_nombre": pk.pedido.cliente.nombre if pk.pedido and pk.pedido.cliente else "—",
                 "cliente_telefono": pk.pedido.TelefonoEntrega if pk.pedido else None,
@@ -235,8 +238,8 @@ class GestorPickingBasicoMixin:
                 "items_total": len(items_data),
                 "items_listos": listos,
                 "items_pendientes": pendientes,
-                "picking_completo": pendientes == 0 and len(items_data) > 0,
-                "listo_para_finalizar": pendientes == 0,
+                "picking_completo": es_restaurant or (pendientes == 0 and len(items_data) > 0),
+                "listo_para_finalizar": es_restaurant or pendientes == 0,
             })
         return resultado
 

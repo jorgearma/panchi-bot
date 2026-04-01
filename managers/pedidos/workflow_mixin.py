@@ -91,7 +91,11 @@ class GestorPedidosWorkflowMixin:
             raise
 
     def _asegurar_picking_si_procede(self, pedido, nuevo_estado) -> None:
-        """Crea un PickingPedido pendiente al entrar en la cola operativa inicial."""
+        """Crea un PickingPedido pendiente al entrar en la cola operativa inicial.
+
+        En modo warehouse crea además un PickingItem por cada línea del pedido.
+        En modo restaurant no crea items — la preparación se marca lista directamente.
+        """
         if nuevo_estado not in {
             EstadoPedido.PAGADO,
             EstadoPedido.CONTRA_REEMBOLSO,
@@ -106,6 +110,9 @@ class GestorPedidosWorkflowMixin:
         if picking_existente:
             return
 
+        import config as app_config
+        modo = app_config.APP_MODE
+
         picking = PickingPedido(
             pedido_id=pedido.PedidoID,
             estado=EstadoPicking.PENDIENTE.value,
@@ -113,14 +120,15 @@ class GestorPedidosWorkflowMixin:
         self.session.add(picking)
         self.session.flush()
 
-        for detalle in pedido.detalles:
-            self.session.add(
-                PickingItem(
-                    picking_id=picking.id,
-                    pedido_detalle_id=detalle.DetalleID,
-                    estado=EstadoPicking.PENDIENTE.value,
+        if modo == 'warehouse':
+            for detalle in pedido.detalles:
+                self.session.add(
+                    PickingItem(
+                        picking_id=picking.id,
+                        pedido_detalle_id=detalle.DetalleID,
+                        estado=EstadoPicking.PENDIENTE.value,
+                    )
                 )
-            )
 
     def guardar_forma_pago(self, pedido_id, forma_pago: str):
         """Guarda la forma de pago elegida en el pedido."""

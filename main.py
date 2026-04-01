@@ -21,6 +21,11 @@ def create_app(config: dict = None) -> Flask:
         raise EnvironmentError(
             f"WHATSAPP_PROVIDER '{_provider}' no es válido. Valores aceptados: 'twilio', 'meta'"
         )
+    _app_mode = app_config.APP_MODE
+    if _app_mode not in ('warehouse', 'restaurant'):
+        raise EnvironmentError(
+            f"APP_MODE '{_app_mode}' no es válido. Valores aceptados: 'warehouse', 'restaurant'"
+        )
     if _provider == 'meta':
         _VARS_OBLIGATORIAS = _VARS_COMUNES + [
             'META_ACCESS_TOKEN', 'META_PHONE_NUMBER_ID', 'META_APP_SECRET', 'META_VERIFY_TOKEN',
@@ -70,6 +75,7 @@ def create_app(config: dict = None) -> Flask:
     from blueprints.api import blueprint_api
     from blueprints.dashboard import blueprint_dashboard
     from blueprints.picker import blueprint_picker
+    from blueprints.cocina import blueprint_cocina
     from blueprints.repartidor import blueprint_repartidor
     from blueprints.productos import blueprint_productos
     from blueprints.empleado import blueprint_empleado
@@ -82,11 +88,16 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(blueprint_api)
     app.register_blueprint(blueprint_dashboard)
     app.register_blueprint(blueprint_picker)
+    app.register_blueprint(blueprint_cocina)
     app.register_blueprint(blueprint_repartidor)
     app.register_blueprint(blueprint_productos)
     app.register_blueprint(blueprint_empleado)
     app.register_blueprint(blueprint_metricas_operacion)
     app.register_blueprint(blueprint_metricas_analitica)
+
+    @app.context_processor
+    def inject_app_mode():
+        return {'app_mode': app_config.APP_MODE}
 
     @app.route('/health')
     def health():
