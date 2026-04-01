@@ -136,8 +136,7 @@ def webhook_monei():
     importe_euros = importe_cents / 100
 
     if data.get('object', {}).get('status') == 'SUCCEEDED' or data.get('type') == 'charge.succeeded':
-        gestor_pedidos.actualizar_estado(order_id, EstadoPedido.PAGADO)
-        gestor_pedidos.registrar_pago(
+        gestor_pedidos.procesar_pago_confirmado(
             pedido_id=order_id,
             importe_euros=importe_euros,
             referencia_externa=data.get('object', {}).get('id'),

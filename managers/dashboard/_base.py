@@ -33,10 +33,13 @@ class GestorDashboardBase:
             from database import SessionLocal
             s = SessionLocal()
             try:
-                empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
-                if empleado and empleado.estado_operativo not in estados_protegidos:
-                    empleado.estado_operativo = nuevo_estado
-                    s.commit()
+                # UPDATE atómico con WHERE para evitar race condition:
+                # si el empleado cambió a en_pausa/desconectado entre el read y el write, no se sobreescribe.
+                s.query(Empleado).filter(
+                    Empleado.EmpleadoID == empleado_id,
+                    Empleado.estado_operativo.notin_(estados_protegidos),
+                ).update({'estado_operativo': nuevo_estado}, synchronize_session=False)
+                s.commit()
             except Exception as e:
                 logger.warning("No se pudo actualizar estado_operativo de empleado %s: %s", empleado_id, e)
                 s.rollback()

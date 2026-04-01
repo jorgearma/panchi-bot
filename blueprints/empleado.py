@@ -4,8 +4,6 @@ from datetime import date, timedelta
 from flask import Blueprint, jsonify, redirect, render_template, request, session
 
 from blueprints.auth import requiere_autenticacion, requiere_rol
-from database import get_db
-from models import Empleado as _Empleado
 from container import gestor_empleado
 
 logger = logging.getLogger(__name__)
@@ -107,8 +105,7 @@ def capacidades():
     empleado_id = session.get('empleado_id')
     try:
         caps = gestor_empleado.capacidades(empleado_id)
-        emp = get_db().query(_Empleado).filter_by(EmpleadoID=empleado_id).first()
-        rol_activo = emp.rol_activo if emp else None
+        rol_activo = gestor_empleado.obtener_rol_activo(empleado_id)
         return jsonify({'capacidades': caps, 'rol_activo': rol_activo})
     except Exception as e:
         logger.error("Error en /empleado/capacidades: %s", e)

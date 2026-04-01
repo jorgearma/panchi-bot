@@ -6,6 +6,7 @@ from werkzeug.security import check_password_hash
 
 from database import get_db
 from models import Empleado
+from container import gestor_empleado
 
 logger = logging.getLogger(__name__)
 
@@ -96,15 +97,7 @@ def logout():
     empleado_id = session.get('empleado_id')
     # Nular rol_activo en BD para forzar check-in en el próximo turno
     if empleado_id:
-        try:
-            from database import get_db
-            from models import Empleado as _Empleado
-            emp = get_db().query(_Empleado).filter_by(EmpleadoID=empleado_id).first()
-            if emp:
-                emp.rol_activo = None
-                get_db().commit()
-        except Exception:
-            pass  # No bloquear el logout por un error de BD
+        gestor_empleado.limpiar_rol_activo(empleado_id)
     session.clear()
     logger.info("AUTH_LOGOUT empleado_id=%s", empleado_id)
     return redirect(url_for('auth.login'))

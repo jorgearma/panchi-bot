@@ -238,6 +238,35 @@ class GestorPedidosLifecycleMixin:
             )
             raise
 
+    def obtener_seguimiento(self, redis_id: str) -> dict | None:
+        """Proyección pública del estado del pedido para la página de tracking."""
+        pedido = self.session.query(Pedido).filter_by(redisID=redis_id).first()
+        if not pedido:
+            return None
+
+        reparto_data = None
+        if pedido.reparto:
+            r = pedido.reparto
+            repartidor_nombre = None
+            repartidor_telefono = None
+            if r.repartidor:
+                repartidor_nombre = f"{r.repartidor.Nombre} {r.repartidor.Apellido}"
+                repartidor_telefono = r.repartidor.Telefono
+            reparto_data = {
+                "estado": r.estado,
+                "hora_salida": r.hora_salida.strftime("%H:%M") if r.hora_salida else None,
+                "hora_estimada_entrega": r.hora_estimada_entrega.strftime("%H:%M") if r.hora_estimada_entrega else None,
+                "repartidor_nombre": repartidor_nombre,
+                "repartidor_telefono": repartidor_telefono,
+                "calle_destino": pedido.DireccionEntrega,
+            }
+
+        return {
+            "estado": pedido.Estado,
+            "forma_pago": pedido.forma_pago,
+            "reparto": reparto_data,
+        }
+
     def obtener_pedido(self, pedido_id):
         """Recupera un pedido por id."""
         try:

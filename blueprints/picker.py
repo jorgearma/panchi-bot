@@ -1,26 +1,13 @@
 import logging
 import os
-from threading import Thread
 
 from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, session
 
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard
-from services.whatsapp_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import notificar_async as _notificar
 
 logger = logging.getLogger(__name__)
-
-
-def _notificar(telefono: str, mensaje: str) -> None:
-    """Envía un WhatsApp en segundo plano para no bloquear la respuesta HTTP."""
-    if not telefono:
-        return
-    def _enviar():
-        try:
-            enviar_mensaje_whatsapp(mensaje, telefono)
-        except Exception as exc:
-            logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
-    Thread(target=_enviar, daemon=True).start()
 
 blueprint_picker = Blueprint("picker", __name__)
 

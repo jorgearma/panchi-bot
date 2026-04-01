@@ -2,11 +2,10 @@ import json
 import logging
 from datetime import datetime
 from decimal import Decimal
-from threading import Thread
 
 from flask import current_app, jsonify
 
-from services.whatsapp_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import notificar_async as _notificar
 
 logger = logging.getLogger(__name__)
 
@@ -18,20 +17,6 @@ _MOTIVOS_LABEL = {
     'pedido_duplicado':     'Pedido duplicado',
     'otro':                 'Otro',
 }
-
-
-def _notificar(telefono: str, mensaje: str) -> None:
-    """Envía un WhatsApp en segundo plano desde el dashboard."""
-    if not telefono:
-        return
-
-    def _enviar():
-        try:
-            enviar_mensaje_whatsapp(mensaje, telefono)
-        except Exception as exc:
-            logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
-
-    Thread(target=_enviar, daemon=True).start()
 
 
 def _serial(obj):

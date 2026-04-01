@@ -75,6 +75,22 @@ class GestorEmpleadoProfileRolesMixin:
         """True si el empleado tiene más de una capacidad operativa."""
         return len(self.capacidades(empleado_id)) > 1
 
+    def obtener_rol_activo(self, empleado_id: int) -> str | None:
+        """Devuelve el rol_activo del empleado o None si no tiene."""
+        empleado = self.session.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+        return empleado.rol_activo if empleado else None
+
+    def limpiar_rol_activo(self, empleado_id: int) -> None:
+        """Nula el rol_activo del empleado. Llamar en logout para forzar check-in en el siguiente turno."""
+        try:
+            empleado = self.session.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+            if empleado:
+                empleado.rol_activo = None
+                self.session.commit()
+        except SQLAlchemyError as e:
+            self.session.rollback()
+            logger.error("Error limpiando rol_activo del empleado %s: %s", empleado_id, e)
+
     def tiene_rol_activo(self, empleado_id: int) -> bool:
         """True si empleado.rol_activo no es NULL en BD."""
         empleado = self.session.query(Empleado).filter_by(

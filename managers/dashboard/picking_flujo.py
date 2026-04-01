@@ -206,7 +206,7 @@ class GestorPickingFlujoMixin:
                     _s = SessionLocal()
                     try:
                         for item in items:
-                            p = _s.query(Producto).filter_by(ProductoID=item["producto_id"]).first()
+                            p = _s.query(Producto).filter_by(ProductoID=item["producto_id"]).with_for_update().first()
                             if not p:
                                 continue
                             if item["estado"] == "encontrado":
