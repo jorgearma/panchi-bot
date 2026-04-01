@@ -302,7 +302,7 @@ class MetricaDiariaEmpleado(Base):
 # ---------------------------------------------------------------------------
 
 class PickingPedido(Base):
-    """Estado de preparación de un pedido en almacén. Uno por pedido."""
+    """Estado de preparación de un pedido. Uno por pedido."""
     __tablename__ = 'picking_pedido'
 
     id = Column(Integer, primary_key=True, autoincrement=True)

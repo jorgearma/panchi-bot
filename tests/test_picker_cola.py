@@ -241,3 +241,166 @@ class TestBlueprintPickerCola:
 
         assert resp.status_code == 404
         assert resp.get_json()['error'] == 'no_encontrado'
+
+
+# ---------------------------------------------------------------------------
+# TestModoRestaurant — listo_para_finalizar sin items
+# ---------------------------------------------------------------------------
+
+class TestModoRestaurant:
+    """En modo restaurant, pickings_del_picker debe marcar listo_para_finalizar=True
+    incluso sin items (modo='restaurant' en el PickingPedido)."""
+
+    def setup_method(self):
+        from container import gestor_dashboard
+        self.gd = gestor_dashboard
+
+    def test_listo_para_finalizar_sin_items_en_restaurant(self, app):
+        """APP_MODE=restaurant y sin items debe tener listo_para_finalizar=True."""
+        with app.app_context():
+            patcher, mock_sess = _mock_session(self.gd)
+            try:
+                mock_picking = MagicMock()
+                mock_picking.id = 1
+                mock_picking.pedido_id = 100
+                mock_picking.estado = 'en_proceso'
+                mock_picking.items = []
+                mock_picking.iniciado_en = None
+                mock_picking.pedido = MagicMock()
+                mock_picking.pedido.DireccionEntrega = 'C/ Test 1'
+                mock_picking.pedido.TelefonoEntrega = '600000000'
+                mock_picking.pedido.Total = 25.50
+                mock_picking.pedido.cliente = MagicMock()
+                mock_picking.pedido.cliente.nombre = 'Test'
+
+                mock_q = MagicMock()
+                mock_q.filter.return_value = mock_q
+                mock_q.order_by.return_value = mock_q
+                mock_q.all.return_value = [mock_picking]
+                mock_sess.query.return_value = mock_q
+
+                import managers.dashboard.picking_basico as pb
+                with patch.object(pb.app_config, 'APP_MODE', 'restaurant', create=True):
+                    result = self.gd.pickings_del_picker(1)
+
+                assert len(result) == 1
+                assert result[0]['listo_para_finalizar'] is True
+                assert result[0]['picking_completo'] is True
+                assert result[0]['modo'] == 'restaurant'
+            finally:
+                patcher.stop()
+
+    def test_listo_para_finalizar_false_en_warehouse_con_items_pendientes(self, app):
+        """picking con modo='warehouse' e items pendientes NO debe estar listo."""
+        with app.app_context():
+            patcher, mock_sess = _mock_session(self.gd)
+            try:
+                item_mock = MagicMock()
+                item_mock.estado = 'pendiente'
+                item_mock.pedido_detalle = MagicMock()
+                item_mock.pedido_detalle.NombreProducto = 'Producto A'
+                item_mock.pedido_detalle.Cantidad = 2
+                item_mock.pedido_detalle.producto = MagicMock()
+                item_mock.pedido_detalle.producto.Nombre = 'Producto A'
+                item_mock.pedido_detalle.producto.Ubicacion = 'A1'
+                item_mock.pedido_detalle.producto.ImagenURL = None
+                item_mock.pedido_detalle.ProductoID = 5
+                item_mock.item_id = 10
+                item_mock.id = 10
+                item_mock.cantidad_encontrada = None
+                item_mock.notas = None
+                item_mock.pedido_detalle_id = 20
+
+                mock_picking = MagicMock()
+                mock_picking.id = 2
+                mock_picking.pedido_id = 200
+                mock_picking.estado = 'en_proceso'
+                mock_picking.modo = 'warehouse'
+                mock_picking.items = [item_mock]
+                mock_picking.iniciado_en = None
+                mock_picking.pedido = MagicMock()
+                mock_picking.pedido.DireccionEntrega = 'C/ Test 2'
+                mock_picking.pedido.TelefonoEntrega = '600000001'
+                mock_picking.pedido.Total = 15.00
+                mock_picking.pedido.cliente = MagicMock()
+                mock_picking.pedido.cliente.nombre = 'Test2'
+
+                mock_q = MagicMock()
+                mock_q.filter.return_value = mock_q
+                mock_q.order_by.return_value = mock_q
+                mock_q.all.return_value = [mock_picking]
+                mock_sess.query.return_value = mock_q
+
+                result = self.gd.pickings_del_picker(2)
+
+                assert len(result) == 1
+                assert result[0]['listo_para_finalizar'] is False
+                assert result[0]['picking_completo'] is False
+            finally:
+                patcher.stop()
+
+
+# ---------------------------------------------------------------------------
+# TestBlueprintCocina — rutas /cocina
+# ---------------------------------------------------------------------------
+
+class TestBlueprintCocina:
+
+    def test_cocina_sin_sesion_rechazado(self, client):
+        resp = client.get('/cocina')
+        assert resp.status_code in (302, 401, 403)
+
+    def test_cocina_con_sesion_ok(self, client, app):
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 1
+            sess['rol'] = 'picker'
+        with app.app_context():
+            resp = client.get('/cocina')
+        assert resp.status_code == 200
+
+    def test_cocina_cola_devuelve_json(self, client, app):
+        from unittest.mock import patch
+        from container import gestor_dashboard
+
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 1
+            sess['rol'] = 'picker'
+
+        with patch.object(gestor_dashboard, 'pickings_sin_asignar', return_value=[
+            {'picking_id': 9, 'pedido_id': 300, 'n_items': 0, 'segundos_esperando': 60}
+        ]):
+            resp = client.get('/cocina/cola')
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'cola' in data
+        assert data['total'] == 1
+
+    def test_cocina_coger_ok(self, client, app):
+        from unittest.mock import patch
+        from container import gestor_dashboard
+
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 4
+            sess['rol'] = 'picker'
+
+        with patch.object(gestor_dashboard, 'reclamar_picking', return_value=(True, 'ok')) as mock_rec:
+            resp = client.post('/cocina/cola/coger/9')
+
+        assert resp.status_code == 200
+        assert resp.get_json()['ok'] is True
+        mock_rec.assert_called_once_with(9, 4)
+
+    def test_cocina_finalizar_ok(self, client, app):
+        from unittest.mock import patch
+        from container import gestor_dashboard
+
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 4
+            sess['rol'] = 'picker'
+
+        with patch.object(gestor_dashboard, 'completar_picking', return_value=(True, 'Picking completado', None)):
+            resp = client.post('/cocina/preparacion/9/finalizar')
+
+        assert resp.status_code == 200
+        assert resp.get_json()['ok'] is True
