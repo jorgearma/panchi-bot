@@ -1,5 +1,6 @@
 import os
 import logging
+from concurrent.futures import ThreadPoolExecutor
 import config
 import requests
 from twilio.rest import Client
@@ -70,3 +71,26 @@ def enviar_mensaje_whatsapp(mensaje: str, destinatario: str) -> None:
         _enviar_meta(mensaje, destinatario)
     else:
         _enviar_twilio(mensaje, destinatario)
+
+
+# Pool acotado para notificaciones async — máximo 10 threads concurrentes hacia Twilio/Meta.
+# Evita la proliferación de threads zombie que ocurre con Thread().start() por cada pedido.
+_notif_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="whatsapp_notif")
+
+
+def notificar_async(telefono: str, mensaje: str) -> None:
+    """Envía un WhatsApp en segundo plano sin bloquear la respuesta HTTP.
+
+    Usa un pool acotado en lugar de un thread por notificación.
+    Los errores se loguean y no se propagan al caller.
+    """
+    if not telefono:
+        return
+
+    def _enviar():
+        try:
+            enviar_mensaje_whatsapp(mensaje, telefono)
+        except Exception as exc:
+            logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
+
+    _notif_pool.submit(_enviar)

@@ -150,6 +150,44 @@ class GestorPedidosWorkflowMixin:
             return True
         return False
 
+    def procesar_pago_confirmado(
+        self,
+        pedido_id,
+        importe_euros,
+        referencia_externa=None,
+        datos_raw=None,
+    ) -> bool:
+        """Atomic: transition to PAGADO + insert pago record in one commit."""
+        try:
+            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido:
+                logger.warning("procesar_pago_confirmado: pedido %s no encontrado", pedido_id)
+                return False
+            if not self._set_estado(pedido, EstadoPedido.PAGADO):
+                return False
+            self.session.add(
+                Pago(
+                    pedido_id=pedido_id,
+                    proveedor="monei",
+                    referencia_externa=referencia_externa,
+                    estado="completado",
+                    importe=importe_euros,
+                    moneda="EUR",
+                    datos_raw=datos_raw,
+                )
+            )
+            self.session.commit()
+            logger.info(
+                "Pago confirmado para pedido %s (ref: %s)", pedido_id, referencia_externa
+            )
+            return True
+        except SQLAlchemyError as error:
+            self.session.rollback()
+            logger.error(
+                "Error al procesar pago confirmado del pedido %s: %s", pedido_id, error
+            )
+            return False
+
     def registrar_pago(
         self,
         pedido_id,
