@@ -1,0 +1,67 @@
+{% extends '_base/base_tailwind.html' %}
+
+{% block extra_head %}
+  {{ super() }}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block extra_styles %}
+  <style>
+    :root {
+      --bg: #edf2f7;
+      --panel: rgba(255, 255, 255, 0.86);
+      --panel-strong: #ffffff;
+      --line: rgba(148, 163, 184, 0.22);
+      --ink: #0f172a;
+      --muted: #64748b;
+      --brand: #0f4c81;
+      --brand-soft: #dbeafe;
+    }
+    body {
+      font-family: "Manrope", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(14, 116, 144, 0.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 24%),
+        linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+    .glass-panel {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+    .fade-in { animation: fadeIn .25s ease-in; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+  {% block dashboard_styles %}{% endblock %}
+{% endblock %}
+
+{% block body_attrs %}class="min-h-screen"{% endblock %}
+
+{% block body %}
+{% from 'macros/ui.html' import status_badge, empty_state, loading_skeleton, error_banner %}
+
+{% block header %}
+<!-- ── HEADER ─────────────────────────────────────────────────────────────── -->
+<header class="sticky top-0 z-30 px-4 pt-4 pb-2">
+  <div class="mx-auto max-w-7xl glass-panel rounded-2xl px-5 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">🍕</span>
+      <span class="font-extrabold text-lg tracking-tight" style="color:var(--brand)">Panchi Ops</span>
+      <span class="hidden sm:inline text-slate-300">|</span>
+      <span class="hidden sm:inline text-sm font-semibold text-slate-500">{% block header_subtitle %}{% endblock %}</span>
+    </div>
+    {% block header_right %}{% include 'dashboard/_nav.html' %}{% endblock %}
+  </div>
+</header>
+{% endblock %}
+
+<!-- ── MAIN ───────────────────────────────────────────────────────────────── -->
+<main class="{% block main_attrs %}mx-auto max-w-7xl px-4 py-6{% endblock %}" {% block main_data %}{% endblock %}>
+  {% block content %}{% endblock %}
+</main>
+
+{% endblock %}

@@ -6,7 +6,7 @@ from unittest.mock import patch, PropertyMock, MagicMock
 
 def test_turnos_hoy_devuelve_claves_esperadas(app):
     """turnos_hoy() devuelve dict con empleados y resumen."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -27,7 +27,7 @@ def test_turnos_hoy_devuelve_claves_esperadas(app):
 
 def test_turnos_hoy_resumen_sin_empleados(app):
     """turnos_hoy() con lista vacía da resumen a cero."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -43,7 +43,7 @@ def test_turnos_hoy_resumen_sin_empleados(app):
 
 def test_turnos_historial_devuelve_claves_esperadas(app):
     """turnos_historial() devuelve dict con turnos, total, page, pages."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -69,7 +69,7 @@ def test_turnos_historial_devuelve_claves_esperadas(app):
 
 def test_turnos_historial_paginacion_por_defecto(app):
     """turnos_historial() usa page=1 y per_page=25 por defecto."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -110,7 +110,7 @@ def test_turnos_html_requiere_auth(client):
 def test_turnos_hoy_json_devuelve_estructura(client):
     """GET /dashboard/turnos/hoy devuelve {empleados, resumen}."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -130,7 +130,7 @@ def test_turnos_hoy_json_devuelve_estructura(client):
 def test_turnos_historial_json_devuelve_estructura(client):
     """GET /dashboard/turnos/historial devuelve {turnos, total, page, pages}."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
@@ -150,7 +150,7 @@ def test_turnos_historial_json_devuelve_estructura(client):
 def test_turnos_historial_json_pasa_filtros(client):
     """GET /dashboard/turnos/historial pasa params al manager."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1

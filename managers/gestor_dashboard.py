@@ -6,18 +6,29 @@ This file is intentionally thin: it just assembles the mixins.
 """
 from managers.dashboard._base import GestorDashboardBase
 from managers.dashboard.gestor_pedidos_mixin import GestorPedidosMixin
-from managers.dashboard.gestor_picking_mixin import GestorPickingMixin
-from managers.dashboard.gestor_reparto_mixin import GestorRepartoMixin
+from managers.dashboard.picking_basico import GestorPickingBasicoMixin
+from managers.dashboard.picking_flujo import GestorPickingFlujoMixin
+from managers.dashboard.reparto_asignacion import GestorRepartoAsignacionMixin
+from managers.dashboard.reparto_tracking import GestorRepartoTrackingMixin
+from managers.dashboard.reparto_cobro import GestorRepartoCobroMixin
 from managers.dashboard.gestor_turnos_mixin import GestorTurnosMixin
-from managers.dashboard.gestor_empleados_mixin import GestorEmpleadosMixin
+from managers.dashboard.empleados_lista import GestorEmpleadosListaMixin
+from managers.dashboard.empleados_monitor import GestorEmpleadosMonitorMixin
+from managers.dashboard.empleados_rendimiento import GestorEmpleadosRendimientoMixin
 from managers.dashboard.gestor_estadisticas_mixin import GestorEstadisticasMixin
+
 
 class GestorDashboard(
     GestorPedidosMixin,
-    GestorPickingMixin,
-    GestorRepartoMixin,
+    GestorPickingBasicoMixin,
+    GestorPickingFlujoMixin,
+    GestorRepartoAsignacionMixin,
+    GestorRepartoTrackingMixin,
+    GestorRepartoCobroMixin,
     GestorTurnosMixin,
-    GestorEmpleadosMixin,
+    GestorEmpleadosListaMixin,
+    GestorEmpleadosMonitorMixin,
+    GestorEmpleadosRendimientoMixin,
     GestorEstadisticasMixin,
     GestorDashboardBase,
 ):

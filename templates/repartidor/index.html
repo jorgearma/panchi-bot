@@ -15,108 +15,90 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <style>
-    [x-cloak] { display: none !important; }
-    :root {
-      --rep-ink: #172033;
-      --rep-panel: #ffffff;
-      --rep-soft: #fff8f2;
-      --rep-line: #f0ddc9;
-      --rep-brand: #ea580c;
-      --rep-brand-dark: #9a3412;
-      --rep-accent: #0f766e;
-      --rep-warm: #f59e0b;
-      --rep-danger: #dc2626;
-    }
-    .slide-up { animation: slideUp .25s ease-out; }
-    @keyframes slideUp {
-      from { opacity:0; transform:translateY(14px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-    button { -webkit-tap-highlight-color: transparent; }
-    .tap-xl { min-height: 56px; }
-    @keyframes glowRed {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); }
-      50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0.25); }
-    }
-    .card-nuevo { animation: glowRed 1.4s ease-in-out infinite; }
-    #mapa-rep  { height: 220px; }
-    #mapa-cola { height: 220px; }
-    .repartidor-shell {
-      background:
-        radial-gradient(circle at top left, rgba(234, 88, 12, 0.14), transparent 30%),
-        radial-gradient(circle at top right, rgba(15, 118, 110, 0.10), transparent 26%),
-        linear-gradient(180deg, #fff3ea 0%, #f9f7f5 34%, #f3ede8 100%);
-      color: var(--rep-ink);
-    }
-    .glass-panel {
-      background: rgba(255, 255, 255, 0.78);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(240, 221, 201, 0.9);
-      box-shadow: 0 18px 50px rgba(23, 32, 51, 0.08);
-    }
-    .section-card {
-      background: rgba(255, 255, 255, 0.92);
-      border: 1px solid rgba(240, 221, 201, 0.95);
-      box-shadow: 0 18px 40px rgba(23, 32, 51, 0.08);
-    }
-    .metric-card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(252,246,240,0.96));
-      border: 1px solid rgba(240, 221, 201, 0.9);
-      box-shadow: 0 14px 30px rgba(23, 32, 51, 0.06);
-    }
-    .queue-card {
-      background: linear-gradient(135deg, rgba(23, 32, 51, 0.98), rgba(154, 52, 18, 0.88));
-      box-shadow: 0 18px 34px rgba(23, 32, 51, 0.24);
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/features/repartidor/index.css') }}" />
 </head>
 <body class="repartidor-shell min-h-screen"
       x-data="repartidor({{ repartidor_id or 'null' }})"
       x-init="init()">
 
   <!-- ======== HEADER ======== -->
-  <header class="bg-slate-950/90 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-lg backdrop-blur">
-    <div class="flex items-center gap-2">
-      <button x-show="vista !== 'lista'"
-              @click="volverALista()"
-              class="p-2 -ml-2 text-gray-400 active:text-white transition text-2xl leading-none">‹</button>
-      <span class="font-bold text-lg">
-        <span x-show="vista === 'lista'">🛵 Mis entregas</span>
-        <span x-show="vista === 'pedido'" x-cloak>
-          Pedido #<span x-text="actual?.pedido_id"></span>
-        </span>
-        <span x-show="vista === 'resumen'" x-cloak>
-          Resumen #<span x-text="actual?.pedido_id"></span>
-        </span>
-      </span>
+  <header class="px-3 pt-3 pb-1">
+  <div class="bg-gray-800 border border-gray-700 rounded-2xl text-white shadow-sm overflow-hidden relative">
+
+    <!-- Arte CSS: skyline + glow -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+      <!-- Gradiente naranja pulsante -->
+      <div class="header-glow absolute right-0 inset-y-0 w-32 bg-gradient-to-l from-orange-500/20 to-transparent"></div>
+      <!-- Skyline minimalista -->
+      <div style="position:absolute;bottom:0;right:10px;display:flex;align-items:flex-end;gap:2px;opacity:0.45">
+        <!-- B1 -->
+        <div style="width:9px;height:22px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:4px;left:2px;width:2px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 5px 3px rgba(249,115,22,0.55)"></div>
+        </div>
+        <!-- B2 -->
+        <div style="width:14px;height:38px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:5px;left:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.5)"></div>
+          <div style="position:absolute;top:5px;right:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.5)"></div>
+          <div style="position:absolute;top:13px;left:2px;width:3px;height:2px;background:#ea580c;border-radius:1px;box-shadow:0 0 5px 2px rgba(234,88,12,0.4)"></div>
+        </div>
+        <!-- B3 -->
+        <div style="width:8px;height:28px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+        </div>
+        <!-- B4 tall -->
+        <div style="width:11px;height:50px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:6px;left:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 7px 3px rgba(249,115,22,0.6)"></div>
+          <div style="position:absolute;top:6px;right:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 7px 3px rgba(249,115,22,0.6)"></div>
+          <div style="position:absolute;top:16px;left:2px;width:3px;height:2px;background:#ea580c;border-radius:1px;box-shadow:0 0 5px 2px rgba(234,88,12,0.35)"></div>
+          <div style="position:absolute;top:26px;right:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.5)"></div>
+        </div>
+        <!-- B5 -->
+        <div style="width:16px;height:32px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:5px;left:3px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.55)"></div>
+          <div style="position:absolute;top:5px;right:3px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.55)"></div>
+          <div style="position:absolute;top:14px;left:3px;width:3px;height:2px;background:#ea580c;border-radius:1px;box-shadow:0 0 5px 2px rgba(234,88,12,0.4)"></div>
+        </div>
+        <!-- B6 -->
+        <div style="width:9px;height:42px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:7px;left:2px;width:4px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 8px 4px rgba(249,115,22,0.6)"></div>
+          <div style="position:absolute;top:18px;left:2px;width:4px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.45)"></div>
+        </div>
+        <!-- B7 short -->
+        <div style="width:12px;height:18px;background:#0f172a;border-radius:2px 2px 0 0"></div>
+      </div>
     </div>
-    <div class="flex items-center gap-2">
-      <!-- Connection status -->
-      <span x-show="!conexionOk" class="text-xs text-red-400 font-medium" x-cloak>Sin conexión</span>
-      <span x-show="conexionOk && lastFetchTime && vista === 'lista'"
-            class="w-2 h-2 rounded-full bg-green-400" x-cloak></span>
-      <span x-show="vista === 'lista' && pedidosActivos.length > 0"
-            class="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-medium"
-            x-text="pedidosActivos.length + ' pendiente' + (pedidosActivos.length > 1 ? 's' : '')"></span>
-      <span x-show="vista === 'lista' && pedidosNuevosEnCalle.length > 0"
-            x-cloak
-            class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold animate-pulse"
-            x-text="pedidosNuevosEnCalle.length + ' nuevo' + (pedidosNuevosEnCalle.length > 1 ? 's' : '')"></span>
-      <button @click="recargar()"
-              class="p-2 -mr-1 text-gray-400 active:text-white transition text-xl leading-none"
-              :class="cargando ? 'animate-spin' : ''">↻</button>
+
+    <!-- Contenido del header -->
+    <div class="relative flex items-center justify-between px-4 py-3">
+      <!-- Izquierda: back + título -->
+      <div class="flex items-center gap-2">
+        <button x-show="vista !== 'lista'"
+                @click="volverALista()"
+                class="p-2 -ml-2 text-gray-400 active:text-white transition text-2xl leading-none">‹</button>
+        <div x-show="vista === 'lista'">
+          <p class="panchi-shimmer text-[11px] font-semibold uppercase tracking-[0.18em] leading-none mb-0.5">Panchi</p>
+          <p class="text-base font-black text-white leading-none tracking-tight">Repartos</p>
+        </div>
+        <span class="font-bold text-lg" x-cloak>
+          <span x-show="vista === 'pedido'">Pedido #<span x-text="actual?.pedido_id"></span></span>
+          <span x-show="vista === 'resumen'">Resumen #<span x-text="actual?.pedido_id"></span></span>
+        </span>
+      </div>
+      <!-- Derecha: estado + recargar -->
+      <div class="flex items-center gap-2">
+        <span x-show="!conexionOk" class="text-xs text-red-400 font-medium" x-cloak>Sin conexión</span>
+      </div>
     </div>
+
+  </div>
   </header>
 
   <!-- ======== SIN ID ======== -->
   <div x-show="!repartidorId"
        class="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
     <div class="text-5xl mb-4">🔗</div>
-    <h2 class="text-xl font-bold text-gray-700 mb-2">Enlace incompleto</h2>
+    <h2 class="text-xl font-bold text-gray-200 mb-2">Enlace incompleto</h2>
     <p class="text-gray-500 text-sm">Accede desde el enlace del supervisor.<br>
-      Ejemplo: <code class="bg-gray-100 px-1 rounded">/repartidor?id=5</code></p>
+      Ejemplo: <code class="bg-gray-800 px-1 rounded">/repartidor?id=5</code></p>
   </div>
 
   <!-- ======== CARGANDO ======== -->
@@ -138,32 +120,32 @@
           <button @click="tabActiva = 'mis-entregas'"
                   class="rounded-2xl px-4 py-3 text-left transition"
                   :class="tabActiva === 'mis-entregas'
-                    ? 'bg-gradient-to-r from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-200'
-                    : 'bg-white/60 text-slate-600'">
+                    ? 'bg-gradient-to-r from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-900'
+                    : 'bg-gray-700/60 text-gray-300'">
             <div class="flex items-center justify-between gap-3">
               <span class="text-sm font-semibold">🛵 Mis entregas</span>
               <span class="rounded-full px-2.5 py-1 text-xs font-bold"
-                    :class="tabActiva === 'mis-entregas' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    :class="tabActiva === 'mis-entregas' ? 'bg-white/20 text-white' : 'bg-gray-700 text-gray-300'"
                     x-text="pedidosActivos.length"></span>
             </div>
             <p class="mt-1 text-[11px]"
-               :class="tabActiva === 'mis-entregas' ? 'text-orange-100' : 'text-slate-400'">
+               :class="tabActiva === 'mis-entregas' ? 'text-orange-100' : 'text-gray-400'">
               Tus entregas activas y su estado
             </p>
           </button>
           <button @click="tabActiva = 'cola'; cargarCola()"
                   class="rounded-2xl px-4 py-3 text-left transition"
                   :class="tabActiva === 'cola'
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-200'
-                    : 'bg-white/60 text-slate-600'">
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-900'
+                    : 'bg-gray-700/60 text-gray-300'">
             <div class="flex items-center justify-between gap-3">
               <span class="text-sm font-semibold">📋 Cola</span>
               <span class="rounded-full px-2.5 py-1 text-xs font-bold"
-                    :class="tabActiva === 'cola' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    :class="tabActiva === 'cola' ? 'bg-white/20 text-white' : 'bg-gray-700 text-gray-300'"
                     x-text="colaTotal"></span>
             </div>
             <p class="mt-1 text-[11px]"
-               :class="tabActiva === 'cola' ? 'text-emerald-100' : 'text-slate-400'">
+               :class="tabActiva === 'cola' ? 'text-emerald-100' : 'text-gray-400'">
               Pedidos disponibles para coger
             </p>
           </button>
@@ -176,7 +158,7 @@
     <div x-show="tabActiva === 'mis-entregas' && pedidosActivos.length === 0 && pedidosHistorial.length === 0"
          class="flex flex-col items-center justify-center min-h-[65vh] text-center px-6">
       <div class="text-6xl mb-4">✅</div>
-      <h2 class="text-xl font-bold text-gray-700 mb-2">Sin entregas pendientes</h2>
+      <h2 class="text-xl font-bold text-gray-200 mb-2">Sin entregas pendientes</h2>
       <p class="text-gray-400 text-sm">No tienes pedidos asignados ahora mismo.</p>
       <button @click="recargar()"
               class="mt-6 bg-orange-500 text-white px-6 py-3 rounded-xl font-medium active:bg-orange-600 transition">
@@ -188,10 +170,10 @@
 
       <!-- ── MAPA DE ENTREGAS ── -->
       <template x-if="true">
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-sm overflow-hidden">
           <button @click="toggleMapa()"
-                  class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 transition">
-            <span class="text-sm font-semibold text-gray-700">🗺️ Ver mis entregas en el mapa</span>
+                  class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-700 transition">
+            <span class="text-sm font-semibold text-gray-200">Mapa</span>
             <span class="text-gray-400 text-xs" x-text="mapaVisible ? '▲' : '▼'"></span>
           </button>
           <div x-show="mapaVisible" x-cloak>
@@ -214,37 +196,35 @@
       <template x-if="pedidosEnReparto.length > 0">
         <div>
           <div class="flex items-center gap-2 mb-2 px-1">
-            <h3 class="text-xs font-semibold text-blue-600 uppercase tracking-wide">En reparto</h3>
-            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-1.5 py-0.5 rounded-full"
+            <h3 class="text-xs font-semibold text-blue-400 uppercase tracking-wide">En reparto</h3>
+            <span class="bg-blue-900 text-blue-300 text-xs font-bold px-1.5 py-0.5 rounded-full"
                   x-text="pedidosEnReparto.length"></span>
           </div>
           <div class="space-y-2">
             <template x-for="p in pedidosEnReparto" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
                    :id="'card-' + p.reparto_id"
-                   :class="pedidoDestacado === p.reparto_id ? 'ring-2 ring-blue-500 ring-offset-1' : ''"
-                   class="rounded-xl shadow-sm border border-blue-200 border-l-4 border-l-blue-500 bg-blue-50 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
+                   :class="pedidoDestacado === p.reparto_id ? 'border-2 border-orange-400 scale-[1.02] shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_4px_rgba(234,88,12,0.3),inset_0_1px_0_rgba(251,146,60,0.15)]' : 'border-2 border-blue-800 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'"
+                   class="rounded-xl bg-blue-950 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
                 <div class="px-4 py-3 flex items-center gap-3">
                   <!-- Info principal -->
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
-                      <span class="text-base font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="text-lg font-black text-white tracking-tight"><span x-text="p.pedido_id"></span></span>
                       <span class="text-xs px-1.5 py-0.5 rounded font-semibold"
                             :class="badgePagoClass(p.pago.estado)"
                             x-text="p.pago.label"></span>
-                      <span x-show="p.pago.estado !== 'pagado_online'"
-                            class="text-sm font-bold text-gray-700"
-                            x-text="p.pago.importe.toFixed(2) + '€'"></span>
                     </div>
-                    <div class="text-sm text-gray-600 truncate" x-text="p.cliente_nombre"></div>
+                    <div class="text-sm font-bold text-white truncate" x-text="p.cliente_nombre"></div>
                     <div class="text-xs text-gray-400 truncate mt-0.5">📍 <span x-text="p.direccion_entrega"></span></div>
                   </div>
-                  <!-- Timer -->
-                  <div class="flex flex-col items-center rounded-xl px-3 py-2 min-w-[64px] flex-shrink-0"
-                       :class="priorityColor(calculateRemainingMinutes(p.fecha_creacion))">
-                    <span class="text-xs font-medium opacity-70 leading-none mb-0.5"
+                  <!-- Timer esquina recortada -->
+                  <div class="flex-shrink-0 flex flex-col items-center justify-center px-3 py-2.5 min-w-[60px]"
+                       :class="priorityTextColor(calculateRemainingMinutes(p.fecha_creacion))"
+                       :style="`background:${priorityStroke(calculateRemainingMinutes(p.fecha_creacion))}22;border:1.5px solid ${priorityStroke(calculateRemainingMinutes(p.fecha_creacion))}88;border-radius:10px;box-shadow:0 0 12px 2px ${priorityStroke(calculateRemainingMinutes(p.fecha_creacion))}22`">
+                    <span class="text-[10px] font-bold text-white leading-none mb-1 uppercase tracking-widest"
                           x-text="formatPromisedTime(p.fecha_creacion)"></span>
-                    <span class="text-2xl font-black leading-none"
+                    <span class="text-lg font-black leading-none tracking-tight"
                           x-text="formatRemaining(calculateRemainingMinutes(p.fecha_creacion))"></span>
                   </div>
                   <span class="text-blue-400 flex-shrink-0">›</span>
@@ -259,28 +239,25 @@
       <template x-if="pedidosNuevosEnCalle.length > 0">
         <div>
           <div class="flex items-center gap-2 mb-2 px-1">
-            <h3 class="text-xs font-semibold text-red-600 uppercase tracking-wide">Recibidos mientras repartes</h3>
-            <span class="bg-red-100 text-red-700 text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse"
+            <h3 class="text-xs font-semibold text-red-400 uppercase tracking-wide">Recibidos mientras repartes</h3>
+            <span class="bg-red-900 text-red-300 text-xs font-bold px-1.5 py-0.5 rounded-full animate-pulse"
                   x-text="pedidosNuevosEnCalle.length"></span>
           </div>
           <div class="space-y-2">
             <template x-for="p in pedidosNuevosEnCalle" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
                    :id="'card-' + p.reparto_id"
-                   :class="pedidoDestacado === p.reparto_id ? 'ring-2 ring-red-500 ring-offset-1' : ''"
-                   class="card-nuevo rounded-xl shadow-sm border border-red-300 border-l-4 border-l-red-500 bg-red-50 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
+                   :class="pedidoDestacado === p.reparto_id ? 'border-2 border-orange-400 scale-[1.02] shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_4px_rgba(234,88,12,0.3),inset_0_1px_0_rgba(251,146,60,0.15)]' : 'border-2 border-red-800 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'"
+                   class="card-nuevo rounded-xl bg-red-950 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
                 <div class="px-4 py-3 flex items-center gap-3">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
-                      <span class="text-base font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="text-lg font-black text-white tracking-tight"><span x-text="p.pedido_id"></span></span>
                       <span class="text-xs px-1.5 py-0.5 rounded font-semibold"
                             :class="badgePagoClass(p.pago.estado)"
                             x-text="p.pago.label"></span>
-                      <span x-show="p.pago.estado !== 'pagado_online'"
-                            class="text-sm font-bold text-gray-700"
-                            x-text="p.pago.importe.toFixed(2) + '€'"></span>
                     </div>
-                    <div class="text-sm text-gray-600 truncate" x-text="p.cliente_nombre"></div>
+                    <div class="text-sm font-bold text-white truncate" x-text="p.cliente_nombre"></div>
                     <div class="text-xs text-gray-400 truncate mt-0.5">📍 <span x-text="p.direccion_entrega"></span></div>
                   </div>
                   <div class="flex flex-col items-center rounded-xl px-3 py-2 min-w-[64px] flex-shrink-0"
@@ -302,28 +279,25 @@
       <template x-if="pedidosEnTiendaConocidos.length > 0">
         <div>
           <div class="flex items-center gap-2 mb-2 px-1">
-            <h3 class="text-xs font-semibold text-amber-600 uppercase tracking-wide">En tienda</h3>
-            <span class="bg-amber-100 text-amber-800 text-xs font-bold px-1.5 py-0.5 rounded-full"
+            <h3 class="text-xs font-semibold text-amber-400 uppercase tracking-wide">En tienda</h3>
+            <span class="bg-amber-900 text-amber-300 text-xs font-bold px-1.5 py-0.5 rounded-full"
                   x-text="pedidosEnTiendaConocidos.length"></span>
           </div>
           <div class="space-y-2">
             <template x-for="p in pedidosEnTiendaConocidos" :key="p.reparto_id">
               <div @click="abrirPedido(p)"
                    :id="'card-' + p.reparto_id"
-                   :class="pedidoDestacado === p.reparto_id ? 'ring-2 ring-amber-500 ring-offset-1' : ''"
-                   class="rounded-xl shadow-sm border border-amber-200 border-l-4 border-l-amber-500 bg-amber-50 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
+                   :class="pedidoDestacado === p.reparto_id ? 'border-2 border-orange-400 scale-[1.02] shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_18px_4px_rgba(234,88,12,0.3),inset_0_1px_0_rgba(251,146,60,0.15)]' : 'border-2 border-amber-800 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'"
+                   class="rounded-xl bg-amber-950 active:scale-95 transition-transform cursor-pointer slide-up overflow-hidden">
                 <div class="px-4 py-3 flex items-center gap-3">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
-                      <span class="text-base font-bold text-gray-900">#<span x-text="p.pedido_id"></span></span>
+                      <span class="text-lg font-black text-white tracking-tight"><span x-text="p.pedido_id"></span></span>
                       <span class="text-xs px-1.5 py-0.5 rounded font-semibold"
                             :class="badgePagoClass(p.pago.estado)"
                             x-text="p.pago.label"></span>
-                      <span x-show="p.pago.estado !== 'pagado_online'"
-                            class="text-sm font-bold text-gray-700"
-                            x-text="p.pago.importe.toFixed(2) + '€'"></span>
                     </div>
-                    <div class="text-sm text-gray-600 truncate" x-text="p.cliente_nombre"></div>
+                    <div class="text-sm font-bold text-white truncate" x-text="p.cliente_nombre"></div>
                     <div class="text-xs text-gray-400 truncate mt-0.5">📍 <span x-text="p.direccion_entrega"></span></div>
                   </div>
                   <div class="flex flex-col items-center rounded-xl px-3 py-2 min-w-[64px] flex-shrink-0"
@@ -348,7 +322,7 @@
                   class="w-full flex items-center justify-between px-1 py-2 active:opacity-70 transition">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Completados hoy</h3>
-              <span class="bg-gray-200 text-gray-500 text-xs font-semibold px-1.5 py-0.5 rounded-full"
+              <span class="bg-gray-700 text-gray-400 text-xs font-semibold px-1.5 py-0.5 rounded-full"
                     x-text="pedidosHistorial.length"></span>
             </div>
             <span class="text-gray-400 text-sm transition-transform duration-200"
@@ -361,15 +335,15 @@
                class="space-y-2 mt-1">
             <template x-for="p in pedidosHistorial" :key="p.reparto_id">
               <div @click="abrirResumen(p)"
-                   class="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition">
+                   class="bg-gray-800 rounded-xl border border-gray-700 px-4 py-3 flex items-center justify-between active:bg-gray-700 cursor-pointer transition">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                       :class="p.estado_reparto === 'entregado' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'">
+                       :class="p.estado_reparto === 'entregado' ? 'bg-green-900 text-green-400' : 'bg-red-100 text-red-600'">
                     <span x-show="p.estado_reparto === 'entregado'">✓</span>
                     <span x-show="p.estado_reparto !== 'entregado'">✗</span>
                   </div>
                   <div>
-                    <span class="font-semibold text-gray-800">#<span x-text="p.pedido_id"></span></span>
+                    <span class="font-semibold text-gray-100">#<span x-text="p.pedido_id"></span></span>
                     <span class="text-gray-400 text-xs ml-1.5" x-text="p.cliente_nombre"></span>
                   </div>
                 </div>
@@ -377,10 +351,10 @@
                   <!-- Badge rendimiento -->
                   <template x-if="p.estado_reparto === 'entregado' && minutesTaken(p) !== null">
                     <span class="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                          :class="wasOnTime(p) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'"
+                          :class="wasOnTime(p) ? 'bg-green-900 text-green-400' : 'bg-red-100 text-red-600'"
                           x-text="minutesTaken(p) + ' min'"></span>
                   </template>
-                  <span class="font-medium text-gray-700" x-text="p.total.toFixed(2) + '€'"></span>
+                  <span class="font-medium text-gray-200" x-text="p.total.toFixed(2) + '€'"></span>
                   <span class="text-gray-300 text-sm">›</span>
                 </div>
               </div>
@@ -397,10 +371,10 @@
 
       <!-- Mapa cola -->
       <div x-show="cola.some(p => p.lat != null && p.lng != null)" x-cloak
-           class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+           class="bg-gray-800 rounded-xl border border-gray-700 shadow-sm overflow-hidden mb-4">
         <button @click="toggleMapaCola()"
-                class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 transition">
-          <span class="text-sm font-semibold text-gray-700">🗺️ Ver pedidos de la cola en el mapa</span>
+                class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-700 transition">
+          <span class="text-sm font-semibold text-gray-200">Mapa</span>
           <span class="text-gray-400 text-xs" x-text="mapaColaVisible ? '▲' : '▼'"></span>
         </button>
         <div x-show="mapaColaVisible" x-cloak>
@@ -449,8 +423,8 @@
       <div x-show="cola.length === 0"
            class="section-card flex flex-col items-center justify-center rounded-[32px] py-16 text-center px-6">
         <div class="text-5xl mb-3">📋</div>
-        <p class="text-lg font-bold text-slate-800">La cola está limpia</p>
-        <p class="mt-2 text-sm text-slate-500">No hay pedidos sin asignar ahora mismo.</p>
+        <p class="text-lg font-bold text-gray-100">La cola está limpia</p>
+        <p class="mt-2 text-sm text-gray-400">No hay pedidos sin asignar ahora mismo.</p>
       </div>
 
     </div>
@@ -463,15 +437,15 @@
 
     <!-- DIRECCIÓN + MAPS -->
     <div class="px-4 pt-4 pb-0">
-      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="bg-gray-800 rounded-2xl border border-gray-700 shadow-sm overflow-hidden">
 
         <!-- Cabecera: estado del reparto -->
         <div class="flex items-center justify-between px-4 pt-3 pb-2">
           <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Dirección de entrega</span>
           <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
                 :class="actual?.estado_reparto === 'asignado'
-                  ? 'bg-orange-100 text-orange-700'
-                  : 'bg-blue-100 text-blue-700'">
+                  ? 'bg-orange-900 text-orange-300'
+                  : 'bg-blue-900 text-blue-300'">
             <span x-show="actual?.estado_reparto === 'asignado'">⏳ Pendiente de salida</span>
             <span x-show="actual?.estado_reparto === 'en_camino'" x-cloak>🛵 En camino</span>
           </span>
@@ -483,11 +457,11 @@
         </div>
 
         <!-- CTA Maps — bloqueado hasta haber salido -->
-        <div class="border-t border-gray-100">
+        <div class="border-t border-gray-700">
 
           <!-- Estado asignado: Maps desactivado con aviso -->
           <div x-show="actual?.estado_reparto === 'asignado'"
-               class="flex items-center gap-3 px-4 py-3 bg-gray-50 cursor-not-allowed">
+               class="flex items-center gap-3 px-4 py-3 bg-gray-800 cursor-not-allowed">
             <span class="text-xl opacity-30">🗺️</span>
             <div class="flex-1">
               <p class="text-sm text-gray-400 font-medium">Maps se abrirá al pulsar</p>
@@ -523,22 +497,22 @@
 
       <!-- Pagado online: sin acción -->
       <div x-show="actual?.pago?.estado === 'pagado_online'"
-           class="rounded-2xl p-4 text-center bg-green-50 border border-green-200">
+           class="rounded-2xl p-4 text-center bg-green-950 border border-green-800">
         <div class="text-3xl mb-1">💳</div>
-        <div class="font-bold text-xl text-green-800">Pagado online</div>
+        <div class="font-bold text-xl text-green-300">Pagado online</div>
         <div class="text-sm text-green-600 mt-0.5">No cobrar nada al cliente</div>
       </div>
 
       <!-- Cobro pendiente o confirmado -->
       <div x-show="actual?.pago?.estado !== 'pagado_online'"
-           class="bg-white rounded-2xl border shadow-sm overflow-hidden transition-colors duration-300"
-           :class="pagoConfirmado ? 'border-green-300' : 'border-orange-300'">
+           class="bg-gray-800 rounded-2xl border shadow-sm overflow-hidden transition-colors duration-300"
+           :class="pagoConfirmado ? 'border-green-300' : 'border-orange-800'">
 
         <!-- Importe + estado -->
         <div class="px-4 py-2.5 text-center transition-colors duration-300"
              :class="pagoConfirmado ? 'bg-green-50' : 'bg-orange-50'">
           <div class="text-3xl font-black transition-colors duration-300"
-               :class="pagoConfirmado ? 'text-green-700' : 'text-orange-900'"
+               :class="pagoConfirmado ? 'text-green-400' : 'text-orange-900'"
                x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></div>
           <div x-show="pagoConfirmado"
                class="text-sm font-medium mt-0.5 text-green-600">✓ Cobrado</div>
@@ -559,12 +533,12 @@
           <!-- Confirmado: resumen + opción de editar -->
           <div x-show="pagoConfirmado"
                class="flex items-center justify-between px-4 py-3">
-            <div class="flex items-center gap-1.5 text-sm text-gray-600">
+            <div class="flex items-center gap-1.5 text-sm text-gray-300">
               <span class="text-green-500">✓</span>
               <span x-text="resumeCobro"></span>
             </div>
             <button @click="resetCobro()"
-                    class="text-xs text-gray-400 underline active:text-gray-600 transition ml-3 flex-shrink-0">
+                    class="text-xs text-gray-400 underline active:text-gray-300 transition ml-3 flex-shrink-0">
               Cambiar
             </button>
           </div>
@@ -574,7 +548,7 @@
     </div>
 
     <!-- CLIENTE -->
-    <div class="bg-white mx-4 mt-3 rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-3">
+    <div class="bg-gray-800 mx-4 mt-3 rounded-2xl border border-gray-700 shadow-sm overflow-hidden mb-3">
       <div class="p-4 flex items-center justify-between">
         <div>
           <div class="text-xs text-gray-400 mb-0.5">Cliente</div>
@@ -582,19 +556,19 @@
           <div class="text-sm text-gray-400 mt-0.5" x-text="actual?.cliente_telefono"></div>
         </div>
         <a :href="'tel:' + actual?.cliente_telefono"
-           class="flex flex-col items-center gap-1 bg-green-50 border border-green-200 rounded-xl px-4 py-3 active:bg-green-100 transition">
+           class="flex flex-col items-center gap-1 bg-green-950 border border-green-800 rounded-xl px-4 py-3 active:bg-green-900 transition">
           <span class="text-2xl">📞</span>
-          <span class="text-xs text-green-700 font-semibold">Llamar</span>
+          <span class="text-xs text-green-400 font-semibold">Llamar</span>
         </a>
       </div>
     </div>
 
     <!-- PRODUCTOS -->
-    <div class="bg-white mx-4 rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-3"
+    <div class="bg-gray-800 mx-4 rounded-2xl border border-gray-700 shadow-sm overflow-hidden mb-3"
          x-data="{ abierto: false }">
       <button @click="abierto = !abierto"
-              class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-50 transition">
-        <span class="font-semibold text-gray-700 text-sm">
+              class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-700 transition">
+        <span class="font-semibold text-gray-200 text-sm">
           Contenido del pedido
           <span class="text-gray-400 font-normal ml-1"
                 x-text="'(' + (actual?.items?.length || 0) + ' productos)'"></span>
@@ -602,20 +576,20 @@
         <span class="text-gray-400 text-xs" x-text="abierto ? '▲' : '▼'"></span>
       </button>
       <div x-show="abierto" x-cloak>
-        <div class="divide-y divide-gray-50 border-t border-gray-100">
+        <div class="divide-y divide-gray-700 border-t border-gray-700">
           <template x-for="item in actual?.items" :key="item.nombre">
             <div class="flex items-center justify-between px-4 py-3">
               <div class="flex items-center gap-2">
-                <span class="w-6 h-6 bg-gray-100 rounded-lg text-center text-xs font-bold text-gray-600 flex items-center justify-center"
+                <span class="w-6 h-6 bg-gray-700 rounded-lg text-center text-xs font-bold text-gray-300 flex items-center justify-center"
                       x-text="item.cantidad"></span>
-                <span class="text-sm text-gray-800" x-text="item.nombre"></span>
+                <span class="text-sm text-gray-200" x-text="item.nombre"></span>
               </div>
-              <span class="text-sm font-medium text-gray-600" x-text="item.subtotal.toFixed(2) + '€'"></span>
+              <span class="text-sm font-medium text-gray-300" x-text="item.subtotal.toFixed(2) + '€'"></span>
             </div>
           </template>
         </div>
-        <div class="px-4 py-3 bg-gray-50 flex justify-between items-center">
-          <span class="font-semibold text-gray-700">Total</span>
+        <div class="px-4 py-3 bg-gray-700 flex justify-between items-center">
+          <span class="font-semibold text-gray-200">Total</span>
           <span class="font-bold text-xl text-gray-900" x-text="actual?.total?.toFixed(2) + '€'"></span>
         </div>
       </div>
@@ -631,14 +605,14 @@
     <!-- Banner estado -->
     <div class="mx-4 mt-4 rounded-2xl p-4 text-center mb-3 slide-up"
          :class="actual?.estado_reparto === 'entregado'
-           ? 'bg-green-50 border border-green-200'
-           : 'bg-red-50 border border-red-200'">
+           ? 'bg-green-950 border border-green-800'
+           : 'bg-red-950 border border-red-800'">
       <div class="text-4xl mb-1">
         <span x-show="actual?.estado_reparto === 'entregado'">✅</span>
         <span x-show="actual?.estado_reparto !== 'entregado'">❌</span>
       </div>
       <div class="font-bold text-lg"
-           :class="actual?.estado_reparto === 'entregado' ? 'text-green-700' : 'text-red-700'"
+           :class="actual?.estado_reparto === 'entregado' ? 'text-green-400' : 'text-red-400'"
            x-text="actual?.estado_reparto === 'entregado' ? 'Entregado' : 'No entregado'"></div>
       <div x-show="actual?.hora_entrega_real" class="text-sm text-gray-500 mt-0.5"
            x-text="formatFechaHora(actual?.hora_entrega_real)"></div>
@@ -649,13 +623,13 @@
     <!-- RENDIMIENTO (solo pedidos entregados) -->
     <template x-if="actual?.estado_reparto === 'entregado'">
       <div class="mx-4 mb-3 slide-up">
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="bg-gray-800 rounded-2xl border border-gray-700 shadow-sm overflow-hidden">
 
           <!-- Cabecera con badge on-time -->
-          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <span class="font-semibold text-gray-700 text-sm">📊 Rendimiento</span>
+          <div class="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+            <span class="font-semibold text-gray-200 text-sm">📊 Rendimiento</span>
             <template x-if="wasOnTime(actual) === true">
-              <span class="text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">🟢 A tiempo</span>
+              <span class="text-xs font-bold bg-green-900 text-green-400 px-2 py-0.5 rounded-full">🟢 A tiempo</span>
             </template>
             <template x-if="wasOnTime(actual) === false">
               <span class="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">🔴 Con retraso</span>
@@ -667,21 +641,21 @@
 
             <!-- Pedido recibido -->
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-base flex-shrink-0">🕐</div>
+              <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-base flex-shrink-0">🕐</div>
               <div class="flex-1">
                 <div class="text-xs text-gray-400">Pedido recibido</div>
-                <div class="font-semibold text-gray-800 text-sm" x-text="formatHora(actual?.fecha_creacion)"></div>
+                <div class="font-semibold text-gray-100 text-sm" x-text="formatHora(actual?.fecha_creacion)"></div>
               </div>
             </div>
 
-            <div class="ml-4 w-px h-4 bg-gray-200 mx-[0.9rem]"></div>
+            <div class="ml-4 w-px h-4 bg-gray-600 mx-[0.9rem]"></div>
 
             <!-- Salida -->
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-base flex-shrink-0">🛵</div>
+              <div class="w-8 h-8 rounded-full bg-orange-900 flex items-center justify-center text-base flex-shrink-0">🛵</div>
               <div class="flex-1">
                 <div class="text-xs text-gray-400">Salida a repartir</div>
-                <div class="font-semibold text-gray-800 text-sm"
+                <div class="font-semibold text-gray-100 text-sm"
                      x-text="actual?.hora_salida ? formatHora(actual.hora_salida) : '—'"></div>
               </div>
               <template x-if="actual?.hora_salida && actual?.fecha_creacion">
@@ -691,14 +665,14 @@
               </template>
             </div>
 
-            <div class="ml-4 w-px h-4 bg-gray-200 mx-[0.9rem]"></div>
+            <div class="ml-4 w-px h-4 bg-gray-600 mx-[0.9rem]"></div>
 
             <!-- Entregado -->
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-base flex-shrink-0">✅</div>
+              <div class="w-8 h-8 rounded-full bg-green-900 flex items-center justify-center text-base flex-shrink-0">✅</div>
               <div class="flex-1">
                 <div class="text-xs text-gray-400">Entregado</div>
-                <div class="font-semibold text-gray-800 text-sm"
+                <div class="font-semibold text-gray-100 text-sm"
                      x-text="actual?.hora_entrega_real ? formatHora(actual.hora_entrega_real) : '—'"></div>
               </div>
               <template x-if="minutesTaken(actual) !== null">
@@ -711,10 +685,10 @@
           </div>
 
           <!-- Métricas -->
-          <div class="border-t border-gray-100 px-4 py-3 grid grid-cols-2 gap-3">
-            <div class="text-center bg-gray-50 rounded-xl py-2.5">
+          <div class="border-t border-gray-700 px-4 py-3 grid grid-cols-2 gap-3">
+            <div class="text-center bg-gray-700 rounded-xl py-2.5">
               <div class="text-xs text-gray-400 mb-0.5">Tiempo en camino</div>
-              <div class="font-bold text-lg text-gray-800">
+              <div class="font-bold text-lg text-gray-100">
                 <template x-if="actual?.hora_salida && actual?.hora_entrega_real">
                   <span x-text="Math.round((new Date(actual.hora_entrega_real) - new Date(actual.hora_salida)) / 60000) + ' min'"></span>
                 </template>
@@ -723,10 +697,10 @@
                 </template>
               </div>
             </div>
-            <div class="text-center bg-gray-50 rounded-xl py-2.5">
+            <div class="text-center bg-gray-700 rounded-xl py-2.5">
               <div class="text-xs text-gray-400 mb-0.5">Tiempo total</div>
               <div class="font-bold text-lg"
-                   :class="wasOnTime(actual) ? 'text-green-600' : (wasOnTime(actual) === false ? 'text-red-500' : 'text-gray-800')">
+                   :class="wasOnTime(actual) ? 'text-green-600' : (wasOnTime(actual) === false ? 'text-red-500' : 'text-gray-100')">
                 <template x-if="minutesTaken(actual) !== null">
                   <span x-text="minutesTaken(actual) + ' min'"></span>
                 </template>
@@ -739,7 +713,7 @@
 
           <!-- Margen vs promesa -->
           <template x-if="minutesTaken(actual) !== null">
-            <div class="border-t border-gray-100 px-4 py-2.5 text-center text-xs text-gray-500">
+            <div class="border-t border-gray-700 px-4 py-2.5 text-center text-xs text-gray-400">
               Promesa al cliente: 20 min ·
               <span :class="wasOnTime(actual) ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'"
                     x-text="wasOnTime(actual)
@@ -754,7 +728,7 @@
     </template>
 
     <!-- Info del pedido -->
-    <div class="bg-white mx-4 rounded-2xl border border-gray-100 shadow-sm mb-3">
+    <div class="bg-gray-800 mx-4 rounded-2xl border border-gray-700 shadow-sm mb-3">
       <div class="p-4 space-y-3">
         <div class="flex justify-between">
           <span class="text-gray-500 text-sm">Cliente</span>
@@ -771,7 +745,7 @@
             <span class="font-medium text-sm flex-1" x-text="actual?.direccion_entrega"></span>
             <a :href="mapsUrl(actual?.direccion_entrega)"
                target="_blank"
-               class="text-blue-500 text-xs border border-blue-200 rounded-lg px-2 py-1 active:bg-blue-50 transition">
+               class="text-blue-500 text-xs border border-blue-800 rounded-lg px-2 py-1 active:bg-blue-900 transition">
               🗺️ Maps
             </a>
           </div>
@@ -782,7 +756,7 @@
                 :class="badgePagoClass(actual?.pago?.estado)"
                 x-text="actual?.pago?.label"></span>
         </div>
-        <div class="flex justify-between border-t border-gray-100 pt-2">
+        <div class="flex justify-between border-t border-gray-700 pt-2">
           <span class="font-semibold">Total</span>
           <span class="font-bold text-lg" x-text="actual?.total?.toFixed(2) + '€'"></span>
         </div>
@@ -790,19 +764,19 @@
     </div>
 
     <!-- Productos entregados -->
-    <div class="bg-white mx-4 rounded-2xl border border-gray-100 shadow-sm mb-4">
-      <div class="px-4 py-3 border-b border-gray-100">
-        <span class="font-semibold text-gray-700 text-sm">Productos entregados</span>
+    <div class="bg-gray-800 mx-4 rounded-2xl border border-gray-700 shadow-sm mb-4">
+      <div class="px-4 py-3 border-b border-gray-700">
+        <span class="font-semibold text-gray-200 text-sm">Productos entregados</span>
       </div>
       <div class="divide-y divide-gray-50">
         <template x-for="item in actual?.items" :key="item.nombre">
           <div class="flex items-center justify-between px-4 py-3">
             <div class="flex items-center gap-2">
-              <span class="w-6 h-6 bg-gray-100 rounded-lg text-center text-xs font-bold text-gray-600 flex items-center justify-center"
+              <span class="w-6 h-6 bg-gray-700 rounded-lg text-center text-xs font-bold text-gray-300 flex items-center justify-center"
                     x-text="item.cantidad"></span>
-              <span class="text-sm text-gray-800" x-text="item.nombre"></span>
+              <span class="text-sm text-gray-200" x-text="item.nombre"></span>
             </div>
-            <span class="text-sm font-medium text-gray-600" x-text="item.subtotal.toFixed(2) + '€'"></span>
+            <span class="text-sm font-medium text-gray-300" x-text="item.subtotal.toFixed(2) + '€'"></span>
           </div>
         </template>
       </div>
@@ -818,7 +792,7 @@
       </button>
       <button x-show="actual?.estado_reparto === 'no_entregado'"
               @click="corregirAEntregado()"
-              class="w-full border border-green-200 text-green-700 bg-green-50 rounded-xl py-3 text-sm font-medium active:bg-green-100 transition">
+              class="w-full border border-green-200 text-green-400 bg-green-50 rounded-xl py-3 text-sm font-medium active:bg-green-900 transition">
         Corregir: marcar como entregado
       </button>
     </div>
@@ -846,15 +820,15 @@
        x-transition:leave="transition ease-in duration-200"
        x-transition:leave-start="translate-y-0"
        x-transition:leave-end="translate-y-full"
-       class="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto"
+       class="fixed inset-x-0 bottom-0 z-50 bg-gray-900 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto"
        x-cloak>
 
     <!-- Handle + cabecera fija -->
-    <div class="sticky top-0 bg-white rounded-t-3xl pt-3 pb-3 px-4 border-b border-gray-100">
-      <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-3"></div>
+    <div class="sticky top-0 bg-gray-900 rounded-t-3xl pt-3 pb-3 px-4 border-b border-gray-700">
+      <div class="w-12 h-1 bg-gray-700 rounded-full mx-auto mb-3"></div>
       <div class="flex items-center justify-between">
-        <h3 class="font-bold text-gray-800">¿Por qué no se pudo entregar?</h3>
-        <button @click="cerrarNoEntregar()" class="text-gray-400 text-2xl leading-none active:text-gray-600 w-8 h-8 flex items-center justify-center">×</button>
+        <h3 class="font-bold text-gray-100">¿Por qué no se pudo entregar?</h3>
+        <button @click="cerrarNoEntregar()" class="text-gray-400 text-2xl leading-none active:text-gray-300 w-8 h-8 flex items-center justify-center">×</button>
       </div>
       <p class="text-gray-400 text-sm mt-0.5">El supervisor lo verá en el dashboard.</p>
     </div>
@@ -866,8 +840,8 @@
           <button @click="motivoSeleccionado = m; motivoLibre = ''"
                   class="rounded-xl border py-3 px-3 text-sm font-medium text-left transition active:scale-95"
                   :class="motivoSeleccionado === m
-                    ? 'border-orange-400 bg-orange-50 text-orange-700'
-                    : 'border-gray-200 text-gray-600 active:bg-gray-50'">
+                    ? 'border-orange-400 bg-orange-50 text-orange-300'
+                    : 'border-gray-600 text-gray-300 active:bg-gray-700'">
             <span x-text="m"></span>
           </button>
         </template>
@@ -880,7 +854,7 @@
                   @input="motivoSeleccionado = ''"
                   placeholder="Describe qué pasó..."
                   rows="3"
-                  class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"></textarea>
+                  class="w-full border border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"></textarea>
       </div>
 
       <!-- Confirmar no entregado -->
@@ -889,7 +863,7 @@
               class="w-full py-4 rounded-2xl font-bold text-lg transition active:scale-95"
               :class="motivoFinal
                 ? 'bg-red-500 active:bg-red-600 text-white'
-                : 'bg-gray-100 text-gray-300 cursor-not-allowed'">
+                : 'bg-gray-700 text-gray-500 cursor-not-allowed'">
         <span x-show="!procesando">Confirmar no entregado</span>
         <span x-show="procesando" class="flex items-center justify-center gap-2">
           <span class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
@@ -903,7 +877,7 @@
        BOTONES FIJOS INFERIORES — vista PEDIDO
   ================================================================ -->
   <div x-show="vista === 'pedido' && actual && !mostrarNoEntregar" x-cloak
-       class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-20 space-y-2">
+       class="fixed bottom-0 left-0 right-0 p-4 bg-gray-900 border-t border-gray-700 shadow-lg z-20 space-y-2">
 
     <!-- Salida a repartir -->
     <div x-show="actual?.estado_reparto === 'asignado'">
@@ -926,7 +900,7 @@
       <div>
         <div class="flex gap-2">
           <button @click="mostrarNoEntregar = true"
-                  class="flex-1 border border-red-300 text-red-600 bg-red-50 py-4 rounded-2xl font-bold active:bg-red-100 transition active:scale-95">
+                  class="flex-1 border border-red-800 text-red-600 bg-red-50 py-4 rounded-2xl font-bold active:bg-red-100 transition active:scale-95">
             ✗ No entregado
           </button>
 
@@ -998,20 +972,20 @@
        x-transition:leave="transition ease-in duration-200"
        x-transition:leave-start="translate-y-0"
        x-transition:leave-end="translate-y-full"
-       class="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[92vh] overflow-y-auto"
+       class="fixed inset-x-0 bottom-0 z-50 bg-gray-900 rounded-t-3xl shadow-2xl max-h-[92vh] overflow-y-auto"
        x-cloak>
 
     <!-- Handle + cabecera -->
-    <div class="sticky top-0 bg-white rounded-t-3xl pt-3 pb-3 px-4 border-b border-gray-100">
-      <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-3"></div>
+    <div class="sticky top-0 bg-gray-900 rounded-t-3xl pt-3 pb-3 px-4 border-b border-gray-700">
+      <div class="w-12 h-1 bg-gray-700 rounded-full mx-auto mb-3"></div>
       <div class="flex items-start justify-between">
         <div>
-          <h3 class="font-bold text-gray-800 text-lg">Cobrar al cliente</h3>
+          <h3 class="font-bold text-gray-100 text-lg">Cobrar al cliente</h3>
           <p class="text-2xl font-black text-orange-600 leading-tight"
              x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></p>
         </div>
         <button @click="cerrarCobro()"
-                class="text-gray-400 text-2xl leading-none active:text-gray-600 w-9 h-9 flex items-center justify-center mt-0.5">×</button>
+                class="text-gray-400 text-2xl leading-none active:text-gray-300 w-9 h-9 flex items-center justify-center mt-0.5">×</button>
       </div>
     </div>
 
@@ -1022,24 +996,24 @@
         <button @click="metodoCobro = 'efectivo'"
                 class="border rounded-2xl py-3.5 flex flex-col items-center gap-1.5 active:scale-95 transition"
                 :class="metodoCobro === 'efectivo'
-                  ? 'border-orange-400 bg-orange-50 text-orange-700'
-                  : 'border-gray-200 text-gray-500 active:bg-gray-50'">
+                  ? 'border-orange-400 bg-orange-50 text-orange-300'
+                  : 'border-gray-600 text-gray-400 active:bg-gray-700'">
           <span class="text-2xl">💵</span>
           <span class="text-xs font-semibold">Efectivo</span>
         </button>
         <button @click="metodoCobro = 'tarjeta'"
                 class="border rounded-2xl py-3.5 flex flex-col items-center gap-1.5 active:scale-95 transition"
                 :class="metodoCobro === 'tarjeta'
-                  ? 'border-blue-400 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 text-gray-500 active:bg-gray-50'">
+                  ? 'border-blue-400 bg-blue-950 text-blue-300'
+                  : 'border-gray-600 text-gray-400 active:bg-gray-700'">
           <span class="text-2xl">📟</span>
           <span class="text-xs font-semibold">Tarjeta</span>
         </button>
         <button @click="metodoCobro = 'mixto'"
                 class="border rounded-2xl py-3.5 flex flex-col items-center gap-1.5 active:scale-95 transition"
                 :class="metodoCobro === 'mixto'
-                  ? 'border-purple-400 bg-purple-50 text-purple-700'
-                  : 'border-gray-200 text-gray-500 active:bg-gray-50'">
+                  ? 'border-purple-400 bg-purple-950 text-purple-300'
+                  : 'border-gray-600 text-gray-400 active:bg-gray-700'">
           <span class="text-2xl">🔀</span>
           <span class="text-xs font-semibold">Mixto</span>
         </button>
@@ -1057,7 +1031,7 @@
                    placeholder="0.00"
                    step="0.01"
                    min="0"
-                   class="flex-1 border border-gray-200 rounded-2xl px-4 py-3.5 text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-orange-300 text-right tabular-nums">
+                   class="flex-1 border border-gray-600 rounded-2xl px-4 py-3.5 text-2xl font-bold bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-300 text-right tabular-nums">
             <span class="text-xl font-bold text-gray-400">€</span>
           </div>
         </div>
@@ -1070,8 +1044,8 @@
               <button @click="importeDado = v.toString()"
                       class="border rounded-xl px-3.5 py-2 text-sm font-semibold transition active:scale-95"
                       :class="parseFloat(importeDado) === v
-                        ? 'border-orange-400 bg-orange-50 text-orange-700'
-                        : 'border-gray-200 text-gray-600 active:bg-gray-50'"
+                        ? 'border-orange-400 bg-orange-50 text-orange-300'
+                        : 'border-gray-600 text-gray-300 active:bg-gray-700'"
                       x-text="v + ' €'">
               </button>
             </template>
@@ -1082,8 +1056,8 @@
         <template x-if="cambioEfectivo !== null">
           <div class="rounded-2xl p-4 text-center"
                :class="cambioEfectivo >= 0
-                 ? 'bg-green-50 border border-green-200'
-                 : 'bg-red-50 border border-red-200'">
+                 ? 'bg-green-950 border border-green-800'
+                 : 'bg-red-950 border border-red-800'">
             <div class="text-xs font-semibold uppercase tracking-wide mb-1"
                  :class="cambioEfectivo >= 0 ? 'text-green-500' : 'text-red-400'">
               <span x-show="cambioEfectivo > 0">Devuelve al cliente</span>
@@ -1091,7 +1065,7 @@
               <span x-show="cambioEfectivo < 0">Falta por cobrar</span>
             </div>
             <div class="text-4xl font-black tabular-nums"
-                 :class="cambioEfectivo >= 0 ? 'text-green-700' : 'text-red-600'"
+                 :class="cambioEfectivo >= 0 ? 'text-green-400' : 'text-red-600'"
                  x-text="Math.abs(cambioEfectivo).toFixed(2) + ' €'"></div>
           </div>
         </template>
@@ -1101,7 +1075,7 @@
                 class="w-full py-4 rounded-2xl font-bold text-lg transition active:scale-95"
                 :class="(cambioEfectivo !== null && cambioEfectivo >= 0)
                   ? 'bg-orange-500 text-white active:bg-orange-600'
-                  : 'bg-gray-100 text-gray-300 cursor-not-allowed'">
+                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'">
           Confirmar cobro en efectivo
         </button>
       </div>
@@ -1109,10 +1083,10 @@
       <!-- ── PANEL TARJETA ────────────────────────────────────── -->
       <div x-show="metodoCobro === 'tarjeta'" class="space-y-4">
 
-        <div class="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-center">
+        <div class="bg-blue-950 border border-blue-800 rounded-2xl p-5 text-center">
           <div class="text-4xl mb-2">📟</div>
-          <div class="font-semibold text-blue-800">Cobra con el datáfono</div>
-          <div class="text-4xl font-black text-blue-900 mt-2 tabular-nums"
+          <div class="font-semibold text-blue-300">Cobra con el datáfono</div>
+          <div class="text-4xl font-black text-blue-200 mt-2 tabular-nums"
                x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></div>
         </div>
 
@@ -1126,9 +1100,9 @@
       <div x-show="metodoCobro === 'mixto'" class="space-y-4">
 
         <!-- Total a cobrar -->
-        <div class="bg-purple-50 border border-purple-200 rounded-2xl px-4 py-3 flex items-center justify-between">
-          <span class="text-sm text-purple-700 font-medium">Total a cobrar</span>
-          <span class="text-xl font-black text-purple-900 tabular-nums"
+        <div class="bg-purple-950 border border-purple-800 rounded-2xl px-4 py-3 flex items-center justify-between">
+          <span class="text-sm text-purple-300 font-medium">Total a cobrar</span>
+          <span class="text-xl font-black text-purple-200 tabular-nums"
                 x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></span>
         </div>
 
@@ -1142,7 +1116,7 @@
                    placeholder="0.00"
                    step="0.01"
                    min="0"
-                   class="flex-1 border border-gray-200 rounded-2xl px-4 py-3 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-300 text-right tabular-nums">
+                   class="flex-1 border border-gray-600 rounded-2xl px-4 py-3 text-xl font-bold bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-300 text-right tabular-nums">
             <span class="font-bold text-gray-400">€</span>
           </div>
         </div>
@@ -1157,7 +1131,7 @@
                    placeholder="0.00"
                    step="0.01"
                    min="0"
-                   class="flex-1 border border-gray-200 rounded-2xl px-4 py-3 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-300 text-right tabular-nums">
+                   class="flex-1 border border-gray-600 rounded-2xl px-4 py-3 text-xl font-bold bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-300 text-right tabular-nums">
             <span class="font-bold text-gray-400">€</span>
           </div>
         </div>
@@ -1166,13 +1140,13 @@
         <template x-if="totalMixtoCalculado > 0">
           <div class="rounded-2xl p-3 text-center"
                :class="mixtoValido
-                 ? 'bg-green-50 border border-green-200'
-                 : 'bg-orange-50 border border-orange-200'">
+                 ? 'bg-green-950 border border-green-800'
+                 : 'bg-orange-950 border border-orange-200'">
             <template x-if="mixtoValido">
-              <span class="text-green-700 font-semibold text-sm">✓ Total correcto</span>
+              <span class="text-green-400 font-semibold text-sm">✓ Total correcto</span>
             </template>
             <template x-if="!mixtoValido">
-              <div class="text-orange-700 font-semibold text-sm">
+              <div class="text-orange-300 font-semibold text-sm">
                 <span x-show="totalMixtoCalculado < (actual?.pago?.importe || 0)">
                   Falta
                   <span class="font-black tabular-nums"
@@ -1193,7 +1167,7 @@
                 class="w-full py-4 rounded-2xl font-bold text-lg transition active:scale-95"
                 :class="mixtoValido
                   ? 'bg-purple-600 text-white active:bg-purple-700'
-                  : 'bg-gray-100 text-gray-300 cursor-not-allowed'">
+                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'">
           Confirmar cobro mixto
         </button>
       </div>
@@ -1203,715 +1177,6 @@
 
 
   <!-- ======== JAVASCRIPT ======== -->
-  <script>
-    let mapaRep = null;
-    let mapaRepMarkers = [];
-    let marcadorTiendaRep = null;
-    let mapaCola = null;
-    let mapaColaMarkers = [];
-    let marcadorTiendaCola = null;
-
-    function repartidor(repartidorId) {
-      if (!repartidorId) {
-        const saved = localStorage.getItem('panchi_repartidor_id');
-        if (saved) repartidorId = parseInt(saved, 10);
-      }
-      return {
-        repartidorId,
-        pedidos: [],
-        vista: 'lista',       // lista | pedido | resumen
-        actual: null,
-        cargando: false,
-        tabActiva: 'mis-entregas',   // 'mis-entregas' | 'cola'
-        cola: [],
-        colaTotal: 0,
-        cogiendo: null,              // reparto_id en vuelo
-        procesando: false,
-        historialAbierto: false,
-        mostrarNoEntregar: false,
-        now: new Date(),
-        motivoSeleccionado: '',
-        motivoLibre: '',
-        motivosRapidos: [
-          'Nadie en casa',
-          'Dirección incorrecta',
-          'Cliente no contesta',
-          'Acceso imposible',
-        ],
-        toast: { visible: false, msg: '', error: false },
-
-        // Hold-to-confirm
-        holdProgress: 0,
-        holdActive: false,
-        _holdTimer: null,
-
-        // Pedidos asignado que ya eran conocidos antes de salir a repartir
-        pedidosConocidos: new Set(),
-
-        // Conexión
-        conexionOk: true,
-        lastFetchTime: null,
-
-        // Mapa
-        mapaVisible: false,
-        mapaColaVisible: false,
-        pedidoDestacado: null,
-
-        // Cobro
-        pagoConfirmado: false,
-        mostrarCobro: false,
-        metodoCobro: '',
-        importeDado: '',
-        importeEfectivoMixto: '',
-        importeTarjetaMixto: '',
-        _resumeCobro: '',
-
-        get pedidosActivos() {
-          return this.pedidos
-            .filter(p => ['asignado', 'en_camino'].includes(p.estado_reparto))
-            .sort((a, b) =>
-              this.calculateRemainingMinutes(a.fecha_creacion) -
-              this.calculateRemainingMinutes(b.fecha_creacion)
-            );
-        },
-
-        get pedidosEnReparto() {
-          return this.pedidos
-            .filter(p => p.estado_reparto === 'en_camino')
-            .sort((a, b) =>
-              this.calculateRemainingMinutes(a.fecha_creacion) -
-              this.calculateRemainingMinutes(b.fecha_creacion)
-            );
-        },
-
-        // Pedidos que el repartidor ya sabía antes de salir (amber)
-        get pedidosEnTiendaConocidos() {
-          return this.pedidos
-            .filter(p => p.estado_reparto === 'asignado' && this.pedidosConocidos.has(p.reparto_id))
-            .sort((a, b) =>
-              this.calculateRemainingMinutes(a.fecha_creacion) -
-              this.calculateRemainingMinutes(b.fecha_creacion)
-            );
-        },
-
-        // Pedidos asignados mientras está en calle repartiendo (rojo)
-        get pedidosNuevosEnCalle() {
-          if (!this.pedidos.some(p => p.estado_reparto === 'en_camino')) return [];
-          return this.pedidos
-            .filter(p => p.estado_reparto === 'asignado' && !this.pedidosConocidos.has(p.reparto_id))
-            .sort((a, b) =>
-              this.calculateRemainingMinutes(a.fecha_creacion) -
-              this.calculateRemainingMinutes(b.fecha_creacion)
-            );
-        },
-
-        get pedidosHistorial() {
-          return this.pedidos.filter(p =>
-            ['entregado', 'no_entregado'].includes(p.estado_reparto)
-          );
-        },
-
-        get motivoFinal() {
-          return this.motivoLibre.trim() || this.motivoSeleccionado;
-        },
-
-        // ── Cobro: computed ───────────────────────────────────────
-        get needsCobro() {
-          return this.actual?.pago?.estado !== 'pagado_online';
-        },
-
-        get canDeliver() {
-          return !this.needsCobro || this.pagoConfirmado;
-        },
-
-        get resumeCobro() {
-          return this._resumeCobro;
-        },
-
-        get cambioEfectivo() {
-          const dado = parseFloat(this.importeDado);
-          const total = this.actual?.pago?.importe || 0;
-          if (isNaN(dado) || dado <= 0) return null;
-          return parseFloat((dado - total).toFixed(2));
-        },
-
-        get totalMixtoCalculado() {
-          const ef = parseFloat(this.importeEfectivoMixto) || 0;
-          const tj = parseFloat(this.importeTarjetaMixto) || 0;
-          return parseFloat((ef + tj).toFixed(2));
-        },
-
-        get mixtoValido() {
-          const total = this.actual?.pago?.importe || 0;
-          return this.totalMixtoCalculado > 0
-            && Math.abs(this.totalMixtoCalculado - total) < 0.005;
-        },
-
-        get quickAmounts() {
-          const total = this.actual?.pago?.importe || 0;
-          const amounts = new Set();
-          [5, 10, 20, 50, 100].forEach(bill => {
-            let v = bill;
-            while (v < total) v += bill;
-            amounts.add(v);
-          });
-          return [...amounts].sort((a, b) => a - b).slice(0, 5);
-        },
-
-        async init() {
-          if (!this.repartidorId) return;
-          localStorage.setItem('panchi_repartidor_id', this.repartidorId);
-          await Promise.all([this.recargar(), this.cargarCola()]);
-          setInterval(() => {
-            if (this.vista === 'lista') { this.recargar(); this.cargarCola(); }
-          }, 60000);
-          setInterval(() => { this.now = new Date(); }, 30000);
-        },
-
-        async recargar(skipCache = false, silencioso = false) {
-          if (!this.repartidorId) return;
-          if (!silencioso) this.cargando = true;
-          const _cacheKey = `panchi_rep_pedidos_${this.repartidorId}`;
-          if (!skipCache) {
-            try {
-              const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
-              if (_cached) {
-                this.pedidos = _cached;
-                if (!_cached.some(p => p.estado_reparto === 'en_camino'))
-                  _cached.filter(p => p.estado_reparto === 'asignado')
-                         .forEach(p => this.pedidosConocidos.add(p.reparto_id));
-                if (!silencioso) this.cargando = false;
-              }
-            } catch (_) {}
-          }
-          try {
-            const r = await fetch(`/repartidor/mis-pedidos?repartidor_id=${this.repartidorId}`);
-            if (r.ok) {
-              this.pedidos = await r.json();
-              localStorage.setItem(_cacheKey, JSON.stringify(this.pedidos));
-              this.conexionOk = true;
-              this.lastFetchTime = new Date();
-              if (this.mapaVisible) this.actualizarMapaRepartidor();
-              // Si no hay nadie en camino, todos los asignados son "conocidos"
-              if (!this.pedidos.some(p => p.estado_reparto === 'en_camino')) {
-                this.pedidos
-                  .filter(p => p.estado_reparto === 'asignado')
-                  .forEach(p => this.pedidosConocidos.add(p.reparto_id));
-              }
-              if (this.actual) {
-                const updated = this.pedidos.find(p => p.reparto_id === this.actual.reparto_id);
-                if (updated) this.actual = updated;
-              }
-            } else {
-              this.conexionOk = false;
-            }
-          } catch {
-            this.conexionOk = false;
-          } finally {
-            if (!silencioso) this.cargando = false;
-          }
-        },
-
-        async cargarCola() {
-          const _cacheKey = `panchi_rep_cola_${this.repartidorId}`;
-          try {
-            const _cached = JSON.parse(localStorage.getItem(_cacheKey) || 'null');
-            if (_cached) {
-              this.cola = _cached.cola || [];
-              this.colaTotal = _cached.total || 0;
-            }
-          } catch (_) {}
-          try {
-            const r = await fetch('/repartidor/cola');
-            if (r.ok) {
-              const data = await r.json();
-              this.cola = data.cola || [];
-              this.colaTotal = data.total || 0;
-              localStorage.setItem(_cacheKey, JSON.stringify(data));
-              if (this.mapaColaVisible) this.actualizarMapaCola();
-            } else {
-              this.conexionOk = false;
-            }
-          } catch (_) {
-            this.conexionOk = false;
-          }
-        },
-
-        async cogerReparto(pedidoId) {
-          if (this.cogiendo !== null) return;
-          this.cogiendo = pedidoId;
-          try {
-            const r = await fetch(`/repartidor/cola/coger/${pedidoId}`, { method: 'POST' });
-            if (r.ok) {
-              this.cola = this.cola.map(p =>
-                p.pedido_id === pedidoId ? { ...p, ya_cogido: true } : p
-              );
-              this.colaTotal = Math.max(0, this.colaTotal - 1);
-              this.mostrarToast('Reparto cogido ✓');
-              this.cargarCola();
-              this.recargar(true, true);
-            } else {
-              const data = await r.json().catch(() => ({}));
-              if (data.error === 'ya_cogido') {
-                this.cola = this.cola.map(p =>
-                  p.pedido_id === pedidoId ? { ...p, ya_cogido: true } : p
-                );
-              } else {
-                this.conexionOk = false;
-              }
-            }
-          } catch (_) {
-            this.conexionOk = false;
-          }
-          this.cogiendo = null;
-        },
-
-        abrirPedido(p) {
-          this.actual = p;
-          this.vista = 'pedido';
-          this.pagoConfirmado = false;
-          this._resumeCobro = '';
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        },
-
-        abrirResumen(p) {
-          this.actual = p;
-          this.vista = 'resumen';
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        },
-
-        volverALista() {
-          this.vista = 'lista';
-          this.actual = null;
-          this.motivoSeleccionado = '';
-          this.motivoLibre = '';
-          this.mostrarNoEntregar = false;
-          this.pagoConfirmado = false;
-          this._resumeCobro = '';
-          this.importeDado = '';
-          this.importeEfectivoMixto = '';
-          this.importeTarjetaMixto = '';
-          this.metodoCobro = '';
-          this._stopHold();
-          this.recargar(true, true);
-        },
-
-        cerrarNoEntregar() {
-          this.mostrarNoEntregar = false;
-          this.motivoSeleccionado = '';
-          this.motivoLibre = '';
-        },
-
-        // ── Cobro ─────────────────────────────────────────────────
-        cerrarCobro() {
-          this.mostrarCobro = false;
-        },
-
-        resetCobro() {
-          this.pagoConfirmado = false;
-          this._resumeCobro = '';
-          this.importeDado = '';
-          this.importeEfectivoMixto = '';
-          this.importeTarjetaMixto = '';
-          this.metodoCobro = '';
-          this.mostrarCobro = true;
-        },
-
-        confirmarCobro() {
-          const importe = this.actual?.pago?.importe || 0;
-          if (this.metodoCobro === 'efectivo') {
-            const cambio = this.cambioEfectivo;
-            if (cambio === null || cambio < 0) return;
-            this._resumeCobro = cambio === 0
-              ? `Efectivo ${importe.toFixed(2)} € (sin cambio)`
-              : `Efectivo · cambio ${cambio.toFixed(2)} €`;
-          } else if (this.metodoCobro === 'tarjeta') {
-            this._resumeCobro = `Tarjeta ${importe.toFixed(2)} €`;
-          } else if (this.metodoCobro === 'mixto') {
-            if (!this.mixtoValido) return;
-            const ef = parseFloat(this.importeEfectivoMixto).toFixed(2);
-            const tj = parseFloat(this.importeTarjetaMixto).toFixed(2);
-            this._resumeCobro = `Mixto · ${ef} € efectivo + ${tj} € tarjeta`;
-          } else {
-            return;
-          }
-          this.pagoConfirmado = true;
-          this.mostrarCobro = false;
-          this.mostrarToast('Cobro registrado ✓');
-          this._persistirCobro();
-        },
-
-        async _persistirCobro() {
-          try {
-            await fetch(`/repartidor/reparto/${this.actual.reparto_id}/registrar-cobro`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                metodo_cobro:     this.metodoCobro,
-                importe_cobrado:  this.actual?.pago?.importe || 0,
-                cambio_devuelto:  this.metodoCobro === 'efectivo' ? this.cambioEfectivo : null,
-                importe_efectivo: this.metodoCobro === 'mixto' ? parseFloat(this.importeEfectivoMixto) : null,
-                importe_tarjeta:  this.metodoCobro === 'mixto' ? parseFloat(this.importeTarjetaMixto) : null,
-              }),
-            });
-          } catch (_) {
-            // fallo silencioso — el cobro queda confirmado localmente
-          }
-        },
-
-        // ── Hold-to-confirm ──────────────────────────────────────
-        startHold() {
-          if (this.procesando || !this.canDeliver) return;
-          this.holdActive = true;
-          this.holdProgress = 0;
-          const startTime = Date.now();
-          this._holdTimer = setInterval(() => {
-            this.holdProgress = Math.min(100, ((Date.now() - startTime) / 1500) * 100);
-            if (this.holdProgress >= 100) {
-              this._stopHold();
-              this.marcarEntregado();
-            }
-          }, 30);
-        },
-
-        _stopHold() {
-          if (this._holdTimer) {
-            clearInterval(this._holdTimer);
-            this._holdTimer = null;
-          }
-          this.holdActive = false;
-          this.holdProgress = 0;
-        },
-
-        // ── Mapa de entregas ──────────────────────────────────────
-        resaltarTarjeta(reparto_id) {
-          this.pedidoDestacado = reparto_id;
-          this.$nextTick(() => {
-            const el = document.getElementById('card-' + reparto_id);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          });
-          setTimeout(() => { this.pedidoDestacado = null; }, 2000);
-        },
-
-        toggleMapa() {
-          this.mapaVisible = !this.mapaVisible;
-          if (this.mapaVisible) {
-            // setTimeout en lugar de $nextTick: iOS necesita tiempo para pintar
-            // el contenedor antes de que Leaflet pueda medir sus dimensiones
-            setTimeout(() => this.iniciarMapaRepartidor(), 50);
-          }
-        },
-
-        iniciarMapaRepartidor() {
-          const el = document.getElementById('mapa-rep');
-          if (!el) return;
-          if (!mapaRep) {
-            mapaRep = L.map('mapa-rep', {
-              tap: false,              // elimina el emulador de tap de Leaflet (causa clicks erráticos en iOS)
-              dragging: false,         // mapa estático: evita que capture el scroll de la página
-              touchZoom: false,        // sin pinch-zoom (overview fijo)
-              scrollWheelZoom: false,
-              doubleClickZoom: false,
-              zoomControl: false,
-            }).setView([40.010049, -3.012543], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution: '© OpenStreetMap',
-              maxZoom: 18,
-            }).addTo(mapaRep);
-          }
-          // invalidateSize siempre al mostrar: corrige el cuadrado en blanco en iOS
-          mapaRep.invalidateSize();
-          this.actualizarMapaRepartidor();
-        },
-
-        actualizarMapaRepartidor() {
-          if (!mapaRep) return;
-
-          // Marcador de tienda — se dibuja una sola vez
-          if (!marcadorTiendaRep) {
-            const iconTienda = L.divIcon({
-              className: '',
-              html: `
-                      <div style="
-                        width:8px;
-                        height:8px;
-                        background:#000;
-                        border-radius:50%;
-                        box-shadow:0 0 6px rgba(0,0,0,0.6);
-                      "></div>
-                    `,
-              iconSize: [32, 32],
-              iconAnchor: [16, 16],
-            });
-            marcadorTiendaRep = L.marker([40.008778, -3.010905], { icon: iconTienda })
-              .bindPopup('<br>Tienda')
-              .addTo(mapaRep);
-          }
-
-          // Marcadores de pedidos activos con coordenadas
-          mapaRepMarkers.forEach(m => m.remove());
-          mapaRepMarkers = [];
-
-          const conCoordenadas = this.pedidosActivos.filter(p => p.lat != null && p.lng != null);
-          conCoordenadas.forEach(p => {
-            const mins = this.calculateRemainingMinutes(p.fecha_creacion);
-            const color = mins > 8 ? '#16a34a' : mins >= 3 ? '#ca8a04' : mins >= 0 ? '#ea580c' : '#dc2626';
-            const icon = L.divIcon({
-              className: '',
-              html: `<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4);font-size:10px;font-weight:900;">${String(p.pedido_id).slice(-3)}</div>`,
-              iconSize: [26, 26],
-              iconAnchor: [13, 13],
-            });
-            const marker = L.marker([p.lat, p.lng], { icon }).addTo(mapaRep);
-            marker.on('click', () => this.resaltarTarjeta(p.reparto_id));
-            mapaRepMarkers.push(marker);
-          });
-
-          // Vista fija del pueblo — no fitBounds, el zoom lo controla setView en iniciarMapaRepartidor
-        },
-
-        toggleMapaCola() {
-          this.mapaColaVisible = !this.mapaColaVisible;
-          if (this.mapaColaVisible) {
-            this.$nextTick(() => setTimeout(() => this.iniciarMapaCola(), 50));
-          }
-        },
-
-        iniciarMapaCola() {
-          const el = document.getElementById('mapa-cola');
-          if (!el) return;
-          if (!mapaCola) {
-            mapaCola = L.map('mapa-cola', {
-              tap: false,
-              dragging: false,
-              touchZoom: false,
-              scrollWheelZoom: false,
-              doubleClickZoom: false,
-              zoomControl: false,
-            }).setView([40.010049, -3.012543], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution: '© OpenStreetMap',
-              maxZoom: 18,
-            }).addTo(mapaCola);
-          }
-          mapaCola.invalidateSize();
-          this.actualizarMapaCola();
-        },
-
-        actualizarMapaCola() {
-          if (!mapaCola) return;
-
-          if (!marcadorTiendaCola) {
-            const iconTienda = L.divIcon({
-              className: '',
-              html: `
-                      <div style="
-                        width:8px;
-                        height:8px;
-                        background:#000;
-                        border-radius:50%;
-                        box-shadow:0 0 6px rgba(0,0,0,0.6);
-                      "></div>
-                    `,
-              iconSize: [32, 32],
-              iconAnchor: [16, 16],
-            });
-            marcadorTiendaCola = L.marker([40.008778, -3.010905], { icon: iconTienda })
-              .bindPopup('<br>Tienda')
-              .addTo(mapaCola);
-          }
-
-          mapaColaMarkers.forEach(m => m.remove());
-          mapaColaMarkers = [];
-          const conCoordenadas = this.cola.filter(p => !p.ya_cogido && p.lat != null && p.lng != null);
-          conCoordenadas.forEach(p => {
-            const icon = L.divIcon({
-              className: '',
-              html: `<div style="background:#ea580c;color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4);font-size:10px;font-weight:900;">${String(p.pedido_id).slice(-3)}</div>`,
-              iconSize: [26, 26],
-              iconAnchor: [13, 13],
-            });
-            const marker = L.marker([p.lat, p.lng], { icon }).addTo(mapaCola);
-            mapaColaMarkers.push(marker);
-          });
-        },
-
-        // ── Helpers de navegación ────────────────────────────────
-        mapsUrl(direccion) {
-          return 'https://www.google.com/maps/dir/?api=1&destination='
-            + encodeURIComponent((direccion || '') + ', Tarancón, España');
-        },
-
-        // ── Acciones API ─────────────────────────────────────────
-        async salirYNavegar() {
-          const ok = await this.marcarSalida();
-          if (ok) this.volverALista();
-        },
-
-        async marcarSalida() {
-          this.procesando = true;
-          try {
-            const r = await fetch(`/repartidor/reparto/${this.actual.reparto_id}/salida`, { method: 'POST' });
-            const data = await r.json();
-            if (r.ok) {
-              this.actual.estado_reparto = 'en_camino';
-              const repartoId = this.actual.reparto_id;
-              const p = this.pedidos.find(p => p.reparto_id === repartoId);
-              if (p) p.estado_reparto = 'en_camino';
-              this.mostrarToast('¡En camino! Buena entrega 🛵');
-              return true;
-            } else {
-              this.mostrarToast(data.error, true);
-              return false;
-            }
-          } finally {
-            this.procesando = false;
-          }
-        },
-
-        async marcarEntregado() {
-          this.procesando = true;
-          try {
-            const r = await fetch(`/repartidor/reparto/${this.actual.reparto_id}/entregar`, { method: 'POST' });
-            const data = await r.json();
-            if (r.ok) {
-              this.mostrarToast('Pedido entregado ✓');
-              const repartoId = this.actual.reparto_id;
-              this.pedidos = this.pedidos.filter(p => p.reparto_id !== repartoId);
-              this.volverALista();
-            } else {
-              this.mostrarToast(data.error, true);
-            }
-          } finally {
-            this.procesando = false;
-          }
-        },
-
-        async confirmarNoEntregado() {
-          if (!this.motivoFinal) return;
-          this.procesando = true;
-          try {
-            const r = await fetch(`/repartidor/reparto/${this.actual.reparto_id}/no-entregar`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ motivo: this.motivoFinal }),
-            });
-            const data = await r.json();
-            if (r.ok) {
-              this.mostrarToast('Registrado. El supervisor lo verá.');
-              this.mostrarNoEntregar = false;
-              await this.recargar(true, true);
-              const updated = this.pedidos.find(p => p.reparto_id === this.actual?.reparto_id);
-              if (updated) this.actual = updated;
-              this.motivoSeleccionado = '';
-              this.motivoLibre = '';
-              this.vista = 'resumen';
-            } else {
-              this.mostrarToast(data.error, true);
-            }
-          } finally {
-            this.procesando = false;
-          }
-        },
-
-        async corregirAEntregado() {
-          this.procesando = true;
-          try {
-            const r = await fetch(`/repartidor/reparto/${this.actual.reparto_id}/entregar`, { method: 'POST' });
-            const data = await r.json();
-            if (r.ok) {
-              this.mostrarToast('Corregido como entregado ✓');
-              await this.recargar(true, true);
-              const updated = this.pedidos.find(p => p.reparto_id === this.actual?.reparto_id);
-              if (updated) this.actual = updated;
-            } else {
-              this.mostrarToast(data.error, true);
-            }
-          } finally {
-            this.procesando = false;
-          }
-        },
-
-        // ── Helpers de rendimiento ───────────────────────────────
-        minutesTaken(p) {
-          if (!p?.fecha_creacion || !p?.hora_entrega_real) return null;
-          return Math.round((new Date(p.hora_entrega_real) - new Date(p.fecha_creacion)) / 60000);
-        },
-
-        wasOnTime(p) {
-          const min = this.minutesTaken(p);
-          if (min === null) return null;
-          return min <= 20;
-        },
-
-        // ── Helpers de tiempo ────────────────────────────────────
-        calculateRemainingMinutes(fechaCreacion) {
-          if (!fechaCreacion) return 99;
-          const promised = new Date(new Date(fechaCreacion).getTime() + 20 * 60 * 1000);
-          return Math.round((promised - this.now) / 60000);
-        },
-
-        priorityColor(minutes) {
-          if (minutes > 8)  return 'bg-green-100 text-green-700';
-          if (minutes >= 3) return 'bg-yellow-100 text-yellow-800';
-          if (minutes >= 0) return 'bg-orange-100 text-orange-700';
-          return 'bg-red-100 text-red-700';
-        },
-
-        formatRemaining(minutes) {
-          if (minutes > 0) return minutes + ' min';
-          if (minutes === 0) return '0 min';
-          return '+' + Math.abs(minutes);
-        },
-
-        formatPromisedTime(fechaCreacion) {
-          if (!fechaCreacion) return '--:--';
-          const t = new Date(new Date(fechaCreacion).getTime() + 20 * 60 * 1000);
-          return t.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        },
-
-        formatHora(ts) {
-          if (!ts) return '—';
-          return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        },
-
-        formatFechaHora(ts) {
-          if (!ts) return '—';
-          const d = new Date(ts);
-          const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-          const hora = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-          return fecha + ' a las ' + hora;
-        },
-
-        mostrarToast(msg, error = false) {
-          // toasts desactivados
-        },
-
-        badgePagoClass(estado) {
-          return {
-            pagado_online:   'bg-green-100 text-green-700',
-            cobrar_efectivo: 'bg-yellow-100 text-yellow-800',
-            cobrar_tarjeta:  'bg-blue-100 text-blue-700',
-          }[estado] || 'bg-gray-100 text-gray-600';
-        },
-
-        badgePagoFondoClass(estado) {
-          return {
-            pagado_online:   'bg-green-50 border border-green-200 text-green-800',
-            cobrar_efectivo: 'bg-yellow-50 border border-yellow-300 text-yellow-900',
-            cobrar_tarjeta:  'bg-blue-50 border border-blue-200 text-blue-900',
-          }[estado] || 'bg-gray-50 border border-gray-200 text-gray-800';
-        },
-      };
-    }
-  </script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/repartidor/sw.js', { scope: '/repartidor' })
-          .catch(err => console.warn('SW registration failed:', err));
-      });
-    }
-  </script>
+  <script src="{{ url_for('static', filename='js/features/repartidor/index.js') }}"></script>
 </body>
 </html>

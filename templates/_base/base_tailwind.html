@@ -1,0 +1,12 @@
+{% extends '_base/base.html' %}
+
+{% block extra_head %}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  {% block extra_scripts %}{% endblock %}
+{% endblock %}
+
+{% block styles %}
+  <style>[x-cloak] { display: none !important; }</style>
+  {% block extra_styles %}{% endblock %}
+{% endblock %}

@@ -133,7 +133,8 @@ def create_app(config: dict = None) -> Flask:
     return app
 
 
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
     conectar_bd1()
     app.run(debug=True, host='0.0.0.0', port=5000)

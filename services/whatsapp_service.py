@@ -1,5 +1,6 @@
 import os
 import logging
+from concurrent.futures import ThreadPoolExecutor
 import config
 import requests
 from twilio.rest import Client
@@ -12,6 +13,7 @@ _client = None
 
 
 def _get_client():
+    """Inicializa y reutiliza el cliente de Twilio."""
     global _client
     if _client is None:
         _client = Client(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN)
@@ -25,6 +27,7 @@ def _get_client():
     reraise=True,
 )
 def _enviar_twilio(mensaje: str, destinatario: str) -> None:
+    """Envia un mensaje usando el proveedor Twilio."""
     _get_client().messages.create(
         body=mensaje,
         from_=config.TWILIO_WHATSAPP_NUMBER,
@@ -40,6 +43,7 @@ def _enviar_twilio(mensaje: str, destinatario: str) -> None:
     reraise=True,
 )
 def _enviar_meta(mensaje: str, destinatario: str) -> None:
+    """Envia un mensaje usando la API de WhatsApp de Meta."""
     numero = destinatario.replace("whatsapp:+", "")
     url = f"https://graph.facebook.com/v21.0/{config.META_PHONE_NUMBER_ID}/messages"
     payload = {
@@ -61,8 +65,32 @@ def _enviar_meta(mensaje: str, destinatario: str) -> None:
 
 
 def enviar_mensaje_whatsapp(mensaje: str, destinatario: str) -> None:
+    """Selecciona proveedor y envia el mensaje de WhatsApp."""
     provider = os.getenv("WHATSAPP_PROVIDER", "twilio")
     if provider == "meta":
         _enviar_meta(mensaje, destinatario)
     else:
         _enviar_twilio(mensaje, destinatario)
+
+
+# Pool acotado para notificaciones async — máximo 10 threads concurrentes hacia Twilio/Meta.
+# Evita la proliferación de threads zombie que ocurre con Thread().start() por cada pedido.
+_notif_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="whatsapp_notif")
+
+
+def notificar_async(telefono: str, mensaje: str) -> None:
+    """Envía un WhatsApp en segundo plano sin bloquear la respuesta HTTP.
+
+    Usa un pool acotado en lugar de un thread por notificación.
+    Los errores se loguean y no se propagan al caller.
+    """
+    if not telefono:
+        return
+
+    def _enviar():
+        try:
+            enviar_mensaje_whatsapp(mensaje, telefono)
+        except Exception as exc:
+            logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
+
+    _notif_pool.submit(_enviar)

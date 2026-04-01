@@ -77,6 +77,7 @@ def geocodificar_direccion(direccion: str) -> tuple[float, float] | None:
 
 
 def validar_direccion(direccion):
+    """Valida una direccion y devuelve su version normalizada si aplica."""
     direccion_limpia = limpiar_direccion(direccion)
     url = construir_url(direccion_limpia)
 

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="{% block lang %}es{% endblock %}">
+<head>
+  {% block head_meta %}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  {% endblock %}
+  <title>{% block title %}Panchi{% endblock %}</title>
+  {% block extra_head %}{% endblock %}
+  {% block styles %}{% endblock %}
+</head>
+<body {% block body_attrs %}{% endblock %}>
+
+{% block body %}{% endblock %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

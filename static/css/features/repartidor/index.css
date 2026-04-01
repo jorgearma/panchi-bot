@@ -1,0 +1,126 @@
+[x-cloak] { display: none !important; }
+
+:root {
+  --rep-ink: #f3f4f6;
+  --rep-panel: #1f2937;
+  --rep-soft: #111827;
+  --rep-line: #374151;
+  --rep-brand: #ea580c;
+  --rep-brand-dark: #9a3412;
+  --rep-accent: #0f766e;
+  --rep-warm: #f59e0b;
+  --rep-danger: #dc2626;
+}
+
+.slide-up { animation: slideUp .25s ease-out; }
+
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+button { -webkit-tap-highlight-color: transparent; }
+.tap-xl { min-height: 56px; }
+
+@keyframes glowRed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); }
+  50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0.25); }
+}
+
+.card-nuevo { animation: glowRed 1.4s ease-in-out infinite; }
+#mapa-rep  { height: 220px; }
+#mapa-cola { height: 220px; }
+#mapa-rep .leaflet-tile-pane,
+#mapa-cola .leaflet-tile-pane  { filter: brightness(1.8) contrast(1.1); }
+
+@keyframes riderMove {
+  0%        { transform: translateX(0px);   opacity: 0; }
+  6%        { opacity: 1; }
+  88%       { opacity: 1; }
+  100%      { transform: translateX(215px); opacity: 0; }
+}
+
+@keyframes routePulse {
+  0%, 100%  { opacity: 0.08; }
+  50%       { opacity: 0.20; }
+}
+
+@keyframes glowPulse {
+  0%, 100%  { opacity: 0.10; }
+  50%       { opacity: 0.28; }
+}
+
+@keyframes shimmerText {
+  0%        { background-position: -200% center; }
+  100%      { background-position:  200% center; }
+}
+
+.header-route  { animation: routePulse 3s ease-in-out infinite; }
+.header-glow   { animation: glowPulse  2.5s ease-in-out infinite; }
+
+.header-rider  {
+  animation: riderMove 3.8s ease-in-out infinite;
+  animation-delay: 0.4s;
+}
+
+@keyframes motoRide {
+  0%   { transform: translateX(0px)   translateY(0px);  opacity: 0; }
+  12%  { transform: translateX(24px)  translateY(0px);  opacity: 1; }
+  35%  { transform: translateX(70px)  translateY(-1px); opacity: 1; }
+  55%  { transform: translateX(110px) translateY(0px);  opacity: 1; }
+  75%  { transform: translateX(155px) translateY(-1px); opacity: 1; }
+  88%  { transform: translateX(178px) translateY(0px);  opacity: 1; }
+  100% { transform: translateX(200px) translateY(0px);  opacity: 0; }
+}
+
+.header-moto {
+  animation: motoRide 5s ease-in-out infinite;
+  animation-delay: 0.6s;
+}
+
+.panchi-shimmer {
+  background: linear-gradient(90deg, #fb923c 0%, #fde68a 40%, #fdba74 50%, #fb923c 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmerText 3s linear infinite;
+}
+
+.leaflet-control-attribution {
+  background: rgba(17, 24, 39, 0.75) !important;
+  color: #4b5563 !important;
+  font-size: 9px !important;
+}
+
+.leaflet-control-attribution a { color: #6b7280 !important; }
+
+.repartidor-shell {
+  background: #111827;
+  color: var(--rep-ink);
+}
+
+.glass-panel {
+  background: rgba(31, 41, 55, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(55, 65, 81, 0.9);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
+}
+
+.section-card {
+  background: rgba(31, 41, 55, 0.95);
+  border: 1px solid rgba(55, 65, 81, 0.95);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+}
+
+.metric-card {
+  background: linear-gradient(180deg, rgba(31,41,55,0.98), rgba(17,24,39,0.98));
+  border: 1px solid rgba(55, 65, 81, 0.9);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+}
+
+.queue-card {
+  background: linear-gradient(135deg, rgba(23, 32, 51, 0.98), rgba(154, 52, 18, 0.88));
+  box-shadow: 0 18px 34px rgba(23, 32, 51, 0.24);
+}

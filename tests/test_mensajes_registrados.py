@@ -44,8 +44,8 @@ def _run(estado_pedido, mensaje="1", reparto=None, soporte=SOPORTE):
 
     with patch("controllers.mensajes_registrados.gestor_usuarios") as mock_gu, \
          patch("controllers.mensajes_registrados.gestor_pedidos") as mock_gp, \
-         patch("controllers.mensajes_registrados.enviar_mensaje_whatsapp") as mock_send, \
-         patch("controllers.mensajes_registrados.config") as mock_cfg:
+         patch("controllers.mensajes_registrados_notifier.enviar_mensaje_whatsapp") as mock_send, \
+         patch("controllers.mensajes_registrados_notifier.config") as mock_cfg:
 
         mock_gu.obtener_usuario_completo.return_value = USUARIO_DATOS
         mock_gp.obtener_pedido_mas_reciente.return_value = pedido_mock
@@ -120,8 +120,8 @@ class TestPedidoEnReparto:
         pedido = _make_pedido(EstadoPedido.EN_REPARTO, reparto=None)
         with patch("controllers.mensajes_registrados.gestor_usuarios") as mock_gu, \
              patch("controllers.mensajes_registrados.gestor_pedidos") as mock_gp, \
-             patch("controllers.mensajes_registrados.enviar_mensaje_whatsapp"), \
-             patch("controllers.mensajes_registrados.config") as mock_cfg:
+             patch("controllers.mensajes_registrados_notifier.enviar_mensaje_whatsapp"), \
+             patch("controllers.mensajes_registrados_notifier.config") as mock_cfg:
             mock_gu.obtener_usuario_completo.return_value = USUARIO_DATOS
             mock_gp.obtener_pedido_mas_reciente.return_value = pedido
             mock_cfg.CUSTOMER_SUPPORT_PHONE = SOPORTE
@@ -234,8 +234,8 @@ class TestFlujosNoBloqueados:
         """Sin pedido activo → inicia nuevo pedido (flujo normal intacto)."""
         with patch("controllers.mensajes_registrados.gestor_usuarios") as mock_gu, \
              patch("controllers.mensajes_registrados.gestor_pedidos") as mock_gp, \
-             patch("controllers.mensajes_registrados.enviar_mensaje_whatsapp"), \
-             patch("controllers.mensajes_registrados.config"):
+             patch("controllers.mensajes_registrados_notifier.enviar_mensaje_whatsapp"), \
+             patch("controllers.mensajes_registrados_notifier.config"):
             mock_gu.obtener_usuario_completo.return_value = USUARIO_DATOS
             mock_gp.obtener_pedido_mas_reciente.return_value = None
             mock_gp.iniciar_pedido.return_value = 100

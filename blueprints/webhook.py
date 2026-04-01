@@ -15,7 +15,7 @@ from utils.text_utils import limpiar_texto
 from services.whatsapp_service import enviar_mensaje_whatsapp
 from schemas.twilio import WebhookRequest
 from managers.gestor_redis import redismanager
-from services import gestor_usuarios, gestor_pedidos
+from container import gestor_usuarios, gestor_pedidos
 from states import EstadoPedido
 
 blueprint_webhook = Blueprint('webhook', __name__)
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 @blueprint_webhook.route('/webhook', methods=['POST'])
 def webhook():
+    """Recibe mensajes de Twilio, valida la firma y los deriva al flujo correcto."""
     if not current_app.config.get("TESTING"):
         validator = RequestValidator(config.TWILIO_AUTH_TOKEN)
         signature = request.headers.get("X-Twilio-Signature", "")
@@ -90,6 +91,7 @@ def webhook():
 @blueprint_webhook.route('/webhoo/monei', methods=['POST'])  # TODO: remove once Monei dashboard points to /webhook/monei
 @blueprint_webhook.route('/webhook/monei', methods=['POST'])
 def webhook_monei():
+    """Procesa pagos confirmados por Monei y actualiza el pedido asociado."""
     raw_body = request.get_data()
 
     secret = config.MONEI_WEBHOOK_SECRET
@@ -134,8 +136,7 @@ def webhook_monei():
     importe_euros = importe_cents / 100
 
     if data.get('object', {}).get('status') == 'SUCCEEDED' or data.get('type') == 'charge.succeeded':
-        gestor_pedidos.actualizar_estado(order_id, EstadoPedido.PAGADO)
-        gestor_pedidos.registrar_pago(
+        gestor_pedidos.procesar_pago_confirmado(
             pedido_id=order_id,
             importe_euros=importe_euros,
             referencia_externa=data.get('object', {}).get('id'),
@@ -155,7 +156,7 @@ def webhook_monei():
 
 @blueprint_webhook.route('/webhook/meta', methods=['GET'])
 def webhook_meta_verify():
-    """Verificación del webhook en el panel de Meta."""
+    """Responde al challenge de verificación del webhook de Meta."""
     mode = request.args.get('hub.mode')
     token = request.args.get('hub.verify_token')
     challenge = request.args.get('hub.challenge', '')
@@ -167,7 +168,7 @@ def webhook_meta_verify():
 
 @blueprint_webhook.route('/webhook/meta', methods=['POST'])
 def webhook_meta():
-    """Recepción de mensajes desde Meta WhatsApp Cloud API."""
+    """Recibe mensajes de Meta, valida la firma y los deriva al mismo flujo de negocio."""
     raw_body = request.get_data()
 
     # Verificar firma

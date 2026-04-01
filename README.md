@@ -144,6 +144,10 @@ ngrok http 5000
 # Copia la URL HTTPS a PUBLIC_URL en .env
 ```
 
+Si pruebas el stack Docker en local con Nginx, deja `NGINX_CONF=nginx.local.conf` en tu `.env`.
+La configuración de producción vive en `nginx.prod.conf` y solo debe usarse cuando ya tengas
+dominio real y certificados de Let's Encrypt en el VPS.
+
 ## Tests
 
 ```bash

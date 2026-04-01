@@ -6,7 +6,7 @@ from unittest.mock import patch, PropertyMock, MagicMock
 
 def test_estadisticas_devuelve_claves_esperadas(app):
     """estadisticas() devuelve todas las claves requeridas."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -26,7 +26,7 @@ def test_estadisticas_devuelve_claves_esperadas(app):
 
 def test_estadisticas_kpis_tienen_campos_requeridos(app):
     """estadisticas() kpis contiene todos los campos esperados."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -49,7 +49,7 @@ def test_estadisticas_kpis_tienen_campos_requeridos(app):
 
 def test_estadisticas_serie_vacia_si_no_hay_pedidos(app):
     """estadisticas() devuelve series con 0s cuando no hay pedidos."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -69,7 +69,7 @@ def test_estadisticas_serie_vacia_si_no_hay_pedidos(app):
 
 def test_estadisticas_acepta_granularidad_semana(app):
     """estadisticas() acepta granularidad='semana' sin error."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
@@ -107,7 +107,7 @@ def test_estadisticas_html_requiere_auth(client):
 def test_estadisticas_datos_json_devuelve_estructura(client):
     """GET /dashboard/estadisticas-datos devuelve estructura completa."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     fake = {
         'kpis': {
@@ -137,7 +137,7 @@ def test_estadisticas_datos_json_devuelve_estructura(client):
 def test_estadisticas_datos_pasa_parametros(client):
     """GET /dashboard/estadisticas-datos pasa desde, hasta y granularidad al manager."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     fake = {
         'kpis': {'ingresos': 0, 'pedidos': 0, 'entregados': 0,
