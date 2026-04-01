@@ -12,15 +12,17 @@ gestor_metricas = GestorMetricas()
 
 
 def _ok(data):
+    """Envuelve la respuesta analítica en un payload estándar de éxito."""
     return jsonify({'ok': True, 'data': data})
 
 
 def _err(msg, code=400):
+    """Devuelve un error uniforme para endpoints analíticos."""
     return jsonify({'ok': False, 'error': msg}), code
 
 
 def _parse_rango():
-    """Parse ?desde=&hasta= query params. Default: last 7 days."""
+    """Lee el rango solicitado y, si falta, usa los últimos siete días."""
     hasta_str = request.args.get('hasta')
     desde_str = request.args.get('desde')
     hasta = date.fromisoformat(hasta_str) if hasta_str else date.today()
@@ -31,6 +33,7 @@ def _parse_rango():
 @blueprint_metricas_analitica.route('/metricas/analitica/resumen')
 @requiere_rol('admin', 'manager')
 def resumen():
+    """Resume el rendimiento global del periodo solicitado."""
     desde, hasta = _parse_rango()
     return _ok(gestor_metricas.resumen_periodo(desde, hasta))
 
@@ -38,6 +41,7 @@ def resumen():
 @blueprint_metricas_analitica.route('/metricas/analitica/pedidos')
 @requiere_rol('admin', 'manager')
 def pedidos():
+    """Devuelve métricas analíticas centradas en pedidos."""
     desde, hasta = _parse_rango()
     return _ok(gestor_metricas.metricas_pedidos(desde, hasta))
 
@@ -45,6 +49,7 @@ def pedidos():
 @blueprint_metricas_analitica.route('/metricas/analitica/picking')
 @requiere_rol('admin', 'manager')
 def picking():
+    """Devuelve métricas analíticas del proceso de picking."""
     desde, hasta = _parse_rango()
     return _ok(gestor_metricas.metricas_picking(desde, hasta))
 
@@ -52,6 +57,7 @@ def picking():
 @blueprint_metricas_analitica.route('/metricas/analitica/reparto')
 @requiere_rol('admin', 'manager')
 def reparto():
+    """Devuelve métricas analíticas del proceso de reparto."""
     desde, hasta = _parse_rango()
     return _ok(gestor_metricas.metricas_reparto(desde, hasta))
 
@@ -59,6 +65,7 @@ def reparto():
 @blueprint_metricas_analitica.route('/metricas/analitica/empleados')
 @requiere_rol('admin', 'manager')
 def empleados():
+    """Lista el rendimiento de empleados, opcionalmente filtrado por rol."""
     desde, hasta = _parse_rango()
     rol = request.args.get('rol') or None
     return _ok(gestor_metricas.rendimiento_empleados(desde, hasta, rol=rol))
@@ -67,6 +74,7 @@ def empleados():
 @blueprint_metricas_analitica.route('/metricas/analitica/empleado/<int:empleado_id>')
 @requiere_rol('admin', 'manager')
 def ficha_empleado(empleado_id: int):
+    """Devuelve la ficha analítica detallada de un empleado."""
     desde, hasta = _parse_rango()
     return _ok(gestor_metricas.ficha_empleado(empleado_id, desde, hasta))
 
@@ -74,6 +82,7 @@ def ficha_empleado(empleado_id: int):
 @blueprint_metricas_analitica.route('/metricas/analitica/comparativa')
 @requiere_rol('admin', 'manager')
 def comparativa():
+    """Compara el rendimiento entre empleados de un mismo rol operativo."""
     rol = request.args.get('rol')
     if not rol or rol not in ('picker', 'repartidor'):
         return _err("Parámetro 'rol' requerido: picker | repartidor")
@@ -84,6 +93,7 @@ def comparativa():
 @blueprint_metricas_analitica.route('/metricas/analitica/asistencia')
 @requiere_rol('admin', 'manager')
 def asistencia():
+    """Devuelve métricas históricas de asistencia para el periodo."""
     desde, hasta = _parse_rango()
     return _ok(gestor_metricas.asistencia_periodo(desde, hasta))
 
@@ -91,5 +101,6 @@ def asistencia():
 @blueprint_metricas_analitica.route('/metricas/analitica/incidencias')
 @requiere_rol('admin', 'manager')
 def incidencias():
+    """Resume incidencias y anomalías detectadas en el periodo."""
     desde, hasta = _parse_rango()
     return _ok(gestor_metricas.metricas_incidencias(desde, hasta))

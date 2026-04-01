@@ -4,7 +4,7 @@ from sqlalchemy.exc import OperationalError
 
 def test_metricas_keys_existentes_presentes(app):
     """Las claves de timing ya implementadas siguen presentes."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         try:
             result = gestor_dashboard.metricas()
@@ -24,7 +24,7 @@ def test_metricas_keys_existentes_presentes(app):
 
 def test_metricas_incluye_cancelaciones_e_ingresos_por_metodo(app):
     """Smoke test: las claves nuevas existen tras la implementación."""
-    from services import gestor_dashboard
+    from container import gestor_dashboard
     with app.app_context():
         try:
             result = gestor_dashboard.metricas()
@@ -42,7 +42,7 @@ def test_metricas_incluye_cancelaciones_e_ingresos_por_metodo(app):
 def test_monitor_datos_devuelve_claves_principales(client, app):
     """El endpoint /dashboard/monitor/datos devuelve metricas, alertas y eventos."""
     from unittest.mock import patch
-    from services import gestor_dashboard
+    from container import gestor_dashboard
 
     with app.app_context():
         with patch.object(gestor_dashboard, 'monitor_empleados', return_value={"pickers": [], "repartidores": [], "pedidos_sin_picker": [], "pedidos_sin_repartidor": []}), \

@@ -1,0 +1,60 @@
+[x-cloak] { display: none !important; }
+
+:root {
+  --bg: #edf2f7;
+  --panel: rgba(255, 255, 255, 0.86);
+  --panel-strong: #ffffff;
+  --line: rgba(148, 163, 184, 0.22);
+  --ink: #0f172a;
+  --muted: #64748b;
+  --brand: #0f4c81;
+  --brand-soft: #dbeafe;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --success: #059669;
+}
+
+body {
+  margin: 0;
+  font-family: "Manrope", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(14, 116, 144, 0.10), transparent 28%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 24%),
+    linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
+  color: var(--ink);
+}
+
+#mapa { height: 320px; transition: height 0.3s ease; }
+#mapa.expanded { height: 480px; }
+.pulse-dot { animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.scroll-logs { max-height: 260px; overflow-y: auto; }
+.fade-in { animation: fadeIn .3s ease-in; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+.glass-panel {
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+.soft-card {
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+.metric-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.85) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+}
+.section-title {
+  letter-spacing: 0.14em;
+}
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.ring-highlight {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}

@@ -42,7 +42,7 @@ class TestSeguimientoEndpoint:
         """Patch the DB query used by the endpoint."""
         mock_db = MagicMock()
         mock_db.query.return_value.filter_by.return_value.first.return_value = pedido_result
-        return patch("blueprints.api.get_db", return_value=mock_db)
+        return patch("blueprints.api.tracking.get_db", return_value=mock_db)
 
     def test_pedido_no_encontrado_devuelve_404(self, client):
         with self._patch_db(None):

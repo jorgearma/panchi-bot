@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 class GestorPedidosMixin:
 
     def metricas(self) -> dict:
+        """Resume los KPIs operativos principales del dashboard."""
         hoy = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         s = self.session
 
@@ -103,6 +104,7 @@ class GestorPedidosMixin:
         }
 
     def pedidos_activos(self, estado: str = None) -> list:
+        """Lista pedidos activos con su contexto operativo actual."""
         s = self.session
         ahora = datetime.utcnow()
 
@@ -182,6 +184,7 @@ class GestorPedidosMixin:
         return resultado
 
     def alertas(self) -> list:
+        """Genera alertas por retrasos, reparto pendiente y stock bajo."""
         s = self.session
         ahora = datetime.utcnow()
         resultado = []
@@ -233,6 +236,7 @@ class GestorPedidosMixin:
         return resultado
 
     def eventos(self, limit: int = 50) -> list:
+        """Devuelve los ultimos cambios de estado registrados."""
         eventos = (
             self.session.query(HistorialEstadoPedido)
             .order_by(HistorialEstadoPedido.cambiado_en.desc())
@@ -261,6 +265,7 @@ class GestorPedidosMixin:
         page: int = 1,
         per_page: int = 25,
     ) -> dict:
+        """Pagina el historial de pedidos con filtros basicos."""
         from math import ceil
         from sqlalchemy import or_
         from models import Usuario
@@ -340,6 +345,7 @@ class GestorPedidosMixin:
         return {"pedidos": resultado, "total": total, "page": page, "pages": pages}
 
     def detalle_pedido(self, pedido_id: int) -> dict | None:
+        """Devuelve el detalle operativo completo de un pedido."""
         s = self.session
         p = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
         if not p:

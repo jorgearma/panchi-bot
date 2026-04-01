@@ -1,25 +1,13 @@
 import logging
 import os
-from threading import Thread
 
 from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, session
 
 from blueprints.auth import requiere_rol
-from services import gestor_dashboard
-from services.whatsapp_service import enviar_mensaje_whatsapp
+from container import gestor_dashboard
+from services.whatsapp_service import notificar_async as _notificar
 
 logger = logging.getLogger(__name__)
-
-
-def _notificar(telefono: str, mensaje: str) -> None:
-    if not telefono:
-        return
-    def _enviar():
-        try:
-            enviar_mensaje_whatsapp(mensaje, telefono)
-        except Exception as exc:
-            logger.error("Error enviando WhatsApp a %s: %s", telefono, exc)
-    Thread(target=_enviar, daemon=True).start()
 
 blueprint_picker = Blueprint("picker", __name__)
 
@@ -27,6 +15,7 @@ blueprint_picker = Blueprint("picker", __name__)
 @blueprint_picker.route("/picker", strict_slashes=False)
 @requiere_rol('picker', 'manager', 'admin')
 def index():
+    """Renderiza la PWA principal del picker autenticado."""
     picker_id = session.get('empleado_id')
     return render_template("picker/index.html", picker_id=picker_id)
 
@@ -39,6 +28,7 @@ def index():
 @blueprint_picker.route("/apple-touch-icon-180x180.png")
 @blueprint_picker.route("/favicon.ico")
 def apple_touch_icon():
+    """Sirve el icono compartido de la PWA de picking."""
     return send_from_directory(
         os.path.join(current_app.root_path, "static", "picker"),
         "icon-180.png",
@@ -49,6 +39,7 @@ def apple_touch_icon():
 @blueprint_picker.route("/picker/manifest.json")
 @requiere_rol('picker', 'manager', 'admin')
 def manifest():
+    """Genera el manifest de la PWA con el contexto del picker actual."""
     picker_id = session.get('empleado_id')
     return Response(
         render_template("picker/manifest.json", picker_id=picker_id),
@@ -58,6 +49,7 @@ def manifest():
 
 @blueprint_picker.route("/picker/sw.js")
 def service_worker():
+    """Entrega el service worker sin caché para forzar versiones frescas."""
     response = Response(
         render_template("picker/sw.js"),
         mimetype="application/javascript",
@@ -70,6 +62,7 @@ def service_worker():
 @blueprint_picker.route("/picker/mis-pedidos")
 @requiere_rol('picker', 'manager', 'admin')
 def mis_pedidos():
+    """Lista los pickings asignados al picker actual."""
     picker_id = session.get('empleado_id')
     try:
         return jsonify(gestor_dashboard.pickings_del_picker(picker_id))
@@ -81,6 +74,7 @@ def mis_pedidos():
 @blueprint_picker.route("/picker/item/<int:item_id>/estado", methods=["POST"])
 @requiere_rol('picker', 'manager', 'admin')
 def actualizar_item(item_id: int):
+    """Actualiza el estado de una línea de picking, incluida su sustitución."""
     data = request.get_json(silent=True) or {}
     estado = data.get("estado")
     if not estado:
@@ -110,6 +104,7 @@ def actualizar_item(item_id: int):
 @blueprint_picker.route("/picker/buscar-productos")
 @requiere_rol('picker', 'manager', 'admin')
 def buscar_productos():
+    """Busca productos para proponer sustituciones durante el picking."""
     q = request.args.get("q", "").strip()
     if len(q) < 2:
         return jsonify([])
@@ -123,6 +118,7 @@ def buscar_productos():
 @blueprint_picker.route("/picker/picking/<int:picking_id>/finalizar", methods=["POST"])
 @requiere_rol('picker', 'manager', 'admin')
 def finalizar_picking(picking_id: int):
+    """Marca un picking como completado por el picker actual."""
     picker_id = session.get('empleado_id')
     ok, msg, _ = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
     if not ok:
@@ -134,6 +130,7 @@ def finalizar_picking(picking_id: int):
 @blueprint_picker.route("/picker/cola")
 @requiere_rol('picker', 'manager', 'admin')
 def cola():
+    """Devuelve la cola de pickings aún sin asignar."""
     try:
         lista = gestor_dashboard.pickings_sin_asignar()
         return jsonify({"cola": lista, "total": len(lista)})
@@ -145,6 +142,7 @@ def cola():
 @blueprint_picker.route("/picker/cola/coger/<int:picking_id>", methods=["POST"])
 @requiere_rol('picker', 'manager', 'admin')
 def coger_picking(picking_id: int):
+    """Permite al picker reclamar un picking pendiente de la cola."""
     empleado_id = session.get('empleado_id')
     try:
         ok, motivo = gestor_dashboard.reclamar_picking(picking_id, empleado_id)
