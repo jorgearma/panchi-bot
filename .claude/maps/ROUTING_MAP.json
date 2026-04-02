@@ -20,7 +20,10 @@
     },
     "architecture": "CONTROLLERS → SERVICES → MANAGERS → [DB | Redis | APIs externas]",
     "entry_points": [
-      "main.py"
+      "main.py",
+      "static/js/features/dashboard/index.js",
+      "static/js/features/picker/index.js",
+      "static/js/features/repartidor/index.js"
     ]
   },
   "glossary": {
@@ -36,20 +39,50 @@
     "empleado": [
       "empleados"
     ],
-    "dashboard": [
-      "dashboards"
-    ],
     "productos": [
       "producto"
     ],
     "init": [
       "inits"
     ],
-    "menu": [
-      "menus"
+    "analitica": [
+      "analiticas"
+    ],
+    "tracking": [
+      "trackings"
+    ],
+    "picking": [
+      "pickings"
     ],
     "pedidos": [
       "pedido"
+    ],
+    "reparto": [
+      "repartos"
+    ],
+    "turnos": [
+      "turno"
+    ],
+    "helpers": [
+      "helper"
+    ],
+    "mensajes": [
+      "mensaje"
+    ],
+    "registrados": [
+      "registrado"
+    ],
+    "pago": [
+      "pagos"
+    ],
+    "registro": [
+      "registros"
+    ],
+    "notifier": [
+      "notifiers"
+    ],
+    "dashboard": [
+      "dashboards"
     ],
     "usuarios": [
       "usuario"
@@ -57,8 +90,14 @@
     "usuario": [
       "usuarios"
     ],
+    "empleados": [
+      "empleado"
+    ],
     "mixin": [
       "mixins"
+    ],
+    "base": [
+      "bases"
     ],
     "crear": [
       "crears"
@@ -74,6 +113,9 @@
     ],
     "whatsapp": [
       "whatsapps"
+    ],
+    "index": [
+      "indexs"
     ],
     "test": [
       "tests"
@@ -245,7 +287,10 @@
     }
   ],
   "entry_points": [
-    "main.py"
+    "main.py",
+    "static/js/features/dashboard/index.js",
+    "static/js/features/picker/index.js",
+    "static/js/features/repartidor/index.js"
   ],
   "default_constraints": [
     "No romper endpoints públicos documentados en CONTRACT_MAP.json",

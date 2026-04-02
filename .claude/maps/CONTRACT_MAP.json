@@ -188,228 +188,6 @@
     },
     {
       "method": "GET",
-      "full_path": "/dashboard",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/monitor",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/monitor/datos",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/metricas",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/pedidos-activos",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/picking",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/repartidores",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/alertas",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/eventos",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/mapa",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/empleados",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/historial",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/historial-pedidos",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/pedido/<int:pedido_id>/detalle",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/turnos",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/turnos/hoy",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/turnos/historial",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/rendimiento",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/rendimiento-datos",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/rendimiento/<int:empleado_id>",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/estadisticas",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/estadisticas-datos",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/turnos/planificacion",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/turnos/crear",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/turnos/<int:turno_id>/editar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/turnos/<int:turno_id>/cancelar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/turnos/<int:turno_id>/eliminar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/picking/asignar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/picking/<int:picking_id>/reasignar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/picking/<int:picking_id>/completar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/reparto/asignar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/reparto/<int:reparto_id>/salida",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/reparto/<int:reparto_id>/entregar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/pedido/<int:pedido_id>/cancelar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/sustituir",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
-      "full_path": "/dashboard/productos",
-      "owner": "blueprints/dashboard.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "GET",
       "full_path": "/productos-admin",
       "owner": "blueprints/productos.py",
       "breaking_if_changed": true
@@ -440,20 +218,44 @@
     },
     {
       "method": "GET",
-      "full_path": "/menu/<token>",
-      "owner": "blueprints/menu.py",
+      "full_path": "/cocina",
+      "owner": "blueprints/cocina.py",
       "breaking_if_changed": true
     },
     {
       "method": "GET",
-      "full_path": "/confirmacion_pago",
-      "owner": "blueprints/menu.py",
+      "full_path": "/cocina/manifest.json",
+      "owner": "blueprints/cocina.py",
       "breaking_if_changed": true
     },
     {
       "method": "GET",
-      "full_path": "/pago_confirmado",
-      "owner": "blueprints/menu.py",
+      "full_path": "/cocina/sw.js",
+      "owner": "blueprints/cocina.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/cocina/mis-pedidos",
+      "owner": "blueprints/cocina.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/cocina/cola",
+      "owner": "blueprints/cocina.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/cocina/cola/coger/<int:picking_id>",
+      "owner": "blueprints/cocina.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/cocina/preparacion/<int:picking_id>/finalizar",
+      "owner": "blueprints/cocina.py",
       "breaking_if_changed": true
     },
     {
@@ -631,45 +433,291 @@
       "breaking_if_changed": true
     },
     {
+      "method": "GET",
+      "full_path": "/api/seguimiento/<redis_id>",
+      "owner": "blueprints/api/tracking.py",
+      "breaking_if_changed": true
+    },
+    {
       "method": "POST",
       "full_path": "/api/confirmacion",
-      "owner": "blueprints/api.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/api/agregar_pedido",
-      "owner": "blueprints/api.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/api/cambiar_estado_a_enlace",
-      "owner": "blueprints/api.py",
-      "breaking_if_changed": true
-    },
-    {
-      "method": "POST",
-      "full_path": "/api/agregar_pedido_efectivo",
-      "owner": "blueprints/api.py",
+      "owner": "blueprints/api/cart.py",
       "breaking_if_changed": true
     },
     {
       "method": "POST",
       "full_path": "/api/volver_al_menu",
-      "owner": "blueprints/api.py",
+      "owner": "blueprints/api/cart.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/api/cambiar_estado_a_enlace",
+      "owner": "blueprints/api/cart.py",
       "breaking_if_changed": true
     },
     {
       "method": "GET",
       "full_path": "/api/productos",
-      "owner": "blueprints/api.py",
+      "owner": "blueprints/api/cart.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/api/agregar_pedido",
+      "owner": "blueprints/api/payments.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/api/agregar_pedido_efectivo",
+      "owner": "blueprints/api/payments.py",
       "breaking_if_changed": true
     },
     {
       "method": "GET",
-      "full_path": "/api/seguimiento/<redis_id>",
-      "owner": "blueprints/api.py",
+      "full_path": "/dashboard/picking",
+      "owner": "blueprints/dashboard/picking.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/picking/asignar",
+      "owner": "blueprints/dashboard/picking.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/picking/<int:picking_id>/reasignar",
+      "owner": "blueprints/dashboard/picking.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/picking/asignar-cocina",
+      "owner": "blueprints/dashboard/picking.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/picking/<int:picking_id>/completar",
+      "owner": "blueprints/dashboard/picking.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/historial",
+      "owner": "blueprints/dashboard/pedidos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/historial-pedidos",
+      "owner": "blueprints/dashboard/pedidos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/pedidos-activos",
+      "owner": "blueprints/dashboard/pedidos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/pedido/<int:pedido_id>/detalle",
+      "owner": "blueprints/dashboard/pedidos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/pedido/<int:pedido_id>/cancelar",
+      "owner": "blueprints/dashboard/pedidos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar",
+      "owner": "blueprints/dashboard/pedidos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/sustituir",
+      "owner": "blueprints/dashboard/pedidos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/productos",
+      "owner": "blueprints/dashboard/pedidos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/repartidores",
+      "owner": "blueprints/dashboard/reparto.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/reparto/asignar",
+      "owner": "blueprints/dashboard/reparto.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/reparto/<int:reparto_id>/salida",
+      "owner": "blueprints/dashboard/reparto.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/reparto/<int:reparto_id>/entregar",
+      "owner": "blueprints/dashboard/reparto.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/turnos",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/turnos/hoy",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/turnos/historial",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/turnos/planificacion",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/turnos/crear",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/turnos/<int:turno_id>/editar",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/turnos/<int:turno_id>/cancelar",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "POST",
+      "full_path": "/dashboard/turnos/<int:turno_id>/eliminar",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/rendimiento",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/rendimiento-datos",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/rendimiento/<int:empleado_id>",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/estadisticas",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/estadisticas-datos",
+      "owner": "blueprints/dashboard/turnos.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard",
+      "owner": "blueprints/dashboard/pages.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/monitor",
+      "owner": "blueprints/dashboard/pages.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/monitor/datos",
+      "owner": "blueprints/dashboard/pages.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/metricas",
+      "owner": "blueprints/dashboard/pages.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/alertas",
+      "owner": "blueprints/dashboard/pages.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/eventos",
+      "owner": "blueprints/dashboard/pages.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/mapa",
+      "owner": "blueprints/dashboard/pages.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/dashboard/empleados",
+      "owner": "blueprints/dashboard/pages.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/menu/<token>",
+      "owner": "blueprints/menu/navegacion.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/confirmacion_pago",
+      "owner": "blueprints/menu/sesion.py",
+      "breaking_if_changed": true
+    },
+    {
+      "method": "GET",
+      "full_path": "/pago_confirmado",
+      "owner": "blueprints/menu/sesion.py",
       "breaking_if_changed": true
     }
   ],
@@ -680,10 +728,10 @@
         "UsuarioDatos"
       ],
       "used_by": [
-        "blueprints/menu.py",
+        "container.py",
+        "blueprints/menu/navegacion.py",
         "controllers/registro.py",
         "services/token_service.py",
-        "services/__init__.py",
         "tests/test_gestor_usuarios.py",
         "tests/test_registro.py"
       ],
@@ -726,7 +774,7 @@
     },
     {
       "name": "MONEI_API_KEY",
-      "owner": "config.py"
+      "owner": "container.py"
     },
     {
       "name": "MONEI_WEBHOOK_SECRET",

@@ -566,3 +566,43 @@ class TestBlueprintEmpleadoNuevos:
                 ge_mock.turno_hoy.return_value = None
                 resp = client.get('/empleado/checkin')
         assert resp.status_code == 200
+
+
+class TestAppModeEnHub:
+    """El hub del empleado debe contener app_mode en el HTML según la config."""
+
+    def test_hub_contiene_app_mode_warehouse(self, client, app):
+        """En modo warehouse el hub renderiza 'warehouse' en el HTML."""
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 1
+            sess['rol'] = 'picker'
+
+        with app.app_context():
+            with patch('blueprints.empleado.gestor_empleado') as ge_mock, \
+                 patch('blueprints.empleado.app_config') as mock_cfg:
+                mock_cfg.APP_MODE = 'warehouse'
+                ge_mock.es_polivalente.return_value = False
+                ge_mock.tiene_rol_activo.return_value = True
+                resp = client.get('/empleado')
+
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert 'warehouse' in html
+
+    def test_hub_contiene_app_mode_restaurant(self, client, app):
+        """En modo restaurant el hub renderiza 'restaurant' en el HTML."""
+        with client.session_transaction() as sess:
+            sess['empleado_id'] = 1
+            sess['rol'] = 'picker'
+
+        with app.app_context():
+            with patch('blueprints.empleado.gestor_empleado') as ge_mock, \
+                 patch('blueprints.empleado.app_config') as mock_cfg:
+                mock_cfg.APP_MODE = 'restaurant'
+                ge_mock.es_polivalente.return_value = False
+                ge_mock.tiene_rol_activo.return_value = True
+                resp = client.get('/empleado')
+
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert 'restaurant' in html

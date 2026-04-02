@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 from flask import Blueprint, jsonify, redirect, render_template, request, session
 
+import config as app_config
 from blueprints.auth import requiere_autenticacion, requiere_rol
 from container import gestor_empleado
 
@@ -25,7 +26,8 @@ def index():
             return redirect('/empleado/checkin')
     except Exception:
         pass  # Si falla la BD, mostrar el hub igualmente
-    return render_template('empleado/index.html', empleado_id=empleado_id, rol=rol)
+    return render_template('empleado/index.html', empleado_id=empleado_id, rol=rol,
+                           app_mode=app_config.APP_MODE)
 
 
 @blueprint_empleado.route('/empleado/perfil')

@@ -115,14 +115,12 @@
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
                       <span class="text-sm font-black text-slate-900">#<span x-text="pk.pedido_id"></span></span>
-                      <span class="rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold text-white">Sin picker</span>
+                      <span class="rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold text-white">Sin cocinero</span>
                     </div>
-                    <p class="mt-0.5 text-[11px] text-sky-700 truncate"
-                       x-text="pk.items_pendientes + ' items pendientes'"></p>
                   </div>
-                  <button @click="pk.picking_id ? abrirModalReasignar(pk.picking_id) : abrirModalPicker(pk.pedido_id)"
+                  <button @click="asignarCocinaEquipo(pk.pedido_id)"
                           class="shrink-0 rounded-xl bg-sky-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-sky-600">
-                    Asignar
+                    Cocina
                   </button>
                 </div>
               </div>
@@ -200,8 +198,8 @@
                          :class="p.es_alerta ? 'text-red-600' : 'text-slate-400'"
                          x-text="
                            p.es_alerta ? '⚠ Requiere atención' :
-                           (p.estado === 'pagado' || p.estado === 'contra_reembolso') ? '→ Asignar picker ahora' :
-                           p.estado === 'en_preparacion' ? '→ Picker en curso' :
+                           (p.estado === 'pagado' || p.estado === 'contra_reembolso') ? '→ Aceptar en cocina' :
+                           p.estado === 'en_preparacion' ? '→ Cocina en curso' :
                            p.estado === 'preparado' ? (p.reparto?.repartidor_nombre ? '→ Listo para salir' : '→ Asignar repartidor') :
                            p.estado === 'en_reparto' ? '→ En camino al cliente' :
                            p.estado === 'entregado' ? '✓ Completado' :
@@ -227,7 +225,7 @@
                                 :class="p.picking ? 'bg-sky-500 text-white' : 'bg-slate-200 text-slate-400'">P</span>
                           <span class="truncate max-w-[110px]"
                                 :class="p.picking?.picker_nombre && p.picking?.estado !== 'completado' ? 'text-base font-bold text-slate-900' : (p.reparto?.repartidor_nombre ? 'text-[11px] text-slate-400' : 'text-sm text-slate-300')"
-                                x-text="p.picking?.picker_nombre || 'Sin picker'"></span>
+                                x-text="p.picking?.picker_nombre || 'Sin cocinero'"></span>
                         </div>
                         <div class="flex items-center gap-1.5">
                           <span class="h-4 w-4 rounded-md flex items-center justify-center text-[9px] font-black shrink-0"
@@ -326,29 +324,31 @@
 
             <!-- ── PICKERS ── -->
             <div class="px-4 pt-4 pb-3">
-              <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Pickers · Preparación</p>
+              <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Cocineros · Preparación</p>
               <div class="space-y-4">
                 <template x-for="picker in pickersEquipo" :key="'p-'+picker.empleado_id">
-                  <div x-data="{ open: false }" :class="!picker.tiene_checkin ? 'opacity-50' : ''">
+                  <div x-data="{ open: false }">
                     <!-- Worker row — clic para colapsar -->
                     <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
                          :class="open ? 'mb-2' : 'mb-0'"
                          @click="open = !open">
-                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black text-white"
-                           :class="picker.tiene_checkin ? 'bg-sky-500' : 'bg-slate-400'">P</div>
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black"
+                           :class="picker.tiene_checkin ? 'bg-sky-500 text-white' : 'bg-slate-200 text-slate-400'">P</div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
                           <span class="text-sm font-bold truncate"
                                 :class="picker.tiene_checkin ? 'text-slate-900' : 'text-slate-400'"
                                 x-text="picker.nombre"></span>
                           <span x-show="!picker.tiene_checkin"
-                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">sin fichar</span>
-                          <span x-show="picker.tiene_checkin" class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-400">Sin fichar</span>
+                          <span x-show="picker.tiene_checkin"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
                                 :class="picker.carga.score >= 3 ? 'bg-red-100 text-red-700' : picker.carga.score === 2 ? 'bg-amber-100 text-amber-700' : picker.carga.score === 1 ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-700'"
                                 x-text="picker.carga.label"></span>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-0.5"
-                           x-text="picker.pedidos_activos + ' pedido(s) · ' + picker.items_pendientes + ' items pend.'"></p>
+                        <p class="text-[11px] mt-0.5"
+                           :class="picker.tiene_checkin ? 'text-slate-400' : 'text-slate-300'"
+                           x-text="picker.tiene_checkin ? picker.pedidos_activos + ' pedido(s) activos' : 'Turno asignado — pendiente de entrada'"></p>
                       </div>
                       <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
                            :class="open ? '' : '-rotate-90'"
@@ -375,12 +375,6 @@
                             <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                   :class="badgePickingClass(pk.estado_picking)"
                                   x-text="pk.estado_picking"></span>
-                            <span class="ml-auto text-[11px] tabular-nums text-slate-500 shrink-0"
-                                  x-text="pk.items_completados + '/' + pk.items_total + ' items'"></span>
-                          </div>
-                          <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100">
-                            <div class="h-1 rounded-full bg-sky-500 transition-all"
-                                 :style="'width:' + (pk.items_total ? (pk.items_completados / pk.items_total * 100) : 0) + '%'"></div>
                           </div>
                           <div class="mt-2 flex gap-1.5">
                             <button @click="abrirModalReasignar(pk.picking_id)"
@@ -396,14 +390,14 @@
                       </template>
                       <div x-show="picker.pickings.length === 0"
                            class="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[11px] text-emerald-700">
-                        Sin pickings — disponible
+                        Sin preparaciones — disponible
                       </div>
                     </div>
                   </div>
                 </template>
                 <div x-show="pickersEquipo.length === 0"
                      class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-400">
-                  No hay pickers activos.
+                  No hay cocineros activos.
                 </div>
               </div>
             </div>
@@ -413,26 +407,28 @@
               <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Repartidores · Calle</p>
               <div class="space-y-4">
                 <template x-for="emp in repartidoresEquipo" :key="'r-'+emp.empleado_id">
-                  <div x-data="{ open: false }" :class="!emp.tiene_checkin ? 'opacity-50' : ''">
+                  <div x-data="{ open: false }">
                     <!-- Worker row — clic para colapsar -->
                     <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
                          :class="open ? 'mb-2' : 'mb-0'"
                          @click="open = !open">
-                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black text-white"
-                           :class="emp.tiene_checkin ? 'bg-orange-500' : 'bg-slate-400'">R</div>
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black"
+                           :class="emp.tiene_checkin ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-400'">R</div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
                           <span class="text-sm font-bold truncate"
                                 :class="emp.tiene_checkin ? 'text-slate-900' : 'text-slate-400'"
                                 x-text="emp.nombre"></span>
                           <span x-show="!emp.tiene_checkin"
-                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">sin fichar</span>
-                          <span x-show="emp.tiene_checkin" class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-400">Sin fichar</span>
+                          <span x-show="emp.tiene_checkin"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
                                 :class="emp.carga.score >= 3 ? 'bg-red-100 text-red-700' : emp.carga.score === 2 ? 'bg-amber-100 text-amber-700' : emp.carga.score === 1 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'"
                                 x-text="emp.carga.label"></span>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-0.5"
-                           x-text="emp.pedidos_activos.length + ' en ruta · ' + emp.entregados_hoy + ' entregados hoy'"></p>
+                        <p class="text-[11px] mt-0.5"
+                           :class="emp.tiene_checkin ? 'text-slate-400' : 'text-slate-300'"
+                           x-text="emp.tiene_checkin ? emp.pedidos_activos.length + ' en ruta · ' + emp.entregados_hoy + ' entregados hoy' : 'Turno asignado — pendiente de entrada'"></p>
                       </div>
                       <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
                            :class="open ? '' : '-rotate-90'"
@@ -704,19 +700,19 @@
 
           <div class="mt-4 grid gap-2">
             <button x-show="!panel.pedido?.picking && ['pagado','contra_reembolso'].includes(panel.pedido?.estado)"
-                    @click="abrirModalPicker(panel.pedido.pedido_id)"
+                    @click="asignarCocinaEquipo(panel.pedido.pedido_id)"
                     class="w-full rounded-2xl bg-sky-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-800">
-              Asignar picker
+              Aceptar en cocina
             </button>
             <button x-show="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado' && !panel.pedido?.picking?.picker_nombre"
-                    @click="abrirModalReasignar(panel.pedido.picking.id)"
+                    @click="asignarCocinaEquipo(panel.pedido.pedido_id)"
                     class="w-full rounded-2xl bg-sky-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-800">
-              Asignar picker
+              Aceptar en cocina
             </button>
             <button x-show="panel.pedido?.picking && panel.pedido?.picking.estado !== 'completado' && panel.pedido?.picking?.picker_nombre"
                     @click="completarPicking(panel.pedido.picking.id)"
                     class="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">
-              Completar picking
+              Listo
             </button>
             <button x-show="(!panel.pedido?.reparto || !panel.pedido?.reparto?.repartidor_nombre) && panel.pedido?.estado === 'preparado'"
                     @click="abrirModalRepartidor(panel.pedido.pedido_id, panel.pedido?.reparto?.repartidor_nombre)"
@@ -841,17 +837,21 @@
           <div class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
             <div class="flex items-center justify-between gap-3">
               <div>
-                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Picking</p>
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Cocina</p>
                 <h3 class="mt-1 text-lg font-extrabold text-slate-950">Estado de preparación</h3>
               </div>
               <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
                     :class="panel.pedido?.picking ? badgePickingClass(panel.pedido?.picking?.estado) : 'bg-slate-100 text-slate-500'"
-                    x-text="panel.pedido?.picking ? panel.pedido?.picking?.estado : 'sin picking'"></span>
+                    x-text="panel.pedido?.picking ? panel.pedido?.picking?.estado : 'sin asignar'"></span>
             </div>
             <div class="mt-4 space-y-3 text-sm">
               <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.picking?.picker_nombre">
                 <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Responsable</p>
                 <p class="mt-1 font-semibold text-slate-900" x-text="panel.pedido?.picking?.picker_nombre"></p>
+              </div>
+              <div class="rounded-2xl bg-sky-50 border border-sky-100 px-4 py-3" x-show="panel.pedido?.picking?.notas">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-400">Equipo cocina</p>
+                <p class="mt-1 text-sm text-sky-800" x-text="panel.pedido?.picking?.notas"></p>
               </div>
               <div class="rounded-2xl bg-slate-50 px-4 py-3" x-show="panel.pedido?.picking?.asignado_en">
                 <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Asignado</p>
@@ -866,7 +866,7 @@
                 <p class="mt-1 text-slate-700" x-text="horaCorta(panel.pedido?.picking?.completado_en)"></p>
               </div>
               <div x-show="!panel.pedido?.picking" class="rounded-2xl border border-dashed border-slate-200 px-4 py-4 text-sm text-slate-400">
-                Aún no hay picking creado para este pedido.
+                Pendiente de aceptar en cocina.
               </div>
             </div>
           </div>
@@ -1059,6 +1059,6 @@
   </div>
 
   <!-- ======== JAVASCRIPT ======== -->
-  <script src="{{ url_for('static', filename='js/features/dashboard/index.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/features/dashboard/index_restaurant.js') }}"></script>
 </body>
 </html>

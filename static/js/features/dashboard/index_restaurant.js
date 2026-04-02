@@ -37,7 +37,7 @@ function dashboard() {
     filtrosRapidos: [
       { id: 'todos', label: 'Todos' },
       { id: 'urgentes', label: 'Urgentes' },
-      { id: 'sin_picker', label: 'Sin picker' },
+      { id: 'sin_picker', label: 'Sin cocinero' },
       { id: 'sin_repartidor', label: 'Sin repartidor' },
       { id: 'en_reparto', label: 'En reparto' },
       { id: 'incidencias', label: 'Incidencias' },
@@ -53,7 +53,7 @@ function dashboard() {
 
     alertReason(alerta) {
       if (alerta.tipo === 'sin_repartidor') return 'Sin repartidor asignado';
-      if (alerta.tipo === 'pedido_retrasado') return 'Sin picker asignado';
+      if (alerta.tipo === 'pedido_retrasado') return 'Sin cocinero asignado';
       return 'Incidencia operativa';
     },
 
@@ -185,7 +185,7 @@ function dashboard() {
             empleado_id: emp.empleado_id,
             nombre: emp.nombre,
             telefono: emp.telefono,
-            tiene_checkin: emp.tiene_checkin,
+            tiene_checkin: emp.tiene_checkin || false,
             pickings: [],
             pedidos_activos: 0,
             items_total: 0,
@@ -202,6 +202,7 @@ function dashboard() {
             empleado_id: pk.empleado.id,
             nombre: pk.empleado.nombre,
             telefono: null,
+            tiene_checkin: false,
             pickings: [],
             pedidos_activos: 0,
             items_total: 0,
@@ -494,7 +495,7 @@ function dashboard() {
     async asignarSiguienteAPicker(empleadoId) {
       const pendiente = this.sinPickerOrdenados[0];
       if (!pendiente) {
-        this.mostrarToast('No hay pedidos pendientes de picker', true);
+        this.mostrarToast('No hay pedidos pendientes de cocinero', true);
         return;
       }
       const pedidoId = pendiente.pedido_id;
@@ -512,7 +513,7 @@ function dashboard() {
         this.mostrarToast(data.mensaje || `Pedido #${pedidoId} asignado`);
         this.cargarTodo();
       } else {
-        this.mostrarToast(data.error || 'No se pudo asignar el picker', true);
+        this.mostrarToast(data.error || 'No se pudo aceptar en cocina', true);
       }
     },
 
@@ -622,7 +623,7 @@ function dashboard() {
       const estadoLabel = {
         pagado: 'Pagado',
         contra_reembolso: 'Contra reembolso',
-        en_preparacion: 'En picking',
+        en_preparacion: 'En cocina',
         preparado: 'Preparado',
         en_reparto: 'En reparto',
       };
@@ -660,6 +661,21 @@ function dashboard() {
       this.modalError = '';
       const r = await fetch('/dashboard/empleados?operacion=true');
       this.empleadosModal = r.ok ? await r.json() : [];
+    },
+
+    async asignarCocinaEquipo(pedido_id) {
+      const r = await fetch('/dashboard/picking/asignar-cocina', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedido_id }),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        this.mostrarToast(data.mensaje);
+        this.cargarTodo();
+      } else {
+        this.mostrarToast(data.error || 'Error al aceptar en cocina', true);
+      }
     },
 
     async confirmarAsignarPicker() {
@@ -703,7 +719,7 @@ function dashboard() {
     async confirmarReasignarPicker() {
       this.modalError = '';
       if (!this.modalReasignar.empleado_id) {
-        this.modalError = 'Selecciona un picker';
+        this.modalError = 'Selecciona un cocinero';
         return;
       }
       await this.reasignarPicker(
@@ -731,7 +747,7 @@ function dashboard() {
     },
 
     async desasignarPicker(picking_id) {
-      if (!confirm('¿Quitar el picker de este pedido? Quedará sin asignar.')) return;
+      if (!confirm('¿Quitar el cocinero de este pedido? Quedará sin asignar.')) return;
       await this.reasignarPicker(picking_id, null);
     },
 
@@ -957,7 +973,7 @@ function dashboard() {
     panelActionTitle(p) {
       if (!p) return 'Sin selección';
       if (!p.picking && ['pagado', 'contra_reembolso'].includes(p.estado)) return 'Asignar preparación';
-      if (p.picking && p.picking.estado !== 'completado' && !p.picking.picker_nombre) return 'Reasignar picker';
+      if (p.picking && p.picking.estado !== 'completado' && !p.picking.picker_nombre) return 'Aceptar en cocina';
       if (p.picking && p.picking.estado !== 'completado' && p.picking.picker_nombre) return 'Cerrar preparación';
       if (!p.reparto && p.estado === 'preparado') return 'Asignar reparto';
       if (p.reparto?.estado === 'asignado') return 'Mandar a calle';
@@ -969,13 +985,13 @@ function dashboard() {
     panelActionSummary(p) {
       if (!p) return '';
       if (!p.picking && ['pagado', 'contra_reembolso'].includes(p.estado)) {
-        return 'El pedido ya está listo para entrar en picking. Asigna un picker cuanto antes.';
+        return 'El pedido está listo para entrar en cocina.';
       }
       if (p.picking && p.picking.estado !== 'completado' && !p.picking.picker_nombre) {
-        return 'Existe picking creado, pero está bloqueado sin responsable asignado.';
+        return 'Existe preparación creada pero sin responsable asignado.';
       }
       if (p.picking && p.picking.estado !== 'completado' && p.picking.picker_nombre) {
-        return `Picking en curso con ${p.picking.picker_nombre}. Revisa si ya puede cerrarse.`;
+        return `Cocina en curso con ${p.picking.picker_nombre}. Revisa si ya puede cerrarse.`;
       }
       if (!p.reparto && p.estado === 'preparado') {
         return 'El pedido ya está preparado y solo falta asignar un repartidor.';
@@ -1029,17 +1045,17 @@ function dashboard() {
         },
         {
           key: 'picking_asignado',
-          label: 'Picker asignado',
+          label: 'Cocinero asignado',
           done: Boolean(p.picking?.asignado_en),
           time: this.horaCorta(p.picking?.asignado_en),
           detail: p.picking?.picker_nombre
             ? `Responsable: ${p.picking.picker_nombre}`
-            : 'Pendiente de responsable de picking.',
+            : 'Pendiente de responsable de cocina.',
           doneClass: 'bg-sky-600',
         },
         {
           key: 'picking_inicio',
-          label: 'Picking iniciado',
+          label: 'Cocina iniciada',
           done: Boolean(p.picking?.iniciado_en),
           time: this.horaCorta(p.picking?.iniciado_en),
           detail: p.picking?.iniciado_en
@@ -1049,12 +1065,12 @@ function dashboard() {
         },
         {
           key: 'picking_fin',
-          label: 'Picking completado',
+          label: 'Cocina completada',
           done: Boolean(p.picking?.completado_en),
           time: this.horaCorta(p.picking?.completado_en),
           detail: p.picking?.completado_en
             ? 'Preparación terminada.'
-            : 'Pendiente de cerrar picking.',
+            : 'Pendiente de cerrar preparación.',
           doneClass: 'bg-emerald-600',
         },
         {
@@ -1148,7 +1164,7 @@ function dashboard() {
         'confirmando-pago': 'Pago...',
         pagado: 'Pago OK',
         contra_reembolso: 'Efectivo',
-        en_preparacion: 'Picking',
+        en_preparacion: 'Cocina',
         preparado: 'Listo',
         en_reparto: 'En ruta',
         entregado: 'Entregado',
@@ -1167,7 +1183,7 @@ function dashboard() {
         return p.reparto?.repartidor_nombre ? 'Listo para salir' : 'Sin repartidor';
       }
       if (p.estado === 'en_preparacion' && (!p.picking || !p.picking.picker_nombre)) {
-        return 'Sin picker';
+        return 'Sin cocinero';
       }
       return this.estadoLabel(p.estado);
     },

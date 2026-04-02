@@ -302,7 +302,7 @@ class MetricaDiariaEmpleado(Base):
 # ---------------------------------------------------------------------------
 
 class PickingPedido(Base):
-    """Estado de preparación de un pedido en almacén. Uno por pedido."""
+    """Estado de preparación de un pedido. Uno por pedido."""
     __tablename__ = 'picking_pedido'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -407,7 +407,7 @@ class Turno(Base):
     hora_inicio = Column(Time, nullable=False)
     hora_fin    = Column(Time, nullable=False)
     notas           = Column(String(255), nullable=True)
-    estado          = Column(String(20), nullable=False, default='planificado')
+    estado          = Column(String(20), nullable=False, default='planificado')  # planificado | completado | cancelado
     tipo            = Column(String(20), nullable=True)   # mañana | tarde | noche | partido
     creado_por      = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
     turno_origen_id = Column(Integer, ForeignKey('turnos.id'), nullable=True)

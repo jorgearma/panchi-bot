@@ -276,11 +276,19 @@ function turnosApp() {
       if (this.empleadosCargados) return;
       try {
         const resp = await fetch('/dashboard/empleados');
-        if (!resp.ok) throw new Error(resp.status);
-        this.empleadosDisponibles = await resp.json();
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+        }
+        const data = await resp.json();
+        // Los datos pueden venir directamente como array o como {error: "..."} si hay error
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        this.empleadosDisponibles = Array.isArray(data) ? data : (data.data || []);
         this.empleadosCargados = true;
       } catch (e) {
-        this.formError = 'No se pudo cargar la lista de empleados.';
+        console.error('Error loading employees:', e);
+        this.formError = `Error al cargar empleados: ${e.message}`;
       }
     },
 
@@ -297,6 +305,9 @@ function turnosApp() {
         notas: '',
       };
       await this._cargarEmpleados();
+      if (this.empleadosDisponibles.length === 0) {
+        this.formError = 'No hay empleados activos disponibles para asignar turnos.';
+      }
       if (empleadoId !== null) this.form.empleado_id = String(empleadoId);
       if (fecha !== null) this.form.fecha = fecha;
       this.modalAbierto = true;

@@ -53,6 +53,9 @@ STORE_ADDRESS: str = os.environ.get("STORE_ADDRESS", "")
 # WhatsApp provider ("twilio" o "meta")
 WHATSAPP_PROVIDER: str = os.environ.get("WHATSAPP_PROVIDER", "twilio")
 
+# Modo operativo de la aplicación: "warehouse" (picking con items) o "restaurant" (cocina sin items)
+APP_MODE: str = os.environ.get("APP_MODE", "warehouse")
+
 # Meta WhatsApp Cloud API (solo necesario si WHATSAPP_PROVIDER=meta)
 META_ACCESS_TOKEN: str | None = os.environ.get("META_ACCESS_TOKEN")
 META_PHONE_NUMBER_ID: str | None = os.environ.get("META_PHONE_NUMBER_ID")

@@ -1,6 +1,6 @@
 """Mixin: gestión de turnos y asistencia — consultas, creación, edición, cancelación."""
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -32,7 +32,7 @@ class GestorTurnosMixin:
         from models import CheckIn
         from models import Turno as TurnoModel
 
-        hoy = datetime.utcnow().date()
+        hoy = date.today()
         ahora = datetime.utcnow()
         s = self.session
 
@@ -62,19 +62,38 @@ class GestorTurnosMixin:
                 if ci.inicio > prev.inicio:
                     checkins_hoy[ci.empleado_id] = ci
 
-        # Build dict empleado_id → turno planificado de hoy (no cancelado)
+        # Build dict empleado_id → list of turnos planificados de hoy (no cancelado)
         turnos_hoy_map = {}
         for t in (
             s.query(TurnoModel)
             .filter(TurnoModel.fecha == hoy, TurnoModel.estado != 'cancelado')
+            .order_by(TurnoModel.hora_inicio)
             .all()
         ):
-            turnos_hoy_map[t.empleado_id] = t
+            if t.empleado_id not in turnos_hoy_map:
+                turnos_hoy_map[t.empleado_id] = []
+            turnos_hoy_map[t.empleado_id].append(t)
 
         resultado = []
         for emp in empleados:
+            turnos = turnos_hoy_map.get(emp.EmpleadoID, [])
+            turno_activo = None
+            if turnos:
+                # Buscar el turno cuya ventana de fichaje está activa AHORA
+                for t in turnos:
+                    inicio_dt = datetime.combine(t.fecha, t.hora_inicio)
+                    fin_dt = datetime.combine(t.fecha, t.hora_fin)
+                    # Ventana: desde -10 min antes hasta la hora_fin
+                    ventana_inicio = inicio_dt - timedelta(minutes=10)
+                    ventana_fin = fin_dt
+                    if ventana_inicio <= ahora <= ventana_fin and t.estado != 'completado':
+                        turno_activo = t
+                        break
+                # Si no hay turno en ventana activa, coger el primero del día (próximo)
+                if not turno_activo and turnos:
+                    turno_activo = [t for t in turnos if t.estado != 'completado'][0] if any(t.estado != 'completado' for t in turnos) else None
+
             ci = checkins_hoy.get(emp.EmpleadoID)
-            turno = turnos_hoy_map.get(emp.EmpleadoID)
             minutos_activo = None
             if ci:
                 fin_efectivo = ci.fin or ahora
@@ -91,17 +110,29 @@ class GestorTurnosMixin:
                 'minutos_activo':   minutos_activo,
                 'activo':           ci is not None and ci.fin is None,
                 'minutos_tarde':    ci.minutos_tarde if ci else None,
-                # Turno planificado
-                'tiene_turno':      turno is not None,
-                'turno_id':         turno.id if turno else None,
-                'turno_hora_inicio': str(turno.hora_inicio)[:5] if turno and turno.hora_inicio else None,
-                'turno_hora_fin':    str(turno.hora_fin)[:5] if turno and turno.hora_fin else None,
-                'turno_tipo':        turno.tipo if turno else None,
+                'tiene_turno':      len(turnos) > 0,
+                'turno_id':         turno_activo.id if turno_activo else None,
+                'turno_hora_inicio': str(turno_activo.hora_inicio)[:5] if turno_activo and turno_activo.hora_inicio else None,
+                'turno_hora_fin':    str(turno_activo.hora_fin)[:5] if turno_activo and turno_activo.hora_fin else None,
+                'turno_tipo':        turno_activo.tipo if turno_activo else None,
                 'turno_empezado':   (
-                    datetime.combine(turno.fecha, turno.hora_inicio) <= ahora
-                    if turno and turno.hora_inicio else False
+                    datetime.combine(turno_activo.fecha, turno_activo.hora_inicio) <= ahora
+                    if turno_activo and turno_activo.hora_inicio else False
                 ),
+                'turnos_dia':       [
+                    {
+                        'id': t.id,
+                        'hora_inicio': str(t.hora_inicio)[:5],
+                        'hora_fin': str(t.hora_fin)[:5],
+                        'estado': t.estado,
+                        'tipo': t.tipo,
+                    }
+                    for t in turnos
+                ]
             })
+
+        # Con turno primero, luego sin turno — cada grupo alfabético
+        resultado.sort(key=lambda e: (0 if e['tiene_turno'] else 1, e['nombre']))
 
         n_con_checkin   = sum(1 for e in resultado if e['activo'])
         n_pausa         = sum(1 for e in resultado if e['estado_operativo'] == 'en_pausa')
@@ -220,7 +251,7 @@ class GestorTurnosMixin:
     ) -> dict:
         """Lista de turnos planificados (pasados y futuros), paginada."""
         from models import Turno as TurnoModel
-        hoy = datetime.utcnow().date()
+        hoy = date.today()
         fecha_desde = datetime.strptime(desde, '%Y-%m-%d').date() if desde else hoy
         fecha_hasta = datetime.strptime(hasta, '%Y-%m-%d').date() if hasta else hoy + timedelta(days=13)
         page = max(page, 1)
@@ -289,6 +320,22 @@ class GestorTurnosMixin:
             h_fin = dtime(*[int(x) for x in hora_fin.split(':')])
         except (ValueError, AttributeError) as exc:
             return {'ok': False, 'error': 'Formato de fecha/hora inválido: %s' % exc}
+
+        # Validar solapamiento de turnos (solo contra turnos planificados, no completados ni cancelados)
+        turnos_ese_dia = s.query(TurnoModel).filter(
+            TurnoModel.empleado_id == empleado_id,
+            TurnoModel.fecha == fecha_dt,
+            TurnoModel.estado == 'planificado',
+        ).all()
+
+        for turno_existente in turnos_ese_dia:
+            # Detectar solapamiento: nuevo_inicio < existente.hora_fin AND nuevo_fin > existente.hora_inicio
+            if h_ini < turno_existente.hora_fin and h_fin > turno_existente.hora_inicio:
+                hora_str = f"{turno_existente.hora_inicio.strftime('%H:%M')}-{turno_existente.hora_fin.strftime('%H:%M')}"
+                return {
+                    'ok': False,
+                    'error': f'Turno solapado con uno existente ({hora_str})'
+                }
 
         turno = TurnoModel(
             empleado_id=empleado_id,

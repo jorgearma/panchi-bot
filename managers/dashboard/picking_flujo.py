@@ -290,6 +290,99 @@ class GestorPickingFlujoMixin:
             logger.error("Error actualizando item %s: %s", item_id, e)
             return False, "Error de base de datos"
 
+    def asignar_cocina_equipo(self, pedido_id: int) -> tuple:
+        """Restaurant mode: acepta el pedido en nombre de todo el equipo de cocina activo.
+
+        Crea un único PickingPedido (por la restricción unique en pedido_id) asignado al
+        primer cocinero disponible, y registra los nombres de todo el equipo en `notas`.
+        Retorna (ok, mensaje, [nombres_equipo]).
+        """
+        s = self.session
+        try:
+            pedido = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido:
+                return False, "Pedido no encontrado", []
+            if pedido.Estado not in _ESTADOS_LISTOS_PARA_PICKING:
+                return False, f"Estado '{pedido.Estado}' no permite asignar cocina", []
+
+            # 1º opción: cocineros con check-in activo (rol_activo='picker', no desconectados)
+            from models import Rol
+            cocineros = (
+                s.query(Empleado)
+                .filter(
+                    Empleado.activo == True,
+                    Empleado.rol_activo == 'picker',
+                    Empleado.estado_operativo.notin_(['desconectado']),
+                )
+                .order_by(Empleado.EmpleadoID)
+                .all()
+            )
+
+            # Fallback: empleados con Rol.nombre='picker' aunque no tengan check-in activo
+            if not cocineros:
+                cocineros = (
+                    s.query(Empleado)
+                    .join(Empleado.rol)
+                    .filter(
+                        Empleado.activo == True,
+                        Rol.nombre == 'picker',
+                    )
+                    .order_by(Empleado.EmpleadoID)
+                    .all()
+                )
+
+            if not cocineros:
+                return False, "No hay cocineros disponibles. Crea empleados con rol 'picker'.", []
+
+            principal = cocineros[0]
+            nombres = [f"{c.Nombre} {c.Apellido}" for c in cocineros]
+            nota_equipo = "Equipo cocina: " + ", ".join(nombres)
+
+            picking = s.query(PickingPedido).filter_by(pedido_id=pedido_id).first()
+            if picking:
+                picking.empleado_id = principal.EmpleadoID
+                picking.estado = EstadoPicking.EN_PROCESO.value
+                picking.iniciado_en = datetime.utcnow()
+                picking.notas = nota_equipo
+            else:
+                picking = PickingPedido(
+                    pedido_id=pedido_id,
+                    empleado_id=principal.EmpleadoID,
+                    estado=EstadoPicking.EN_PROCESO.value,
+                    iniciado_en=datetime.utcnow(),
+                    notas=nota_equipo,
+                )
+                s.add(picking)
+                s.flush()
+                for detalle in pedido.detalles:
+                    s.add(PickingItem(
+                        picking_id=picking.id,
+                        pedido_detalle_id=detalle.DetalleID,
+                        estado="pendiente",
+                    ))
+
+            if transicion_valida_pedido(pedido.Estado, EstadoPedido.EN_PREPARACION.value):
+                estado_anterior = pedido.Estado
+                pedido.Estado = EstadoPedido.EN_PREPARACION.value
+                s.add(HistorialEstadoPedido(
+                    pedido_id=pedido_id,
+                    estado_anterior=estado_anterior,
+                    estado_nuevo=EstadoPedido.EN_PREPARACION.value,
+                    notas=f"Aceptado en cocina — {nota_equipo}",
+                ))
+
+            s.commit()
+            for c in cocineros:
+                self._actualizar_estado_operativo(c.EmpleadoID, 'ocupado')
+
+            n = len(cocineros)
+            msg = f"Pedido aceptado por cocina ({n} cocinero{'s' if n > 1 else ''})"
+            return True, msg, nombres
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error asignando cocina equipo para pedido %s: %s", pedido_id, e)
+            return False, "Error de base de datos", []
+
     def reclamar_picking(self, picking_id: int, empleado_id: int) -> tuple[bool, str]:
         """
         Asigna el picking al empleado de forma atómica, avanza el estado a EN_PROCESO

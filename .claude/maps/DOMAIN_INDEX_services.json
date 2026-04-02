@@ -7,17 +7,18 @@
       "purpose": "Punto de entrada de la aplicación main",
       "key_symbols": [
         "create_app",
+        "inject_app_mode",
         "health",
         "manejar_errores_globales"
       ],
       "test_files": [],
       "related_paths": [
-        "blueprints/api.py",
+        "blueprints/api/__init__.py",
         "blueprints/auth.py",
-        "blueprints/dashboard.py",
+        "blueprints/cocina.py",
+        "blueprints/dashboard/__init__.py",
         "blueprints/empleado.py",
-        "blueprints/menu.py",
-        "blueprints/metricas_analitica.py"
+        "blueprints/menu/__init__.py"
       ],
       "contracts": [
         "integration:Sentry"
@@ -28,26 +29,24 @@
       ]
     },
     {
-      "path": "blueprints/menu.py",
-      "role": "controller",
-      "purpose": "Define rutas HTTP para menu",
+      "path": "container.py",
+      "role": "other",
+      "purpose": "Módulo de container",
       "key_symbols": [
-        "quiniela",
-        "mostrar_confirmacion",
-        "mostrar_confirmacion_depago"
+        "get_monei"
       ],
-      "test_files": [
-        "tests/test_menu.py"
-      ],
+      "test_files": [],
       "related_paths": [
+        "managers/gestor_dashboard.py",
+        "managers/gestor_empleado.py",
+        "managers/gestor_pedidos.py",
+        "managers/gestor_productos.py",
         "managers/gestor_redis.py",
-        "schemas/usuario.py",
-        "services/__init__.py",
-        "states.py",
-        "managers/gestor_dashboard.py"
+        "managers/gestor_usuarios.py"
       ],
       "contracts": [
-        "integration:Redis"
+        "integration:Monei",
+        "env:MONEI_API_KEY"
       ],
       "open_priority": "seed",
       "confidence_signals": [
@@ -68,11 +67,11 @@
         "tests/test_webhook.py"
       ],
       "related_paths": [
+        "container.py",
         "controllers/mensajes_registrados.py",
         "controllers/registro.py",
         "managers/gestor_redis.py",
         "schemas/twilio.py",
-        "services/__init__.py",
         "services/whatsapp_service.py"
       ],
       "contracts": [
@@ -84,21 +83,24 @@
       ]
     },
     {
-      "path": "controllers/pago.py",
+      "path": "blueprints/menu/navegacion.py",
       "role": "controller",
-      "purpose": "Define rutas HTTP para pago",
+      "purpose": "Define rutas HTTP para navegacion",
       "key_symbols": [
-        "iniciar_pago",
-        "iniciar_pago_efectivo"
+        "register",
+        "quiniela"
       ],
       "test_files": [],
       "related_paths": [
-        "services/whatsapp_service.py",
+        "blueprints/menu/_helpers.py",
+        "container.py",
+        "managers/gestor_redis.py",
+        "schemas/usuario.py",
         "states.py",
         "managers/gestor_dashboard.py"
       ],
       "contracts": [
-        "integration:Monei"
+        "integration:Redis"
       ],
       "open_priority": "seed",
       "confidence_signals": [
@@ -132,7 +134,8 @@
       "role": "service",
       "purpose": "Adapta el servicio externo de service",
       "key_symbols": [
-        "enviar_mensaje_whatsapp"
+        "enviar_mensaje_whatsapp",
+        "notificar_async"
       ],
       "test_files": [
         "tests/test_whatsapp_service.py"
@@ -150,24 +153,18 @@
       ]
     },
     {
-      "path": "services/__init__.py",
+      "path": "services/monei_service.py",
       "role": "service",
-      "purpose": "Adapta el servicio externo de init",
+      "purpose": "Adapta el servicio externo de service",
       "key_symbols": [
-        "get_monei"
+        "crear_pago"
       ],
       "test_files": [],
       "related_paths": [
-        "managers/gestor_dashboard.py",
-        "managers/gestor_empleado.py",
-        "managers/gestor_pedidos.py",
-        "managers/gestor_productos.py",
-        "managers/gestor_redis.py",
-        "managers/gestor_usuarios.py"
+        "managers/gestor_dashboard.py"
       ],
       "contracts": [
-        "integration:Monei",
-        "env:MONEI_API_KEY"
+        "integration:Monei"
       ],
       "open_priority": "seed",
       "confidence_signals": [

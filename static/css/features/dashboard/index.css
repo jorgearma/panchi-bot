@@ -58,3 +58,8 @@ body {
 .ring-highlight {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
+
+select option:disabled {
+  color: #9CA3AF;
+  background-color: #F3F4F6;
+}
