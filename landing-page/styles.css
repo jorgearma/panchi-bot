@@ -351,74 +351,48 @@ img { display: block; max-width: 100%; }
   margin-bottom: 0;
 }
 
+/* --- Hero Layout (3-column grid: phone | copy | phone) --- */
+.hero-layout {
+  display: grid;
+  grid-template-columns: 137px 1fr 137px;
+  align-items: center;
+  gap: 36px;
+  padding: 16px 0;
+}
+
+.hero-phone-col {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 /* --- Hero Phones --- */
-.hero-phones {
-  position: relative;
-  height: 420px;
-  margin: 56px auto 0;
-  max-width: 780px;
-}
-
-.hero-phone-shadow {
-  position: absolute;
-  bottom: -20px;
-  width: 180px;
-  height: 30px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(27,27,24,.12), transparent 70%);
-  filter: blur(8px);
-  z-index: 0;
-}
-.hero-phone-shadow--left { left: 50%; transform: translateX(-320px); }
-.hero-phone-shadow--right { left: 50%; transform: translateX(140px); }
-
 .hero-phone {
-  position: absolute;
-  width: 260px;
-  height: 520px;
+  width: 137px;
+  height: 273px;
   z-index: 2;
   opacity: 0;
-  will-change: transform;
+  flex-shrink: 0;
 }
 
 .hero-phone--left {
-  left: 50%;
-  top: 0;
-  transform: translateX(-340px) translateY(40px) rotate(-7deg);
+  transform: translateY(50px) rotate(-7deg);
   animation: phoneEnterLeft .9s var(--ease-out) .4s forwards;
 }
 .hero-phone--right {
-  left: 50%;
-  top: 0;
-  transform: translateX(80px) translateY(40px) rotate(7deg);
+  transform: translateY(50px) rotate(7deg);
   animation: phoneEnterRight .9s var(--ease-out) .6s forwards;
 }
 
 @keyframes phoneEnterLeft {
-  from { opacity: 0; transform: translateX(-380px) translateY(80px) rotate(-12deg); }
-  to   { opacity: 1; transform: translateX(-340px) translateY(0px) rotate(-7deg); }
+  from { opacity: 0; transform: translateY(80px) rotate(-12deg); }
+  to   { opacity: 1; transform: translateY(0px) rotate(-7deg); }
 }
 @keyframes phoneEnterRight {
-  from { opacity: 0; transform: translateX(120px) translateY(80px) rotate(12deg); }
-  to   { opacity: 1; transform: translateX(80px) translateY(0px) rotate(7deg); }
+  from { opacity: 0; transform: translateY(80px) rotate(12deg); }
+  to   { opacity: 1; transform: translateY(0px) rotate(7deg); }
 }
-
-/* Floating animation (applied after entrance via JS) */
-.hero-phone--left.floating {
-  animation: floatLeft 6s ease-in-out infinite;
-}
-.hero-phone--right.floating {
-  animation: floatRight 7s ease-in-out infinite;
-}
-
-@keyframes floatLeft {
-  0%, 100% { transform: translateX(-340px) translateY(0px) rotate(-7deg); }
-  50% { transform: translateX(-340px) translateY(-18px) rotate(-5deg); }
-}
-@keyframes floatRight {
-  0%, 100% { transform: translateX(80px) translateY(0px) rotate(7deg); }
-  50% { transform: translateX(80px) translateY(-14px) rotate(5deg); }
-}
+/* Float handled entirely by JS rAF loop — no CSS float keyframes needed */
 
 /* --- Phone mockup shared --- */
 .phone-mockup {
@@ -638,6 +612,47 @@ img { display: block; max-width: 100%; }
 .hero-tracking-bar {
   background: linear-gradient(180deg, #FAFAF7, #fff);
 }
+
+/* --- Hero phone internals scaled for 137×273px (≈0.53× original 260×520) --- */
+.hero-phone.phone-mockup  { border-radius: 20px; padding: 5px; }
+.hero-phone .phone-notch  { width: 38px; height: 3px; top: 7px; }
+.hero-phone .phone-screen { border-radius: 14px; }
+
+/* WhatsApp phone */
+.hero-phone .wa-header                  { padding: 7px 7px 5px; gap: 5px; }
+.hero-phone .wa-avatar                  { width: 18px; height: 18px; font-size: 9px; }
+.hero-phone .wa-name                    { font-size: .41rem; }
+.hero-phone .wa-status                  { font-size: .34rem; }
+.hero-phone .wa-chat                    { padding: 6px; gap: 3px; }
+.hero-phone .wa-bubble                  { padding: 4px 6px; font-size: .38rem; border-radius: 5px; line-height: 1.35; }
+.hero-phone .wa-bubble-time             { font-size: .30rem; margin-top: 1px; }
+.hero-phone .hero-chat-highlights       { gap: 3px; padding-top: 4px; }
+.hero-phone .hero-chat-highlights span  { padding: 2px 4px; font-size: .30rem; }
+.hero-phone .hero-phone-footer          { padding: 5px 7px; }
+.hero-phone .hero-phone-footer span     { font-size: .30rem; }
+.hero-phone .hero-phone-footer strong   { font-size: .44rem; }
+
+/* Dashboard phone */
+.hero-phone .hero-ops-header            { padding: 7px; gap: 2px; }
+.hero-phone .hero-ops-eyebrow           { font-size: .30rem; }
+.hero-phone .hero-ops-header strong     { font-size: .49rem; }
+.hero-phone .hero-ops-body              { padding: 5px; gap: 5px; }
+.hero-phone .hero-ops-grid              { gap: 4px; }
+.hero-phone .hero-ops-card              { padding: 5px; border-radius: 6px; }
+.hero-phone .hero-ops-card span         { font-size: .28rem; margin-bottom: 2px; }
+.hero-phone .hero-ops-card strong       { font-size: .49rem; }
+.hero-phone .hero-orders                { padding: 5px; border-radius: 6px; }
+.hero-phone .hero-orders-title          { font-size: .30rem; margin-bottom: 3px; }
+.hero-phone .hero-order-row             { padding: 3px 0; gap: 3px; }
+.hero-phone .hero-order-row span        { font-size: .34rem; }
+.hero-phone .hero-order-row strong      { font-size: .33rem; }
+.hero-phone .hero-order-row small       { font-size: .31rem; }
+
+/* Tracking bar */
+.hero-phone .hero-tracking-bar          { padding: 5px 6px; }
+.hero-phone .track-dot                  { width: 6px; height: 6px; }
+.hero-phone .track-step span            { font-size: .27rem; }
+.hero-phone .track-line                 { height: 1px; margin-bottom: 8px; }
 
 /* --- Stats --- */
 .hero-stats {
@@ -1670,26 +1685,8 @@ img { display: block; max-width: 100%; }
    RESPONSIVE
    ============================================================ */
 @media (max-width: 1024px) {
-  .hero-phones { height: 360px; }
-  .hero-phone--left  { transform: translateX(-280px) translateY(0) rotate(-7deg); }
-  .hero-phone--right { transform: translateX(20px) translateY(0) rotate(7deg); }
-  .hero-phone { width: 220px; height: 440px; }
-  @keyframes phoneEnterLeft {
-    from { opacity: 0; transform: translateX(-320px) translateY(60px) rotate(-12deg); }
-    to   { opacity: 1; transform: translateX(-280px) translateY(0px) rotate(-7deg); }
-  }
-  @keyframes phoneEnterRight {
-    from { opacity: 0; transform: translateX(60px) translateY(60px) rotate(12deg); }
-    to   { opacity: 1; transform: translateX(20px) translateY(0px) rotate(7deg); }
-  }
-  @keyframes floatLeft {
-    0%, 100% { transform: translateX(-280px) translateY(0px) rotate(-7deg); }
-    50% { transform: translateX(-280px) translateY(-14px) rotate(-5deg); }
-  }
-  @keyframes floatRight {
-    0%, 100% { transform: translateX(20px) translateY(0px) rotate(7deg); }
-    50% { transform: translateX(20px) translateY(-10px) rotate(5deg); }
-  }
+  .hero-layout { grid-template-columns: 116px 1fr 116px; gap: 20px; }
+  .hero-phone { width: 116px; height: 231px; }
 }
 
 @media (max-width: 768px) {
@@ -1712,40 +1709,25 @@ img { display: block; max-width: 100%; }
   .hero { padding: 120px 0 40px; min-height: auto; }
   .hero-title { font-size: clamp(2rem, 7vw, 2.8rem); }
 
-  .hero-phones {
-    height: auto;
-    display: flex;
-    justify-content: center;
+  /* Mobile: copy on top, phones side-by-side below */
+  .hero-layout {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "copy copy"
+      "left right";
     gap: 16px;
-    margin-top: 40px;
   }
+  .hero-top          { grid-area: copy; }
+  .hero-phone-col--left  { grid-area: left; }
+  .hero-phone-col--right { grid-area: right; }
   .hero-phone {
-    position: relative;
-    left: auto;
-    width: 160px;
-    height: 320px;
+    width: 98px;
+    height: 196px;
     opacity: 1;
-  }
-  .hero-phone--left {
-    transform: rotate(-5deg);
     animation: none;
   }
-  .hero-phone--right {
-    transform: rotate(5deg);
-    animation: none;
-  }
-  .hero-phone--left.floating { animation: floatLeftMobile 5s ease-in-out infinite; }
-  .hero-phone--right.floating { animation: floatRightMobile 6s ease-in-out infinite; }
-  @keyframes floatLeftMobile {
-    0%, 100% { transform: rotate(-5deg) translateY(0); }
-    50% { transform: rotate(-3deg) translateY(-8px); }
-  }
-  @keyframes floatRightMobile {
-    0%, 100% { transform: rotate(5deg) translateY(0); }
-    50% { transform: rotate(3deg) translateY(-6px); }
-  }
-
-  .hero-phone-shadow { display: none; }
+  .hero-phone--left  { transform: rotate(-5deg); }
+  .hero-phone--right { transform: rotate(5deg); }
 
   .hero-stats { gap: 24px; margin-top: 36px; }
   .stat-divider { display: none; }
