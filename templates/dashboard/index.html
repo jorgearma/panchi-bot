@@ -329,16 +329,21 @@
               <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Pickers · Preparación</p>
               <div class="space-y-4">
                 <template x-for="picker in pickersEquipo" :key="'p-'+picker.empleado_id">
-                  <div x-data="{ open: false }">
+                  <div x-data="{ open: false }" :class="!picker.tiene_checkin ? 'opacity-50' : ''">
                     <!-- Worker row — clic para colapsar -->
                     <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
                          :class="open ? 'mb-2' : 'mb-0'"
                          @click="open = !open">
-                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black bg-sky-500 text-white">P</div>
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black text-white"
+                           :class="picker.tiene_checkin ? 'bg-sky-500' : 'bg-slate-400'">P</div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
-                          <span class="text-sm font-bold text-slate-900 truncate" x-text="picker.nombre"></span>
-                          <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                          <span class="text-sm font-bold truncate"
+                                :class="picker.tiene_checkin ? 'text-slate-900' : 'text-slate-400'"
+                                x-text="picker.nombre"></span>
+                          <span x-show="!picker.tiene_checkin"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">sin fichar</span>
+                          <span x-show="picker.tiene_checkin" class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
                                 :class="picker.carga.score >= 3 ? 'bg-red-100 text-red-700' : picker.carga.score === 2 ? 'bg-amber-100 text-amber-700' : picker.carga.score === 1 ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-700'"
                                 x-text="picker.carga.label"></span>
                         </div>
@@ -408,16 +413,21 @@
               <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Repartidores · Calle</p>
               <div class="space-y-4">
                 <template x-for="emp in repartidoresEquipo" :key="'r-'+emp.empleado_id">
-                  <div x-data="{ open: false }">
+                  <div x-data="{ open: false }" :class="!emp.tiene_checkin ? 'opacity-50' : ''">
                     <!-- Worker row — clic para colapsar -->
                     <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
                          :class="open ? 'mb-2' : 'mb-0'"
                          @click="open = !open">
-                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black bg-orange-500 text-white">R</div>
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black text-white"
+                           :class="emp.tiene_checkin ? 'bg-orange-500' : 'bg-slate-400'">R</div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
-                          <span class="text-sm font-bold text-slate-900 truncate" x-text="emp.nombre"></span>
-                          <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                          <span class="text-sm font-bold truncate"
+                                :class="emp.tiene_checkin ? 'text-slate-900' : 'text-slate-400'"
+                                x-text="emp.nombre"></span>
+                          <span x-show="!emp.tiene_checkin"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">sin fichar</span>
+                          <span x-show="emp.tiene_checkin" class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
                                 :class="emp.carga.score >= 3 ? 'bg-red-100 text-red-700' : emp.carga.score === 2 ? 'bg-amber-100 text-amber-700' : emp.carga.score === 1 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'"
                                 x-text="emp.carga.label"></span>
                         </div>
@@ -506,7 +516,11 @@
                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
           <option value="">— Seleccionar —</option>
           <template x-for="e in empleadosModal" :key="e.id">
-            <option :value="e.id" x-text="e.nombre + ' (' + e.rol + ')'"></option>
+            <option
+              :value="e.id"
+              :disabled="!e.has_checked_in"
+              x-text="e.nombre + ' (' + e.rol + ')' + (!e.has_checked_in ? ' — sin fichar' : '')">
+            </option>
           </template>
         </select>
       </div>
@@ -542,7 +556,11 @@
                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
           <option value="">— Seleccionar —</option>
           <template x-for="e in empleadosModal" :key="e.id">
-            <option :value="e.id" x-text="e.nombre + ' (' + e.rol + ')'"></option>
+            <option
+              :value="e.id"
+              :disabled="!e.has_checked_in"
+              x-text="e.nombre + ' (' + e.rol + ')' + (!e.has_checked_in ? ' — sin fichar' : '')">
+            </option>
           </template>
         </select>
       </div>
@@ -581,7 +599,11 @@
                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
           <option value="">— Seleccionar —</option>
           <template x-for="e in empleadosModal" :key="e.id">
-            <option :value="e.id" x-text="e.nombre + ' (' + e.rol + ')'"></option>
+            <option
+              :value="e.id"
+              :disabled="!e.has_checked_in"
+              x-text="e.nombre + ' (' + e.rol + ')' + (!e.has_checked_in ? ' — sin fichar' : '')">
+            </option>
           </template>
         </select>
       </div>

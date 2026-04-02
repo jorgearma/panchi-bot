@@ -202,6 +202,7 @@ function dashboard() {
             empleado_id: pk.empleado.id,
             nombre: pk.empleado.nombre,
             telefono: null,
+            tiene_checkin: false,
             pickings: [],
             pedidos_activos: 0,
             items_total: 0,
