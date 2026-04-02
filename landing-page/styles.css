@@ -693,7 +693,7 @@ img { display: block; max-width: 100%; }
    ============================================================ */
 .section-header {
   text-align: center;
-  margin-bottom: 56px;
+  margin-bottom: 36px;
 }
 
 .section-eyebrow {
@@ -762,7 +762,7 @@ img { display: block; max-width: 100%; }
    FEATURES
    ============================================================ */
 .features {
-  padding: 100px 0;
+  padding: 60px 0;
 }
 
 .features-grid {
@@ -850,7 +850,7 @@ img { display: block; max-width: 100%; }
    HOW IT WORKS
    ============================================================ */
 .how-section {
-  padding: 100px 0;
+  padding: 60px 0;
   background: var(--cream-dark);
 }
 
@@ -903,7 +903,7 @@ img { display: block; max-width: 100%; }
    DEMO
    ============================================================ */
 .demo-section {
-  padding: 100px 0;
+  padding: 60px 0;
 }
 
 .demo-wrapper {
@@ -1243,7 +1243,7 @@ img { display: block; max-width: 100%; }
    TESTIMONIALS
    ============================================================ */
 .testimonials {
-  padding: 100px 0;
+  padding: 60px 0;
   background: var(--green-deep);
 }
 
@@ -1316,7 +1316,7 @@ img { display: block; max-width: 100%; }
    PRICING
    ============================================================ */
 .pricing {
-  padding: 100px 0;
+  padding: 60px 0;
 }
 
 .pricing-grid {
@@ -1428,7 +1428,7 @@ img { display: block; max-width: 100%; }
    FAQ
    ============================================================ */
 .faq {
-  padding: 100px 0;
+  padding: 60px 0;
   background: var(--cream-dark);
 }
 
@@ -1506,7 +1506,7 @@ img { display: block; max-width: 100%; }
    CTA
    ============================================================ */
 .cta-section {
-  padding: 100px 0;
+  padding: 60px 0;
 }
 
 .cta-card {
