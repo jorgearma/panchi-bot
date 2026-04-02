@@ -11,7 +11,6 @@ from managers.dashboard.picking_flujo import GestorPickingFlujoMixin
 from managers.dashboard.reparto_asignacion import GestorRepartoAsignacionMixin
 from managers.dashboard.reparto_tracking import GestorRepartoTrackingMixin
 from managers.dashboard.reparto_cobro import GestorRepartoCobroMixin
-from managers.dashboard.gestor_turnos_mixin import GestorTurnosMixin
 from managers.dashboard.empleados_lista import GestorEmpleadosListaMixin
 from managers.dashboard.empleados_monitor import GestorEmpleadosMonitorMixin
 from managers.dashboard.empleados_rendimiento import GestorEmpleadosRendimientoMixin
@@ -25,7 +24,6 @@ class GestorDashboard(
     GestorRepartoAsignacionMixin,
     GestorRepartoTrackingMixin,
     GestorRepartoCobroMixin,
-    GestorTurnosMixin,
     GestorEmpleadosListaMixin,
     GestorEmpleadosMonitorMixin,
     GestorEmpleadosRendimientoMixin,

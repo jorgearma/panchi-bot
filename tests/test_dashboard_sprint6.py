@@ -7,10 +7,10 @@ import pytest
 
 def test_turnos_planificacion_devuelve_claves_esperadas(app):
     """turnos_planificacion() devuelve {turnos, total, page, pages}."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             mock_q = mock_session.return_value.query.return_value
             mock_q.join.return_value = mock_q
@@ -21,7 +21,7 @@ def test_turnos_planificacion_devuelve_claves_esperadas(app):
             mock_q.limit.return_value = mock_q
             mock_q.all.return_value = []
 
-            result = gestor_dashboard.turnos_planificacion()
+            result = gestor_empleado.turnos_planificacion()
 
             assert 'turnos' in result
             assert 'total' in result
@@ -32,13 +32,13 @@ def test_turnos_planificacion_devuelve_claves_esperadas(app):
 
 def test_crear_turno_devuelve_ok_con_datos_validos(app):
     """crear_turno() devuelve {ok: True, turno_id} cuando el empleado existe."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         emp_mock = MagicMock()
         emp_mock.EmpleadoID = 1
 
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             s = mock_session.return_value
             s.query.return_value.filter_by.return_value.first.return_value = emp_mock
@@ -53,7 +53,7 @@ def test_crear_turno_devuelve_ok_con_datos_validos(app):
                     obj.id = 42
             s.flush.side_effect = flush_side_effect
 
-            result = gestor_dashboard.crear_turno(
+            result = gestor_empleado.crear_turno(
                 empleado_id=1,
                 fecha='2026-04-01',
                 hora_inicio='09:00',
@@ -67,14 +67,14 @@ def test_crear_turno_devuelve_ok_con_datos_validos(app):
 
 def test_crear_turno_devuelve_error_si_empleado_no_existe(app):
     """crear_turno() devuelve {ok: False} si el empleado no existe."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             mock_session.return_value.query.return_value.filter_by.return_value.first.return_value = None
 
-            result = gestor_dashboard.crear_turno(
+            result = gestor_empleado.crear_turno(
                 empleado_id=99999,
                 fecha='2026-04-01',
                 hora_inicio='09:00',
@@ -87,19 +87,19 @@ def test_crear_turno_devuelve_error_si_empleado_no_existe(app):
 
 def test_editar_turno_devuelve_ok_si_turno_existe(app):
     """editar_turno() devuelve {ok: True} cuando el turno existe y no está cancelado."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         turno_mock = MagicMock()
         turno_mock.estado = 'planificado'
 
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             s = mock_session.return_value
             s.query.return_value.filter_by.return_value.first.return_value = turno_mock
             s.commit = MagicMock()
 
-            result = gestor_dashboard.editar_turno(
+            result = gestor_empleado.editar_turno(
                 turno_id=1,
                 hora_inicio='10:00',
                 hora_fin='18:00',
@@ -110,14 +110,14 @@ def test_editar_turno_devuelve_ok_si_turno_existe(app):
 
 def test_editar_turno_devuelve_error_si_no_existe(app):
     """editar_turno() devuelve {ok: False} si el turno no existe."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             mock_session.return_value.query.return_value.filter_by.return_value.first.return_value = None
 
-            result = gestor_dashboard.editar_turno(turno_id=99999, hora_inicio='09:00')
+            result = gestor_empleado.editar_turno(turno_id=99999, hora_inicio='09:00')
 
             assert result['ok'] is False
             assert 'error' in result
@@ -125,19 +125,19 @@ def test_editar_turno_devuelve_error_si_no_existe(app):
 
 def test_cancelar_turno_devuelve_ok_si_turno_existe(app):
     """cancelar_turno() devuelve {ok: True} cuando el turno existe."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         turno_mock = MagicMock()
         turno_mock.estado = 'planificado'
 
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             s = mock_session.return_value
             s.query.return_value.filter_by.return_value.first.return_value = turno_mock
             s.commit = MagicMock()
 
-            result = gestor_dashboard.cancelar_turno(turno_id=1)
+            result = gestor_empleado.cancelar_turno(turno_id=1)
 
             assert result['ok'] is True
             assert turno_mock.estado == 'cancelado'
@@ -148,7 +148,7 @@ def test_cancelar_turno_devuelve_ok_si_turno_existe(app):
 def test_turnos_planificacion_json_devuelve_estructura(client):
     """GET /dashboard/turnos/planificacion devuelve {turnos, total, page, pages}."""
     from unittest.mock import patch
-    from container import gestor_dashboard
+    from container import gestor_empleado
 
     fake = {'turnos': [], 'total': 0, 'page': 1, 'pages': 1}
 
@@ -156,7 +156,7 @@ def test_turnos_planificacion_json_devuelve_estructura(client):
         sess['empleado_id'] = 1
         sess['rol'] = 'admin'
 
-    with patch.object(gestor_dashboard, 'turnos_planificacion', return_value=fake):
+    with patch.object(gestor_empleado, 'turnos_planificacion', return_value=fake):
         resp = client.get('/dashboard/turnos/planificacion')
         assert resp.status_code == 200
         data = resp.get_json()
@@ -167,13 +167,13 @@ def test_turnos_planificacion_json_devuelve_estructura(client):
 def test_crear_turno_route_devuelve_ok(client):
     """POST /dashboard/turnos/crear devuelve {ok: True}."""
     from unittest.mock import patch
-    from container import gestor_dashboard
+    from container import gestor_empleado
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
         sess['rol'] = 'admin'
 
-    with patch.object(gestor_dashboard, 'crear_turno', return_value={'ok': True, 'turno_id': 10}):
+    with patch.object(gestor_empleado, 'crear_turno', return_value={'ok': True, 'turno_id': 10}):
         resp = client.post('/dashboard/turnos/crear', json={
             'empleado_id': 1, 'fecha': '2026-04-01',
             'hora_inicio': '09:00', 'hora_fin': '17:00',
@@ -196,13 +196,13 @@ def test_crear_turno_route_400_si_faltan_campos(client):
 def test_editar_turno_route_devuelve_ok(client):
     """POST /dashboard/turnos/<id>/editar devuelve {ok: True}."""
     from unittest.mock import patch
-    from container import gestor_dashboard
+    from container import gestor_empleado
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
         sess['rol'] = 'admin'
 
-    with patch.object(gestor_dashboard, 'editar_turno', return_value={'ok': True}):
+    with patch.object(gestor_empleado, 'editar_turno', return_value={'ok': True}):
         resp = client.post('/dashboard/turnos/1/editar', json={'hora_inicio': '10:00'})
         assert resp.status_code == 200
         data = resp.get_json()
@@ -212,13 +212,13 @@ def test_editar_turno_route_devuelve_ok(client):
 def test_cancelar_turno_route_devuelve_ok(client):
     """POST /dashboard/turnos/<id>/cancelar devuelve {ok: True}."""
     from unittest.mock import patch
-    from container import gestor_dashboard
+    from container import gestor_empleado
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
         sess['rol'] = 'admin'
 
-    with patch.object(gestor_dashboard, 'cancelar_turno', return_value={'ok': True}):
+    with patch.object(gestor_empleado, 'cancelar_turno', return_value={'ok': True}):
         resp = client.post('/dashboard/turnos/1/cancelar')
         assert resp.status_code == 200
         data = resp.get_json()
