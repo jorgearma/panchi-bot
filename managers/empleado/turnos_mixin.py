@@ -39,9 +39,8 @@ class GestorEmpleadoTurnosMixin:
         # Buscar turno en ventana activa ahora
         for turno in turnos:
             inicio_dt = datetime.combine(hoy, turno.hora_inicio)
-            fin_dt = datetime.combine(hoy, turno.hora_fin)
             ventana_inicio = inicio_dt - timedelta(minutes=self._MINUTOS_ANTES)
-            ventana_fin = fin_dt
+            ventana_fin = inicio_dt + timedelta(minutes=self._MINUTOS_DESPUES)
             if ventana_inicio <= ahora <= ventana_fin:
                 return {
                     'id': turno.id,
@@ -52,8 +51,14 @@ class GestorEmpleadoTurnosMixin:
                     'estado': turno.estado,
                 }
 
-        # Si no hay ninguno activo, devolver el primero futuro
-        turno = turnos[0]
+        # Si no hay ninguno activo, devolver el próximo cuya ventana aún no haya pasado
+        turno = next(
+            (
+                t for t in turnos
+                if datetime.combine(hoy, t.hora_inicio) + timedelta(minutes=self._MINUTOS_DESPUES) >= ahora
+            ),
+            None,
+        ) or turnos[0]
         return {
             'id': turno.id,
             'fecha': turno.fecha.isoformat(),
@@ -151,7 +156,7 @@ class GestorEmpleadoTurnosMixin:
                 'ventana_hasta': None,
             }
 
-        # Calcular ventana: desde -MINUTOS_ANTES hasta hora_fin
+        # Calcular ventana: desde -MINUTOS_ANTES hasta +MINUTOS_DESPUES del inicio
         inicio_turno = datetime(
             turno.fecha.year,
             turno.fecha.month,
@@ -159,16 +164,9 @@ class GestorEmpleadoTurnosMixin:
             turno.hora_inicio.hour,
             turno.hora_inicio.minute,
         )
-        fin_turno = datetime(
-            turno.fecha.year,
-            turno.fecha.month,
-            turno.fecha.day,
-            turno.hora_fin.hour,
-            turno.hora_fin.minute,
-        )
 
         ventana_desde = inicio_turno - timedelta(minutes=self._MINUTOS_ANTES)
-        ventana_hasta = fin_turno  # Permite fichar hasta la hora de fin del turno
+        ventana_hasta = inicio_turno + timedelta(minutes=self._MINUTOS_DESPUES)
 
         ahora = datetime.now()
 
@@ -215,7 +213,7 @@ class GestorEmpleadoTurnosMixin:
         from models import Turno as TurnoModel
 
         hoy = date.today()
-        ahora = datetime.utcnow()
+        ahora = datetime.now()
         s = self.session
 
         empleados = (
@@ -261,9 +259,8 @@ class GestorEmpleadoTurnosMixin:
                 # Buscar el turno cuya ventana de fichaje está activa AHORA
                 for t in turnos:
                     inicio_dt = datetime.combine(t.fecha, t.hora_inicio)
-                    fin_dt = datetime.combine(t.fecha, t.hora_fin)
                     ventana_inicio = inicio_dt - timedelta(minutes=self._MINUTOS_ANTES)
-                    ventana_fin = fin_dt
+                    ventana_fin = inicio_dt + timedelta(minutes=self._MINUTOS_DESPUES)
                     if ventana_inicio <= ahora <= ventana_fin and t.estado != 'completado':
                         turno_activo = t
                         break
