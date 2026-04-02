@@ -185,6 +185,7 @@ function dashboard() {
             empleado_id: emp.empleado_id,
             nombre: emp.nombre,
             telefono: emp.telefono,
+            tiene_checkin: emp.tiene_checkin,
             pickings: [],
             pedidos_activos: 0,
             items_total: 0,
@@ -657,7 +658,7 @@ function dashboard() {
     async abrirModalPicker(pedido_id) {
       this.modalPicker = { visible: true, pedido_id, empleado_id: '' };
       this.modalError = '';
-      const r = await fetch('/dashboard/empleados');
+      const r = await fetch('/dashboard/empleados?operacion=true');
       this.empleadosModal = r.ok ? await r.json() : [];
     },
 
@@ -695,7 +696,7 @@ function dashboard() {
     async abrirModalReasignar(picking_id) {
       this.modalReasignar = { visible: true, picking_id, empleado_id: '' };
       this.modalError = '';
-      const r = await fetch('/dashboard/empleados');
+      const r = await fetch('/dashboard/empleados?operacion=true');
       this.empleadosModal = r.ok ? await r.json() : [];
     },
 
@@ -742,7 +743,7 @@ function dashboard() {
         repartidor_actual: repartidorActual || null,
       };
       this.modalError = '';
-      const r = await fetch('/dashboard/empleados');
+      const r = await fetch('/dashboard/empleados?operacion=true');
       this.empleadosModal = r.ok ? await r.json() : [];
     },
 

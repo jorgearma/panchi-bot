@@ -1,14 +1,18 @@
 {
   "entry_points": [
-    "main.py"
+    "main.py",
+    "static/js/features/dashboard/index.js",
+    "static/js/features/picker/index.js",
+    "static/js/features/repartidor/index.js"
   ],
   "forward": {
     "main.py": [
-      "blueprints/api.py",
+      "blueprints/api/__init__.py",
       "blueprints/auth.py",
-      "blueprints/dashboard.py",
+      "blueprints/cocina.py",
+      "blueprints/dashboard/__init__.py",
       "blueprints/empleado.py",
-      "blueprints/menu.py",
+      "blueprints/menu/__init__.py",
       "blueprints/metricas_analitica.py",
       "blueprints/metricas_operacion.py",
       "blueprints/picker.py",
@@ -18,6 +22,14 @@
       "config.py",
       "database.py",
       "managers/gestor_redis.py"
+    ],
+    "container.py": [
+      "managers/gestor_dashboard.py",
+      "managers/gestor_empleado.py",
+      "managers/gestor_pedidos.py",
+      "managers/gestor_productos.py",
+      "managers/gestor_redis.py",
+      "managers/gestor_usuarios.py"
     ],
     "database.py": [
       "models.py"
@@ -31,42 +43,33 @@
     ],
     "blueprints/empleado.py": [
       "blueprints/auth.py",
-      "database.py",
-      "models.py",
-      "services/__init__.py"
+      "config.py",
+      "container.py"
     ],
     "blueprints/picker.py": [
       "blueprints/auth.py",
-      "services/__init__.py",
-      "services/whatsapp_service.py"
-    ],
-    "blueprints/dashboard.py": [
-      "blueprints/auth.py",
-      "services/__init__.py",
+      "container.py",
       "services/whatsapp_service.py"
     ],
     "blueprints/productos.py": [
-      "services/__init__.py"
+      "container.py"
     ],
-    "blueprints/menu.py": [
-      "config.py",
-      "managers/gestor_redis.py",
-      "schemas/usuario.py",
-      "services/__init__.py",
-      "states.py"
+    "blueprints/cocina.py": [
+      "blueprints/auth.py",
+      "container.py"
     ],
     "blueprints/repartidor.py": [
       "blueprints/auth.py",
-      "services/__init__.py",
+      "container.py",
       "services/whatsapp_service.py"
     ],
     "blueprints/webhook.py": [
       "config.py",
+      "container.py",
       "controllers/mensajes_registrados.py",
       "controllers/registro.py",
       "managers/gestor_redis.py",
       "schemas/twilio.py",
-      "services/__init__.py",
       "services/whatsapp_service.py",
       "states.py",
       "utils/text_utils.py"
@@ -76,33 +79,88 @@
       "managers/gestor_metricas.py"
     ],
     "blueprints/auth.py": [
+      "container.py",
       "database.py",
       "models.py"
     ],
-    "blueprints/api.py": [
+    "blueprints/api/tracking.py": [
+      "container.py"
+    ],
+    "blueprints/api/cart.py": [
       "config.py",
-      "controllers/pago.py",
+      "container.py",
       "controllers/pedido.py",
-      "database.py",
-      "models.py",
-      "services/__init__.py",
       "states.py"
     ],
-    "controllers/mensajes_registrados.py": [
+    "blueprints/api/payments.py": [
       "config.py",
+      "container.py",
+      "controllers/pago.py"
+    ],
+    "blueprints/dashboard/picking.py": [
+      "blueprints/auth.py",
+      "blueprints/dashboard/_common.py",
+      "container.py"
+    ],
+    "blueprints/dashboard/pedidos.py": [
+      "blueprints/auth.py",
+      "blueprints/dashboard/_common.py",
+      "container.py"
+    ],
+    "blueprints/dashboard/reparto.py": [
+      "blueprints/auth.py",
+      "blueprints/dashboard/_common.py",
+      "container.py"
+    ],
+    "blueprints/dashboard/turnos.py": [
+      "blueprints/auth.py",
+      "blueprints/dashboard/_common.py",
+      "container.py"
+    ],
+    "blueprints/dashboard/_common.py": [
+      "services/whatsapp_service.py"
+    ],
+    "blueprints/dashboard/pages.py": [
+      "blueprints/auth.py",
+      "blueprints/dashboard/_common.py",
+      "config.py",
+      "container.py"
+    ],
+    "blueprints/menu/navegacion.py": [
+      "blueprints/menu/_helpers.py",
+      "config.py",
+      "container.py",
+      "managers/gestor_redis.py",
+      "schemas/usuario.py",
+      "states.py"
+    ],
+    "blueprints/menu/sesion.py": [
+      "blueprints/menu/_helpers.py",
+      "config.py",
+      "container.py"
+    ],
+    "controllers/mensajes_registrados.py": [
+      "container.py",
+      "controllers/mensajes_registrados_notifier.py",
       "controllers/pedido.py",
-      "services/__init__.py",
       "services/whatsapp_service.py",
       "states.py",
       "utils/menu_opciones.py"
     ],
     "controllers/pago.py": [
-      "services/whatsapp_service.py",
+      "controllers/pago_notifier.py",
+      "services/monei_service.py",
       "states.py"
     ],
+    "controllers/registro_notifier.py": [
+      "services/whatsapp_service.py"
+    ],
+    "controllers/pago_notifier.py": [
+      "services/whatsapp_service.py"
+    ],
     "controllers/pedido.py": [
+      "container.py",
       "schemas/twilio.py",
-      "services/__init__.py",
       "services/maps_service.py",
       "services/token_service.py",
       "services/whatsapp_service.py",
@@ -112,26 +170,37 @@
       "utils/text_utils.py"
     ],
     "controllers/registro.py": [
+      "container.py",
+      "controllers/registro_notifier.py",
       "managers/estado_usuario.py",
-      "services/__init__.py",
       "services/maps_service.py",
-      "services/whatsapp_service.py",
       "states.py",
       "utils/menu_opciones.py"
     ],
+    "controllers/mensajes_registrados_notifier.py": [
+      "config.py",
+      "services/whatsapp_service.py",
+      "states.py"
+    ],
     "managers/gestor_dashboard.py": [
       "managers/dashboard/_base.py",
-      "managers/dashboard/gestor_empleados_mixin.py",
+      "managers/dashboard/empleados_lista.py",
+      "managers/dashboard/empleados_monitor.py",
+      "managers/dashboard/empleados_rendimiento.py",
       "managers/dashboard/gestor_estadisticas_mixin.py",
       "managers/dashboard/gestor_pedidos_mixin.py",
-      "managers/dashboard/gestor_picking_mixin.py",
-      "managers/dashboard/gestor_reparto_mixin.py",
-      "managers/dashboard/gestor_turnos_mixin.py"
+      "managers/dashboard/gestor_turnos_mixin.py",
+      "managers/dashboard/picking_basico.py",
+      "managers/dashboard/picking_flujo.py",
+      "managers/dashboard/reparto_asignacion.py",
+      "managers/dashboard/reparto_cobro.py",
+      "managers/dashboard/reparto_tracking.py"
     ],
     "managers/gestor_pedidos.py": [
-      "database.py",
-      "models.py",
-      "states.py"
+      "managers/pedidos/base.py",
+      "managers/pedidos/items_mixin.py",
+      "managers/pedidos/lifecycle_mixin.py",
+      "managers/pedidos/workflow_mixin.py"
     ],
     "managers/gestor_usuarios.py": [
       "database.py",
@@ -145,30 +214,30 @@
       "models.py"
     ],
     "managers/gestor_empleado.py": [
-      "database.py",
-      "models.py",
-      "states.py"
+      "managers/empleado/base.py",
+      "managers/empleado/checkin_mixin.py",
+      "managers/empleado/metricas_mixin.py",
+      "managers/empleado/profile_roles_mixin.py",
+      "managers/empleado/turnos_mixin.py"
     ],
     "managers/estado_usuario.py": [
       "states.py"
     ],
     "managers/gestor_metricas.py": [
-      "database.py",
-      "managers/gestor_empleado.py",
+      "managers/metricas/analitica_mixin.py",
+      "managers/metricas/base.py",
+      "managers/metricas/empleados_mixin.py",
+      "managers/metricas/tiempo_real_mixin.py"
+    ],
+    "managers/dashboard/empleados_monitor.py": [
+      "managers/dashboard/_helpers.py",
+      "models.py",
+      "states.py"
+    ],
+    "managers/dashboard/empleados_lista.py": [
       "models.py"
     ],
     "managers/dashboard/gestor_estadisticas_mixin.py": [
-      "models.py",
-      "states.py"
-    ],
-    "managers/dashboard/gestor_empleados_mixin.py": [
-      "managers/dashboard/_helpers.py",
-      "models.py",
-      "states.py"
-    ],
-    "managers/dashboard/gestor_picking_mixin.py": [
-      "database.py",
-      "managers/dashboard/_helpers.py",
       "models.py",
       "states.py"
     ],
@@ -177,7 +246,18 @@
       "models.py",
       "states.py"
     ],
-    "managers/dashboard/gestor_reparto_mixin.py": [
+    "managers/dashboard/picking_flujo.py": [
+      "database.py",
+      "managers/dashboard/_helpers.py",
+      "models.py",
+      "states.py"
+    ],
+    "managers/dashboard/reparto_cobro.py": [
+      "managers/dashboard/_helpers.py",
+      "models.py",
+      "states.py"
+    ],
+    "managers/dashboard/reparto_tracking.py": [
       "database.py",
       "managers/dashboard/_helpers.py",
       "models.py",
@@ -186,12 +266,76 @@
     "managers/dashboard/_helpers.py": [
       "states.py"
     ],
+    "managers/dashboard/empleados_rendimiento.py": [
+      "managers/dashboard/_helpers.py",
+      "models.py"
+    ],
     "managers/dashboard/gestor_turnos_mixin.py": [
       "managers/dashboard/_helpers.py",
       "models.py"
     ],
+    "managers/dashboard/reparto_asignacion.py": [
+      "managers/dashboard/_helpers.py",
+      "models.py",
+      "states.py"
+    ],
     "managers/dashboard/gestor_pedidos_mixin.py": [
       "managers/dashboard/_helpers.py",
+      "models.py",
+      "states.py"
+    ],
+    "managers/dashboard/picking_basico.py": [
+      "config.py",
+      "managers/dashboard/_helpers.py",
+      "models.py",
+      "states.py"
+    ],
+    "managers/empleado/profile_roles_mixin.py": [
+      "models.py",
+      "states.py"
+    ],
+    "managers/empleado/turnos_mixin.py": [
+      "models.py"
+    ],
+    "managers/empleado/metricas_mixin.py": [
+      "models.py",
+      "states.py"
+    ],
+    "managers/empleado/base.py": [
+      "database.py"
+    ],
+    "managers/empleado/checkin_mixin.py": [
+      "models.py"
+    ],
+    "managers/metricas/empleados_mixin.py": [
+      "managers/dashboard/_helpers.py",
+      "managers/gestor_empleado.py",
+      "models.py"
+    ],
+    "managers/metricas/analitica_mixin.py": [
+      "models.py"
+    ],
+    "managers/metricas/base.py": [
+      "database.py",
+      "models.py"
+    ],
+    "managers/metricas/tiempo_real_mixin.py": [
+      "models.py"
+    ],
+    "managers/pedidos/lifecycle_mixin.py": [
+      "models.py",
+      "states.py"
+    ],
+    "managers/pedidos/base.py": [
+      "database.py",
+      "states.py"
+    ],
+    "managers/pedidos/workflow_mixin.py": [
+      "config.py",
+      "models.py",
+      "states.py"
+    ],
+    "managers/pedidos/items_mixin.py": [
       "models.py",
       "states.py"
     ],
@@ -203,24 +347,21 @@
     "services/whatsapp_service.py": [
       "config.py"
     ],
-    "services/__init__.py": [
-      "managers/gestor_dashboard.py",
-      "managers/gestor_empleado.py",
-      "managers/gestor_pedidos.py",
-      "managers/gestor_productos.py",
-      "managers/gestor_redis.py",
-      "managers/gestor_usuarios.py"
-    ],
     "services/maps_service.py": [
       "config.py"
     ]
   },
   "reverse": {
-    "blueprints/api.py": [
+    "blueprints/api/__init__.py": [
       "main.py"
     ],
     "blueprints/auth.py": [
-      "blueprints/dashboard.py",
+      "blueprints/cocina.py",
+      "blueprints/dashboard/pages.py",
+      "blueprints/dashboard/pedidos.py",
+      "blueprints/dashboard/picking.py",
+      "blueprints/dashboard/reparto.py",
+      "blueprints/dashboard/turnos.py",
       "blueprints/empleado.py",
       "blueprints/metricas_analitica.py",
       "blueprints/metricas_operacion.py",
@@ -228,13 +369,16 @@
       "blueprints/repartidor.py",
       "main.py"
     ],
-    "blueprints/dashboard.py": [
+    "blueprints/cocina.py": [
+      "main.py"
+    ],
+    "blueprints/dashboard/__init__.py": [
       "main.py"
     ],
     "blueprints/empleado.py": [
       "main.py"
     ],
-    "blueprints/menu.py": [
+    "blueprints/menu/__init__.py": [
       "main.py"
     ],
     "blueprints/metricas_analitica.py": [
@@ -256,65 +400,105 @@
       "main.py"
     ],
     "config.py": [
-      "blueprints/api.py",
-      "blueprints/menu.py",
+      "blueprints/api/cart.py",
+      "blueprints/api/payments.py",
+      "blueprints/dashboard/pages.py",
+      "blueprints/empleado.py",
+      "blueprints/menu/navegacion.py",
+      "blueprints/menu/sesion.py",
       "blueprints/webhook.py",
-      "controllers/mensajes_registrados.py",
+      "controllers/mensajes_registrados_notifier.py",
       "main.py",
+      "managers/dashboard/picking_basico.py",
       "managers/gestor_redis.py",
+      "managers/pedidos/workflow_mixin.py",
       "services/maps_service.py",
       "services/token_service.py",
       "services/whatsapp_service.py"
     ],
     "database.py": [
-      "blueprints/api.py",
       "blueprints/auth.py",
-      "blueprints/empleado.py",
       "main.py",
       "managers/dashboard/_base.py",
-      "managers/dashboard/gestor_picking_mixin.py",
-      "managers/dashboard/gestor_reparto_mixin.py",
-      "managers/gestor_empleado.py",
-      "managers/gestor_metricas.py",
-      "managers/gestor_pedidos.py",
+      "managers/dashboard/picking_flujo.py",
+      "managers/dashboard/reparto_tracking.py",
+      "managers/empleado/base.py",
       "managers/gestor_productos.py",
       "managers/gestor_usuarios.py",
+      "managers/metricas/base.py",
+      "managers/pedidos/base.py",
       "models.py"
     ],
     "managers/gestor_redis.py": [
-      "blueprints/menu.py",
+      "blueprints/menu/navegacion.py",
       "blueprints/webhook.py",
+      "container.py",
       "main.py",
-      "services/__init__.py",
       "services/token_service.py"
     ],
+    "managers/gestor_dashboard.py": [
+      "container.py"
+    ],
+    "managers/gestor_empleado.py": [
+      "container.py",
+      "managers/metricas/empleados_mixin.py"
+    ],
+    "managers/gestor_pedidos.py": [
+      "container.py"
+    ],
+    "managers/gestor_productos.py": [
+      "container.py"
+    ],
+    "managers/gestor_usuarios.py": [
+      "container.py"
+    ],
     "models.py": [
-      "blueprints/api.py",
       "blueprints/auth.py",
-      "blueprints/empleado.py",
       "database.py",
       "managers/dashboard/_base.py",
-      "managers/dashboard/gestor_empleados_mixin.py",
+      "managers/dashboard/empleados_lista.py",
+      "managers/dashboard/empleados_monitor.py",
+      "managers/dashboard/empleados_rendimiento.py",
       "managers/dashboard/gestor_estadisticas_mixin.py",
       "managers/dashboard/gestor_pedidos_mixin.py",
-      "managers/dashboard/gestor_picking_mixin.py",
-      "managers/dashboard/gestor_reparto_mixin.py",
       "managers/dashboard/gestor_turnos_mixin.py",
-      "managers/gestor_empleado.py",
-      "managers/gestor_metricas.py",
-      "managers/gestor_pedidos.py",
+      "managers/dashboard/picking_basico.py",
+      "managers/dashboard/picking_flujo.py",
+      "managers/dashboard/reparto_asignacion.py",
+      "managers/dashboard/reparto_cobro.py",
+      "managers/dashboard/reparto_tracking.py",
+      "managers/empleado/checkin_mixin.py",
+      "managers/empleado/metricas_mixin.py",
+      "managers/empleado/profile_roles_mixin.py",
+      "managers/empleado/turnos_mixin.py",
       "managers/gestor_productos.py",
-      "managers/gestor_usuarios.py"
+      "managers/gestor_usuarios.py",
+      "managers/metricas/analitica_mixin.py",
+      "managers/metricas/base.py",
+      "managers/metricas/empleados_mixin.py",
+      "managers/metricas/tiempo_real_mixin.py",
+      "managers/pedidos/items_mixin.py",
+      "managers/pedidos/lifecycle_mixin.py",
+      "managers/pedidos/workflow_mixin.py"
     ],
     "managers/gestor_metricas.py": [
       "blueprints/metricas_analitica.py",
       "blueprints/metricas_operacion.py"
     ],
-    "services/__init__.py": [
-      "blueprints/api.py",
-      "blueprints/dashboard.py",
+    "container.py": [
+      "blueprints/api/cart.py",
+      "blueprints/api/payments.py",
+      "blueprints/api/tracking.py",
+      "blueprints/auth.py",
+      "blueprints/cocina.py",
+      "blueprints/dashboard/pages.py",
+      "blueprints/dashboard/pedidos.py",
+      "blueprints/dashboard/picking.py",
+      "blueprints/dashboard/reparto.py",
+      "blueprints/dashboard/turnos.py",
       "blueprints/empleado.py",
-      "blueprints/menu.py",
+      "blueprints/menu/navegacion.py",
+      "blueprints/menu/sesion.py",
       "blueprints/picker.py",
       "blueprints/productos.py",
       "blueprints/repartidor.py",
@@ -324,37 +508,15 @@
       "controllers/registro.py"
     ],
     "services/whatsapp_service.py": [
-      "blueprints/dashboard.py",
+      "blueprints/dashboard/_common.py",
       "blueprints/picker.py",
       "blueprints/repartidor.py",
       "blueprints/webhook.py",
       "controllers/mensajes_registrados.py",
-      "controllers/pago.py",
+      "controllers/mensajes_registrados_notifier.py",
+      "controllers/pago_notifier.py",
       "controllers/pedido.py",
-      "controllers/registro.py"
-    ],
-    "schemas/usuario.py": [
-      "blueprints/menu.py",
-      "services/token_service.py"
-    ],
-    "states.py": [
-      "blueprints/api.py",
-      "blueprints/menu.py",
-      "blueprints/webhook.py",
-      "controllers/mensajes_registrados.py",
-      "controllers/pago.py",
-      "controllers/pedido.py",
-      "controllers/registro.py",
-      "managers/dashboard/_base.py",
-      "managers/dashboard/_helpers.py",
-      "managers/dashboard/gestor_empleados_mixin.py",
-      "managers/dashboard/gestor_estadisticas_mixin.py",
-      "managers/dashboard/gestor_pedidos_mixin.py",
-      "managers/dashboard/gestor_picking_mixin.py",
-      "managers/dashboard/gestor_reparto_mixin.py",
-      "managers/estado_usuario.py",
-      "managers/gestor_empleado.py",
-      "managers/gestor_pedidos.py"
+      "controllers/registro_notifier.py"
     ],
     "controllers/mensajes_registrados.py": [
       "blueprints/webhook.py"
@@ -366,21 +528,72 @@
       "blueprints/webhook.py",
       "controllers/pedido.py"
     ],
+    "states.py": [
+      "blueprints/api/cart.py",
+      "blueprints/menu/navegacion.py",
+      "blueprints/webhook.py",
+      "controllers/mensajes_registrados.py",
+      "controllers/mensajes_registrados_notifier.py",
+      "controllers/pago.py",
+      "controllers/pedido.py",
+      "controllers/registro.py",
+      "managers/dashboard/_base.py",
+      "managers/dashboard/_helpers.py",
+      "managers/dashboard/empleados_monitor.py",
+      "managers/dashboard/gestor_estadisticas_mixin.py",
+      "managers/dashboard/gestor_pedidos_mixin.py",
+      "managers/dashboard/picking_basico.py",
+      "managers/dashboard/picking_flujo.py",
+      "managers/dashboard/reparto_asignacion.py",
+      "managers/dashboard/reparto_cobro.py",
+      "managers/dashboard/reparto_tracking.py",
+      "managers/empleado/metricas_mixin.py",
+      "managers/empleado/profile_roles_mixin.py",
+      "managers/estado_usuario.py",
+      "managers/pedidos/base.py",
+      "managers/pedidos/items_mixin.py",
+      "managers/pedidos/lifecycle_mixin.py",
+      "managers/pedidos/workflow_mixin.py"
+    ],
     "utils/text_utils.py": [
       "blueprints/webhook.py",
       "controllers/pedido.py"
     ],
-    "controllers/pago.py": [
-      "blueprints/api.py"
-    ],
     "controllers/pedido.py": [
-      "blueprints/api.py",
+      "blueprints/api/cart.py",
+      "controllers/mensajes_registrados.py"
+    ],
+    "controllers/pago.py": [
+      "blueprints/api/payments.py"
+    ],
+    "blueprints/dashboard/_common.py": [
+      "blueprints/dashboard/pages.py",
+      "blueprints/dashboard/pedidos.py",
+      "blueprints/dashboard/picking.py",
+      "blueprints/dashboard/reparto.py",
+      "blueprints/dashboard/turnos.py"
+    ],
+    "blueprints/menu/_helpers.py": [
+      "blueprints/menu/navegacion.py",
+      "blueprints/menu/sesion.py"
+    ],
+    "schemas/usuario.py": [
+      "blueprints/menu/navegacion.py",
+      "services/token_service.py"
+    ],
+    "controllers/mensajes_registrados_notifier.py": [
       "controllers/mensajes_registrados.py"
     ],
     "utils/menu_opciones.py": [
       "controllers/mensajes_registrados.py",
       "controllers/pedido.py",
       "controllers/registro.py"
+    ],
+    "controllers/pago_notifier.py": [
+      "controllers/pago.py"
+    ],
+    "services/monei_service.py": [
+      "controllers/pago.py"
     ],
     "services/maps_service.py": [
       "controllers/pedido.py",
@@ -392,13 +605,22 @@
     "utils/es_pregunta.py": [
       "controllers/pedido.py"
     ],
+    "controllers/registro_notifier.py": [
+      "controllers/registro.py"
+    ],
     "managers/estado_usuario.py": [
       "controllers/registro.py"
     ],
     "managers/dashboard/_base.py": [
       "managers/gestor_dashboard.py"
     ],
-    "managers/dashboard/gestor_empleados_mixin.py": [
+    "managers/dashboard/empleados_lista.py": [
+      "managers/gestor_dashboard.py"
+    ],
+    "managers/dashboard/empleados_monitor.py": [
+      "managers/gestor_dashboard.py"
+    ],
+    "managers/dashboard/empleados_rendimiento.py": [
       "managers/gestor_dashboard.py"
     ],
     "managers/dashboard/gestor_estadisticas_mixin.py": [
@@ -407,84 +629,153 @@
     "managers/dashboard/gestor_pedidos_mixin.py": [
       "managers/gestor_dashboard.py"
     ],
-    "managers/dashboard/gestor_picking_mixin.py": [
-      "managers/gestor_dashboard.py"
-    ],
-    "managers/dashboard/gestor_reparto_mixin.py": [
-      "managers/gestor_dashboard.py"
-    ],
     "managers/dashboard/gestor_turnos_mixin.py": [
       "managers/gestor_dashboard.py"
     ],
-    "managers/gestor_empleado.py": [
-      "managers/gestor_metricas.py",
-      "services/__init__.py"
+    "managers/dashboard/picking_basico.py": [
+      "managers/gestor_dashboard.py"
+    ],
+    "managers/dashboard/picking_flujo.py": [
+      "managers/gestor_dashboard.py"
+    ],
+    "managers/dashboard/reparto_asignacion.py": [
+      "managers/gestor_dashboard.py"
+    ],
+    "managers/dashboard/reparto_cobro.py": [
+      "managers/gestor_dashboard.py"
+    ],
+    "managers/dashboard/reparto_tracking.py": [
+      "managers/gestor_dashboard.py"
+    ],
+    "managers/pedidos/base.py": [
+      "managers/gestor_pedidos.py"
+    ],
+    "managers/pedidos/items_mixin.py": [
+      "managers/gestor_pedidos.py"
+    ],
+    "managers/pedidos/lifecycle_mixin.py": [
+      "managers/gestor_pedidos.py"
+    ],
+    "managers/pedidos/workflow_mixin.py": [
+      "managers/gestor_pedidos.py"
+    ],
+    "managers/empleado/base.py": [
+      "managers/gestor_empleado.py"
+    ],
+    "managers/empleado/checkin_mixin.py": [
+      "managers/gestor_empleado.py"
+    ],
+    "managers/empleado/metricas_mixin.py": [
+      "managers/gestor_empleado.py"
+    ],
+    "managers/empleado/profile_roles_mixin.py": [
+      "managers/gestor_empleado.py"
+    ],
+    "managers/empleado/turnos_mixin.py": [
+      "managers/gestor_empleado.py"
+    ],
+    "managers/metricas/analitica_mixin.py": [
+      "managers/gestor_metricas.py"
+    ],
+    "managers/metricas/base.py": [
+      "managers/gestor_metricas.py"
+    ],
+    "managers/metricas/empleados_mixin.py": [
+      "managers/gestor_metricas.py"
+    ],
+    "managers/metricas/tiempo_real_mixin.py": [
+      "managers/gestor_metricas.py"
     ],
     "managers/dashboard/_helpers.py": [
-      "managers/dashboard/gestor_empleados_mixin.py",
+      "managers/dashboard/empleados_monitor.py",
+      "managers/dashboard/empleados_rendimiento.py",
       "managers/dashboard/gestor_pedidos_mixin.py",
-      "managers/dashboard/gestor_picking_mixin.py",
-      "managers/dashboard/gestor_reparto_mixin.py",
-      "managers/dashboard/gestor_turnos_mixin.py"
-    ],
-    "managers/gestor_dashboard.py": [
-      "services/__init__.py"
-    ],
-    "managers/gestor_pedidos.py": [
-      "services/__init__.py"
-    ],
-    "managers/gestor_productos.py": [
-      "services/__init__.py"
-    ],
-    "managers/gestor_usuarios.py": [
-      "services/__init__.py"
+      "managers/dashboard/gestor_turnos_mixin.py",
+      "managers/dashboard/picking_basico.py",
+      "managers/dashboard/picking_flujo.py",
+      "managers/dashboard/reparto_asignacion.py",
+      "managers/dashboard/reparto_cobro.py",
+      "managers/dashboard/reparto_tracking.py",
+      "managers/metricas/empleados_mixin.py"
     ]
   },
   "nodes": {
-    "blueprints/api.py": {
+    "blueprints/api/__init__.py": {
+      "role": "controller",
+      "symbols": []
+    },
+    "blueprints/api/cart.py": {
       "role": "controller",
       "symbols": [
         {
+          "name": "register",
+          "line": 14,
+          "kind": "function",
+          "end_line": 116
+        },
+        {
           "name": "agregar_pedido_confirmacion",
-          "line": 19,
+          "line": 17,
           "kind": "function",
-          "end_line": 45
-        },
-        {
-          "name": "agregar_pedido",
-          "line": 49,
-          "kind": "function",
-          "end_line": 87
-        },
-        {
-          "name": "cambiar_estado_a_enlace",
-          "line": 91,
-          "kind": "function",
-          "end_line": 110
-        },
-        {
-          "name": "agregar_pedido_efectivo",
-          "line": 114,
-          "kind": "function",
-          "end_line": 144
+          "end_line": 44
         },
         {
           "name": "volver_al_menu",
-          "line": 148,
+          "line": 47,
           "kind": "function",
-          "end_line": 166
+          "end_line": 65
+        },
+        {
+          "name": "cambiar_estado_a_enlace",
+          "line": 68,
+          "kind": "function",
+          "end_line": 88
         },
         {
           "name": "obtener_productos",
-          "line": 170,
+          "line": 91,
           "kind": "function",
-          "end_line": 194
+          "end_line": 116
+        }
+      ]
+    },
+    "blueprints/api/payments.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "register",
+          "line": 12,
+          "kind": "function",
+          "end_line": 88
+        },
+        {
+          "name": "agregar_pedido",
+          "line": 15,
+          "kind": "function",
+          "end_line": 54
+        },
+        {
+          "name": "agregar_pedido_efectivo",
+          "line": 57,
+          "kind": "function",
+          "end_line": 88
+        }
+      ]
+    },
+    "blueprints/api/tracking.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "register",
+          "line": 10,
+          "kind": "function",
+          "end_line": 19
         },
         {
           "name": "seguimiento_pedido",
-          "line": 198,
+          "line": 13,
           "kind": "function",
-          "end_line": 225
+          "end_line": 19
         }
       ]
     },
@@ -493,170 +784,402 @@
       "symbols": [
         {
           "name": "_get_empleado_by_email",
-          "line": 17,
+          "line": 18,
           "kind": "function",
-          "end_line": 18
+          "end_line": 20
         },
         {
           "name": "login",
-          "line": 22,
+          "line": 24,
           "kind": "function",
-          "end_line": 88
+          "end_line": 91
         },
         {
           "name": "logout",
-          "line": 92,
+          "line": 95,
           "kind": "function",
-          "end_line": 107
+          "end_line": 103
         },
         {
           "name": "requiere_rol",
-          "line": 110,
+          "line": 106,
           "kind": "function",
-          "end_line": 123
+          "end_line": 119
         },
         {
           "name": "decorator",
-          "line": 112,
-          "kind": "function",
-          "end_line": 122
-        },
-        {
-          "name": "requiere_autenticacion",
-          "line": 126,
-          "kind": "function",
-          "end_line": 138
-        },
-        {
-          "name": "wrapped",
-          "line": 132,
-          "kind": "function",
-          "end_line": 137
-        }
-      ]
-    },
-    "blueprints/dashboard.py": {
-      "role": "controller",
-      "symbols": [
-        {
-          "name": "_notificar",
-          "line": 15,
-          "kind": "function",
-          "end_line": 23
-        },
-        {
-          "name": "_enviar",
-          "line": 18,
-          "kind": "function",
-          "end_line": 22
-        },
-        {
-          "name": "_serial",
-          "line": 28,
-          "kind": "function",
-          "end_line": 34
-        },
-        {
-          "name": "_ok",
-          "line": 37,
-          "kind": "function",
-          "end_line": 43
-        },
-        {
-          "name": "_err",
-          "line": 46,
-          "kind": "function",
-          "end_line": 47
-        },
-        {
-          "name": "index",
-          "line": 56,
-          "kind": "function",
-          "end_line": 57
-        },
-        {
-          "name": "monitor",
-          "line": 62,
-          "kind": "function",
-          "end_line": 63
-        },
-        {
-          "name": "monitor_datos",
-          "line": 68,
-          "kind": "function",
-          "end_line": 83
-        },
-        {
-          "name": "metricas",
-          "line": 92,
-          "kind": "function",
-          "end_line": 97
-        },
-        {
-          "name": "pedidos_activos",
-          "line": 102,
-          "kind": "function",
-          "end_line": 108
-        },
-        {
-          "name": "picking",
-          "line": 113,
+          "line": 108,
           "kind": "function",
           "end_line": 118
         },
         {
-          "name": "repartidores",
-          "line": 123,
+          "name": "requiere_autenticacion",
+          "line": 122,
           "kind": "function",
-          "end_line": 128
+          "end_line": 131
+        },
+        {
+          "name": "wrapped",
+          "line": 125,
+          "kind": "function",
+          "end_line": 130
+        }
+      ]
+    },
+    "blueprints/cocina.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "index",
+          "line": 16,
+          "kind": "function",
+          "end_line": 19
+        },
+        {
+          "name": "manifest",
+          "line": 24,
+          "kind": "function",
+          "end_line": 29
+        },
+        {
+          "name": "service_worker",
+          "line": 33,
+          "kind": "function",
+          "end_line": 40
+        },
+        {
+          "name": "mis_pedidos",
+          "line": 45,
+          "kind": "function",
+          "end_line": 52
+        },
+        {
+          "name": "cola",
+          "line": 57,
+          "kind": "function",
+          "end_line": 64
+        },
+        {
+          "name": "coger_preparacion",
+          "line": 69,
+          "kind": "function",
+          "end_line": 84
+        },
+        {
+          "name": "finalizar_preparacion",
+          "line": 89,
+          "kind": "function",
+          "end_line": 96
+        }
+      ]
+    },
+    "blueprints/dashboard/__init__.py": {
+      "role": "controller",
+      "symbols": []
+    },
+    "blueprints/dashboard/_common.py": {
+      "role": "utility",
+      "symbols": [
+        {
+          "name": "_serial",
+          "line": 22,
+          "kind": "function",
+          "end_line": 28
+        },
+        {
+          "name": "_ok",
+          "line": 31,
+          "kind": "function",
+          "end_line": 36
+        },
+        {
+          "name": "_err",
+          "line": 39,
+          "kind": "function",
+          "end_line": 41
+        }
+      ]
+    },
+    "blueprints/dashboard/pages.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "register",
+          "line": 13,
+          "kind": "function",
+          "end_line": 104
+        },
+        {
+          "name": "index",
+          "line": 17,
+          "kind": "function",
+          "end_line": 21
+        },
+        {
+          "name": "monitor",
+          "line": 25,
+          "kind": "function",
+          "end_line": 27
+        },
+        {
+          "name": "monitor_datos",
+          "line": 31,
+          "kind": "function",
+          "end_line": 46
+        },
+        {
+          "name": "metricas",
+          "line": 50,
+          "kind": "function",
+          "end_line": 56
         },
         {
           "name": "alertas",
-          "line": 133,
+          "line": 60,
           "kind": "function",
-          "end_line": 138
+          "end_line": 66
         },
         {
           "name": "eventos",
-          "line": 143,
+          "line": 70,
           "kind": "function",
-          "end_line": 149
+          "end_line": 77
         },
         {
           "name": "mapa",
-          "line": 154,
+          "line": 81,
           "kind": "function",
-          "end_line": 159
+          "end_line": 87
         },
         {
           "name": "empleados",
-          "line": 164,
+          "line": 91,
           "kind": "function",
-          "end_line": 170
+          "end_line": 104
+        }
+      ]
+    },
+    "blueprints/dashboard/pedidos.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "register",
+          "line": 12,
+          "kind": "function",
+          "end_line": 129
         },
         {
           "name": "historial",
-          "line": 175,
+          "line": 16,
           "kind": "function",
-          "end_line": 176
+          "end_line": 18
         },
         {
           "name": "historial_pedidos",
-          "line": 181,
+          "line": 22,
           "kind": "function",
-          "end_line": 196
+          "end_line": 38
+        },
+        {
+          "name": "pedidos_activos",
+          "line": 42,
+          "kind": "function",
+          "end_line": 49
         },
         {
           "name": "detalle_pedido",
-          "line": 201,
+          "line": 53,
           "kind": "function",
-          "end_line": 209
+          "end_line": 62
+        },
+        {
+          "name": "cancelar_pedido",
+          "line": 66,
+          "kind": "function",
+          "end_line": 85
+        },
+        {
+          "name": "eliminar_item",
+          "line": 89,
+          "kind": "function",
+          "end_line": 95
+        },
+        {
+          "name": "sustituir_item",
+          "line": 99,
+          "kind": "function",
+          "end_line": 118
+        },
+        {
+          "name": "productos_disponibles",
+          "line": 122,
+          "kind": "function",
+          "end_line": 129
+        }
+      ]
+    },
+    "blueprints/dashboard/picking.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "register",
+          "line": 12,
+          "kind": "function",
+          "end_line": 74
+        },
+        {
+          "name": "picking",
+          "line": 16,
+          "kind": "function",
+          "end_line": 22
+        },
+        {
+          "name": "asignar_picker",
+          "line": 26,
+          "kind": "function",
+          "end_line": 38
+        },
+        {
+          "name": "reasignar_picker",
+          "line": 42,
+          "kind": "function",
+          "end_line": 51
+        },
+        {
+          "name": "asignar_cocina_equipo",
+          "line": 55,
+          "kind": "function",
+          "end_line": 64
+        },
+        {
+          "name": "completar_picking",
+          "line": 68,
+          "kind": "function",
+          "end_line": 74
+        }
+      ]
+    },
+    "blueprints/dashboard/reparto.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "register",
+          "line": 12,
+          "kind": "function",
+          "end_line": 58
+        },
+        {
+          "name": "repartidores",
+          "line": 16,
+          "kind": "function",
+          "end_line": 22
+        },
+        {
+          "name": "asignar_repartidor",
+          "line": 26,
+          "kind": "function",
+          "end_line": 38
+        },
+        {
+          "name": "marcar_salida",
+          "line": 42,
+          "kind": "function",
+          "end_line": 48
+        },
+        {
+          "name": "marcar_entregado",
+          "line": 52,
+          "kind": "function",
+          "end_line": 58
+        }
+      ]
+    },
+    "blueprints/dashboard/turnos.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "register",
+          "line": 12,
+          "kind": "function",
+          "end_line": 190
         },
         {
           "name": "turnos",
-          "line": 214,
+          "line": 16,
           "kind": "function",
-          "end_line": 215
+          "end_line": 18
+        },
+        {
+          "name": "turnos_hoy",
+          "line": 22,
+          "kind": "function",
+          "end_line": 28
+        },
+        {
+          "name": "turnos_historial",
+          "line": 32,
+          "kind": "function",
+          "end_line": 47
+        },
+        {
+          "name": "turnos_planificacion",
+          "line": 51,
+          "kind": "function",
+          "end_line": 66
+        },
+        {
+          "name": "crear_turno",
+          "line": 70,
+          "kind": "function",
+          "end_line": 93
+        },
+        {
+          "name": "editar_turno",
+          "line": 97,
+          "kind": "function",
+          "end_line": 113
+        },
+        {
+          "name": "cancelar_turno_route",
+          "line": 117,
+          "kind": "function",
+          "end_line": 126
+        },
+        {
+          "name": "eliminar_turno_route",
+          "line": 130,
+          "kind": "function",
+          "end_line": 139
+        },
+        {
+          "name": "rendimiento",
+          "line": 143,
+          "kind": "function",
+          "end_line": 145
+        },
+        {
+          "name": "rendimiento_datos",
+          "line": 149,
+          "kind": "function",
+          "end_line": 157
+        },
+        {
+          "name": "rendimiento_empleado",
+          "line": 161,
+          "kind": "function",
+          "end_line": 171
+        },
+        {
+          "name": "estadisticas",
+          "line": 175,
+          "kind": "function",
+          "end_line": 177
+        },
+        {
+          "name": "estadisticas_datos",
+          "line": 181,
+          "kind": "function",
+          "end_line": 190
         }
       ]
     },
@@ -665,122 +1188,148 @@
       "symbols": [
         {
           "name": "index",
-          "line": 20,
+          "line": 19,
           "kind": "function",
-          "end_line": 29
+          "end_line": 30
         },
         {
           "name": "perfil",
-          "line": 34,
+          "line": 35,
           "kind": "function",
-          "end_line": 43
+          "end_line": 45
         },
         {
           "name": "estado",
-          "line": 48,
+          "line": 50,
           "kind": "function",
-          "end_line": 57
+          "end_line": 60
         },
         {
           "name": "turno_hoy",
-          "line": 62,
+          "line": 65,
           "kind": "function",
-          "end_line": 69
+          "end_line": 73
         },
         {
           "name": "puede_iniciar",
-          "line": 74,
+          "line": 78,
           "kind": "function",
-          "end_line": 81
+          "end_line": 86
         },
         {
           "name": "metricas",
-          "line": 86,
+          "line": 91,
           "kind": "function",
-          "end_line": 94
+          "end_line": 100
         },
         {
           "name": "capacidades",
-          "line": 99,
+          "line": 105,
           "kind": "function",
-          "end_line": 108
+          "end_line": 114
         },
         {
           "name": "carga_operativa",
-          "line": 113,
+          "line": 119,
           "kind": "function",
-          "end_line": 119
+          "end_line": 126
         },
         {
           "name": "cambiar_rol",
-          "line": 124,
+          "line": 131,
           "kind": "function",
-          "end_line": 139
+          "end_line": 147
         },
         {
           "name": "checkin",
-          "line": 144,
+          "line": 152,
           "kind": "function",
-          "end_line": 159
+          "end_line": 168
         },
         {
           "name": "fichaje_iniciar",
-          "line": 164,
+          "line": 173,
           "kind": "function",
-          "end_line": 179
+          "end_line": 189
         },
         {
           "name": "fichaje_cerrar",
-          "line": 184,
-          "kind": "function",
-          "end_line": 195
-        },
-        {
-          "name": "fichaje_hoy",
-          "line": 200,
+          "line": 194,
           "kind": "function",
           "end_line": 206
         },
         {
-          "name": "turnos_page",
+          "name": "fichaje_hoy",
           "line": 211,
           "kind": "function",
-          "end_line": 214
+          "end_line": 218
+        },
+        {
+          "name": "turnos_page",
+          "line": 223,
+          "kind": "function",
+          "end_line": 227
         },
         {
           "name": "turnos_datos",
-          "line": 219,
+          "line": 232,
           "kind": "function",
-          "end_line": 235
+          "end_line": 249
         }
       ]
     },
-    "blueprints/menu.py": {
+    "blueprints/menu/__init__.py": {
       "role": "controller",
+      "symbols": []
+    },
+    "blueprints/menu/_helpers.py": {
+      "role": "utility",
       "symbols": [
         {
           "name": "_extraer_calle",
+          "line": 1,
+          "kind": "function",
+          "end_line": 6
+        }
+      ]
+    },
+    "blueprints/menu/navegacion.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "register",
           "line": 21,
           "kind": "function",
-          "end_line": 31
+          "end_line": 88
         },
         {
           "name": "quiniela",
-          "line": 35,
+          "line": 24,
           "kind": "function",
-          "end_line": 98
+          "end_line": 88
+        }
+      ]
+    },
+    "blueprints/menu/sesion.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "register",
+          "line": 13,
+          "kind": "function",
+          "end_line": 68
         },
         {
           "name": "mostrar_confirmacion",
-          "line": 102,
+          "line": 16,
           "kind": "function",
-          "end_line": 124
+          "end_line": 39
         },
         {
           "name": "mostrar_confirmacion_depago",
-          "line": 128,
+          "line": 42,
           "kind": "function",
-          "end_line": 153
+          "end_line": 68
         }
       ]
     },
@@ -791,73 +1340,73 @@
           "name": "_ok",
           "line": 14,
           "kind": "function",
-          "end_line": 15
+          "end_line": 16
         },
         {
           "name": "_err",
-          "line": 18,
+          "line": 19,
           "kind": "function",
-          "end_line": 19
+          "end_line": 21
         },
         {
           "name": "_parse_rango",
-          "line": 22,
+          "line": 24,
           "kind": "function",
-          "end_line": 28
+          "end_line": 30
         },
         {
           "name": "resumen",
-          "line": 33,
+          "line": 35,
           "kind": "function",
-          "end_line": 35
+          "end_line": 38
         },
         {
           "name": "pedidos",
-          "line": 40,
+          "line": 43,
           "kind": "function",
-          "end_line": 42
+          "end_line": 46
         },
         {
           "name": "picking",
-          "line": 47,
+          "line": 51,
           "kind": "function",
-          "end_line": 49
+          "end_line": 54
         },
         {
           "name": "reparto",
-          "line": 54,
+          "line": 59,
           "kind": "function",
-          "end_line": 56
+          "end_line": 62
         },
         {
           "name": "empleados",
-          "line": 61,
-          "kind": "function",
-          "end_line": 64
-        },
-        {
-          "name": "ficha_empleado",
-          "line": 69,
+          "line": 67,
           "kind": "function",
           "end_line": 71
         },
         {
-          "name": "comparativa",
+          "name": "ficha_empleado",
           "line": 76,
           "kind": "function",
-          "end_line": 81
+          "end_line": 79
+        },
+        {
+          "name": "comparativa",
+          "line": 84,
+          "kind": "function",
+          "end_line": 90
         },
         {
           "name": "asistencia",
-          "line": 86,
+          "line": 95,
           "kind": "function",
-          "end_line": 88
+          "end_line": 98
         },
         {
           "name": "incidencias",
-          "line": 93,
+          "line": 103,
           "kind": "function",
-          "end_line": 95
+          "end_line": 106
         }
       ]
     },
@@ -868,43 +1417,43 @@
           "name": "_ok",
           "line": 12,
           "kind": "function",
-          "end_line": 13
+          "end_line": 14
         },
         {
           "name": "_err",
-          "line": 16,
+          "line": 17,
           "kind": "function",
-          "end_line": 17
+          "end_line": 19
         },
         {
           "name": "resumen",
-          "line": 22,
+          "line": 24,
           "kind": "function",
-          "end_line": 23
+          "end_line": 26
         },
         {
           "name": "asistencia",
-          "line": 28,
+          "line": 31,
           "kind": "function",
-          "end_line": 29
+          "end_line": 33
         },
         {
           "name": "colas",
-          "line": 34,
+          "line": 38,
           "kind": "function",
-          "end_line": 35
+          "end_line": 40
         },
         {
           "name": "pedidos_estado",
-          "line": 40,
+          "line": 45,
           "kind": "function",
-          "end_line": 41
+          "end_line": 47
         },
         {
           "name": "alertas",
-          "line": 46,
+          "line": 52,
           "kind": "function",
-          "end_line": 47
+          "end_line": 54
         }
       ]
     },
@@ -912,76 +1461,64 @@
       "role": "controller",
       "symbols": [
         {
-          "name": "_notificar",
-          "line": 14,
-          "kind": "function",
-          "end_line": 22
-        },
-        {
-          "name": "_enviar",
+          "name": "index",
           "line": 17,
           "kind": "function",
-          "end_line": 21
-        },
-        {
-          "name": "index",
-          "line": 29,
-          "kind": "function",
-          "end_line": 31
+          "end_line": 20
         },
         {
           "name": "apple_touch_icon",
-          "line": 41,
+          "line": 30,
           "kind": "function",
-          "end_line": 46
+          "end_line": 36
         },
         {
           "name": "manifest",
-          "line": 51,
+          "line": 41,
           "kind": "function",
-          "end_line": 56
+          "end_line": 47
         },
         {
           "name": "service_worker",
-          "line": 60,
+          "line": 51,
           "kind": "function",
-          "end_line": 67
+          "end_line": 59
         },
         {
           "name": "mis_pedidos",
-          "line": 72,
+          "line": 64,
           "kind": "function",
-          "end_line": 78
+          "end_line": 71
         },
         {
           "name": "actualizar_item",
-          "line": 83,
+          "line": 76,
           "kind": "function",
-          "end_line": 107
+          "end_line": 101
         },
         {
           "name": "buscar_productos",
-          "line": 112,
+          "line": 106,
           "kind": "function",
-          "end_line": 120
+          "end_line": 115
         },
         {
           "name": "finalizar_picking",
-          "line": 125,
+          "line": 120,
           "kind": "function",
-          "end_line": 131
+          "end_line": 127
         },
         {
           "name": "cola",
-          "line": 136,
+          "line": 132,
           "kind": "function",
-          "end_line": 142
+          "end_line": 139
         },
         {
           "name": "coger_picking",
-          "line": 147,
+          "line": 144,
           "kind": "function",
-          "end_line": 161
+          "end_line": 159
         }
       ]
     },
@@ -992,31 +1529,31 @@
           "name": "index",
           "line": 11,
           "kind": "function",
-          "end_line": 12
+          "end_line": 13
         },
         {
           "name": "lista",
-          "line": 16,
+          "line": 17,
           "kind": "function",
-          "end_line": 21
+          "end_line": 23
         },
         {
           "name": "actualizar_stock",
-          "line": 25,
+          "line": 27,
           "kind": "function",
-          "end_line": 38
+          "end_line": 41
         },
         {
           "name": "toggle_disponible",
-          "line": 42,
+          "line": 45,
           "kind": "function",
-          "end_line": 49
+          "end_line": 53
         },
         {
           "name": "actualizar_precio",
-          "line": 53,
+          "line": 57,
           "kind": "function",
-          "end_line": 64
+          "end_line": 69
         }
       ]
     },
@@ -1024,86 +1561,74 @@
       "role": "controller",
       "symbols": [
         {
-          "name": "_notificar",
-          "line": 15,
-          "kind": "function",
-          "end_line": 23
-        },
-        {
-          "name": "_enviar",
+          "name": "index",
           "line": 18,
           "kind": "function",
-          "end_line": 22
-        },
-        {
-          "name": "index",
-          "line": 30,
-          "kind": "function",
-          "end_line": 32
+          "end_line": 21
         },
         {
           "name": "apple_touch_icon",
-          "line": 41,
+          "line": 30,
           "kind": "function",
-          "end_line": 46
+          "end_line": 36
         },
         {
           "name": "manifest",
-          "line": 51,
+          "line": 41,
           "kind": "function",
-          "end_line": 56
+          "end_line": 47
         },
         {
           "name": "service_worker",
-          "line": 60,
+          "line": 51,
           "kind": "function",
-          "end_line": 67
+          "end_line": 59
         },
         {
           "name": "mis_pedidos",
-          "line": 72,
+          "line": 64,
           "kind": "function",
-          "end_line": 78
+          "end_line": 71
         },
         {
           "name": "marcar_salida",
-          "line": 83,
+          "line": 76,
           "kind": "function",
-          "end_line": 89
+          "end_line": 83
         },
         {
           "name": "marcar_entregado",
-          "line": 94,
+          "line": 88,
           "kind": "function",
-          "end_line": 100
+          "end_line": 95
         },
         {
           "name": "marcar_no_entregado",
-          "line": 105,
+          "line": 100,
           "kind": "function",
-          "end_line": 116
+          "end_line": 112
         },
         {
           "name": "registrar_cobro",
-          "line": 121,
+          "line": 117,
           "kind": "function",
-          "end_line": 140
+          "end_line": 137
         },
         {
           "name": "cierre",
-          "line": 145,
+          "line": 142,
           "kind": "function",
-          "end_line": 147
+          "end_line": 145
         },
         {
           "name": "cierre_datos",
-          "line": 152,
+          "line": 150,
           "kind": "function",
-          "end_line": 160
+          "end_line": 159
         },
         {
           "name": "cola",
-          "line": 165,
+          "line": 164,
           "kind": "function",
           "end_line": 171
         },
@@ -1111,7 +1636,7 @@
           "name": "coger_reparto",
           "line": 176,
           "kind": "function",
-          "end_line": 190
+          "end_line": 191
         }
       ]
     },
@@ -1122,25 +1647,25 @@
           "name": "webhook",
           "line": 26,
           "kind": "function",
-          "end_line": 87
+          "end_line": 88
         },
         {
           "name": "webhook_monei",
-          "line": 92,
+          "line": 93,
           "kind": "function",
-          "end_line": 153
+          "end_line": 154
         },
         {
           "name": "webhook_meta_verify",
-          "line": 157,
+          "line": 158,
           "kind": "function",
-          "end_line": 165
+          "end_line": 166
         },
         {
           "name": "webhook_meta",
-          "line": 169,
+          "line": 170,
           "kind": "function",
-          "end_line": 253
+          "end_line": 254
         }
       ]
     },
@@ -1148,31 +1673,89 @@
       "role": "config",
       "symbols": []
     },
+    "container.py": {
+      "role": "other",
+      "symbols": [
+        {
+          "name": "get_monei",
+          "line": 22,
+          "kind": "function",
+          "end_line": 26
+        }
+      ]
+    },
     "controllers/mensajes_registrados.py": {
       "role": "controller",
       "symbols": [
         {
           "name": "ManejadorMensajesRegistrados",
-          "line": 14,
+          "line": 23,
           "kind": "class"
         },
         {
           "name": "_iniciar_pedido_y_enviar_menu",
-          "line": 17,
+          "line": 26,
           "kind": "function",
-          "end_line": 35
-        },
-        {
-          "name": "_responder_pedido_en_curso",
-          "line": 38,
-          "kind": "function",
-          "end_line": 94
+          "end_line": 41
         },
         {
           "name": "manejar_mensajes_registrados",
-          "line": 97,
+          "line": 44,
           "kind": "function",
-          "end_line": 174
+          "end_line": 107
+        }
+      ]
+    },
+    "controllers/mensajes_registrados_notifier.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "_enviar_error_usuario_no_encontrado",
+          "line": 12,
+          "kind": "function",
+          "end_line": 17
+        },
+        {
+          "name": "_enviar_error_sistema",
+          "line": 20,
+          "kind": "function",
+          "end_line": 25
+        },
+        {
+          "name": "_enviar_bienvenida_menu",
+          "line": 28,
+          "kind": "function",
+          "end_line": 33
+        },
+        {
+          "name": "_enviar_enlace_caducado",
+          "line": 36,
+          "kind": "function",
+          "end_line": 42
+        },
+        {
+          "name": "_enviar_enlace_pedido",
+          "line": 45,
+          "kind": "function",
+          "end_line": 50
+        },
+        {
+          "name": "_enviar_enlace_pago",
+          "line": 53,
+          "kind": "function",
+          "end_line": 58
+        },
+        {
+          "name": "_enviar_error_generico",
+          "line": 61,
+          "kind": "function",
+          "end_line": 66
+        },
+        {
+          "name": "_enviar_estado_en_curso",
+          "line": 69,
+          "kind": "function",
+          "end_line": 122
         }
       ]
     },
@@ -1180,16 +1763,33 @@
       "role": "controller",
       "symbols": [
         {
-          "name": "iniciar_pago",
-          "line": 11,
+          "name": "_validar_carrito",
+          "line": 10,
           "kind": "function",
-          "end_line": 112
+          "end_line": 23
+        },
+        {
+          "name": "iniciar_pago",
+          "line": 26,
+          "kind": "function",
+          "end_line": 92
         },
         {
           "name": "iniciar_pago_efectivo",
-          "line": 115,
+          "line": 95,
           "kind": "function",
-          "end_line": 186
+          "end_line": 138
+        }
+      ]
+    },
+    "controllers/pago_notifier.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "_enviar_confirmacion_efectivo",
+          "line": 6,
+          "kind": "function",
+          "end_line": 18
         }
       ]
     },
@@ -1200,13 +1800,13 @@
           "name": "procesar_pedido",
           "line": 18,
           "kind": "function",
-          "end_line": 66
+          "end_line": 64
         },
         {
           "name": "confirmar_carrito",
-          "line": 69,
+          "line": 67,
           "kind": "function",
-          "end_line": 176
+          "end_line": 166
         }
       ]
     },
@@ -1214,81 +1814,104 @@
       "role": "controller",
       "symbols": [
         {
-          "name": "_enviar_mensaje_registro",
-          "line": 18,
-          "kind": "function",
-          "end_line": 22
-        },
-        {
           "name": "confirmar_direccion",
-          "line": 25,
+          "line": 27,
           "kind": "function",
-          "end_line": 38
+          "end_line": 41
         },
         {
-          "name": "_enviar_bienvenida",
-          "line": 41,
+          "name": "_es_nombre_valido",
+          "line": 43,
           "kind": "function",
           "end_line": 48
         },
         {
-          "name": "_enviar_cancelacion_registro",
+          "name": "RegistroUsuario",
           "line": 51,
+          "kind": "class"
+        },
+        {
+          "name": "__init__",
+          "line": 53,
           "kind": "function",
-          "end_line": 55
+          "end_line": 56
+        },
+        {
+          "name": "manejar_registro",
+          "line": 110,
+          "kind": "function",
+          "end_line": 113
+        }
+      ]
+    },
+    "controllers/registro_notifier.py": {
+      "role": "controller",
+      "symbols": [
+        {
+          "name": "_enviar_bienvenida",
+          "line": 9,
+          "kind": "function",
+          "end_line": 17
+        },
+        {
+          "name": "_enviar_cancelacion_registro",
+          "line": 20,
+          "kind": "function",
+          "end_line": 25
         },
         {
           "name": "_solicitar_nombre",
-          "line": 58,
+          "line": 28,
+          "kind": "function",
+          "end_line": 33
+        },
+        {
+          "name": "_solicitar_direccion",
+          "line": 36,
+          "kind": "function",
+          "end_line": 42
+        },
+        {
+          "name": "_enviar_confirmacion_direccion",
+          "line": 45,
+          "kind": "function",
+          "end_line": 52
+        },
+        {
+          "name": "_enviar_direccion_invalida",
+          "line": 55,
           "kind": "function",
           "end_line": 62
         },
         {
-          "name": "_solicitar_direccion",
+          "name": "_enviar_mensaje_registro",
           "line": 65,
           "kind": "function",
           "end_line": 70
         },
         {
-          "name": "_enviar_confirmacion_direccion",
-          "line": 73,
+          "name": "_enviar_nombre_invalido",
+          "line": 75,
           "kind": "function",
-          "end_line": 79
+          "end_line": 81
         },
         {
-          "name": "_enviar_direccion_invalida",
-          "line": 82,
+          "name": "_enviar_registro_pendiente",
+          "line": 84,
           "kind": "function",
-          "end_line": 88
+          "end_line": 90
         },
         {
-          "name": "_es_nombre_valido",
-          "line": 90,
+          "name": "_enviar_pedir_confirmacion",
+          "line": 93,
           "kind": "function",
-          "end_line": 94
+          "end_line": 98
         },
         {
-          "name": "_validar_y_confirmar_direccion",
-          "line": 97,
+          "name": "_enviar_reintentar_direccion",
+          "line": 101,
           "kind": "function",
-          "end_line": 104
-        },
-        {
-          "name": "RegistroUsuario",
-          "line": 106,
-          "kind": "class"
-        },
-        {
-          "name": "__init__",
-          "line": 108,
-          "kind": "function",
-          "end_line": 110
-        },
-        {
-          "name": "manejar_registro",
-          "line": 176,
-          "kind": "function",
-          "end_line": 178
+          "end_line": 107
         }
       ]
     },
@@ -1322,19 +1945,25 @@
           "name": "create_app",
           "line": 17,
           "kind": "function",
-          "end_line": 133
+          "end_line": 144
+        },
+        {
+          "name": "inject_app_mode",
+          "line": 99,
+          "kind": "function",
+          "end_line": 100
         },
         {
           "name": "health",
-          "line": 92,
+          "line": 103,
           "kind": "function",
-          "end_line": 113
+          "end_line": 124
         },
         {
           "name": "manejar_errores_globales",
-          "line": 116,
+          "line": 127,
           "kind": "function",
-          "end_line": 131
+          "end_line": 142
         }
       ]
     },
@@ -1350,25 +1979,25 @@
           "name": "session",
           "line": 14,
           "kind": "function",
-          "end_line": 16
+          "end_line": 17
         },
         {
           "name": "_actualizar_estado_operativo",
-          "line": 20,
+          "line": 21,
           "kind": "function",
-          "end_line": 44
+          "end_line": 49
         },
         {
           "name": "_ejecutar",
-          "line": 30,
+          "line": 31,
           "kind": "function",
-          "end_line": 42
+          "end_line": 47
         },
         {
           "name": "_tiempo_medio",
-          "line": 46,
+          "line": 51,
           "kind": "function",
-          "end_line": 69
+          "end_line": 75
         }
       ]
     },
@@ -1376,44 +2005,76 @@
       "role": "utility",
       "symbols": [
         {
-          "name": "_iso",
-          "line": 6,
+          "name": "_dur_picking",
+          "line": 8,
           "kind": "function",
-          "end_line": 11
+          "end_line": 12
+        },
+        {
+          "name": "_dur_reparto",
+          "line": 15,
+          "kind": "function",
+          "end_line": 19
+        },
+        {
+          "name": "_iso",
+          "line": 22,
+          "kind": "function",
+          "end_line": 27
         }
       ]
     },
-    "managers/dashboard/gestor_empleados_mixin.py": {
+    "managers/dashboard/empleados_lista.py": {
       "role": "data_access",
       "symbols": [
         {
-          "name": "GestorEmpleadosMixin",
-          "line": 17,
+          "name": "GestorEmpleadosListaMixin",
+          "line": 12,
           "kind": "class"
         },
         {
           "name": "empleados_disponibles",
-          "line": 19,
+          "line": 14,
           "kind": "function",
-          "end_line": 31
+          "end_line": 58
+        }
+      ]
+    },
+    "managers/dashboard/empleados_monitor.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorEmpleadosMonitorMixin",
+          "line": 16,
+          "kind": "class"
         },
         {
           "name": "monitor_empleados",
-          "line": 33,
+          "line": 18,
           "kind": "function",
-          "end_line": 359
+          "end_line": 368
+        }
+      ]
+    },
+    "managers/dashboard/empleados_rendimiento.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorEmpleadosRendimientoMixin",
+          "line": 11,
+          "kind": "class"
         },
         {
           "name": "rendimiento_resumen",
-          "line": 361,
+          "line": 13,
           "kind": "function",
-          "end_line": 461
+          "end_line": 113
         },
         {
           "name": "rendimiento_empleado",
-          "line": 463,
+          "line": 115,
           "kind": "function",
-          "end_line": 640
+          "end_line": 292
         }
       ]
     },
@@ -1457,201 +2118,37 @@
           "name": "metricas",
           "line": 22,
           "kind": "function",
-          "end_line": 103
+          "end_line": 104
         },
         {
           "name": "pedidos_activos",
-          "line": 105,
-          "kind": "function",
-          "end_line": 182
-        },
-        {
-          "name": "alertas",
-          "line": 184,
-          "kind": "function",
-          "end_line": 233
-        },
-        {
-          "name": "eventos",
-          "line": 235,
-          "kind": "function",
-          "end_line": 252
-        },
-        {
-          "name": "historial_pedidos",
-          "line": 254,
-          "kind": "function",
-          "end_line": 340
-        },
-        {
-          "name": "detalle_pedido",
-          "line": 342,
-          "kind": "function",
-          "end_line": 416
-        }
-      ]
-    },
-    "managers/dashboard/gestor_picking_mixin.py": {
-      "role": "data_access",
-      "symbols": [
-        {
-          "name": "GestorPickingMixin",
-          "line": 24,
-          "kind": "class"
-        },
-        {
-          "name": "picking_activo",
-          "line": 26,
-          "kind": "function",
-          "end_line": 177
-        },
-        {
-          "name": "buscar_productos",
-          "line": 179,
-          "kind": "function",
-          "end_line": 192
-        },
-        {
-          "name": "asignar_picker",
-          "line": 194,
-          "kind": "function",
-          "end_line": 244
-        },
-        {
-          "name": "reasignar_picker",
-          "line": 246,
-          "kind": "function",
-          "end_line": 309
-        },
-        {
-          "name": "completar_picking",
-          "line": 311,
-          "kind": "function",
-          "end_line": 424
-        },
-        {
-          "name": "_descontar",
-          "line": 370,
-          "kind": "function",
-          "end_line": 393
-        },
-        {
-          "name": "_actualizar_disponibilidad_picker",
-          "line": 399,
-          "kind": "function",
-          "end_line": 416
-        },
-        {
-          "name": "pickings_del_picker",
-          "line": 426,
-          "kind": "function",
-          "end_line": 482
-        },
-        {
-          "name": "actualizar_item_picking",
-          "line": 484,
-          "kind": "function",
-          "end_line": 516
-        },
-        {
-          "name": "pickings_sin_asignar",
-          "line": 518,
-          "kind": "function",
-          "end_line": 548
-        },
-        {
-          "name": "reclamar_picking",
-          "line": 550,
-          "kind": "function",
-          "end_line": 612
-        }
-      ]
-    },
-    "managers/dashboard/gestor_reparto_mixin.py": {
-      "role": "data_access",
-      "symbols": [
-        {
-          "name": "GestorRepartoMixin",
-          "line": 27,
-          "kind": "class"
-        },
-        {
-          "name": "repartidores",
-          "line": 29,
-          "kind": "function",
-          "end_line": 98
-        },
-        {
-          "name": "mapa",
-          "line": 100,
-          "kind": "function",
-          "end_line": 123
-        },
-        {
-          "name": "asignar_repartidor",
-          "line": 125,
-          "kind": "function",
-          "end_line": 155
-        },
-        {
-          "name": "marcar_salida_reparto",
-          "line": 157,
+          "line": 106,
           "kind": "function",
           "end_line": 185
         },
         {
-          "name": "marcar_no_entregado",
+          "name": "alertas",
           "line": 187,
           "kind": "function",
-          "end_line": 208
+          "end_line": 237
         },
         {
-          "name": "marcar_entregado",
-          "line": 210,
+          "name": "eventos",
+          "line": 239,
           "kind": "function",
-          "end_line": 266
+          "end_line": 257
         },
         {
-          "name": "_actualizar_disponibilidad",
-          "line": 242,
+          "name": "historial_pedidos",
+          "line": 259,
           "kind": "function",
-          "end_line": 258
+          "end_line": 346
         },
         {
-          "name": "registrar_cobro",
-          "line": 268,
+          "name": "detalle_pedido",
+          "line": 348,
           "kind": "function",
-          "end_line": 298
-        },
-        {
-          "name": "cierre_caja_repartidor",
-          "line": 300,
-          "kind": "function",
-          "end_line": 384
-        },
-        {
-          "name": "_detalle",
-          "line": 353,
-          "kind": "function",
-          "end_line": 366
-        },
-        {
-          "name": "repartos_del_repartidor",
-          "line": 386,
-          "kind": "function",
-          "end_line": 483
-        },
-        {
-          "name": "repartos_sin_asignar",
-          "line": 485,
-          "kind": "function",
-          "end_line": 537
-        },
-        {
-          "name": "reclamar_reparto",
-          "line": 539,
-          "kind": "function",
-          "end_line": 601
+          "end_line": 423
         }
       ]
     },
@@ -1707,6 +2204,412 @@
         }
       ]
     },
+    "managers/dashboard/picking_basico.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorPickingBasicoMixin",
+          "line": 15,
+          "kind": "class"
+        },
+        {
+          "name": "picking_activo",
+          "line": 17,
+          "kind": "function",
+          "end_line": 169
+        },
+        {
+          "name": "buscar_productos",
+          "line": 171,
+          "kind": "function",
+          "end_line": 184
+        },
+        {
+          "name": "pickings_del_picker",
+          "line": 186,
+          "kind": "function",
+          "end_line": 244
+        },
+        {
+          "name": "pickings_sin_asignar",
+          "line": 246,
+          "kind": "function",
+          "end_line": 277
+        }
+      ]
+    },
+    "managers/dashboard/picking_flujo.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorPickingFlujoMixin",
+          "line": 21,
+          "kind": "class"
+        },
+        {
+          "name": "asignar_picker",
+          "line": 23,
+          "kind": "function",
+          "end_line": 74
+        },
+        {
+          "name": "reasignar_picker",
+          "line": 76,
+          "kind": "function",
+          "end_line": 140
+        },
+        {
+          "name": "completar_picking",
+          "line": 142,
+          "kind": "function",
+          "end_line": 257
+        },
+        {
+          "name": "_descontar",
+          "line": 201,
+          "kind": "function",
+          "end_line": 225
+        },
+        {
+          "name": "_actualizar_disponibilidad_picker",
+          "line": 231,
+          "kind": "function",
+          "end_line": 249
+        },
+        {
+          "name": "actualizar_item_picking",
+          "line": 259,
+          "kind": "function",
+          "end_line": 291
+        },
+        {
+          "name": "asignar_cocina_equipo",
+          "line": 293,
+          "kind": "function",
+          "end_line": 384
+        },
+        {
+          "name": "reclamar_picking",
+          "line": 386,
+          "kind": "function",
+          "end_line": 448
+        }
+      ]
+    },
+    "managers/dashboard/reparto_asignacion.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorRepartoAsignacionMixin",
+          "line": 15,
+          "kind": "class"
+        },
+        {
+          "name": "repartidores",
+          "line": 17,
+          "kind": "function",
+          "end_line": 84
+        },
+        {
+          "name": "asignar_repartidor",
+          "line": 86,
+          "kind": "function",
+          "end_line": 117
+        },
+        {
+          "name": "repartos_sin_asignar",
+          "line": 119,
+          "kind": "function",
+          "end_line": 171
+        },
+        {
+          "name": "reclamar_reparto",
+          "line": 173,
+          "kind": "function",
+          "end_line": 235
+        }
+      ]
+    },
+    "managers/dashboard/reparto_cobro.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorRepartoCobroMixin",
+          "line": 14,
+          "kind": "class"
+        },
+        {
+          "name": "registrar_cobro",
+          "line": 16,
+          "kind": "function",
+          "end_line": 46
+        },
+        {
+          "name": "cierre_caja_repartidor",
+          "line": 48,
+          "kind": "function",
+          "end_line": 133
+        },
+        {
+          "name": "_detalle",
+          "line": 101,
+          "kind": "function",
+          "end_line": 115
+        }
+      ]
+    },
+    "managers/dashboard/reparto_tracking.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorRepartoTrackingMixin",
+          "line": 23,
+          "kind": "class"
+        },
+        {
+          "name": "mapa",
+          "line": 25,
+          "kind": "function",
+          "end_line": 49
+        },
+        {
+          "name": "repartos_del_repartidor",
+          "line": 51,
+          "kind": "function",
+          "end_line": 148
+        },
+        {
+          "name": "marcar_salida_reparto",
+          "line": 150,
+          "kind": "function",
+          "end_line": 178
+        },
+        {
+          "name": "marcar_no_entregado",
+          "line": 180,
+          "kind": "function",
+          "end_line": 201
+        },
+        {
+          "name": "marcar_entregado",
+          "line": 203,
+          "kind": "function",
+          "end_line": 260
+        },
+        {
+          "name": "_actualizar_disponibilidad",
+          "line": 235,
+          "kind": "function",
+          "end_line": 252
+        }
+      ]
+    },
+    "managers/empleado/base.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorEmpleadoBase",
+          "line": 4,
+          "kind": "class"
+        },
+        {
+          "name": "session",
+          "line": 12,
+          "kind": "function",
+          "end_line": 14
+        }
+      ]
+    },
+    "managers/empleado/checkin_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorEmpleadoCheckinMixin",
+          "line": 10,
+          "kind": "class"
+        },
+        {
+          "name": "_checkin_abierto_hoy",
+          "line": 11,
+          "kind": "function",
+          "end_line": 18
+        },
+        {
+          "name": "_cerrar_tramo_activo",
+          "line": 20,
+          "kind": "function",
+          "end_line": 27
+        },
+        {
+          "name": "_abrir_tramo",
+          "line": 29,
+          "kind": "function",
+          "end_line": 32
+        },
+        {
+          "name": "iniciar_turno",
+          "line": 34,
+          "kind": "function",
+          "end_line": 88
+        },
+        {
+          "name": "cerrar_turno",
+          "line": 90,
+          "kind": "function",
+          "end_line": 108
+        },
+        {
+          "name": "checkin_hoy",
+          "line": 110,
+          "kind": "function",
+          "end_line": 122
+        },
+        {
+          "name": "_resumen_checkin",
+          "line": 124,
+          "kind": "function",
+          "end_line": 141
+        }
+      ]
+    },
+    "managers/empleado/metricas_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorEmpleadoMetricasMixin",
+          "line": 11,
+          "kind": "class"
+        },
+        {
+          "name": "carga_operativa",
+          "line": 12,
+          "kind": "function",
+          "end_line": 44
+        },
+        {
+          "name": "_colas_globales",
+          "line": 46,
+          "kind": "function",
+          "end_line": 59
+        },
+        {
+          "name": "metricas_hoy",
+          "line": 61,
+          "kind": "function",
+          "end_line": 121
+        },
+        {
+          "name": "puntualidad_empleado",
+          "line": 123,
+          "kind": "function",
+          "end_line": 166
+        },
+        {
+          "name": "registrar_ausencia",
+          "line": 168,
+          "kind": "function",
+          "end_line": 187
+        },
+        {
+          "name": "calcular_y_guardar_metrica_diaria",
+          "line": 189,
+          "kind": "function",
+          "end_line": 240
+        },
+        {
+          "name": "ausencias_empleado",
+          "line": 242,
+          "kind": "function",
+          "end_line": 264
+        }
+      ]
+    },
+    "managers/empleado/profile_roles_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorEmpleadoProfileRolesMixin",
+          "line": 11,
+          "kind": "class"
+        },
+        {
+          "name": "perfil",
+          "line": 12,
+          "kind": "function",
+          "end_line": 27
+        },
+        {
+          "name": "cambiar_estado",
+          "line": 29,
+          "kind": "function",
+          "end_line": 62
+        },
+        {
+          "name": "capacidades",
+          "line": 64,
+          "kind": "function",
+          "end_line": 72
+        },
+        {
+          "name": "es_polivalente",
+          "line": 74,
+          "kind": "function",
+          "end_line": 76
+        },
+        {
+          "name": "obtener_rol_activo",
+          "line": 78,
+          "kind": "function",
+          "end_line": 81
+        },
+        {
+          "name": "limpiar_rol_activo",
+          "line": 83,
+          "kind": "function",
+          "end_line": 92
+        },
+        {
+          "name": "tiene_rol_activo",
+          "line": 94,
+          "kind": "function",
+          "end_line": 100
+        },
+        {
+          "name": "cambiar_rol",
+          "line": 102,
+          "kind": "function",
+          "end_line": 190
+        }
+      ]
+    },
+    "managers/empleado/turnos_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorEmpleadoTurnosMixin",
+          "line": 10,
+          "kind": "class"
+        },
+        {
+          "name": "turno_hoy",
+          "line": 11,
+          "kind": "function",
+          "end_line": 25
+        },
+        {
+          "name": "turnos_proximos",
+          "line": 27,
+          "kind": "function",
+          "end_line": 58
+        },
+        {
+          "name": "puede_iniciar_turno",
+          "line": 60,
+          "kind": "function",
+          "end_line": 109
+        }
+      ]
+    },
     "managers/estado_usuario.py": {
       "role": "data_access",
       "symbols": [
@@ -1725,13 +2628,13 @@
           "name": "obtener_estado",
           "line": 21,
           "kind": "function",
-          "end_line": 33
+          "end_line": 34
         },
         {
           "name": "actualizar_estado",
-          "line": 36,
+          "line": 37,
           "kind": "function",
-          "end_line": 58
+          "end_line": 60
         }
       ]
     },
@@ -1740,7 +2643,7 @@
       "symbols": [
         {
           "name": "GestorDashboard",
-          "line": 15,
+          "line": 21,
           "kind": "class"
         }
       ]
@@ -1750,122 +2653,8 @@
       "symbols": [
         {
           "name": "GestorEmpleado",
-          "line": 14,
+          "line": 15,
           "kind": "class"
-        },
-        {
-          "name": "session",
-          "line": 17,
-          "kind": "function",
-          "end_line": 19
-        },
-        {
-          "name": "perfil",
-          "line": 23,
-          "kind": "function",
-          "end_line": 37
-        },
-        {
-          "name": "cambiar_estado",
-          "line": 39,
-          "kind": "function",
-          "end_line": 67
-        },
-        {
-          "name": "turno_hoy",
-          "line": 69,
-          "kind": "function",
-          "end_line": 82
-        },
-        {
-          "name": "turnos_proximos",
-          "line": 84,
-          "kind": "function",
-          "end_line": 111
-        },
-        {
-          "name": "capacidades",
-          "line": 113,
-          "kind": "function",
-          "end_line": 120
-        },
-        {
-          "name": "es_polivalente",
-          "line": 122,
-          "kind": "function",
-          "end_line": 124
-        },
-        {
-          "name": "tiene_rol_activo",
-          "line": 126,
-          "kind": "function",
-          "end_line": 131
-        },
-        {
-          "name": "cambiar_rol",
-          "line": 133,
-          "kind": "function",
-          "end_line": 204
-        },
-        {
-          "name": "puede_iniciar_turno",
-          "line": 213,
-          "kind": "function",
-          "end_line": 264
-        },
-        {
-          "name": "_checkin_abierto_hoy",
-          "line": 270,
-          "kind": "function",
-          "end_line": 277
-        },
-        {
-          "name": "_cerrar_tramo_activo",
-          "line": 279,
-          "kind": "function",
-          "end_line": 286
-        },
-        {
-          "name": "_abrir_tramo",
-          "line": 288,
-          "kind": "function",
-          "end_line": 291
-        },
-        {
-          "name": "iniciar_turno",
-          "line": 293,
-          "kind": "function",
-          "end_line": 346
-        },
-        {
-          "name": "cerrar_turno",
-          "line": 348,
-          "kind": "function",
-          "end_line": 366
-        },
-        {
-          "name": "checkin_hoy",
-          "line": 368,
-          "kind": "function",
-          "end_line": 382
-        },
-        {
-          "name": "_resumen_checkin",
-          "line": 384,
-          "kind": "function",
-          "end_line": 401
-        },
-        {
-          "name": "carga_operativa",
-          "line": 403,
-          "kind": "function",
-          "end_line": 428
-        },
-        {
-          "name": "_colas_globales",
-          "line": 430,
-          "kind": "function",
-          "end_line": 441
         }
       ]
     },
@@ -1874,122 +2663,8 @@
       "symbols": [
         {
           "name": "GestorMetricas",
-          "line": 13,
+          "line": 15,
           "kind": "class"
-        },
-        {
-          "name": "session",
-          "line": 16,
-          "kind": "function",
-          "end_line": 18
-        },
-        {
-          "name": "resumen_operacion",
-          "line": 24,
-          "kind": "function",
-          "end_line": 92
-        },
-        {
-          "name": "_tiempo_medio_ciclo_hoy",
-          "line": 94,
-          "kind": "function",
-          "end_line": 114
-        },
-        {
-          "name": "asistencia_hoy",
-          "line": 116,
-          "kind": "function",
-          "end_line": 143
-        },
-        {
-          "name": "colas_detalle",
-          "line": 145,
-          "kind": "function",
-          "end_line": 211
-        },
-        {
-          "name": "pedidos_por_estado",
-          "line": 213,
-          "kind": "function",
-          "end_line": 223
-        },
-        {
-          "name": "alertas_tiempo_real",
-          "line": 225,
-          "kind": "function",
-          "end_line": 233
-        },
-        {
-          "name": "_alertas_ausencia",
-          "line": 235,
-          "kind": "function",
-          "end_line": 270
-        },
-        {
-          "name": "_alertas_colas",
-          "line": 272,
-          "kind": "function",
-          "end_line": 303
-        },
-        {
-          "name": "_alertas_pedidos_bloqueados",
-          "line": 305,
-          "kind": "function",
-          "end_line": 345
-        },
-        {
-          "name": "_tiempo_medio_ciclo_periodo",
-          "line": 347,
-          "kind": "function",
-          "end_line": 363
-        },
-        {
-          "name": "_alertas_repartidores_inactivos",
-          "line": 365,
-          "kind": "function",
-          "end_line": 412
-        },
-        {
-          "name": "resumen_periodo",
-          "line": 418,
-          "kind": "function",
-          "end_line": 485
-        },
-        {
-          "name": "metricas_pedidos",
-          "line": 487,
-          "kind": "function",
-          "end_line": 584
-        },
-        {
-          "name": "metricas_picking",
-          "line": 586,
-          "kind": "function",
-          "end_line": 653
-        },
-        {
-          "name": "_picking_tiempos",
-          "line": 655,
-          "kind": "function",
-          "end_line": 678
-        },
-        {
-          "name": "metricas_reparto",
-          "line": 680,
-          "kind": "function",
-          "end_line": 753
-        },
-        {
-          "name": "rendimiento_empleados",
-          "line": 755,
-          "kind": "function",
-          "end_line": 842
-        },
-        {
-          "name": "comparativa_empleados",
-          "line": 844,
-          "kind": "function",
-          "end_line": 873
         }
       ]
     },
@@ -1998,110 +2673,8 @@
       "symbols": [
         {
           "name": "GestorPedidos",
-          "line": 18,
+          "line": 14,
           "kind": "class"
-        },
-        {
-          "name": "session",
-          "line": 21,
-          "kind": "function",
-          "end_line": 23
-        },
-        {
-          "name": "iniciar_pedido",
-          "line": 27,
-          "kind": "function",
-          "end_line": 36
-        },
-        {
-          "name": "guardar_enlace",
-          "line": 40,
-          "kind": "function",
-          "end_line": 51
-        },
-        {
-          "name": "hay_pedido_pendiente",
-          "line": 57,
-          "kind": "function",
-          "end_line": 67
-        },
-        {
-          "name": "obtener_pedido_mas_reciente",
-          "line": 71,
-          "kind": "function",
-          "end_line": 88
-        },
-        {
-          "name": "agregar_productos_a_pedido",
-          "line": 91,
-          "kind": "function",
-          "end_line": 133
-        },
-        {
-          "name": "actualizar_estado",
-          "line": 136,
-          "kind": "function",
-          "end_line": 163
-        },
-        {
-          "name": "_asegurar_picking_si_procede",
-          "line": 165,
-          "kind": "function",
-          "end_line": 193
-        },
-        {
-          "name": "guardar_forma_pago",
-          "line": 195,
-          "kind": "function",
-          "end_line": 201
-        },
-        {
-          "name": "guardar_coordenadas",
-          "line": 203,
-          "kind": "function",
-          "end_line": 210
-        },
-        {
-          "name": "guardar_redis_id",
-          "line": 212,
-          "kind": "function",
-          "end_line": 218
-        },
-        {
-          "name": "registrar_pago",
-          "line": 220,
-          "kind": "function",
-          "end_line": 239
-        },
-        {
-          "name": "_recalcular_total",
-          "line": 256,
-          "kind": "function",
-          "end_line": 259
-        },
-        {
-          "name": "cancelar_pedido",
-          "line": 261,
-          "kind": "function",
-          "end_line": 309
-        },
-        {
-          "name": "eliminar_item",
-          "line": 311,
-          "kind": "function",
-          "end_line": 359
-        },
-        {
-          "name": "sustituir_item",
-          "line": 361,
-          "kind": "function",
-          "end_line": 480
-        },
-        {
-          "name": "obtener_pedido",
-          "line": 482,
-          "kind": "function",
-          "end_line": 490
         }
       ]
     },
@@ -2117,55 +2690,55 @@
           "name": "session",
           "line": 12,
           "kind": "function",
-          "end_line": 14
+          "end_line": 15
         },
         {
           "name": "obtener_productos",
-          "line": 16,
+          "line": 17,
           "kind": "function",
-          "end_line": 35
+          "end_line": 36
         },
         {
           "name": "obtener_producto_por_codigo",
-          "line": 37,
+          "line": 38,
           "kind": "function",
-          "end_line": 54
+          "end_line": 55
         },
         {
           "name": "productos_admin",
-          "line": 56,
+          "line": 57,
           "kind": "function",
-          "end_line": 81
+          "end_line": 82
         },
         {
           "name": "actualizar_stock",
-          "line": 83,
+          "line": 84,
           "kind": "function",
-          "end_line": 102
+          "end_line": 103
         },
         {
           "name": "ajustar_stock",
-          "line": 104,
+          "line": 105,
           "kind": "function",
-          "end_line": 122
+          "end_line": 123
         },
         {
           "name": "toggle_disponible",
-          "line": 124,
+          "line": 125,
           "kind": "function",
-          "end_line": 136
+          "end_line": 138
         },
         {
           "name": "actualizar_precio",
-          "line": 138,
+          "line": 140,
           "kind": "function",
-          "end_line": 152
+          "end_line": 155
         },
         {
           "name": "descontar_stock_picking",
-          "line": 154,
+          "line": 157,
           "kind": "function",
-          "end_line": 175
+          "end_line": 178
         }
       ]
     },
@@ -2181,43 +2754,43 @@
           "name": "__init__",
           "line": 9,
           "kind": "function",
-          "end_line": 24
+          "end_line": 25
         },
         {
           "name": "get",
-          "line": 26,
+          "line": 27,
           "kind": "function",
-          "end_line": 31
+          "end_line": 33
         },
         {
           "name": "set",
-          "line": 34,
+          "line": 36,
           "kind": "function",
-          "end_line": 46
+          "end_line": 48
         },
         {
           "name": "delete",
-          "line": 49,
+          "line": 51,
           "kind": "function",
-          "end_line": 61
+          "end_line": 63
         },
         {
           "name": "esta_bloqueado",
-          "line": 63,
+          "line": 65,
           "kind": "function",
-          "end_line": 66
+          "end_line": 69
         },
         {
           "name": "bloquear_usuario",
-          "line": 68,
+          "line": 71,
           "kind": "function",
-          "end_line": 75
+          "end_line": 78
         },
         {
           "name": "desbloquear_usuario",
-          "line": 77,
+          "line": 80,
           "kind": "function",
-          "end_line": 80
+          "end_line": 84
         }
       ]
     },
@@ -2233,31 +2806,417 @@
           "name": "session",
           "line": 11,
           "kind": "function",
-          "end_line": 13
+          "end_line": 14
         },
         {
           "name": "obtener_usuario",
-          "line": 16,
+          "line": 17,
           "kind": "function",
-          "end_line": 29
+          "end_line": 30
         },
         {
           "name": "guardar_usuario",
-          "line": 31,
+          "line": 32,
           "kind": "function",
-          "end_line": 40
+          "end_line": 41
         },
         {
           "name": "obtener_usuario_completo",
-          "line": 43,
+          "line": 44,
           "kind": "function",
-          "end_line": 53
+          "end_line": 54
         },
         {
           "name": "verificar_usuario",
-          "line": 56,
+          "line": 57,
+          "kind": "function",
+          "end_line": 69
+        }
+      ]
+    },
+    "managers/metricas/analitica_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorMetricasAnaliticaMixin",
+          "line": 5,
+          "kind": "class"
+        },
+        {
+          "name": "resumen_periodo",
+          "line": 6,
+          "kind": "function",
+          "end_line": 77
+        },
+        {
+          "name": "metricas_pedidos",
+          "line": 79,
+          "kind": "function",
+          "end_line": 176
+        },
+        {
+          "name": "metricas_picking",
+          "line": 178,
+          "kind": "function",
+          "end_line": 246
+        },
+        {
+          "name": "_picking_tiempos",
+          "line": 248,
+          "kind": "function",
+          "end_line": 273
+        },
+        {
+          "name": "metricas_reparto",
+          "line": 275,
+          "kind": "function",
+          "end_line": 355
+        },
+        {
+          "name": "metricas_incidencias",
+          "line": 357,
+          "kind": "function",
+          "end_line": 450
+        }
+      ]
+    },
+    "managers/metricas/base.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorMetricasBase",
+          "line": 6,
+          "kind": "class"
+        },
+        {
+          "name": "session",
+          "line": 19,
+          "kind": "function",
+          "end_line": 21
+        },
+        {
+          "name": "_horas_trabajadas",
+          "line": 23,
+          "kind": "function",
+          "end_line": 41
+        },
+        {
+          "name": "_tiempo_entre_estados",
+          "line": 43,
+          "kind": "function",
+          "end_line": 61
+        },
+        {
+          "name": "_operaciones_empleado",
+          "line": 63,
+          "kind": "function",
+          "end_line": 88
+        }
+      ]
+    },
+    "managers/metricas/empleados_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorMetricasEmpleadosMixin",
+          "line": 7,
+          "kind": "class"
+        },
+        {
+          "name": "rendimiento_empleados",
+          "line": 8,
+          "kind": "function",
+          "end_line": 95
+        },
+        {
+          "name": "comparativa_empleados",
+          "line": 97,
+          "kind": "function",
+          "end_line": 134
+        },
+        {
+          "name": "ficha_empleado",
+          "line": 136,
+          "kind": "function",
+          "end_line": 203
+        },
+        {
+          "name": "_evolucion_semanal",
+          "line": 205,
+          "kind": "function",
+          "end_line": 228
+        },
+        {
+          "name": "asistencia_periodo",
+          "line": 230,
+          "kind": "function",
+          "end_line": 318
+        }
+      ]
+    },
+    "managers/metricas/tiempo_real_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorMetricasTiempoRealMixin",
+          "line": 8,
+          "kind": "class"
+        },
+        {
+          "name": "resumen_operacion",
+          "line": 9,
+          "kind": "function",
+          "end_line": 70
+        },
+        {
+          "name": "_tiempo_medio_ciclo_hoy",
+          "line": 72,
+          "kind": "function",
+          "end_line": 96
+        },
+        {
+          "name": "asistencia_hoy",
+          "line": 98,
+          "kind": "function",
+          "end_line": 129
+        },
+        {
+          "name": "colas_detalle",
+          "line": 131,
+          "kind": "function",
+          "end_line": 199
+        },
+        {
+          "name": "pedidos_por_estado",
+          "line": 201,
+          "kind": "function",
+          "end_line": 213
+        },
+        {
+          "name": "alertas_tiempo_real",
+          "line": 215,
+          "kind": "function",
+          "end_line": 224
+        },
+        {
+          "name": "_alertas_ausencia",
+          "line": 226,
+          "kind": "function",
+          "end_line": 269
+        },
+        {
+          "name": "_alertas_colas",
+          "line": 271,
+          "kind": "function",
+          "end_line": 307
+        },
+        {
+          "name": "_alertas_pedidos_bloqueados",
+          "line": 309,
+          "kind": "function",
+          "end_line": 351
+        },
+        {
+          "name": "_tiempo_medio_ciclo_periodo",
+          "line": 353,
+          "kind": "function",
+          "end_line": 378
+        },
+        {
+          "name": "_alertas_repartidores_inactivos",
+          "line": 380,
+          "kind": "function",
+          "end_line": 431
+        }
+      ]
+    },
+    "managers/pedidos/base.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorPedidosBase",
+          "line": 7,
+          "kind": "class"
+        },
+        {
+          "name": "session",
+          "line": 23,
+          "kind": "function",
+          "end_line": 25
+        },
+        {
+          "name": "_to_decimal",
+          "line": 28,
+          "kind": "function",
+          "end_line": 30
+        }
+      ]
+    },
+    "managers/pedidos/items_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorPedidosItemsMixin",
+          "line": 13,
+          "kind": "class"
+        },
+        {
+          "name": "_recalcular_total",
+          "line": 15,
+          "kind": "function",
+          "end_line": 18
+        },
+        {
+          "name": "cancelar_pedido",
+          "line": 20,
+          "kind": "function",
+          "end_line": 81
+        },
+        {
+          "name": "eliminar_item",
+          "line": 83,
+          "kind": "function",
+          "end_line": 144
+        },
+        {
+          "name": "sustituir_item",
+          "line": 146,
+          "kind": "function",
+          "end_line": 284
+        }
+      ]
+    },
+    "managers/pedidos/lifecycle_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorPedidosLifecycleMixin",
+          "line": 11,
+          "kind": "class"
+        },
+        {
+          "name": "iniciar_pedido",
+          "line": 17,
+          "kind": "function",
+          "end_line": 31
+        },
+        {
+          "name": "guardar_enlace",
+          "line": 33,
+          "kind": "function",
+          "end_line": 42
+        },
+        {
+          "name": "hay_pedido_pendiente",
+          "line": 49,
           "kind": "function",
           "end_line": 67
+        },
+        {
+          "name": "obtener_pedido_mas_reciente",
+          "line": 74,
+          "kind": "function",
+          "end_line": 95
+        },
+        {
+          "name": "_reemplazar_detalles",
+          "line": 97,
+          "kind": "function",
+          "end_line": 136
+        },
+        {
+          "name": "agregar_productos_a_pedido",
+          "line": 138,
+          "kind": "function",
+          "end_line": 164
+        },
+        {
+          "name": "confirmar_pago_online",
+          "line": 171,
+          "kind": "function",
+          "end_line": 203
+        },
+        {
+          "name": "confirmar_pago_efectivo",
+          "line": 210,
+          "kind": "function",
+          "end_line": 239
+        },
+        {
+          "name": "obtener_seguimiento",
+          "line": 241,
+          "kind": "function",
+          "end_line": 268
+        },
+        {
+          "name": "obtener_pedido",
+          "line": 270,
+          "kind": "function",
+          "end_line": 283
+        }
+      ]
+    },
+    "managers/pedidos/workflow_mixin.py": {
+      "role": "data_access",
+      "symbols": [
+        {
+          "name": "GestorPedidosWorkflowMixin",
+          "line": 12,
+          "kind": "class"
+        },
+        {
+          "name": "_set_estado",
+          "line": 13,
+          "kind": "function",
+          "end_line": 35
+        },
+        {
+          "name": "actualizar_estado",
+          "line": 42,
+          "kind": "function",
+          "end_line": 60
+        },
+        {
+          "name": "fijar_carrito_confirmado",
+          "line": 67,
+          "kind": "function",
+          "end_line": 91
+        },
+        {
+          "name": "_asegurar_picking_si_procede",
+          "line": 93,
+          "kind": "function",
+          "end_line": 131
+        },
+        {
+          "name": "guardar_forma_pago",
+          "line": 133,
+          "kind": "function",
+          "end_line": 140
+        },
+        {
+          "name": "guardar_coordenadas",
+          "line": 142,
+          "kind": "function",
+          "end_line": 150
+        },
+        {
+          "name": "guardar_redis_id",
+          "line": 152,
+          "kind": "function",
+          "end_line": 159
+        },
+        {
+          "name": "procesar_pago_confirmado",
+          "line": 161,
+          "kind": "function",
+          "end_line": 197
+        },
+        {
+          "name": "registrar_pago",
+          "line": 199,
+          "kind": "function",
+          "end_line": 232
         }
       ]
     },
@@ -2403,17 +3362,6 @@
         }
       ]
     },
-    "services/__init__.py": {
-      "role": "service",
-      "symbols": [
-        {
-          "name": "get_monei",
-          "line": 18,
-          "kind": "function",
-          "end_line": 22
-        }
-      ]
-    },
     "services/maps_service.py": {
       "role": "service",
       "symbols": [
@@ -2445,7 +3393,18 @@
           "name": "validar_direccion",
           "line": 79,
           "kind": "function",
-          "end_line": 125
+          "end_line": 126
+        }
+      ]
+    },
+    "services/monei_service.py": {
+      "role": "service",
+      "symbols": [
+        {
+          "name": "crear_pago",
+          "line": 10,
+          "kind": "function",
+          "end_line": 47
         }
       ]
     },
@@ -2456,13 +3415,13 @@
           "name": "generar_token_temporal",
           "line": 12,
           "kind": "function",
-          "end_line": 29
+          "end_line": 30
         },
         {
           "name": "generar_enlace",
-          "line": 32,
+          "line": 33,
           "kind": "function",
-          "end_line": 34
+          "end_line": 36
         }
       ]
     },
@@ -2471,27 +3430,39 @@
       "symbols": [
         {
           "name": "_get_client",
-          "line": 14,
+          "line": 15,
           "kind": "function",
-          "end_line": 18
+          "end_line": 20
         },
         {
           "name": "_enviar_twilio",
-          "line": 27,
+          "line": 29,
           "kind": "function",
-          "end_line": 33
+          "end_line": 36
         },
         {
           "name": "_enviar_meta",
-          "line": 42,
+          "line": 45,
           "kind": "function",
-          "end_line": 60
+          "end_line": 64
         },
         {
           "name": "enviar_mensaje_whatsapp",
-          "line": 63,
+          "line": 67,
           "kind": "function",
-          "end_line": 68
+          "end_line": 73
+        },
+        {
+          "name": "notificar_async",
+          "line": 81,
+          "kind": "function",
+          "end_line": 96
+        },
+        {
+          "name": "_enviar",
+          "line": 90,
+          "kind": "function",
+          "end_line": 94
         }
       ]
     },
@@ -2535,6 +3506,39 @@
           "line": 106,
           "kind": "function",
           "end_line": 112
+        }
+      ]
+    },
+    "static/js/features/dashboard/index.js": {
+      "role": "entry_point",
+      "symbols": [
+        {
+          "name": "dashboard",
+          "line": 5,
+          "kind": "function",
+          "end_line": 5
+        }
+      ]
+    },
+    "static/js/features/picker/index.js": {
+      "role": "entry_point",
+      "symbols": [
+        {
+          "name": "picker",
+          "line": 1,
+          "kind": "function",
+          "end_line": 1
+        }
+      ]
+    },
+    "static/js/features/repartidor/index.js": {
+      "role": "entry_point",
+      "symbols": [
+        {
+          "name": "repartidor",
+          "line": 8,
+          "kind": "function",
+          "end_line": 8
         }
       ]
     },
@@ -2582,9 +3586,9 @@
     "database.py → models.py → database.py"
   ],
   "stats": {
-    "total_files": 74,
-    "connected_files": 45,
-    "edges": 135,
+    "total_files": 126,
+    "connected_files": 83,
+    "edges": 208,
     "cycles_found": 1,
     "blueprint_edges_added": 0
   }

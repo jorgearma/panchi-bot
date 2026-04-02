@@ -20,3 +20,7 @@ def test_picker_sin_sesion_redirige_a_login(client):
 def test_repartidor_sin_sesion_redirige_a_login(client):
     resp = client.get('/repartidor')
     assert resp.status_code in (302, 401)
+
+def test_cocina_sin_sesion_redirige_a_login(client):
+    resp = client.get('/cocina')
+    assert resp.status_code in (302, 401)

@@ -1,12 +1,12 @@
 """Reparto — asignación de repartidores y listados."""
 import logging
-from datetime import datetime
+from datetime import datetime, date
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from managers.dashboard._helpers import _iso
-from models import Empleado, Pedido, Reparto
+from models import CheckIn, Empleado, Pedido, Reparto, Turno
 from states import EstadoPedido, EstadoReparto
 
 logger = logging.getLogger(__name__)
@@ -17,9 +17,29 @@ class GestorRepartoAsignacionMixin:
     def repartidores(self) -> dict:
         """Resume repartidores y pedidos listos para asignar."""
         s = self.session
-        hoy = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        hoy = date.today()
+        hoy_dt = datetime.combine(hoy, datetime.min.time())
 
-        empleados = s.query(Empleado).filter(Empleado.activo == True).all()
+        # Solo empleados con turno HOY (no cancelado)
+        ids_con_turno = {
+            t.empleado_id for t in s.query(Turno.empleado_id).filter(
+                Turno.fecha == hoy,
+                Turno.estado != 'cancelado',
+            ).all()
+        }
+
+        empleados = s.query(Empleado).filter(
+            Empleado.activo == True,
+            Empleado.EmpleadoID.in_(ids_con_turno) if ids_con_turno else False,
+        ).all()
+
+        # Check-ins abiertos hoy (fin == None)
+        checkins_abiertos = {
+            ci.empleado_id for ci in s.query(CheckIn.empleado_id).filter(
+                CheckIn.fecha == hoy,
+                CheckIn.fin == None,
+            ).all()
+        }
 
         # Pedidos PREPARADO sin repartidor: excluir solo los que ya tienen Reparto con repartidor asignado.
         # Cubre tanto el caso sin fila Reparto como el caso con fila Reparto pero repartidor_id=NULL
@@ -44,7 +64,7 @@ class GestorRepartoAsignacionMixin:
             entregados_hoy = s.query(func.count(Reparto.id)).filter(
                 Reparto.repartidor_id == e.EmpleadoID,
                 Reparto.estado == EstadoReparto.ENTREGADO.value,
-                Reparto.hora_entrega_real >= hoy,
+                Reparto.hora_entrega_real >= hoy_dt,
             ).scalar() or 0
 
             pedidos_activos_data = [
@@ -68,6 +88,7 @@ class GestorRepartoAsignacionMixin:
                 "rol": e.rol.nombre if e.rol else e.Puesto,
                 "pedidos_activos": pedidos_activos_data,
                 "entregados_hoy": entregados_hoy,
+                "tiene_checkin": e.EmpleadoID in checkins_abiertos,
             })
 
         return {

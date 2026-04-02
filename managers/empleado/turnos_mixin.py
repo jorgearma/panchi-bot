@@ -1,7 +1,7 @@
 import logging
 from datetime import date, datetime, timedelta
 
-from models import Turno
+from models import CheckIn, Turno
 from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
@@ -9,19 +9,51 @@ logger = logging.getLogger(__name__)
 
 class GestorEmpleadoTurnosMixin:
     def turno_hoy(self, empleado_id: int) -> dict | None:
-        """Turno del día actual, o None si no hay."""
+        """Turno activo ahora o próximo del día actual. Devuelve None si no hay ninguno.
+
+        Prioridad:
+        1. Turno cuya ventana de fichaje esté activa AHORA
+        2. Si no, el próximo turno futuro del día
+        3. Si ninguno, None
+        """
         hoy = date.today()
-        turno = self.session.query(Turno).filter_by(
-            empleado_id=empleado_id,
-            fecha=hoy,
-        ).first()
-        if not turno:
+        ahora = datetime.now()
+
+        turnos = self.session.query(Turno).filter(
+            Turno.empleado_id == empleado_id,
+            Turno.fecha == hoy,
+            Turno.estado != 'cancelado',
+            Turno.estado != 'completado',
+        ).order_by(Turno.hora_inicio).all()
+
+        if not turnos:
             return None
+
+        # Buscar turno en ventana activa ahora
+        for turno in turnos:
+            inicio_dt = datetime.combine(hoy, turno.hora_inicio)
+            fin_dt = datetime.combine(hoy, turno.hora_fin)
+            ventana_inicio = inicio_dt - timedelta(minutes=self._MINUTOS_ANTES)
+            ventana_fin = fin_dt
+            if ventana_inicio <= ahora <= ventana_fin:
+                return {
+                    'id': turno.id,
+                    'fecha': turno.fecha.isoformat(),
+                    'hora_inicio': str(turno.hora_inicio)[:5],
+                    'hora_fin': str(turno.hora_fin)[:5],
+                    'notas': turno.notas,
+                    'estado': turno.estado,
+                }
+
+        # Si no hay ninguno activo, devolver el primero futuro
+        turno = turnos[0]
         return {
+            'id': turno.id,
             'fecha': turno.fecha.isoformat(),
             'hora_inicio': str(turno.hora_inicio)[:5],
             'hora_fin': str(turno.hora_fin)[:5],
             'notas': turno.notas,
+            'estado': turno.estado,
         }
 
     def turnos_proximos(self, empleado_id: int, desde: date, hasta: date) -> list[dict]:
@@ -58,7 +90,14 @@ class GestorEmpleadoTurnosMixin:
             return []
 
     def puede_iniciar_turno(self, empleado_id: int) -> dict:
-        """Comprueba si el empleado está dentro de la ventana de fichaje de su turno de hoy."""
+        """Comprueba si el empleado puede abrir turno AHORA.
+
+        Validaciones:
+        1. Existe un turno activo para hoy
+        2. No está completado
+        3. No hay otro CheckIn abierto hoy
+        4. Está dentro de la ventana de fichaje (desde -10 min antes hasta hora_fin)
+        """
         turno_data = self.turno_hoy(empleado_id)
         if turno_data is None:
             return {
@@ -69,12 +108,44 @@ class GestorEmpleadoTurnosMixin:
                 'ventana_hasta': None,
             }
 
-        hoy = date.today()
-        turno = self.session.query(Turno).filter_by(
-            empleado_id=empleado_id,
-            fecha=hoy,
-        ).first()
+        turno_id = turno_data['id']
+        turno = self.session.query(Turno).filter_by(id=turno_id).first()
+        if not turno:
+            return {
+                'puede': False,
+                'razon': 'Turno no encontrado',
+                'turno_id': None,
+                'ventana_desde': None,
+                'ventana_hasta': None,
+            }
 
+        # Verificar si ya está completado
+        if turno.estado == 'completado':
+            return {
+                'puede': False,
+                'razon': 'Turno ya completado',
+                'turno_id': turno_id,
+                'ventana_desde': None,
+                'ventana_hasta': None,
+            }
+
+        # Verificar si hay CheckIn abierto para este turno
+        checkin_abierto = self.session.query(CheckIn).filter(
+            CheckIn.empleado_id == empleado_id,
+            CheckIn.turno_id == turno_id,
+            CheckIn.fin == None,
+        ).first()
+        if checkin_abierto:
+            return {
+                'puede': False,
+                'razon': 'Ya tienes un turno en curso',
+                'turno_id': turno_id,
+                'ventana_desde': None,
+                'ventana_hasta': None,
+            }
+
+        # Calcular ventana: desde -MINUTOS_ANTES hasta hora_fin
+        hoy = date.today()
         inicio_turno = datetime(
             turno.fecha.year,
             turno.fecha.month,
@@ -82,20 +153,27 @@ class GestorEmpleadoTurnosMixin:
             turno.hora_inicio.hour,
             turno.hora_inicio.minute,
         )
+        fin_turno = datetime(
+            turno.fecha.year,
+            turno.fecha.month,
+            turno.fecha.day,
+            turno.hora_fin.hour,
+            turno.hora_fin.minute,
+        )
+
         ventana_desde = inicio_turno - timedelta(minutes=self._MINUTOS_ANTES)
-        ventana_hasta = inicio_turno + timedelta(minutes=self._MINUTOS_DESPUES)
+        ventana_hasta = fin_turno  # Permite fichar hasta la hora de fin del turno
 
         ahora = datetime.now()
-        ahora_comparable = datetime(hoy.year, hoy.month, hoy.day, ahora.hour, ahora.minute)
 
-        if not (ventana_desde <= ahora_comparable <= ventana_hasta):
+        if not (ventana_desde <= ahora <= ventana_hasta):
             return {
                 'puede': False,
                 'razon': (
                     f"Fuera del horario de fichaje "
                     f"(ventana {ventana_desde.strftime('%H:%M')}-{ventana_hasta.strftime('%H:%M')})"
                 ),
-                'turno_id': turno.id,
+                'turno_id': turno_id,
                 'ventana_desde': ventana_desde.strftime('%H:%M'),
                 'ventana_hasta': ventana_hasta.strftime('%H:%M'),
             }
@@ -103,7 +181,7 @@ class GestorEmpleadoTurnosMixin:
         return {
             'puede': True,
             'razon': None,
-            'turno_id': turno.id,
+            'turno_id': turno_id,
             'ventana_desde': ventana_desde.strftime('%H:%M'),
             'ventana_hasta': ventana_hasta.strftime('%H:%M'),
         }

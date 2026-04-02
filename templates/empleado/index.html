@@ -17,7 +17,7 @@
   </style>
 </head>
 <body class="bg-gray-900 min-h-screen"
-      x-data="empleadoHub({{ empleado_id or 'null' }}, '{{ rol or '' }}')"
+      x-data="empleadoHub({{ empleado_id or 'null' }}, '{{ rol or '' }}', '{{ app_mode or 'warehouse' }}')"
       x-init="init()">
 
   <!-- ======== HEADER ======== -->
@@ -84,7 +84,7 @@
       <div class="grid grid-cols-2 gap-2">
         <div class="bg-gray-800 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <p class="text-xs text-gray-500">Sin picker</p>
+            <p class="text-xs text-gray-500" x-text="appMode === 'restaurant' ? 'Sin cocinero' : 'Sin picker'"></p>
             <p class="text-xl font-bold mt-0.5"
                :class="metricas.sin_picker > 0 ? 'text-amber-400' : 'text-gray-600'"
                x-text="metricas.sin_picker ?? '—'"></p>
@@ -239,10 +239,11 @@
 
   <!-- ======== ALPINE COMPONENT ======== -->
   <script>
-  function empleadoHub(empleadoId, rol) {
+  function empleadoHub(empleadoId, rol, appMode) {
     return {
       empleadoId,
       rol,
+      appMode,
       perfil:          { estado_operativo: 'desconectado' },
       turno:           null,
       metricas:        {},
@@ -279,8 +280,8 @@
       get estadoBg() {
         return { disponible: 'bg-green-950 border-green-900', ocupado: 'bg-amber-950 border-amber-900', en_pausa: 'bg-purple-950 border-purple-900', desconectado: 'bg-gray-800 border-gray-700' }[this.perfil.estado_operativo] || 'bg-gray-800 border-gray-700';
       },
-      get appUrl()          { return this.rol === 'repartidor' ? '/repartidor' : '/picker'; },
-      get appLabel()        { return this.rol === 'repartidor' ? '🛵 App Reparto' : '🛒 App Picking'; },
+      get appUrl()          { return this.rol === 'repartidor' ? '/repartidor' : (this.appMode === 'restaurant' ? '/cocina' : '/picker'); },
+      get appLabel()        { return this.rol === 'repartidor' ? '🛵 App Reparto' : (this.appMode === 'restaurant' ? '👨‍🍳 App Cocina' : '🛒 App Picking'); },
       get appGradient()     { return this.rol === 'repartidor' ? 'bg-gradient-to-r from-orange-600 to-orange-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'; },
       get appSubtitleColor(){ return this.rol === 'repartidor' ? 'text-orange-200' : 'text-blue-200'; },
       get appBtnColor()     { return this.rol === 'repartidor' ? 'text-orange-600' : 'text-blue-600'; },
