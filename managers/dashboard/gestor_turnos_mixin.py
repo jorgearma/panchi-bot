@@ -78,11 +78,6 @@ class GestorTurnosMixin:
         resultado = []
         for emp in empleados:
             turno = turnos_hoy_map.get(emp.EmpleadoID)
-
-            # Solo incluir empleados con turno hoy
-            if not turno:
-                continue
-
             ci = checkins_hoy.get(emp.EmpleadoID)
             minutos_activo = None
             if ci:
@@ -100,8 +95,7 @@ class GestorTurnosMixin:
                 'minutos_activo':   minutos_activo,
                 'activo':           ci is not None and ci.fin is None,
                 'minutos_tarde':    ci.minutos_tarde if ci else None,
-                # Turno planificado
-                'tiene_turno':      True,  # Ya filtramos arriba
+                'tiene_turno':      turno is not None,
                 'turno_id':         turno.id if turno else None,
                 'turno_hora_inicio': str(turno.hora_inicio)[:5] if turno and turno.hora_inicio else None,
                 'turno_hora_fin':    str(turno.hora_fin)[:5] if turno and turno.hora_fin else None,
@@ -112,8 +106,8 @@ class GestorTurnosMixin:
                 ),
             })
 
-        # Ordenar alfabéticamente por nombre
-        resultado.sort(key=lambda e: e['nombre'])
+        # Con turno primero, luego sin turno — cada grupo alfabético
+        resultado.sort(key=lambda e: (0 if e['tiene_turno'] else 1, e['nombre']))
 
         n_con_checkin   = sum(1 for e in resultado if e['activo'])
         n_pausa         = sum(1 for e in resultado if e['estado_operativo'] == 'en_pausa')
