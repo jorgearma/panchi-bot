@@ -51,130 +51,135 @@
     </div>
 
     <div class="container">
-      <div class="hero-top" data-reveal>
-        <div class="hero-badge">
-          <span class="badge-pulse"></span>
-          Funciona 24/7 sin que hagas nada
-        </div>
+      <div class="hero-layout">
 
-        <h1 class="hero-title">
-          Tu restaurante<br/>en piloto automático<br/>
-          con <span class="title-accent">WhatsApp</span>
-        </h1>
-
-        <p class="hero-subtitle">
-          Tus clientes piden por WhatsApp, pagan en segundos, y tu restaurante funciona solo.
-          Cero apps nuevas. Cero teléfonos sonando. Cero complicaciones.
-        </p>
-
-        <div class="hero-actions">
-          <a href="#demo" class="btn btn-primary btn-lg">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Ver demo en vivo
-          </a>
-          <a href="#contact" class="btn btn-ghost btn-lg">Habla con ventas</a>
-        </div>
-      </div>
-
-      <!-- FLOATING PHONES -->
-      <div class="hero-phones" id="heroPhones">
-        <div class="hero-phone-shadow hero-phone-shadow--left"></div>
-        <div class="hero-phone-shadow hero-phone-shadow--right"></div>
-
-        <div class="phone-mockup hero-phone hero-phone--left" data-parallax-speed="1.2">
-          <div class="phone-notch"></div>
-          <div class="phone-screen">
-            <div class="wa-header">
-              <div class="wa-avatar">🍔</div>
-              <div class="wa-info">
-                <span class="wa-name">Panchi Bot</span>
-                <span class="wa-status">responde al instante</span>
+        <!-- LEFT PHONE — WhatsApp chat -->
+        <div class="hero-phone-col hero-phone-col--left">
+          <div class="phone-mockup hero-phone hero-phone--left">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="wa-header">
+                <div class="wa-avatar">🍔</div>
+                <div class="wa-info">
+                  <span class="wa-name">Panchi Bot</span>
+                  <span class="wa-status">responde al instante</span>
+                </div>
               </div>
-            </div>
-            <div class="wa-chat hero-chat-static">
-              <div class="wa-bubble wa-bubble-user">
-                Quiero repetir mi pedido del viernes
-                <div class="wa-bubble-time">20:11</div>
+              <div class="wa-chat hero-chat-static">
+                <div class="wa-bubble wa-bubble-user">
+                  Quiero repetir mi pedido del viernes
+                  <div class="wa-bubble-time">20:11</div>
+                </div>
+                <div class="wa-bubble wa-bubble-bot">
+                  Perfecto. Te preparo burger trufada, patatas y bebida.
+                  <div class="wa-bubble-time">20:11</div>
+                </div>
+                <div class="wa-bubble wa-bubble-bot">
+                  Pago online en un toque y entrega estimada en 22 min.
+                  <div class="wa-bubble-time">20:12</div>
+                </div>
+                <div class="hero-chat-highlights">
+                  <span>Recompra automática</span>
+                  <span>Upselling inteligente</span>
+                  <span>24/7</span>
+                </div>
               </div>
-              <div class="wa-bubble wa-bubble-bot">
-                Perfecto. Te preparo burger trufada, patatas y bebida.
-                <div class="wa-bubble-time">20:11</div>
+              <div class="hero-phone-footer">
+                <span>Ticket medio</span>
+                <strong>+18%</strong>
               </div>
-              <div class="wa-bubble wa-bubble-bot">
-                Pago online en un toque y entrega estimada en 22 min.
-                <div class="wa-bubble-time">20:12</div>
-              </div>
-              <div class="hero-chat-highlights">
-                <span>Recompra automática</span>
-                <span>Upselling inteligente</span>
-                <span>24/7</span>
-              </div>
-            </div>
-            <div class="hero-phone-footer">
-              <span>Ticket medio</span>
-              <strong>+18%</strong>
             </div>
           </div>
         </div>
 
-        <div class="phone-mockup hero-phone hero-phone--right" data-parallax-speed="0.8">
-          <div class="phone-notch"></div>
-          <div class="phone-screen">
-            <div class="hero-ops-header">
-              <span class="hero-ops-eyebrow">Operativa en tiempo real</span>
-              <strong>Turno de cena</strong>
-            </div>
-            <div class="hero-ops-body">
-              <div class="hero-ops-grid">
-                <div class="hero-ops-card">
-                  <span>Pedidos activos</span>
-                  <strong>18</strong>
+        <!-- COPY -->
+        <div class="hero-top" data-reveal>
+          <div class="hero-badge">
+            <span class="badge-pulse"></span>
+            Funciona 24/7 sin que hagas nada
+          </div>
+
+          <h1 class="hero-title">
+            Tu restaurante<br/>en piloto automático<br/>
+            con <span class="title-accent">WhatsApp</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            Tus clientes piden por WhatsApp, pagan en segundos, y tu restaurante funciona solo.
+            Cero apps nuevas. Cero teléfonos sonando. Cero complicaciones.
+          </p>
+
+          <div class="hero-actions">
+            <a href="#demo" class="btn btn-primary btn-lg">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Ver demo en vivo
+            </a>
+            <a href="#contact" class="btn btn-ghost btn-lg">Habla con ventas</a>
+          </div>
+        </div>
+
+        <!-- RIGHT PHONE — Dashboard operativo -->
+        <div class="hero-phone-col hero-phone-col--right">
+          <div class="phone-mockup hero-phone hero-phone--right">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="hero-ops-header">
+                <span class="hero-ops-eyebrow">Operativa en tiempo real</span>
+                <strong>Turno de cena</strong>
+              </div>
+              <div class="hero-ops-body">
+                <div class="hero-ops-grid">
+                  <div class="hero-ops-card">
+                    <span>Pedidos activos</span>
+                    <strong>18</strong>
+                  </div>
+                  <div class="hero-ops-card">
+                    <span>Pago online</span>
+                    <strong>74%</strong>
+                  </div>
+                  <div class="hero-ops-card">
+                    <span>Tiempo medio</span>
+                    <strong>16 min</strong>
+                  </div>
+                  <div class="hero-ops-card">
+                    <span>Valoración</span>
+                    <strong>4.9/5</strong>
+                  </div>
                 </div>
-                <div class="hero-ops-card">
-                  <span>Pago online</span>
-                  <strong>74%</strong>
-                </div>
-                <div class="hero-ops-card">
-                  <span>Tiempo medio</span>
-                  <strong>16 min</strong>
-                </div>
-                <div class="hero-ops-card">
-                  <span>Valoración</span>
-                  <strong>4.9/5</strong>
+                <div class="hero-orders">
+                  <div class="hero-orders-title">Pedidos en curso</div>
+                  <div class="hero-order-row">
+                    <span>#2481</span>
+                    <strong>Preparando</strong>
+                    <small>8 min</small>
+                  </div>
+                  <div class="hero-order-row">
+                    <span>#2482</span>
+                    <strong>Listo</strong>
+                    <small>2 min</small>
+                  </div>
+                  <div class="hero-order-row">
+                    <span>#2483</span>
+                    <strong>En reparto</strong>
+                    <small>12 min</small>
+                  </div>
                 </div>
               </div>
-              <div class="hero-orders">
-                <div class="hero-orders-title">Pedidos en curso</div>
-                <div class="hero-order-row">
-                  <span>#2481</span>
-                  <strong>Preparando</strong>
-                  <small>8 min</small>
+              <div class="tracking-bar hero-tracking-bar">
+                <div class="tracking-steps">
+                  <div class="track-step done"><div class="track-dot"></div><span>Pedido</span></div>
+                  <div class="track-line done"></div>
+                  <div class="track-step done"><div class="track-dot"></div><span>Cocina</span></div>
+                  <div class="track-line done"></div>
+                  <div class="track-step active"><div class="track-dot"></div><span>Rider</span></div>
+                  <div class="track-line"></div>
+                  <div class="track-step"><div class="track-dot"></div><span>Entrega</span></div>
                 </div>
-                <div class="hero-order-row">
-                  <span>#2482</span>
-                  <strong>Listo</strong>
-                  <small>2 min</small>
-                </div>
-                <div class="hero-order-row">
-                  <span>#2483</span>
-                  <strong>En reparto</strong>
-                  <small>12 min</small>
-                </div>
-              </div>
-            </div>
-            <div class="tracking-bar hero-tracking-bar">
-              <div class="tracking-steps">
-                <div class="track-step done"><div class="track-dot"></div><span>Pedido</span></div>
-                <div class="track-line done"></div>
-                <div class="track-step done"><div class="track-dot"></div><span>Cocina</span></div>
-                <div class="track-line done"></div>
-                <div class="track-step active"><div class="track-dot"></div><span>Rider</span></div>
-                <div class="track-line"></div>
-                <div class="track-step"><div class="track-dot"></div><span>Entrega</span></div>
               </div>
             </div>
           </div>
         </div>
+
       </div>
 
       <!-- STATS -->
