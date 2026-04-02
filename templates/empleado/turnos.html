@@ -149,6 +149,7 @@
 
         estadoBadge(estado) {
           if (estado === 'cancelado')   return 'bg-red-900 text-red-300';
+          if (estado === 'completado')  return 'bg-blue-900 text-blue-300';
           if (estado === 'planificado') return 'bg-green-900 text-green-300';
           return 'bg-gray-700 text-gray-300';
         },

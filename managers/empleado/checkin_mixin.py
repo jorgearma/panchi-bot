@@ -48,15 +48,20 @@ class GestorEmpleadoCheckinMixin:
         minutos_tarde = None
         if turno_id is not None:
             turno = s.query(Turno).filter_by(id=turno_id).first()
-            if turno and turno.fecha == hoy:
-                inicio_planificado = datetime(
-                    hoy.year,
-                    hoy.month,
-                    hoy.day,
-                    turno.hora_inicio.hour,
-                    turno.hora_inicio.minute,
-                )
-                minutos_tarde = int((ahora - inicio_planificado).total_seconds() / 60)
+            if turno:
+                # Validar que el turno no esté completado
+                if turno.estado == 'completado':
+                    raise ValueError('turno_ya_completado')
+
+                if turno.fecha == hoy:
+                    inicio_planificado = datetime(
+                        hoy.year,
+                        hoy.month,
+                        hoy.day,
+                        turno.hora_inicio.hour,
+                        turno.hora_inicio.minute,
+                    )
+                    minutos_tarde = int((ahora - inicio_planificado).total_seconds() / 60)
 
         empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
         check_in = CheckIn(
@@ -88,7 +93,9 @@ class GestorEmpleadoCheckinMixin:
         return check_in
 
     def cerrar_turno(self, empleado_id: int) -> dict:
-        """Cierra el CheckIn activo de hoy. Lanza ValueError('no_abierto') si no hay ninguno."""
+        """Cierra el CheckIn activo de hoy. Lanza ValueError('no_abierto') si no hay ninguno.
+        Además marca el turno asociado como 'completado'.
+        """
         s = self.session
         ahora = datetime.utcnow()
 
@@ -99,6 +106,13 @@ class GestorEmpleadoCheckinMixin:
         try:
             self._cerrar_tramo_activo(check_in, ahora)
             check_in.fin = ahora
+
+            # Marcar turno asociado como completado
+            if check_in.turno_id:
+                turno = s.query(Turno).filter_by(id=check_in.turno_id).first()
+                if turno and turno.estado == 'planificado':
+                    turno.estado = 'completado'
+
             s.commit()
         except SQLAlchemyError as e:
             s.rollback()
