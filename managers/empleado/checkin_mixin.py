@@ -113,6 +113,10 @@ class GestorEmpleadoCheckinMixin:
                 if turno and turno.estado == 'planificado':
                     turno.estado = 'completado'
 
+            empleado = s.query(Empleado).filter_by(EmpleadoID=empleado_id).first()
+            if empleado:
+                empleado.estado_operativo = 'desconectado'
+
             s.commit()
         except SQLAlchemyError as e:
             s.rollback()
