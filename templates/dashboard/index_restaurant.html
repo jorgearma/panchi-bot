@@ -332,16 +332,23 @@
                     <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
                          :class="open ? 'mb-2' : 'mb-0'"
                          @click="open = !open">
-                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black bg-sky-500 text-white">P</div>
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black"
+                           :class="picker.tiene_checkin ? 'bg-sky-500 text-white' : 'bg-slate-200 text-slate-400'">P</div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
-                          <span class="text-sm font-bold text-slate-900 truncate" x-text="picker.nombre"></span>
-                          <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                          <span class="text-sm font-bold truncate"
+                                :class="picker.tiene_checkin ? 'text-slate-900' : 'text-slate-400'"
+                                x-text="picker.nombre"></span>
+                          <span x-show="!picker.tiene_checkin"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-400">Sin fichar</span>
+                          <span x-show="picker.tiene_checkin"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
                                 :class="picker.carga.score >= 3 ? 'bg-red-100 text-red-700' : picker.carga.score === 2 ? 'bg-amber-100 text-amber-700' : picker.carga.score === 1 ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-700'"
                                 x-text="picker.carga.label"></span>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-0.5"
-                           x-text="picker.pedidos_activos + ' pedido(s) activos'"></p>
+                        <p class="text-[11px] mt-0.5"
+                           :class="picker.tiene_checkin ? 'text-slate-400' : 'text-slate-300'"
+                           x-text="picker.tiene_checkin ? picker.pedidos_activos + ' pedido(s) activos' : 'Turno asignado — pendiente de entrada'"></p>
                       </div>
                       <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
                            :class="open ? '' : '-rotate-90'"
@@ -405,16 +412,23 @@
                     <div class="flex items-center gap-2 cursor-pointer select-none rounded-2xl px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors"
                          :class="open ? 'mb-2' : 'mb-0'"
                          @click="open = !open">
-                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black bg-orange-500 text-white">R</div>
+                      <div class="h-8 w-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black"
+                           :class="emp.tiene_checkin ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-400'">R</div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
-                          <span class="text-sm font-bold text-slate-900 truncate" x-text="emp.nombre"></span>
-                          <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                          <span class="text-sm font-bold truncate"
+                                :class="emp.tiene_checkin ? 'text-slate-900' : 'text-slate-400'"
+                                x-text="emp.nombre"></span>
+                          <span x-show="!emp.tiene_checkin"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-400">Sin fichar</span>
+                          <span x-show="emp.tiene_checkin"
+                                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
                                 :class="emp.carga.score >= 3 ? 'bg-red-100 text-red-700' : emp.carga.score === 2 ? 'bg-amber-100 text-amber-700' : emp.carga.score === 1 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'"
                                 x-text="emp.carga.label"></span>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-0.5"
-                           x-text="emp.pedidos_activos.length + ' en ruta · ' + emp.entregados_hoy + ' entregados hoy'"></p>
+                        <p class="text-[11px] mt-0.5"
+                           :class="emp.tiene_checkin ? 'text-slate-400' : 'text-slate-300'"
+                           x-text="emp.tiene_checkin ? emp.pedidos_activos.length + ' en ruta · ' + emp.entregados_hoy + ' entregados hoy' : 'Turno asignado — pendiente de entrada'"></p>
                       </div>
                       <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
                            :class="open ? '' : '-rotate-90'"
