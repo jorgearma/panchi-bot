@@ -3,7 +3,7 @@ import logging
 from flask import render_template, request
 
 from blueprints.auth import requiere_rol
-from container import gestor_dashboard
+from container import gestor_dashboard, gestor_empleado
 from blueprints.dashboard._common import _ok, _err
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def register(bp):
     def turnos_hoy():
         """Devuelve los turnos programados para hoy."""
         try:
-            return _ok(gestor_dashboard.turnos_hoy())
+            return _ok(gestor_empleado.turnos_hoy())
         except Exception as e:
             logger.error("Error en /dashboard/turnos/hoy: %s", e)
             return _err("Error interno", 500)
@@ -38,7 +38,7 @@ def register(bp):
             rol         = request.args.get("rol")
             page        = max(int(request.args.get("page", 1)), 1)
             per_page    = int(request.args.get("per_page", 25))
-            return _ok(gestor_dashboard.turnos_historial(
+            return _ok(gestor_empleado.turnos_historial(
                 desde=desde, hasta=hasta, empleado_id=empleado_id,
                 rol=rol, page=page, per_page=per_page,
             ))
@@ -57,7 +57,7 @@ def register(bp):
             rol         = request.args.get('rol') or None
             page        = max(int(request.args.get('page', 1)), 1)
             per_page    = min(int(request.args.get('per_page', 25)), 200)
-            return _ok(gestor_dashboard.turnos_planificacion(
+            return _ok(gestor_empleado.turnos_planificacion(
                 desde=desde, hasta=hasta, empleado_id=empleado_id,
                 rol=rol, page=page, per_page=per_page,
             ))
@@ -77,7 +77,7 @@ def register(bp):
         if not all([empleado_id, fecha, hora_inicio, hora_fin]):
             return _err("Faltan campos: empleado_id, fecha, hora_inicio, hora_fin")
         try:
-            result = gestor_dashboard.crear_turno(
+            result = gestor_empleado.crear_turno(
                 empleado_id=int(empleado_id),
                 fecha=fecha,
                 hora_inicio=hora_inicio,
@@ -98,7 +98,7 @@ def register(bp):
         """Edita los campos permitidos de un turno existente."""
         data = request.get_json(silent=True) or {}
         try:
-            result = gestor_dashboard.editar_turno(
+            result = gestor_empleado.editar_turno(
                 turno_id=turno_id,
                 hora_inicio=data.get('hora_inicio') or None,
                 hora_fin=data.get('hora_fin') or None,
@@ -117,7 +117,7 @@ def register(bp):
     def cancelar_turno_route(turno_id):
         """Cancela un turno manteniendo su rastro histórico."""
         try:
-            result = gestor_dashboard.cancelar_turno(turno_id=turno_id)
+            result = gestor_empleado.cancelar_turno(turno_id=turno_id)
             if not result['ok']:
                 return _err(result['error'])
             return _ok(result)
@@ -130,7 +130,7 @@ def register(bp):
     def eliminar_turno_route(turno_id):
         """Elimina un turno cuando ya no debe conservarse en planificación."""
         try:
-            result = gestor_dashboard.eliminar_turno(turno_id=turno_id)
+            result = gestor_empleado.eliminar_turno(turno_id=turno_id)
             if not result['ok']:
                 return _err(result['error'])
             return _ok(result)
