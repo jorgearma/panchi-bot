@@ -24,10 +24,6 @@ function picker(pickerId) {
     cogiendo: null,
     tabActiva: 'mis-pedidos',
 
-    pedidosColaConocidos: new Set(),
-    esDemoMode: false,
-    pollingColaInternal: null,
-
     modalCantidad: {
       visible: false,
       item: null,
@@ -82,11 +78,6 @@ function picker(pickerId) {
     async init() {
       if (!this.pickerId) return;
       localStorage.setItem('panchi_picker_id', this.pickerId);
-
-      // Detectar modo demo
-      this.esDemoMode = document.documentElement.getAttribute('data-demo-mode') === 'true' ||
-                        window.location.href.includes('/demo');
-
       this.isOnline = navigator.onLine;
       window.addEventListener('online', () => {
         this.isOnline = true;
@@ -97,20 +88,16 @@ function picker(pickerId) {
       });
       await Promise.all([this.recargar(), this.cargarCola()]);
 
-      // Polling normal cada 60 segundos
+      // Detectar modo demo para polling más rápido
+      const esDemoMode = window.location.href.includes('/demo') || window.location.href.includes('/picker/demo');
+      const pollingInterval = esDemoMode ? 5000 : 60000;
+
       setInterval(() => {
         if (this.vistaActual === 'lista') {
-          this.recargar();
+          this.recargar(true);
           this.cargarCola();
         }
-      }, 60000);
-
-      // En modo demo: polling rápido de cola cada 3 segundos para notificaciones
-      if (this.esDemoMode) {
-        this.pollingColaInternal = setInterval(() => {
-          this.cargarColaConNotificaciones();
-        }, 3000);
-      }
+      }, pollingInterval);
     },
 
     async recargar(silencioso = false) {
@@ -166,33 +153,6 @@ function picker(pickerId) {
       } catch (_) {
         this.mostrarToast('Error al cargar la cola', true);
       }
-    },
-
-    async cargarColaConNotificaciones() {
-      const _cacheKey = `panchi_picker_cola_${this.pickerId}`;
-      try {
-        const r = await fetch('/picker/cola');
-        if (r.ok) {
-          const d = await r.json();
-          this.cola = d.cola || [];
-          this.colaTotal = d.total || 0;
-          localStorage.setItem(_cacheKey, JSON.stringify(d));
-
-          // Detectar nuevos pedidos en la cola
-          (d.cola || []).forEach(pedido => {
-            if (!this.pedidosColaConocidos.has(pedido.picking_id)) {
-              this.pedidosColaConocidos.add(pedido.picking_id);
-              // Mostrar notificación de nuevo pedido en cola
-              this.mostrarToastNuevoPedido(pedido);
-            }
-          });
-        }
-      } catch (_) {}
-    },
-
-    mostrarToastNuevoPedido(pedido) {
-      const msg = `📦 Nuevo picking en cola: ${pedido.cliente_nombre} — $${pedido.total.toFixed(2)}`;
-      this.mostrarToast(msg);
     },
 
     async cogerPedido(pickingId) {
