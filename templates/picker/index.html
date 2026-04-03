@@ -99,24 +99,12 @@
     </div>
 
     <!-- Contenido del header -->
-    <div class="relative flex items-center justify-between px-4 py-3">
-      <!-- Izquierda: back + título -->
-      <div class="flex items-center gap-2">
-        <button x-show="vistaActual === 'ticket'"
-                @click="volverALista()"
-                class="p-2 -ml-2 text-gray-400 active:text-white transition text-2xl leading-none">‹</button>
-        <div x-show="vistaActual === 'lista'">
-          <p class="panchi-shimmer text-[11px] font-semibold uppercase tracking-[0.18em] leading-none mb-0.5">Panchi</p>
-          <p class="text-base font-black text-white leading-none tracking-tight">Picking</p>
-        </div>
-        <span class="font-bold text-lg" x-cloak>
-          <span x-show="vistaActual === 'ticket'">Pedido #<span x-text="ticketActual?.pedido_id"></span></span>
-        </span>
+    <div class="relative flex items-center justify-start px-4 py-3">
+      <div>
+        <p class="panchi-shimmer text-[11px] font-semibold uppercase tracking-[0.18em] leading-none mb-0.5">Panchi</p>
+        <p class="text-base font-black text-white leading-none tracking-tight">Picking</p>
       </div>
-      <!-- Derecha: estado + recargar -->
-      <div class="flex items-center gap-2">
-        <span x-show="!isOnline" class="text-xs text-red-400 font-medium" x-cloak>Sin conexión</span>
-      </div>
+      <span x-show="!isOnline" class="ml-auto text-xs text-red-400 font-medium" x-cloak>Sin conexión</span>
     </div>
 
   </div>
@@ -133,8 +121,8 @@
   <!-- ======== SIN PICKER ID ======== -->
   <div x-show="!pickerId" class="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
     <div class="text-5xl mb-4">🔗</div>
-    <h2 class="text-xl font-bold text-gray-700 mb-2">Enlace incompleto</h2>
-    <p class="text-gray-500 text-sm">Accede desde el enlace que te dio el supervisor.<br>Ejemplo: <code class="bg-gray-100 px-1 rounded">/picker?id=3</code></p>
+    <h2 class="text-xl font-bold text-gray-200 mb-2">Enlace incompleto</h2>
+    <p class="text-gray-400 text-sm">Accede desde el enlace que te dio el supervisor.<br>Ejemplo: <code class="bg-gray-800 px-1 rounded">/picker?id=3</code></p>
   </div>
 
   <!-- ======== CARGANDO ======== -->
@@ -154,32 +142,32 @@
           <button @click="tabActiva = 'mis-pedidos'"
                   class="rounded-2xl px-4 py-3 text-left transition"
                   :class="tabActiva === 'mis-pedidos'
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-200'
-                    : 'bg-white/60 text-slate-600'">
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-900'
+                    : 'bg-gray-700/60 text-gray-300'">
             <div class="flex items-center justify-between gap-3">
               <span class="text-sm font-semibold">📦 Mis pedidos</span>
               <span class="rounded-full px-2.5 py-1 text-xs font-bold"
-                    :class="tabActiva === 'mis-pedidos' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    :class="tabActiva === 'mis-pedidos' ? 'bg-white/20 text-white' : 'bg-gray-700 text-gray-300'"
                     x-text="pedidos.length"></span>
             </div>
             <p class="mt-1 text-[11px]"
-               :class="tabActiva === 'mis-pedidos' ? 'text-blue-100' : 'text-slate-400'">
+               :class="tabActiva === 'mis-pedidos' ? 'text-blue-100' : 'text-gray-400'">
               Tus pedidos activos y su avance
             </p>
           </button>
           <button @click="tabActiva = 'cola'"
                   class="rounded-2xl px-4 py-3 text-left transition"
                   :class="tabActiva === 'cola'
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-200'
-                    : 'bg-white/60 text-slate-600'">
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-900'
+                    : 'bg-gray-700/60 text-gray-300'">
             <div class="flex items-center justify-between gap-3">
               <span class="text-sm font-semibold">📋 Cola</span>
               <span class="rounded-full px-2.5 py-1 text-xs font-bold"
-                    :class="tabActiva === 'cola' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'"
+                    :class="tabActiva === 'cola' ? 'bg-white/20 text-white' : 'bg-gray-700 text-gray-300'"
                     x-text="colaTotal"></span>
             </div>
             <p class="mt-1 text-[11px]"
-               :class="tabActiva === 'cola' ? 'text-emerald-100' : 'text-slate-400'">
+               :class="tabActiva === 'cola' ? 'text-emerald-100' : 'text-gray-400'">
               Pedidos disponibles para coger
             </p>
           </button>
@@ -191,38 +179,42 @@
     <div x-show="tabActiva === 'cola'" x-cloak class="mt-4">
 
       <!-- Lista -->
-      <div x-show="cola.length > 0" class="space-y-4">
+      <div x-show="cola.length > 0" class="space-y-2">
         <template x-for="p in cola" :key="p.picking_id">
-          <div class="queue-card rounded-[30px] p-4 text-white slide-up"
-               :class="p.ya_cogido ? 'opacity-45 saturate-50' : ''">
-            <div class="flex items-start justify-between gap-4">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-sm font-semibold text-blue-100">Pedido #<span x-text="p.pedido_id"></span></span>
+          <div class="rounded-xl active:scale-95 transition-transform slide-up overflow-hidden"
+               :class="p.ya_cogido
+                 ? 'border-2 border-red-800 bg-red-950 opacity-50 saturate-50'
+                 : 'border-2 border-blue-800 bg-blue-950'">
+            <div class="px-4 py-3 flex items-center gap-3">
+              <!-- Info principal -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-lg font-black text-white tracking-tight" x-text="p.pedido_id"></span>
+                  <span x-show="!p.ya_cogido"
+                        class="text-xs px-1.5 py-0.5 rounded font-semibold bg-blue-900 text-blue-300">
+                    Disponible
+                  </span>
                   <span x-show="p.ya_cogido"
-                        class="rounded-full bg-red-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-100">
+                        class="text-xs px-1.5 py-0.5 rounded font-semibold bg-red-900 text-red-300">
                     Bloqueado
                   </span>
                 </div>
-                <p class="mt-2 text-sm text-slate-200"
-                   x-show="!p.ya_cogido"
-                   x-text="'Esperando desde hace ' + (p.segundos_esperando < 60
-                     ? p.segundos_esperando + ' segundos'
-                     : Math.floor(p.segundos_esperando / 60) + ' min')"></p>
-                <p class="mt-2 text-sm text-red-100" x-show="p.ya_cogido">Ya cogido por otro picker</p>
+                <div class="text-xs text-gray-400" x-show="!p.ya_cogido"
+                     x-text="p.segundos_esperando < 60 ? p.segundos_esperando + 's esperando' : Math.floor(p.segundos_esperando / 60) + ' min esperando'"></div>
+                <div class="text-xs text-red-400" x-show="p.ya_cogido">Ya cogido por otro picker</div>
               </div>
+              <!-- Acción -->
               <button @click="cogerPedido(p.picking_id)"
                       :disabled="p.ya_cogido || cogiendo !== null"
-                      class="tap-xl rounded-2xl px-5 py-3 text-sm font-bold transition"
+                      class="flex-shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition"
                       :class="p.ya_cogido
-                        ? 'bg-white/10 text-slate-300 cursor-not-allowed'
+                        ? 'bg-white/10 text-gray-500 cursor-not-allowed'
                         : 'bg-white text-slate-900 active:scale-95'">
-                <span x-show="!p.ya_cogido && cogiendo !== p.picking_id">Coger pedido</span>
+                <span x-show="!p.ya_cogido && cogiendo !== p.picking_id">Coger →</span>
                 <span x-show="p.ya_cogido">Cogido</span>
                 <span x-show="cogiendo === p.picking_id && !p.ya_cogido">...</span>
               </button>
             </div>
-
           </div>
         </template>
       </div>
@@ -231,16 +223,16 @@
       <div x-show="cola.length === 0"
            class="section-card flex flex-col items-center justify-center rounded-[32px] py-16 text-center px-6">
         <div class="text-5xl mb-3">📋</div>
-        <p class="text-lg font-bold text-slate-800">La cola está limpia</p>
-        <p class="mt-2 text-sm text-slate-500">No hay pedidos sin asignar ahora mismo.</p>
+        <p class="text-lg font-bold text-gray-200">La cola está limpia</p>
+        <p class="mt-2 text-sm text-gray-400">No hay pedidos sin asignar ahora mismo.</p>
       </div>
     </div>
 
     <div x-show="tabActiva === 'mis-pedidos' && pedidos.length === 0"
          class="section-card mt-4 flex flex-col items-center justify-center min-h-[65vh] rounded-[32px] text-center px-6">
       <div class="text-6xl mb-4">✅</div>
-      <h2 class="text-xl font-bold text-slate-800 mb-2">Sin pedidos asignados</h2>
-      <p class="text-slate-500 text-sm">No tienes pedidos pendientes ahora mismo.</p>
+      <h2 class="text-xl font-bold text-gray-200 mb-2">Sin pedidos asignados</h2>
+      <p class="text-gray-400 text-sm">No tienes pedidos pendientes ahora mismo.</p>
       <button @click="recargar()"
               class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-2xl font-medium active:bg-blue-700 transition tap-xl">
         Actualizar
@@ -251,7 +243,7 @@
       <template x-for="p in pedidos" :key="p.picking_id">
         <div @click="abrirTicket(p)"
              class="order-card overflow-hidden rounded-[30px] border active:scale-[0.985] transition-transform cursor-pointer slide-up"
-             :class="p.picking_completo ? 'border-green-300' : 'border-white/70'">
+             :class="p.picking_completo ? 'border-green-600' : 'border-gray-700/70'">
 
           <!-- Banner de picking completo -->
           <div x-show="p.picking_completo"
@@ -264,16 +256,15 @@
             <div class="flex items-start justify-between gap-4">
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
-                    Pedido #<span x-text="p.pedido_id"></span>
-                  </span>
+                  <span class="rounded-full bg-slate-900 px-3 py-1 text-xl font-black tabular-nums text-white leading-none"
+                        x-text="p.pedido_id"></span>
                   <div class="text-lg font-black leading-tight truncate"
                        :class="colorTiempoDesde(p.iniciado_en)"
                        x-text="p.iniciado_en ? formatMinutosDesde(p.iniciado_en) : 'Recién asignado'"></div>
                 </div>
               </div>
               <div class="text-right flex-shrink-0">
-                <span class="text-xl font-black text-slate-900" x-text="p.total.toFixed(2) + '€'"></span>
+                <span class="text-xl font-black text-white" x-text="p.total.toFixed(2) + '€'"></span>
                 <div class="mt-1.5">
                   <span x-show="p.picking_completo"
                         class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">
@@ -284,11 +275,11 @@
             </div>
 
             <div class="mt-4">
-              <div class="flex justify-between text-xs text-slate-400 mb-2">
+              <div class="flex justify-between text-xs text-gray-400 mb-2">
                 <span x-text="(p.items_listos ?? (p.items_total - p.items_pendientes)) + ' de ' + p.items_total + ' productos'"></span>
                 <span x-text="Math.round((p.items_listos ?? (p.items_total - p.items_pendientes)) / p.items_total * 100) + '%'"></span>
               </div>
-              <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+              <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
                 <div class="h-3 rounded-full transition-all"
                      :class="p.picking_completo ? 'bg-green-500' : 'bg-blue-500'"
                      :style="'width:' + (p.items_total > 0 ? ((p.items_listos ?? (p.items_total - p.items_pendientes)) / p.items_total * 100) : 0) + '%'"></div>
@@ -296,12 +287,12 @@
             </div>
           </div>
 
-          <div class="border-t border-slate-100 px-5 py-3 flex items-center justify-between gap-3 bg-white/70">
-            <div class="flex items-center gap-2 min-w-0 text-xs text-slate-400">
+          <div class="border-t border-gray-700 px-5 py-3 flex items-center justify-between gap-3 bg-gray-800/40">
+            <div class="flex items-center gap-2 min-w-0 text-xs text-gray-500">
               <span x-text="p.iniciado_en ? 'Iniciado ' + formatHora(p.iniciado_en) : 'Recién asignado'"></span>
               <span x-show="p.cliente_nombre" class="truncate" x-text="p.cliente_nombre"></span>
             </div>
-            <span class="text-blue-600 text-sm font-semibold">Abrir ticket →</span>
+            <span class="text-blue-400 text-sm font-semibold">Abrir ticket →</span>
           </div>
         </div>
       </template>
@@ -311,23 +302,26 @@
   <!-- ======== VISTA TICKET ======== -->
   <div x-show="pickerId && vistaActual === 'ticket' && ticketActual" x-cloak class="pb-36">
 
+    <!-- Info del pedido + Progreso -->
+    <div class="mx-3 mt-3 bg-gray-800/50 border border-gray-700 rounded-2xl overflow-hidden">
+
     <!-- Info del pedido -->
-    <div class="bg-white border-b border-gray-100 px-4 py-3">
+    <div class="px-4 py-3 border-b border-gray-700">
       <div class="flex items-center justify-between">
         <div class="flex-1 min-w-0 mr-3">
-          <span class="text-gray-500 text-sm">Cliente</span>
-          <div class="font-semibold truncate" x-text="ticketActual?.cliente_nombre"></div>
+          <span class="text-gray-400 text-sm">Cliente</span>
+          <div class="font-semibold truncate text-white" x-text="ticketActual?.cliente_nombre"></div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
           <!-- Botón llamar al cliente -->
           <a x-show="ticketActual?.cliente_telefono"
              :href="'tel:' + ticketActual?.cliente_telefono"
-             class="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 font-semibold text-sm px-3 py-2 rounded-xl active:bg-blue-100 transition tap-xl">
+             class="flex items-center gap-1.5 bg-blue-900/50 border border-blue-700 text-blue-300 font-semibold text-sm px-3 py-2 rounded-xl active:bg-blue-900 transition tap-xl">
             📞 <span>Llamar</span>
           </a>
           <div class="text-right">
-            <span class="text-gray-500 text-sm">Total</span>
-            <div class="font-bold text-lg" x-text="ticketActual?.total.toFixed(2) + '€'"></div>
+            <span class="text-gray-400 text-sm">Total</span>
+            <div class="font-bold text-lg text-white" x-text="ticketActual?.total.toFixed(2) + '€'"></div>
           </div>
         </div>
       </div>
@@ -338,32 +332,34 @@
     </div>
 
     <!-- Progreso -->
-    <div class="bg-white px-4 py-3 border-b border-gray-100">
-      <div class="flex justify-between text-sm text-gray-500 mb-1.5">
+    <div class="px-4 py-3">
+      <div class="flex justify-between text-sm text-gray-400 mb-1.5">
         <span x-text="itemsCompletados + ' de ' + (ticketActual?.items_total || 0) + ' recogidos'"></span>
         <span x-show="ticketActual?.items_pendientes > 0"
-              class="text-amber-600 font-medium"
+              class="text-amber-500 font-medium"
               x-text="ticketActual?.items_pendientes + ' pendientes'"></span>
         <span x-show="ticketActual?.listo_para_finalizar"
-              class="text-green-600 font-semibold">✓ Todo recogido</span>
+              class="text-green-400 font-semibold">✓ Todo recogido</span>
       </div>
-      <div class="w-full bg-gray-100 rounded-full h-3">
+      <div class="w-full bg-gray-700 rounded-full h-3">
         <div class="h-3 rounded-full transition-all"
              :class="ticketActual?.listo_para_finalizar ? 'bg-green-500' : 'bg-blue-500'"
              :style="'width:' + progresoPorc + '%'"></div>
       </div>
     </div>
 
+    </div><!-- /Info + Progreso wrapper -->
+
     <!-- Lista de items — ordenados por ubicación, pendientes primero -->
     <div class="p-4 space-y-3">
       <template x-for="item in itemsOrdenados" :key="item.item_id">
-        <div class="bg-white rounded-2xl border shadow-sm overflow-hidden slide-up"
+        <div class="bg-gray-800/60 rounded-2xl border overflow-hidden slide-up"
              :class="{
-               'border-green-200 bg-green-50/30':  item.estado === 'encontrado',
-               'border-orange-200 bg-orange-50/30': item.estado === 'sustituido',
-               'border-red-200 bg-red-50/30':       item.estado === 'sin_stock',
-               'border-gray-100':                   item.estado === 'pendiente',
-               'ring-2 ring-blue-400 ring-offset-1': item.item_id === primerPendiente?.item_id && item.estado === 'pendiente',
+               'border-green-700 bg-green-900/20':  item.estado === 'encontrado',
+               'border-orange-700 bg-orange-900/20': item.estado === 'sustituido',
+               'border-red-800 bg-red-900/20':       item.estado === 'sin_stock',
+               'border-gray-700':                    item.estado === 'pendiente',
+               'ring-2 ring-blue-400 ring-offset-1 ring-offset-gray-900': item.item_id === primerPendiente?.item_id && item.estado === 'pendiente',
              }">
 
           <!-- Indicador "siguiente" en el primer pendiente -->
@@ -376,7 +372,7 @@
           <div class="flex gap-3 p-4 pb-3">
 
             <!-- Imagen -->
-            <div class="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+            <div class="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gray-700 border border-gray-600">
               <img x-show="item.imagen"
                    :src="item.imagen"
                    :alt="item.nombre"
@@ -391,13 +387,13 @@
             <!-- Info -->
             <div class="flex-1 min-w-0">
               <div class="flex items-start justify-between gap-2">
-                <div class="font-bold text-gray-900 leading-tight text-base" x-text="item.nombre"></div>
+                <div class="font-bold text-white leading-tight text-base" x-text="item.nombre"></div>
                 <div x-show="item.estado === 'encontrado'"
-                     class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-green-600 font-bold text-sm">✓</div>
+                     class="flex-shrink-0 w-8 h-8 bg-green-900/50 rounded-lg flex items-center justify-center text-green-400 font-bold text-sm">✓</div>
                 <div x-show="item.estado === 'sustituido'"
-                     class="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold text-sm">↔</div>
+                     class="flex-shrink-0 w-8 h-8 bg-orange-900/50 rounded-lg flex items-center justify-center text-orange-400 font-bold text-sm">↔</div>
                 <div x-show="item.estado === 'sin_stock'"
-                     class="flex-shrink-0 w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-red-500 font-bold text-sm">✗</div>
+                     class="flex-shrink-0 w-8 h-8 bg-red-900/50 rounded-lg flex items-center justify-center text-red-400 font-bold text-sm">✗</div>
               </div>
 
               <!-- Cantidad pedida / encontrada -->
@@ -412,14 +408,14 @@
 
               <!-- Ubicación -->
               <div x-show="item.ubicacion" class="mt-1.5">
-                <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-sm font-bold px-2.5 py-1 rounded-lg">
+                <span class="inline-flex items-center gap-1 bg-amber-900/30 text-amber-400 border border-amber-700 text-sm font-bold px-2.5 py-1 rounded-lg">
                   📍 <span x-text="item.ubicacion"></span>
                 </span>
               </div>
 
               <!-- Motivo registrado (solo en items completados) -->
               <div x-show="item.estado !== 'pendiente' && item.notas" class="mt-1.5">
-                <span class="text-xs text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-md font-medium"
+                <span class="text-xs text-gray-400 bg-gray-700/50 border border-gray-600 px-2 py-0.5 rounded-md font-medium"
                       x-text="formatMotivo(item.notas)"></span>
               </div>
             </div>
@@ -439,7 +435,7 @@
             <!-- Sin stock: 25% — ahora abre modal -->
             <button @click="abrirModalSinStock(item)"
                     :disabled="item._guardando"
-                    class="flex-1 bg-gray-100 active:bg-red-100 text-red-500 border border-gray-200 rounded-xl font-semibold text-sm transition-transform active:scale-95 disabled:opacity-40 tap-xl">
+                    class="flex-1 bg-gray-700 active:bg-red-900/30 text-red-400 border border-gray-600 rounded-xl font-semibold text-sm transition-transform active:scale-95 disabled:opacity-40 tap-xl">
               ✗
             </button>
           </div>
@@ -448,7 +444,7 @@
           <div x-show="item.estado !== 'pendiente'" class="px-4 pb-4">
             <button @click="marcarItem(item, 'pendiente', {})"
                     :disabled="item._guardando"
-                    class="w-full border border-gray-200 rounded-xl py-3 text-sm text-gray-500 active:bg-gray-50 disabled:opacity-40 transition tap-xl">
+                    class="w-full border border-gray-700 rounded-xl py-3 text-sm text-gray-400 active:bg-gray-700/50 disabled:opacity-40 transition tap-xl">
               ↩ Deshacer
             </button>
           </div>
@@ -459,7 +455,7 @@
 
   <!-- ======== BOTÓN FINALIZAR ======== -->
   <div x-show="vistaActual === 'ticket' && ticketActual" x-cloak
-       class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-20">
+       class="fixed bottom-0 left-0 right-0 p-4 bg-gray-900 border-t border-gray-700 shadow-lg z-20">
 
     <div x-show="!ticketActual?.listo_para_finalizar"
          class="text-center text-sm text-gray-400 mb-2">
@@ -470,8 +466,8 @@
             :disabled="!ticketActual?.listo_para_finalizar || finalizando"
             class="w-full py-4 rounded-2xl font-bold text-lg transition-all active:scale-95"
             :class="ticketActual?.listo_para_finalizar
-              ? 'bg-green-500 active:bg-green-600 text-white shadow-lg shadow-green-200'
-              : 'bg-gray-100 text-gray-300 cursor-not-allowed'">
+              ? 'bg-green-500 active:bg-green-600 text-white shadow-lg shadow-green-900'
+              : 'bg-gray-800 text-gray-600 cursor-not-allowed'">
       <span x-show="!finalizando">
         <span x-show="ticketActual?.listo_para_finalizar">✓ Finalizar picking</span>
         <span x-show="!ticketActual?.listo_para_finalizar"
@@ -497,15 +493,15 @@
        x-transition:leave="transition ease-in duration-150"
        x-transition:leave-start="translate-y-0 opacity-100"
        x-transition:leave-end="translate-y-full opacity-0"
-       class="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl p-6">
-    <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
-    <div class="text-lg font-bold text-gray-900 mb-1">¿Finalizar picking?</div>
-    <p class="text-sm text-gray-500 mb-6">
+       class="fixed bottom-0 inset-x-0 z-50 bg-gray-800 rounded-t-3xl shadow-2xl p-6">
+    <div class="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-5"></div>
+    <div class="text-lg font-bold text-white mb-1">¿Finalizar picking?</div>
+    <p class="text-sm text-gray-400 mb-6">
       El pedido pasará a <strong>preparado</strong> y se avisará al repartidor.<br>Esta acción no se puede deshacer desde aquí.
     </p>
     <div class="flex gap-3">
       <button @click="confirmarFinalizar = false"
-              class="flex-1 border border-gray-200 rounded-xl py-4 text-gray-600 font-semibold text-sm active:bg-gray-50 tap-xl">
+              class="flex-1 border border-gray-700 rounded-xl py-4 text-gray-300 font-semibold text-sm active:bg-gray-700 tap-xl">
         Cancelar
       </button>
       <button @click="confirmarFinalizar = false; finalizarPicking()"
@@ -542,15 +538,15 @@
        x-transition:leave="transition ease-in duration-150"
        x-transition:leave-start="translate-y-0 opacity-100"
        x-transition:leave-end="translate-y-full opacity-0"
-       class="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl">
+       class="fixed bottom-0 inset-x-0 z-50 bg-gray-800 rounded-t-3xl shadow-2xl">
 
     <!-- Handle -->
-    <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-5"></div>
+    <div class="w-12 h-1 bg-gray-600 rounded-full mx-auto mt-3 mb-5"></div>
 
     <!-- Título -->
-    <div class="px-5 pb-4 border-b border-gray-100">
-      <div class="font-bold text-gray-900 text-lg" x-text="modalCantidad.item?.nombre"></div>
-      <div class="text-sm text-gray-500 mt-0.5"
+    <div class="px-5 pb-4 border-b border-gray-700">
+      <div class="font-bold text-white text-lg" x-text="modalCantidad.item?.nombre"></div>
+      <div class="text-sm text-gray-400 mt-0.5"
            x-text="'Pedido: ' + (modalCantidad.item?.cantidad || 0) + ' unidades'"></div>
     </div>
 
@@ -564,9 +560,9 @@
 
     <!-- Divisor -->
     <div class="flex items-center px-5 pb-5 gap-3">
-      <div class="flex-1 h-px bg-gray-200"></div>
+      <div class="flex-1 h-px bg-gray-700"></div>
       <span class="text-xs text-gray-400 font-medium">o ajustar si faltan</span>
-      <div class="flex-1 h-px bg-gray-200"></div>
+      <div class="flex-1 h-px bg-gray-700"></div>
     </div>
 
     <!-- Stepper -->
@@ -574,14 +570,14 @@
       <div class="flex items-center justify-center gap-6">
         <button @click="ajustarCantidad(-1)"
                 :disabled="modalCantidad.cantidad <= 0"
-                class="w-16 h-16 bg-gray-100 rounded-2xl text-3xl font-bold text-gray-600 active:bg-gray-200 disabled:opacity-30 flex items-center justify-center tap-xl">
+                class="w-16 h-16 bg-gray-700 rounded-2xl text-3xl font-bold text-gray-300 active:bg-gray-600 disabled:opacity-30 flex items-center justify-center tap-xl">
           −
         </button>
-        <span class="text-5xl font-extrabold text-gray-900 w-20 text-center tabular-nums"
+        <span class="text-5xl font-extrabold text-white w-20 text-center tabular-nums"
               x-text="modalCantidad.cantidad"></span>
         <button @click="ajustarCantidad(1)"
                 :disabled="modalCantidad.cantidad >= (modalCantidad.item?.cantidad || 0)"
-                class="w-16 h-16 bg-gray-100 rounded-2xl text-3xl font-bold text-gray-600 active:bg-gray-200 disabled:opacity-30 flex items-center justify-center tap-xl">
+                class="w-16 h-16 bg-gray-700 rounded-2xl text-3xl font-bold text-gray-300 active:bg-gray-600 disabled:opacity-30 flex items-center justify-center tap-xl">
           +
         </button>
       </div>
@@ -599,7 +595,7 @@
     <!-- Acciones -->
     <div class="px-5 pb-8 flex gap-3">
       <button @click="cancelarModalCantidad()"
-              class="flex-1 border border-gray-200 rounded-xl py-4 text-gray-600 font-semibold text-sm active:bg-gray-50 tap-xl">
+              class="flex-1 border border-gray-700 rounded-xl py-4 text-gray-300 font-semibold text-sm active:bg-gray-700 tap-xl">
         Cancelar
       </button>
       <button @click="confirmarCantidad()"
@@ -627,40 +623,40 @@
        x-transition:leave="transition ease-in duration-150"
        x-transition:leave-start="translate-y-0 opacity-100"
        x-transition:leave-end="translate-y-full opacity-0"
-       class="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[88vh] overflow-y-auto">
+       class="fixed bottom-0 inset-x-0 z-50 bg-gray-800 rounded-t-3xl shadow-2xl max-h-[88vh] overflow-y-auto">
 
     <!-- Handle -->
-    <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-5"></div>
+    <div class="w-12 h-1 bg-gray-600 rounded-full mx-auto mt-3 mb-5"></div>
 
     <!-- Título -->
-    <div class="px-5 pb-4 border-b border-gray-100">
-      <div class="font-bold text-gray-900 text-lg" x-text="modalSinStock.item?.nombre"></div>
-      <div class="text-sm text-gray-500 mt-0.5"
+    <div class="px-5 pb-4 border-b border-gray-700">
+      <div class="font-bold text-white text-lg" x-text="modalSinStock.item?.nombre"></div>
+      <div class="text-sm text-gray-400 mt-0.5"
            x-text="(modalSinStock.item?.cantidad || 0) + ' unidades pedidas'"></div>
     </div>
 
     <!-- Motivo -->
-    <div class="px-5 py-4 border-b border-gray-100">
-      <div class="text-sm font-semibold text-gray-600 mb-3">¿Motivo?</div>
+    <div class="px-5 py-4 border-b border-gray-700">
+      <div class="text-sm font-semibold text-gray-300 mb-3">¿Motivo?</div>
       <div class="grid grid-cols-3 gap-2">
         <button @click="modalSinStock.motivo = 'sin_stock'"
                 :class="modalSinStock.motivo === 'sin_stock'
-                  ? 'bg-red-100 border-red-300 text-red-700'
-                  : 'bg-gray-50 border-gray-200 text-gray-600'"
+                  ? 'bg-red-900/40 border-red-700 text-red-300'
+                  : 'bg-gray-700 border-gray-600 text-gray-300'"
                 class="border rounded-xl py-3 px-2 text-xs font-semibold text-center transition-colors tap-xl">
           📦<br>Sin stock
         </button>
         <button @click="modalSinStock.motivo = 'dañado'"
                 :class="modalSinStock.motivo === 'dañado'
-                  ? 'bg-red-100 border-red-300 text-red-700'
-                  : 'bg-gray-50 border-gray-200 text-gray-600'"
+                  ? 'bg-red-900/40 border-red-700 text-red-300'
+                  : 'bg-gray-700 border-gray-600 text-gray-300'"
                 class="border rounded-xl py-3 px-2 text-xs font-semibold text-center transition-colors tap-xl">
           🚫<br>Dañado
         </button>
         <button @click="modalSinStock.motivo = 'no_encuentro'"
                 :class="modalSinStock.motivo === 'no_encuentro'
-                  ? 'bg-red-100 border-red-300 text-red-700'
-                  : 'bg-gray-50 border-gray-200 text-gray-600'"
+                  ? 'bg-red-900/40 border-red-700 text-red-300'
+                  : 'bg-gray-700 border-gray-600 text-gray-300'"
                 class="border rounded-xl py-3 px-2 text-xs font-semibold text-center transition-colors tap-xl">
           🔍<br>No lo encuentro
         </button>
@@ -668,21 +664,21 @@
     </div>
 
     <!-- Sustitución -->
-    <div class="px-5 py-4 border-b border-gray-100">
-      <div class="text-sm font-semibold text-gray-600 mb-3">
-        Sustituto <span class="font-normal text-gray-400">(opcional)</span>
+    <div class="px-5 py-4 border-b border-gray-700">
+      <div class="text-sm font-semibold text-gray-300 mb-3">
+        Sustituto <span class="font-normal text-gray-500">(opcional)</span>
       </div>
 
       <!-- Sustituto seleccionado -->
       <div x-show="modalSinStock.sustituto" class="mb-3">
-        <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+        <div class="flex items-center justify-between bg-green-900/30 border border-green-700 rounded-xl px-4 py-3">
           <div>
-            <div class="font-semibold text-green-800 text-sm" x-text="modalSinStock.sustituto?.nombre"></div>
-            <div class="text-xs text-green-600 mt-0.5"
+            <div class="font-semibold text-green-300 text-sm" x-text="modalSinStock.sustituto?.nombre"></div>
+            <div class="text-xs text-green-400 mt-0.5"
                  x-text="modalSinStock.sustituto?.precio?.toFixed(2) + '€'"></div>
           </div>
           <button @click="limpiarSustituto()"
-                  class="w-8 h-8 flex items-center justify-center text-green-600 active:text-green-800 text-lg">
+                  class="w-8 h-8 flex items-center justify-center text-green-400 active:text-green-300 text-lg">
             ✕
           </button>
         </div>
@@ -696,22 +692,22 @@
                  @input.debounce.300ms="buscarSustitutos($event.target.value)"
                  placeholder="Buscar producto sustituto..."
                  autocomplete="off"
-                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-400 pr-10" />
+                 class="w-full bg-gray-700 border border-gray-600 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 pr-10" />
           <div x-show="modalSinStock.buscando"
                class="absolute right-3 top-3.5 w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
         </div>
 
         <!-- Resultados -->
         <div x-show="modalSinStock.resultados.length > 0"
-             class="mt-2 border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-50">
+             class="mt-2 border border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-700">
           <template x-for="prod in modalSinStock.resultados" :key="prod.id">
             <button @click="seleccionarSustituto(prod)"
-                    class="w-full flex items-center justify-between px-4 py-3 text-left active:bg-gray-100">
+                    class="w-full flex items-center justify-between px-4 py-3 text-left bg-gray-700/50 active:bg-gray-700">
               <div>
-                <div class="text-sm font-medium text-gray-800" x-text="prod.nombre"></div>
+                <div class="text-sm font-medium text-white" x-text="prod.nombre"></div>
                 <div class="text-xs text-gray-400 mt-0.5" x-text="'Stock: ' + prod.stock"></div>
               </div>
-              <span class="text-sm text-gray-600 font-semibold ml-3 flex-shrink-0"
+              <span class="text-sm text-gray-300 font-semibold ml-3 flex-shrink-0"
                     x-text="prod.precio.toFixed(2) + '€'"></span>
             </button>
           </template>
@@ -728,7 +724,7 @@
     <!-- Acciones -->
     <div class="px-5 py-4 pb-8 flex gap-3">
       <button @click="cancelarModalSinStock()"
-              class="flex-1 border border-gray-200 rounded-xl py-4 text-gray-600 font-semibold text-sm active:bg-gray-50 tap-xl">
+              class="flex-1 border border-gray-700 rounded-xl py-4 text-gray-300 font-semibold text-sm active:bg-gray-700 tap-xl">
         Cancelar
       </button>
       <button @click="confirmarSinStock()"
