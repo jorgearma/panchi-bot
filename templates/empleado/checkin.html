@@ -9,16 +9,94 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <style>[x-cloak] { display: none !important; } button { -webkit-tap-highlight-color: transparent; }</style>
+  <style>
+    [x-cloak] { display: none !important; }
+    button { -webkit-tap-highlight-color: transparent; }
+
+    /* Header glow animación */
+    @keyframes headerGlow {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 0.4; }
+    }
+    .header-glow {
+      animation: headerGlow 3s ease-in-out infinite;
+    }
+
+    .panchi-shimmer {
+      background: linear-gradient(90deg, #60a5fa, #3b82f6, #60a5fa);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+  </style>
 </head>
 <body class="bg-gray-900 min-h-screen"
       x-data="checkinHub({{ empleado_id or 'null' }})"
       x-init="init()">
 
-  <!-- HEADER -->
-  <header class="bg-gray-900 border-b border-gray-800 px-4 py-3 sticky top-0 z-30">
-    <p class="text-xs text-gray-500" x-text="fechaHoy"></p>
-    <p class="text-white font-bold text-base leading-tight" x-text="saludo"></p>
+  <!-- ======== HEADER ======== -->
+  <header class="px-3 pt-3 pb-1 flex justify-center">
+  <div class="bg-gray-800 border border-gray-700 rounded-2xl text-white shadow-sm overflow-hidden relative max-w-md w-full">
+
+    <!-- Arte CSS: skyline + glow -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+      <!-- Gradiente azul pulsante -->
+      <div class="header-glow absolute right-0 inset-y-0 w-32 bg-gradient-to-l from-blue-500/20 to-transparent"></div>
+      <!-- Skyline minimalista -->
+      <div style="position:absolute;bottom:0;right:10px;display:flex;align-items:flex-end;gap:2px;opacity:0.45">
+        <!-- B1 -->
+        <div style="width:9px;height:22px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:4px;left:2px;width:2px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 5px 3px rgba(59,130,246,0.55)"></div>
+        </div>
+        <!-- B2 -->
+        <div style="width:14px;height:38px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:5px;left:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.5)"></div>
+          <div style="position:absolute;top:5px;right:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.5)"></div>
+          <div style="position:absolute;top:13px;left:2px;width:3px;height:2px;background:#2563eb;border-radius:1px;box-shadow:0 0 5px 2px rgba(37,99,235,0.4)"></div>
+        </div>
+        <!-- B3 -->
+        <div style="width:8px;height:28px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+        </div>
+        <!-- B4 tall -->
+        <div style="width:11px;height:50px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:6px;left:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 7px 3px rgba(59,130,246,0.6)"></div>
+          <div style="position:absolute;top:6px;right:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 7px 3px rgba(59,130,246,0.6)"></div>
+          <div style="position:absolute;top:16px;left:2px;width:3px;height:2px;background:#2563eb;border-radius:1px;box-shadow:0 0 5px 2px rgba(37,99,235,0.35)"></div>
+          <div style="position:absolute;top:26px;right:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.5)"></div>
+        </div>
+        <!-- B5 -->
+        <div style="width:16px;height:32px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:5px;left:3px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.55)"></div>
+          <div style="position:absolute;top:5px;right:3px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.55)"></div>
+          <div style="position:absolute;top:14px;left:3px;width:3px;height:2px;background:#2563eb;border-radius:1px;box-shadow:0 0 5px 2px rgba(37,99,235,0.4)"></div>
+        </div>
+        <!-- B6 -->
+        <div style="width:9px;height:42px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:7px;left:2px;width:4px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 8px 4px rgba(59,130,246,0.6)"></div>
+          <div style="position:absolute;top:18px;left:2px;width:4px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.45)"></div>
+        </div>
+        <!-- B7 short -->
+        <div style="width:12px;height:18px;background:#0f172a;border-radius:2px 2px 0 0"></div>
+      </div>
+    </div>
+
+    <!-- Contenido del header -->
+    <div class="relative flex items-center justify-start px-4 py-3">
+      <!-- Izquierda: título -->
+      <div>
+        <p class="panchi-shimmer text-[11px] font-semibold uppercase tracking-[0.18em] leading-none mb-0.5">Panchi</p>
+        <p class="text-base font-black text-white leading-none tracking-tight" x-text="saludo"></p>
+      </div>
+    </div>
+
+  </div>
   </header>
 
   <main class="max-w-md mx-auto px-4 py-6 space-y-4">
