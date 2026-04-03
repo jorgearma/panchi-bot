@@ -95,6 +95,9 @@ function picker(pickerId) {
       setInterval(() => {
         if (this.vistaActual === 'lista') {
           this.recargar(true);
+        }
+        // En demo: actualizar cola siempre (incluso fuera de lista)
+        if (esDemoMode || this.vistaActual === 'lista') {
           this.cargarCola();
         }
       }, pollingInterval);
