@@ -63,6 +63,9 @@ def create_app(config: dict = None) -> Flask:
 
     app = Flask(__name__)
     app.secret_key = app_config.SECRET_KEY
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = app_config.SESSION_COOKIE_SECURE
     app.teardown_appcontext(close_db)
     CORS(app, resources={r"/api/*": {"origins": app_config.ALLOWED_ORIGIN or "*"}})
 
