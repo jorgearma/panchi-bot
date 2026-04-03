@@ -119,6 +119,37 @@ class DemoState:
         return True
 
     @classmethod
+    def reclamar_picking_by_pedido(cls, session_id: str, pedido_id: int):
+        """Reclamar un picking de la cola usando pedido_id y agregarlo a mis pedidos."""
+        r = _get_redis()
+        cola_raw = r.get(cls._key_cola_picker(session_id))
+        if not cola_raw:
+            return False
+        cola = json.loads(cola_raw)
+
+        # Buscar en la cola por pedido_id
+        picking_obj = None
+        for i, item in enumerate(cola["cola"]):
+            if item["pedido_id"] == pedido_id:
+                picking_obj = cola["cola"].pop(i)
+                break
+
+        if not picking_obj:
+            return False
+
+        # Actualizar cola
+        cola["total"] = len(cola["cola"])
+        r.setex(cls._key_cola_picker(session_id), DEMO_TTL, json.dumps(cola))
+
+        # Agregar a mis pedidos
+        pickings_raw = r.get(cls._key_picker(session_id))
+        pickings = json.loads(pickings_raw) if pickings_raw else []
+        pickings.append(picking_obj)
+        r.setex(cls._key_picker(session_id), DEMO_TTL, json.dumps(pickings))
+
+        return True
+
+    @classmethod
     def reclamar_reparto(cls, session_id: str, reparto_id: int):
         """Reclamar un reparto de la cola y agregarlo a mis pedidos."""
         r = _get_redis()
@@ -131,6 +162,37 @@ class DemoState:
         reparto_obj = None
         for i, item in enumerate(cola["cola"]):
             if item["reparto_id"] == reparto_id:
+                reparto_obj = cola["cola"].pop(i)
+                break
+
+        if not reparto_obj:
+            return False
+
+        # Actualizar cola
+        cola["total"] = len(cola["cola"])
+        r.setex(cls._key_cola_rep(session_id), DEMO_TTL, json.dumps(cola))
+
+        # Agregar a mis pedidos
+        repartos_raw = r.get(cls._key_rep(session_id))
+        repartos = json.loads(repartos_raw) if repartos_raw else []
+        repartos.append(reparto_obj)
+        r.setex(cls._key_rep(session_id), DEMO_TTL, json.dumps(repartos))
+
+        return True
+
+    @classmethod
+    def reclamar_reparto_by_pedido(cls, session_id: str, pedido_id: int):
+        """Reclamar un reparto de la cola usando pedido_id y agregarlo a mis pedidos."""
+        r = _get_redis()
+        cola_raw = r.get(cls._key_cola_rep(session_id))
+        if not cola_raw:
+            return False
+        cola = json.loads(cola_raw)
+
+        # Buscar en la cola por pedido_id
+        reparto_obj = None
+        for i, item in enumerate(cola["cola"]):
+            if item["pedido_id"] == pedido_id:
                 reparto_obj = cola["cola"].pop(i)
                 break
 
