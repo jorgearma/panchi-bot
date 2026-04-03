@@ -219,7 +219,7 @@ def coger_reparto(pedido_id: int):
     """Permite al repartidor reclamar un pedido pendiente de reparto."""
     if session.get('demo_mode'):
         from blueprints.demo import DemoState
-        ok = DemoState.reclamar_reparto(session.get('demo_session_id', 'default'), pedido_id)
+        ok = DemoState.reclamar_reparto_by_pedido(session.get('demo_session_id', 'default'), pedido_id)
         if ok:
             return jsonify({"ok": True, "pedido_id": pedido_id})
         return jsonify({"error": "no_encontrado"}), 404
