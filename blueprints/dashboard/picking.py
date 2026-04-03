@@ -1,6 +1,6 @@
 import logging
 
-from flask import jsonify, request
+from flask import jsonify, request, session
 
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard
@@ -12,9 +12,12 @@ logger = logging.getLogger(__name__)
 def register(bp):
     """Registra las rutas de supervisión y gestión del picking."""
     @bp.route("/dashboard/picking")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def picking():
         """Devuelve el estado actual del picking en curso."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_dashboard_picking
+            return _ok(get_demo_dashboard_picking())
         try:
             return _ok(gestor_dashboard.picking_activo())
         except Exception as e:

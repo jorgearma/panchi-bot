@@ -402,6 +402,28 @@ def autologin():
     return redirect('/picker' if role == 'picker' else '/repartidor')
 
 
+@blueprint_demo.route('/dashboard/demo')
+def dashboard_demo():
+    """Entrada directa al modo demo del dashboard sin autenticación."""
+    import config as app_config
+    if 'demo_session_id' not in session:
+        session['demo_session_id'] = str(uuid.uuid4())
+        try:
+            DemoState.init_session(session['demo_session_id'])
+        except Exception as e:
+            logger.warning("DEMO: no se pudo inicializar Redis: %s", e)
+
+    session['empleado_id'] = 0
+    session['empleado_nombre'] = 'Admin Demo'
+    session['rol'] = 'admin'
+    session['demo_mode'] = True
+    session.permanent = False
+
+    if app_config.APP_MODE == 'restaurant':
+        return render_template("dashboard/index_restaurant.html")
+    return render_template("dashboard/index.html")
+
+
 @blueprint_demo.route('/demo/reset', methods=['POST'])
 def reset():
     """Regenera los datos demo para esta sesión."""

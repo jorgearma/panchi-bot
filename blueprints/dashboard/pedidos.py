@@ -38,9 +38,12 @@ def register(bp):
             return _err("Error interno", 500)
 
     @bp.route("/dashboard/pedidos-activos")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def pedidos_activos():
         """Lista los pedidos activos visibles en operación."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_dashboard_pedidos
+            return _ok(get_demo_dashboard_pedidos())
         try:
             estado = request.args.get("estado")
             return _ok(gestor_dashboard.pedidos_activos(estado=estado))
