@@ -555,7 +555,7 @@ function dashboard() {
     iniciarMapa() {
       const el = document.getElementById('mapa');
       if (!el || mapaLeaflet) return;
-      mapaLeaflet = L.map('mapa').setView([40.0041, -2.9980], 14);
+      mapaLeaflet = L.map('mapa').setView([40.011, -3.011], 14);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap',
         maxZoom: 18,

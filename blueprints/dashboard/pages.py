@@ -93,7 +93,7 @@ def register(bp):
     def mapa():
         """Devuelve la información necesaria para el mapa operativo."""
         if session.get('demo_mode'):
-            return _ok({"repartidores": [], "tienda": {"lat": 40.0058, "lng": -2.9951}})
+            return _ok({"repartidores": [], "tienda": {"lat": 40.01139, "lng": -3.01102}})
         try:
             return _ok(gestor_dashboard.mapa())
         except Exception as e:
