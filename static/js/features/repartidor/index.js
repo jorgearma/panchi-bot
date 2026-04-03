@@ -15,6 +15,7 @@ function repartidor(repartidorId) {
     pedidos: [],
     vista: 'lista',
     actual: null,
+    navStack: [],
     cargando: false,
     tabActiva: 'mis-entregas',
     cola: [],
@@ -54,6 +55,18 @@ function repartidor(repartidorId) {
     importeEfectivoMixto: '',
     importeTarjetaMixto: '',
     _resumeCobro: '',
+
+    get puedeVolver() {
+      return this.navStack.length > 0;
+    },
+
+    get labelAnterior() {
+      const prev = this.navStack[this.navStack.length - 1];
+      if (!prev) return '';
+      if (prev.vista === 'lista') return prev.tabActiva === 'cola' ? 'Cola' : 'Mis entregas';
+      if (prev.vista === 'pedido') return 'Pedido';
+      return 'Atrás';
+    },
 
     get pedidosActivos() {
       return this.pedidos
@@ -257,6 +270,7 @@ function repartidor(repartidorId) {
     },
 
     abrirPedido(p) {
+      this.navStack.push({ vista: this.vista, actual: this.actual, tabActiva: this.tabActiva });
       this.actual = p;
       this.vista = 'pedido';
       this.pagoConfirmado = false;
@@ -265,12 +279,23 @@ function repartidor(repartidorId) {
     },
 
     abrirResumen(p) {
+      this.navStack.push({ vista: this.vista, actual: this.actual, tabActiva: this.tabActiva });
       this.actual = p;
       this.vista = 'resumen';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
 
+    goBack() {
+      const prev = this.navStack.pop();
+      if (!prev) return;
+      this.actual = prev.actual;
+      this.vista = prev.vista;
+      this.tabActiva = prev.tabActiva;
+      this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    },
+
     volverALista() {
+      this.navStack = [];
       this.vista = 'lista';
       this.actual = null;
       this.motivoSeleccionado = '';
@@ -581,6 +606,7 @@ function repartidor(repartidorId) {
           if (updated) this.actual = updated;
           this.motivoSeleccionado = '';
           this.motivoLibre = '';
+          this.navStack.push({ vista: this.vista, actual: this.actual, tabActiva: this.tabActiva });
           this.vista = 'resumen';
         } else {
           this.mostrarToast(data.error, true);
