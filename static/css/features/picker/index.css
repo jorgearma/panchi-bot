@@ -23,10 +23,13 @@ button { -webkit-tap-highlight-color: transparent; }
 .tap-xl { min-height: 56px; }
 
 html, body { overscroll-behavior: none; }
+html { background: #0f172a; }
 
 .picker-shell {
   background: #111827;
   color: var(--picker-ink);
+  max-width: 430px;
+  margin: 0 auto;
   padding-bottom: env(safe-area-inset-bottom);
 }
 

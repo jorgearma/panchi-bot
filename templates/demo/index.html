@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panchi — Demo operativa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Typography ── */
+    .brand {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #f97316;
+    }
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      color: #f8fafc;
+    }
+    .hero-title span {
+      background: linear-gradient(135deg, #f97316 0%, #fb923c 50%, #fbbf24 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.125rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      max-width: 480px;
+    }
+
+    /* ── Layout ── */
+    .page-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem 2rem;
+      gap: 3rem;
+    }
+    .hero {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(249, 115, 22, 0.12);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      border-radius: 999px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fb923c;
+      letter-spacing: 0.05em;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #f97316;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    /* ── Phone stage ── */
+    .phone-stage {
+      display: flex;
+      gap: 3rem;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .phone-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    /* ── Phone frame ── */
+    .phone-frame {
+      position: relative;
+      width: 340px;
+      height: 680px;
+      border-radius: 44px;
+      border: 8px solid #1e293b;
+      background: #0a0a0a;
+      box-shadow:
+        0 0 0 1px #334155,
+        0 30px 80px rgba(0,0,0,0.7),
+        0 10px 30px rgba(0,0,0,0.5),
+        inset 0 0 0 1px #0f172a;
+      overflow: hidden;
+    }
+
+    /* Dynamic island */
+    .phone-frame::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 32px;
+      background: #000;
+      border-radius: 999px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Home indicator */
+    .phone-frame::after {
+      content: '';
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 999px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Side buttons — volume */
+    .phone-frame .btn-volume {
+      position: absolute;
+      left: -11px;
+      top: 100px;
+      width: 3px;
+      height: 28px;
+      background: #1e293b;
+      border-radius: 2px 0 0 2px;
+    }
+    .phone-frame .btn-volume.lower {
+      top: 140px;
+    }
+    /* Power button */
+    .phone-frame .btn-power {
+      position: absolute;
+      right: -11px;
+      top: 120px;
+      width: 3px;
+      height: 56px;
+      background: #1e293b;
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* Screen glow */
+    .phone-screen {
+      position: absolute;
+      inset: 0;
+      border-radius: 36px;
+      overflow: hidden;
+    }
+    .phone-screen iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* Loading overlay */
+    .phone-loading {
+      position: absolute;
+      inset: 0;
+      border-radius: 36px;
+      background: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      z-index: 5;
+      transition: opacity 0.4s ease;
+    }
+    .phone-loading.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #1e293b;
+      border-top-color: #f97316;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .phone-loading p {
+      font-size: 0.75rem;
+      color: #475569;
+    }
+
+    /* ── Labels ── */
+    .phone-label {
+      text-align: center;
+    }
+    .phone-label strong {
+      display: block;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+    }
+    .phone-label span {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    /* ── Footer ── */
+    .demo-footer {
+      margin-top: auto;
+      padding: 1.5rem;
+      text-align: center;
+      border-top: 1px solid #1e293b;
+    }
+    .demo-footer p {
+      font-size: 0.8rem;
+      color: #475569;
+    }
+    .demo-footer code {
+      background: rgba(249, 115, 22, 0.1);
+      border: 1px solid rgba(249, 115, 22, 0.2);
+      color: #fb923c;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: ui-monospace, 'Cascadia Code', monospace;
+    }
+
+    /* ── Decorative background ── */
+    .bg-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .bg-glow::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 500px;
+      background: radial-gradient(ellipse, rgba(249,115,22,0.06) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    /* ── Mobile message ── */
+    .mobile-msg {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 1.5rem;
+      padding: 2rem 1.5rem;
+      max-width: 360px;
+    }
+    .mobile-msg .icon {
+      font-size: 3rem;
+    }
+    .mobile-msg h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .mobile-msg p {
+      font-size: 0.9rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .mobile-msg a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #f97316;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .mobile-msg a:hover { background: #ea6b0a; }
+
+    @media (max-width: 767px) {
+      .desktop-only { display: none !important; }
+      .mobile-msg   { display: flex !important; }
+      .page-wrapper { padding: 2rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <div class="page-wrapper" style="position:relative;z-index:1;">
+
+    <!-- Hero -->
+    <header class="hero">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        Demo en vivo
+      </div>
+      <p class="brand">Panchi</p>
+      <h1 class="hero-title">Demo <span>operativa</span></h1>
+      <p class="hero-sub">
+        Explora en tiempo real cómo el equipo gestiona pedidos, preparación y reparto desde las apps internas.
+      </p>
+    </header>
+
+    <!-- Phone stage — desktop only -->
+    <section class="phone-stage desktop-only" aria-label="Mockups de la aplicación">
+
+      <!-- Picker phone -->
+      <div class="phone-wrapper">
+        <div class="phone-frame" id="frame-picker">
+          <span class="btn-volume" aria-hidden="true"></span>
+          <span class="btn-volume lower" aria-hidden="true"></span>
+          <span class="btn-power" aria-hidden="true"></span>
+          <div class="phone-screen">
+            <div class="phone-loading" id="loading-picker">
+              <div class="spinner"></div>
+              <p>Cargando picking…</p>
+            </div>
+            <iframe
+              src="/demo/autologin?role=picker"
+              title="Vista Picking"
+              loading="lazy"
+              onload="hideLoading('loading-picker')"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation-by-user-activation"
+            ></iframe>
+          </div>
+        </div>
+        <div class="phone-label">
+          <strong>Picking</strong>
+          <span>Preparación de pedidos</span>
+        </div>
+      </div>
+
+      <!-- Repartidor phone -->
+      <div class="phone-wrapper">
+        <div class="phone-frame" id="frame-repartidor">
+          <span class="btn-volume" aria-hidden="true"></span>
+          <span class="btn-volume lower" aria-hidden="true"></span>
+          <span class="btn-power" aria-hidden="true"></span>
+          <div class="phone-screen">
+            <div class="phone-loading" id="loading-repartidor">
+              <div class="spinner"></div>
+              <p>Cargando reparto…</p>
+            </div>
+            <iframe
+              src="/demo/autologin?role=repartidor"
+              title="Vista Repartidor"
+              loading="lazy"
+              onload="hideLoading('loading-repartidor')"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation-by-user-activation"
+            ></iframe>
+          </div>
+        </div>
+        <div class="phone-label">
+          <strong>Reparto</strong>
+          <span>Gestión de entregas</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Mobile fallback -->
+    <div class="mobile-msg" aria-label="Aviso modo móvil">
+      <div class="icon">🖥️</div>
+      <h2>Esta demo es para ordenador</h2>
+      <p>
+        Los mockups de teléfono están optimizados para pantallas grandes.
+        En tu móvil, accede directamente a la aplicación.
+      </p>
+      <a href="/picker">Abrir app →</a>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="demo-footer" style="position:relative;z-index:1;">
+    <p>Acceso demo con <code>demo@panchi.com</code> — solo lectura</p>
+  </footer>
+
+  <script>
+    function hideLoading(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    }
+    // Fallback: hide loaders after 8s in case onload doesn't fire
+    setTimeout(() => {
+      ['loading-picker', 'loading-repartidor'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+    }, 8000);
+  </script>
+</body>
+</html>
