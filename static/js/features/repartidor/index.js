@@ -40,6 +40,7 @@ function repartidor(repartidorId) {
     _holdTimer: null,
 
     pedidosConocidos: new Set(),
+    pedidosColaConocidos: new Set(),
 
     conexionOk: true,
     lastFetchTime: null,
@@ -47,6 +48,9 @@ function repartidor(repartidorId) {
     mapaVisible: false,
     mapaColaVisible: false,
     pedidoDestacado: null,
+
+    esDemoMode: false,
+    pollingColaInternal: null,
 
     pagoConfirmado: false,
     mostrarCobro: false,
@@ -158,16 +162,63 @@ function repartidor(repartidorId) {
     async init() {
       if (!this.repartidorId) return;
       localStorage.setItem('panchi_repartidor_id', this.repartidorId);
+
+      // Detectar modo demo
+      this.esDemoMode = document.documentElement.getAttribute('data-demo-mode') === 'true' ||
+                        window.location.href.includes('/demo');
+
       await Promise.all([this.recargar(), this.cargarCola()]);
+
+      // Polling normal cada 60 segundos
       setInterval(() => {
         if (this.vista === 'lista') {
           this.recargar();
           this.cargarCola();
         }
       }, 60000);
+
+      // En modo demo: polling rápido de cola cada 3 segundos para notificaciones
+      if (this.esDemoMode) {
+        this.pollingColaInternal = setInterval(() => {
+          this.cargarColaConNotificaciones();
+        }, 3000);
+      }
+
       setInterval(() => {
         this.now = new Date();
       }, 30000);
+    },
+
+    async cargarColaConNotificaciones() {
+      const _cacheKey = `panchi_rep_cola_${this.repartidorId}`;
+      try {
+        const r = await fetch('/repartidor/cola');
+        if (r.ok) {
+          const data = await r.json();
+          this.cola = data.cola || [];
+          this.colaTotal = data.total || 0;
+          localStorage.setItem(_cacheKey, JSON.stringify(data));
+
+          // Detectar nuevos pedidos en la cola
+          (data.cola || []).forEach(pedido => {
+            if (!this.pedidosColaConocidos.has(pedido.pedido_id)) {
+              this.pedidosColaConocidos.add(pedido.pedido_id);
+              // Mostrar notificación de nuevo pedido en cola
+              this.mostrarToastNuevoPedido(pedido);
+            }
+          });
+
+          if (this.mapaColaVisible) this.actualizarMapaCola();
+        }
+      } catch (_) {}
+    },
+
+    mostrarToastNuevoPedido(pedido) {
+      const msg = `📦 Nuevo pedido en cola: ${pedido.cliente_nombre} — $${pedido.total.toFixed(2)}`;
+      this.toast = { visible: true, msg, error: false };
+      setTimeout(() => {
+        this.toast.visible = false;
+      }, 5000);
     },
 
     async recargar(skipCache = false, silencioso = false) {
