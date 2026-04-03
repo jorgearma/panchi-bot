@@ -17,17 +17,19 @@ blueprint_picker = Blueprint("picker", __name__)
 def demo_view():
     """Entrada directa al modo demo del picker sin autenticación."""
     from blueprints.demo import DemoState
+    # Usar demo_session_id existente o crear uno nuevo
     if 'demo_session_id' not in session:
         session['demo_session_id'] = str(uuid.uuid4())
+        try:
+            DemoState.init_session(session['demo_session_id'])
+        except Exception:
+            pass
+    # Siempre preparar la sesión como demo
     session['empleado_id'] = 0
     session['empleado_nombre'] = 'Demo'
     session['rol'] = 'manager'
     session['demo_mode'] = True
     session.permanent = False
-    try:
-        DemoState.init_session(session['demo_session_id'])
-    except Exception:
-        pass
     return redirect('/picker')
 
 

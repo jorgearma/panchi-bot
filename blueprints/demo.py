@@ -185,14 +185,72 @@ class DemoState:
 
     @classmethod
     def finalizar_picking(cls, session_id: str, picking_id: int):
-        """Marca un picking como completado."""
+        """Marca un picking como completado y lo traslada a la cola del repartidor."""
+        r = _get_redis()
         pickings = cls.get_picker(session_id)
-        for picking in pickings:
+
+        picking_obj = None
+        for i, picking in enumerate(pickings):
             if picking['picking_id'] == picking_id:
-                picking['estado'] = 'COMPLETADO'
-                cls.save_picker(session_id, pickings)
-                return True
-        return False
+                picking_obj = pickings.pop(i)
+                break
+
+        if not picking_obj:
+            return False
+
+        # Guardar pickings actualizado (sin este picking)
+        cls.save_picker(session_id, pickings)
+
+        # Convertir picking a reparto y agregarlo a cola repartidor
+        reparto = cls._converting_picking_to_reparto(picking_obj)
+        cola_raw = r.get(cls._key_cola_rep(session_id))
+        cola = json.loads(cola_raw) if cola_raw else {"cola": [], "total": 0}
+        cola["cola"].append(reparto)
+        cola["total"] = len(cola["cola"])
+        r.setex(cls._key_cola_rep(session_id), DEMO_TTL, json.dumps(cola))
+
+        return True
+
+    @staticmethod
+    def _converting_picking_to_reparto(picking: dict) -> dict:
+        """Convierte un picking completado a un reparto para la cola del repartidor."""
+        # Generar IDs únicos para reparto
+        reparto_id = 3000 + picking['picking_id']
+
+        # Convertir items de picking a formato reparto
+        items_reparto = []
+        for item in picking.get('items', []):
+            items_reparto.append({
+                'nombre': item['nombre'],
+                'cantidad': item['cantidad'],
+                'subtotal': item.get('subtotal', item['cantidad'] * 5.0)  # Valor por defecto
+            })
+
+        return {
+            'reparto_id': reparto_id,
+            'pedido_id': picking['pedido_id'],
+            'estado_reparto': 'asignado',
+            'estado_pedido': 'PREPARADO',
+            'cliente_nombre': picking['cliente_nombre'],
+            'cliente_telefono': picking['cliente_telefono'],
+            'direccion_entrega': picking['direccion_entrega'],
+            'lat': 40.0053 + (reparto_id % 100) * 0.0001,  # Coordenadas varían ligeramente
+            'lng': -2.9956 - (reparto_id % 100) * 0.0001,
+            'total': picking['total'],
+            'pago': {
+                'estado': 'cobrar_efectivo' if reparto_id % 2 == 0 else 'pagado_online',
+                'label': 'Cobrar en efectivo' if reparto_id % 2 == 0 else 'Pagado online',
+                'importe': picking['total'],
+                'proveedor': None if reparto_id % 2 == 0 else 'Monei',
+            },
+            'items': items_reparto,
+            'fecha_creacion': picking['iniciado_en'],
+            'hora_salida': None,
+            'hora_estimada_entrega': None,
+            'hora_entrega_real': None,
+            'motivo_no_entrega': None,
+            'notas': None,
+        }
 
     @classmethod
     def marcar_salida_reparto(cls, session_id: str, reparto_id: int):
@@ -208,28 +266,49 @@ class DemoState:
     @classmethod
     def marcar_entregado(cls, session_id: str, reparto_id: int):
         repartos = cls.get_repartidor(session_id)
-        for r in repartos:
+        reparto_obj = None
+        for i, r in enumerate(repartos):
             if r['reparto_id'] == reparto_id:
-                r['estado_reparto'] = 'entregado'
-                r['hora_entrega_real'] = datetime.utcnow().isoformat()
-                cls.save_repartidor(session_id, repartos)
-                return True
-        return False
+                reparto_obj = repartos.pop(i)
+                break
+
+        if not reparto_obj:
+            return False
+
+        reparto_obj['estado_reparto'] = 'entregado'
+        reparto_obj['hora_entrega_real'] = datetime.utcnow().isoformat()
+        cls.save_repartidor(session_id, repartos)
+        return True
 
     @classmethod
     def marcar_no_entregado(cls, session_id: str, reparto_id: int, motivo: str):
         repartos = cls.get_repartidor(session_id)
-        for r in repartos:
+        reparto_obj = None
+        for i, r in enumerate(repartos):
             if r['reparto_id'] == reparto_id:
-                r['estado_reparto'] = 'no_entregado'
-                r['motivo_no_entrega'] = motivo
-                cls.save_repartidor(session_id, repartos)
-                return True
-        return False
+                reparto_obj = repartos.pop(i)
+                break
+
+        if not reparto_obj:
+            return False
+
+        reparto_obj['estado_reparto'] = 'no_entregado'
+        reparto_obj['motivo_no_entrega'] = motivo
+        cls.save_repartidor(session_id, repartos)
+        return True
 
 
 @blueprint_demo.route('/demo')
 def index():
+    """Renderiza la página demo y prepara la sesión compartida."""
+    # Crear demo_session_id una sola vez para picker y repartidor compartido
+    if 'demo_session_id' not in session:
+        session['demo_session_id'] = str(uuid.uuid4())
+        # Inicializar datos en Redis
+        try:
+            DemoState.init_session(session['demo_session_id'])
+        except Exception as e:
+            logger.warning("DEMO: no se pudo inicializar Redis: %s", e)
     return render_template('demo/index.html')
 
 
