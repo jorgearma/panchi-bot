@@ -47,13 +47,26 @@
     }
 
     /* ── Layout ── */
-    .page-wrapper {
-      flex: 1;
+    .phone-section {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 3rem 1.5rem 3.5rem;
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      position: relative;
+      z-index: 1;
+    }
+    .info-section {
+      width: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 3rem 1.5rem 2rem;
-      gap: 3rem;
+      gap: 1.5rem;
+      background: #0a101e;
+      position: relative;
+      z-index: 1;
     }
     .hero {
       text-align: center;
@@ -164,6 +177,7 @@
       inset: 0;
       border-radius: 36px;
       overflow: hidden;
+      z-index: 1;
     }
 
     /*
@@ -174,10 +188,10 @@
     */
     .iframe-scaler {
       position: absolute;
-      top: 0;
+      top: 44px;
       left: calc((100% - 375px * 0.763) / 2);
       width: 375px;
-      height: calc(100% / 0.763);
+      height: calc((100% - 44px) / 0.763);
       transform: scale(0.763);
       transform-origin: top left;
     }
@@ -274,6 +288,51 @@
       border-radius: 50%;
     }
 
+    /* ── iOS Status bar ── */
+    .phone-statusbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .sb-time {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.02em;
+      font-family: -apple-system, 'SF Pro Text', ui-sans-serif, sans-serif;
+      line-height: 1;
+    }
+    .sb-island {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 72px;
+      height: 22px;
+      background: #000;
+      border-radius: 999px;
+    }
+    .sb-right {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sb-carrier {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.01em;
+      font-family: -apple-system, 'SF Pro Text', ui-sans-serif, sans-serif;
+    }
+
     /* ── Mobile message ── */
     .mobile-msg {
       display: none;
@@ -322,9 +381,8 @@
 <body>
   <div class="bg-glow" aria-hidden="true"></div>
 
-  <div class="page-wrapper" style="position:relative;z-index:1;">
-
-    <!-- Hero -->
+  <!-- Sección 1: info -->
+  <div class="info-section">
     <header class="hero">
       <div class="badge">
         <span class="badge-dot"></span>
@@ -336,9 +394,11 @@
         Explora en tiempo real cómo el equipo gestiona pedidos, preparación y reparto desde las apps internas.
       </p>
     </header>
+  </div>
 
-    <!-- Phone stage — desktop only -->
-    <section class="phone-stage desktop-only" aria-label="Mockups de la aplicación">
+  <!-- Sección 2: teléfonos -->
+  <div class="phone-section desktop-only">
+    <section class="phone-stage" aria-label="Mockups de la aplicación">
 
       <!-- Picker phone -->
       <div class="phone-wrapper">
@@ -346,6 +406,7 @@
           <span class="btn-volume" aria-hidden="true"></span>
           <span class="btn-volume lower" aria-hidden="true"></span>
           <span class="btn-power" aria-hidden="true"></span>
+
           <div class="phone-screen">
             <div class="phone-loading" id="loading-picker">
               <div class="spinner"></div>
@@ -361,6 +422,27 @@
               ></iframe>
             </div>
           </div>
+
+          <!-- iOS status bar — encima del iframe -->
+          <div class="phone-statusbar" aria-hidden="true">
+            <span class="sb-time">9:41</span>
+            <div class="sb-island"></div>
+            <div class="sb-right">
+              <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+                <rect x="0"    y="9" width="3" height="3"  rx="0.8" fill="white"/>
+                <rect x="4.5"  y="6" width="3" height="6"  rx="0.8" fill="white"/>
+                <rect x="9"    y="3" width="3" height="9"  rx="0.8" fill="white"/>
+                <rect x="13.5" y="0" width="3" height="12" rx="0.8" fill="white"/>
+              </svg>
+              <span class="sb-carrier">5G</span>
+              <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+                <rect x="0.5" y="0.5" width="22" height="12" rx="3" stroke="white" stroke-opacity="0.35" stroke-width="1"/>
+                <rect x="23.5" y="4" width="3" height="5" rx="1.5" fill="white" fill-opacity="0.4"/>
+                <rect x="2" y="2" width="17" height="9" rx="2" fill="white"/>
+              </svg>
+            </div>
+          </div>
+
         </div>
         <div class="phone-label">
           <strong>Picking</strong>
@@ -389,6 +471,27 @@
               ></iframe>
             </div>
           </div>
+
+          <!-- iOS status bar — encima del iframe -->
+          <div class="phone-statusbar" aria-hidden="true">
+            <span class="sb-time">9:41</span>
+            <div class="sb-island"></div>
+            <div class="sb-right">
+              <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+                <rect x="0"    y="9" width="3" height="3"  rx="0.8" fill="white"/>
+                <rect x="4.5"  y="6" width="3" height="6"  rx="0.8" fill="white"/>
+                <rect x="9"    y="3" width="3" height="9"  rx="0.8" fill="white"/>
+                <rect x="13.5" y="0" width="3" height="12" rx="0.8" fill="white"/>
+              </svg>
+              <span class="sb-carrier">5G</span>
+              <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+                <rect x="0.5" y="0.5" width="22" height="12" rx="3" stroke="white" stroke-opacity="0.35" stroke-width="1"/>
+                <rect x="23.5" y="4" width="3" height="5" rx="1.5" fill="white" fill-opacity="0.4"/>
+                <rect x="2" y="2" width="17" height="9" rx="2" fill="white"/>
+              </svg>
+            </div>
+          </div>
+
         </div>
         <div class="phone-label">
           <strong>Reparto</strong>
@@ -397,22 +500,21 @@
       </div>
 
     </section>
+  </div>
 
-    <!-- Mobile fallback -->
-    <div class="mobile-msg" aria-label="Aviso modo móvil">
-      <div class="icon">🖥️</div>
-      <h2>Esta demo es para ordenador</h2>
-      <p>
-        Los mockups de teléfono están optimizados para pantallas grandes.
-        En tu móvil, accede directamente a la aplicación.
-      </p>
-      <a href="/picker">Abrir app →</a>
-    </div>
-
+  <!-- Mobile fallback -->
+  <div class="mobile-msg" aria-label="Aviso modo móvil">
+    <div class="icon">🖥️</div>
+    <h2>Esta demo es para ordenador</h2>
+    <p>
+      Los mockups de teléfono están optimizados para pantallas grandes.
+      En tu móvil, accede directamente a la aplicación.
+    </p>
+    <a href="/picker">Abrir app →</a>
   </div>
 
   <!-- Footer -->
-  <footer class="demo-footer" style="position:relative;z-index:1;">
+  <footer class="demo-footer" style="background:#0a101e;border-top:1px solid #1e293b;">
     <p>Acceso demo con <code>demo@panchi.com</code> — solo lectura</p>
   </footer>
 
