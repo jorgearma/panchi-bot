@@ -1,7 +1,7 @@
 import logging
 from functools import wraps
 
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 from database import get_db
@@ -18,6 +18,14 @@ _ROLES_VALIDOS = {'manager', 'picker', 'repartidor', 'admin'}
 def _get_empleado_by_email(email: str):
     """Busca un empleado activo por email para iniciar sesión."""
     return get_db().query(Empleado).filter_by(Email=email, activo=True).first()
+
+
+@blueprint_auth.route('/auth/manifest.json')
+def manifest():
+    return Response(
+        render_template('auth/manifest.json'),
+        mimetype='application/manifest+json',
+    )
 
 
 @blueprint_auth.route('/auth/login', methods=['GET', 'POST'])

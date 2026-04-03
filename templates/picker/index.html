@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <title>Panchi — Picking</title>
 
   <!-- PWA -->
@@ -738,5 +738,15 @@
 
   <!-- ======== JAVASCRIPT ======== -->
   <script src="{{ url_for('static', filename='js/features/picker/index.js') }}"></script>
+
+  <!-- ======== PWA: Service Worker ======== -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/picker/sw.js', { scope: '/picker/' })
+          .catch(err => console.warn('SW picker no registrado:', err));
+      });
+    }
+  </script>
 </body>
 </html>
