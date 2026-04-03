@@ -167,6 +167,9 @@ function repartidor(repartidorId) {
       setInterval(() => {
         if (this.vista === 'lista') {
           this.recargar(true, true);
+        }
+        // En demo: actualizar cola siempre (incluso fuera de lista)
+        if (esDemoMode || this.vista === 'lista') {
           this.cargarCola();
         }
       }, pollingInterval);
