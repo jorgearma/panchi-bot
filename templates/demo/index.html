@@ -333,6 +333,129 @@
       font-family: -apple-system, 'SF Pro Text', ui-sans-serif, sans-serif;
     }
 
+    /* ── Tablet section ── */
+    .tablet-section {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 3rem 1.5rem 3.5rem;
+      background: #080c14;
+      border-bottom: 1px solid #1e293b;
+      position: relative;
+      z-index: 1;
+    }
+    .tablet-section-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .tablet-section-header h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+    }
+    .tablet-section-header p {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+    .tablet-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* Tablet frame — proporciones iPad 10.9" (820×1180 landscape = 1180×820) */
+    .tablet-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      width: 100%;
+      max-width: 1100px;
+    }
+    .tablet-frame {
+      position: relative;
+      width: 1060px;
+      height: 740px;
+      border-radius: 28px;
+      border: 14px solid #1a2234;
+      background: #080c14;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.07),
+        inset 0 0 0 1px rgba(255,255,255,0.04),
+        0 60px 120px rgba(0,0,0,0.85),
+        0 20px 50px rgba(0,0,0,0.55),
+        0 4px 12px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+    /* Home button / power button tablet */
+    .tablet-frame .tablet-btn-power {
+      position: absolute;
+      top: -18px;
+      right: 120px;
+      width: 40px;
+      height: 5px;
+      background: #1a2234;
+      border-radius: 2px 2px 0 0;
+    }
+    .tablet-frame .tablet-btn-vol {
+      position: absolute;
+      top: -18px;
+      right: 200px;
+      width: 28px;
+      height: 5px;
+      background: #1a2234;
+      border-radius: 2px 2px 0 0;
+    }
+    .tablet-frame .tablet-btn-vol.lower {
+      right: 240px;
+    }
+    .tablet-screen {
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      overflow: hidden;
+      z-index: 1;
+    }
+    /*
+      inner width = 1060 - 2×14 = 1032px
+      viewport desktop = 1600px
+      scale = 1032/1600 = 0.645
+    */
+    .tablet-iframe-scaler {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1600px;
+      height: calc(100% / 0.645);
+      transform: scale(0.645);
+      transform-origin: top left;
+    }
+    .tablet-iframe-scaler iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+    .tablet-label {
+      text-align: center;
+    }
+    .tablet-label strong {
+      display: block;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+    }
+    .tablet-label span {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
     /* ── Mobile message ── */
     .mobile-msg {
       display: none;
@@ -502,6 +625,45 @@
     </section>
   </div>
 
+  <!-- Sección 3: tablet dashboard -->
+  <div class="tablet-section desktop-only">
+    <div class="tablet-stage">
+      <div class="tablet-section-header">
+        <h2>Panel de control</h2>
+        <p>Vista del administrador — gestión completa de pedidos, picking y reparto en tiempo real</p>
+      </div>
+
+      <div class="tablet-wrapper">
+        <div class="tablet-frame" id="frame-dashboard">
+          <span class="tablet-btn-power" aria-hidden="true"></span>
+          <span class="tablet-btn-vol" aria-hidden="true"></span>
+          <span class="tablet-btn-vol lower" aria-hidden="true"></span>
+
+          <div class="tablet-screen">
+            <div class="phone-loading" id="loading-dashboard">
+              <div class="spinner"></div>
+              <p>Cargando dashboard…</p>
+            </div>
+            <div class="tablet-iframe-scaler">
+              <iframe
+                src="/dashboard/demo"
+                title="Vista Dashboard Admin"
+                loading="lazy"
+                onload="hideLoading('loading-dashboard')"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation-by-user-activation"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+
+        <div class="tablet-label">
+          <strong>Panchi Ops — Centro de control</strong>
+          <span>Panel de administrador con pedidos activos, picking y reparto en tiempo real</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Mobile fallback -->
   <div class="mobile-msg" aria-label="Aviso modo móvil">
     <div class="icon">🖥️</div>
@@ -546,11 +708,15 @@
         const res = await fetch('/demo/reset', { method: 'POST' });
         if (res.ok) {
           // Mostrar loaders de nuevo
-          document.getElementById('loading-picker').classList.remove('hidden');
-          document.getElementById('loading-repartidor').classList.remove('hidden');
+          ['loading-picker', 'loading-repartidor', 'loading-dashboard'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
+          });
           // Recargar iframes
-          document.querySelector('iframe[src="/picker/demo"]').src = '/picker/demo?t=' + Date.now();
-          document.querySelector('iframe[src="/repartidor/demo"]').src = '/repartidor/demo?t=' + Date.now();
+          const t = Date.now();
+          document.querySelector('iframe[src*="/picker/demo"]').src = '/picker/demo?t=' + t;
+          document.querySelector('iframe[src*="/repartidor/demo"]').src = '/repartidor/demo?t=' + t;
+          document.querySelector('iframe[src*="/dashboard/demo"]').src = '/dashboard/demo?t=' + t;
         }
       } catch (err) {
         console.error('Reset error:', err);
@@ -562,7 +728,7 @@
 
     // Fallback: hide loaders after 8s in case onload doesn't fire
     setTimeout(() => {
-      ['loading-picker', 'loading-repartidor'].forEach(id => {
+      ['loading-picker', 'loading-repartidor', 'loading-dashboard'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
