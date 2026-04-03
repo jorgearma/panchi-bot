@@ -369,32 +369,36 @@
       </div>
 
       <!-- Lista -->
-      <div x-show="cola.length > 0" class="space-y-4">
+      <div x-show="cola.length > 0" class="space-y-2">
         <template x-for="p in cola" :key="p.pedido_id">
-          <div class="queue-card rounded-2xl p-3 text-white slide-up"
-               :class="p.ya_cogido ? 'opacity-45 saturate-50' : ''">
-            <div class="flex items-start justify-between gap-4">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span x-show="!p.ya_cogido" class="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-100">
+          <div class="rounded-xl active:scale-95 transition-transform slide-up overflow-hidden"
+               :class="p.ya_cogido
+                 ? 'border-2 border-red-800 bg-red-950 opacity-50 saturate-50'
+                 : 'border-2 border-orange-800 bg-orange-950'">
+            <div class="px-4 py-3 flex items-center gap-3">
+              <!-- Info principal -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-lg font-black text-white tracking-tight" x-text="p.pedido_id"></span>
+                  <span x-show="!p.ya_cogido"
+                        class="text-xs px-1.5 py-0.5 rounded font-semibold bg-orange-900 text-orange-300">
                     Disponible
                   </span>
-                  <span x-show="!p.ya_cogido"
-                        class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-slate-200"
-                        x-text="p.segundos_esperando < 60 ? p.segundos_esperando + 's' : Math.floor(p.segundos_esperando / 60) + ' min'"></span>
                   <span x-show="p.ya_cogido"
-                        class="rounded-full bg-red-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-100">
+                        class="text-xs px-1.5 py-0.5 rounded font-semibold bg-red-900 text-red-300">
                     Bloqueado
                   </span>
                 </div>
-                <div class="mt-2 text-base font-bold">Pedido #<span x-text="p.pedido_id"></span></div>
-                <p class="mt-1 text-xs text-red-100" x-show="p.ya_cogido">Ya cogido por otro repartidor</p>
+                <div class="text-xs text-gray-400" x-show="!p.ya_cogido"
+                     x-text="p.segundos_esperando < 60 ? p.segundos_esperando + 's esperando' : Math.floor(p.segundos_esperando / 60) + ' min esperando'"></div>
+                <div class="text-xs text-red-400" x-show="p.ya_cogido">Ya cogido por otro repartidor</div>
               </div>
+              <!-- Acción -->
               <button @click="cogerReparto(p.pedido_id)"
                       :disabled="p.ya_cogido || cogiendo !== null"
-                      class="rounded-xl px-3 py-2 text-xs font-bold transition flex-shrink-0"
+                      class="flex-shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition"
                       :class="p.ya_cogido
-                        ? 'bg-white/10 text-slate-300 cursor-not-allowed'
+                        ? 'bg-white/10 text-gray-500 cursor-not-allowed'
                         : 'bg-white text-slate-900 active:scale-95'">
                 <span x-show="!p.ya_cogido && cogiendo !== p.pedido_id">Coger →</span>
                 <span x-show="p.ya_cogido">Cogido</span>
