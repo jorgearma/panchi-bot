@@ -68,24 +68,10 @@
     </div>
 
     <!-- Contenido del header -->
-    <div class="relative flex items-center justify-between px-4 py-3">
-      <!-- Izquierda: back + título -->
-      <div class="flex items-center gap-2">
-        <button x-show="vista !== 'lista'"
-                @click="volverALista()"
-                class="p-2 -ml-2 text-gray-400 active:text-white transition text-2xl leading-none">‹</button>
-        <div x-show="vista === 'lista'">
-          <p class="panchi-shimmer text-[11px] font-semibold uppercase tracking-[0.18em] leading-none mb-0.5">Panchi</p>
-          <p class="text-base font-black text-white leading-none tracking-tight">Repartos</p>
-        </div>
-        <span class="font-bold text-lg" x-cloak>
-          <span x-show="vista === 'pedido'">Pedido #<span x-text="actual?.pedido_id"></span></span>
-          <span x-show="vista === 'resumen'">Resumen #<span x-text="actual?.pedido_id"></span></span>
-        </span>
-      </div>
-      <!-- Derecha: estado + recargar -->
-      <div class="flex items-center gap-2">
-        <span x-show="!conexionOk" class="text-xs text-red-400 font-medium" x-cloak>Sin conexión</span>
+    <div class="relative flex items-center px-4 py-3">
+      <div>
+        <p class="panchi-shimmer text-[11px] font-semibold uppercase tracking-[0.18em] leading-none mb-0.5">Panchi</p>
+        <p class="text-base font-black text-white leading-none tracking-tight">Repartos</p>
       </div>
     </div>
 
@@ -435,15 +421,48 @@
   ================================================================ -->
   <div x-show="vista === 'pedido' && actual" x-cloak class="pb-40">
 
-    <!-- HEADER STICKY: Pedido # + Dirección + Info crítica -->
-    <header class="sticky top-0 z-30 px-3 pt-3 pb-1 bg-gradient-to-b from-slate-900 via-slate-900 to-transparent backdrop-blur">
-      <div class="bg-gray-800 border border-gray-700 rounded-2xl text-white shadow-sm overflow-hidden relative">
-        <!-- Glow effect -->
-        <div class="absolute inset-0 pointer-events-none overflow-hidden">
-          <div class="absolute right-0 inset-y-0 w-32 bg-gradient-to-l from-orange-500/15 to-transparent opacity-40"></div>
-        </div>
+    <!-- HEADER -->
+    <header class="px-3 pt-3 pb-1">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl text-white shadow-sm overflow-hidden relative">
 
-        <!-- Header content -->
+      <!-- Arte CSS: skyline + glow -->
+      <div class="absolute inset-0 pointer-events-none overflow-hidden">
+        <div class="header-glow absolute right-0 inset-y-0 w-32 bg-gradient-to-l from-orange-500/20 to-transparent"></div>
+        <div style="position:absolute;bottom:0;right:10px;display:flex;align-items:flex-end;gap:2px;opacity:0.45">
+          <div style="width:9px;height:22px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+            <div style="position:absolute;top:4px;left:2px;width:2px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 5px 3px rgba(249,115,22,0.55)"></div>
+          </div>
+          <div style="width:14px;height:38px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+            <div style="position:absolute;top:5px;left:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.5)"></div>
+            <div style="position:absolute;top:5px;right:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.5)"></div>
+            <div style="position:absolute;top:13px;left:2px;width:3px;height:2px;background:#ea580c;border-radius:1px;box-shadow:0 0 5px 2px rgba(234,88,12,0.4)"></div>
+          </div>
+          <div style="width:8px;height:28px;background:#0f172a;border-radius:2px 2px 0 0;position:relative"></div>
+          <div style="width:11px;height:50px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+            <div style="position:absolute;top:6px;left:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 7px 3px rgba(249,115,22,0.6)"></div>
+            <div style="position:absolute;top:6px;right:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 7px 3px rgba(249,115,22,0.6)"></div>
+            <div style="position:absolute;top:16px;left:2px;width:3px;height:2px;background:#ea580c;border-radius:1px;box-shadow:0 0 5px 2px rgba(234,88,12,0.35)"></div>
+            <div style="position:absolute;top:26px;right:2px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.5)"></div>
+          </div>
+          <div style="width:16px;height:32px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+            <div style="position:absolute;top:5px;left:3px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.55)"></div>
+            <div style="position:absolute;top:5px;right:3px;width:3px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.55)"></div>
+            <div style="position:absolute;top:14px;left:3px;width:3px;height:2px;background:#ea580c;border-radius:1px;box-shadow:0 0 5px 2px rgba(234,88,12,0.4)"></div>
+          </div>
+          <div style="width:9px;height:42px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+            <div style="position:absolute;top:7px;left:2px;width:4px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 8px 4px rgba(249,115,22,0.6)"></div>
+            <div style="position:absolute;top:18px;left:2px;width:4px;height:2px;background:#f97316;border-radius:1px;box-shadow:0 0 6px 3px rgba(249,115,22,0.45)"></div>
+          </div>
+          <div style="width:12px;height:18px;background:#0f172a;border-radius:2px 2px 0 0"></div>
+        </div>
+      </div>
+
+    </div>
+    </header>
+
+    <!-- Pedido # + Dirección + Info crítica -->
+    <div class="px-3 pt-3">
+      <div class="bg-gray-800 border border-gray-700 rounded-2xl text-white shadow-sm overflow-hidden relative">
         <div class="relative px-4 py-4">
           <div class="flex items-start justify-between gap-3 mb-2">
             <div>
@@ -459,14 +478,13 @@
               <span x-text="actual?.estado_reparto === 'asignado' ? 'Pendiente' : 'En camino'"></span>
             </span>
           </div>
-          <!-- Dirección en header -->
           <div class="bg-gray-700/30 rounded-lg p-2.5 mt-3 border border-gray-600/30">
             <p class="text-xs text-gray-400 font-medium mb-1">📍 Entregar en</p>
             <p class="text-sm font-bold text-white leading-snug" x-text="actual?.direccion_entrega"></p>
           </div>
         </div>
       </div>
-    </header>
+    </div>
 
     <!-- MAPS CTA (secundario, más compacto) -->
     <div class="px-4 pt-3 pb-0 space-y-3">
