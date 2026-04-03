@@ -151,6 +151,8 @@ def cambiar_rol():
 @requiere_autenticacion
 def checkin():
     """Muestra la selección de rol cuando el empleado tiene varias capacidades."""
+    if session.get('demo_mode'):
+        return jsonify({'error': 'No disponible en demo'}), 403
     empleado_id = session.get('empleado_id')
     try:
         caps = gestor_empleado.capacidades(empleado_id)

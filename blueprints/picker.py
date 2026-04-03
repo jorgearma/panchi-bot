@@ -34,7 +34,7 @@ def demo_view():
 
 
 @blueprint_picker.route("/picker", strict_slashes=False)
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def index():
     """Renderiza la PWA principal del picker autenticado."""
     picker_id = session.get('empleado_id')
@@ -58,7 +58,7 @@ def apple_touch_icon():
 
 
 @blueprint_picker.route("/picker/manifest.json")
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def manifest():
     """Genera el manifest de la PWA con el contexto del picker actual."""
     picker_id = session.get('empleado_id')
@@ -81,7 +81,7 @@ def service_worker():
 
 
 @blueprint_picker.route("/picker/mis-pedidos")
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def mis_pedidos():
     """Lista los pickings asignados al picker actual."""
     if session.get('demo_mode'):
@@ -96,7 +96,7 @@ def mis_pedidos():
 
 
 @blueprint_picker.route("/picker/item/<int:item_id>/estado", methods=["POST"])
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def actualizar_item(item_id: int):
     """Actualiza el estado de una línea de picking, incluida su sustitución."""
     if session.get('demo_mode'):
@@ -138,7 +138,7 @@ def actualizar_item(item_id: int):
 
 
 @blueprint_picker.route("/picker/buscar-productos")
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def buscar_productos():
     """Busca productos para proponer sustituciones durante el picking."""
     if session.get('demo_mode'):
@@ -154,7 +154,7 @@ def buscar_productos():
 
 
 @blueprint_picker.route("/picker/picking/<int:picking_id>/finalizar", methods=["POST"])
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def finalizar_picking(picking_id: int):
     """Marca un picking como completado por el picker actual."""
     if session.get('demo_mode'):
@@ -170,7 +170,7 @@ def finalizar_picking(picking_id: int):
 
 
 @blueprint_picker.route("/picker/cola")
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def cola():
     """Devuelve la cola de pickings aún sin asignar."""
     if session.get('demo_mode'):
@@ -185,7 +185,7 @@ def cola():
 
 
 @blueprint_picker.route("/picker/cola/coger/<int:picking_id>", methods=["POST"])
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def coger_picking(picking_id: int):
     """Permite al picker reclamar un picking pendiente de la cola."""
     if session.get('demo_mode'):
