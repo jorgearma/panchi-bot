@@ -162,7 +162,7 @@ function repartidor(repartidorId) {
 
       // Detectar modo demo para polling más rápido
       const esDemoMode = window.location.href.includes('/demo') || window.location.href.includes('/repartidor/demo');
-      const pollingInterval = esDemoMode ? 5000 : 60000;
+      const pollingInterval = esDemoMode ? 2000 : 60000;
 
       setInterval(() => {
         if (this.vista === 'lista') {
