@@ -360,6 +360,8 @@ class DemoState:
         return True
 
 
+
+
 @blueprint_demo.route('/demo')
 def index():
     """Renderiza la página demo y prepara la sesión compartida."""
@@ -380,10 +382,9 @@ def autologin():
     if role not in ('picker', 'repartidor'):
         role = 'picker'
 
-    # Generar demo_session_id único por visita demo si no existe
-    if 'demo_session_id' not in session:
-        session['demo_session_id'] = str(uuid.uuid4())
-
+    # Limpiar cualquier sesión real antes de crear la demo
+    session.clear()
+    session['demo_session_id'] = str(uuid.uuid4())
     demo_sid = session['demo_session_id']
 
     session['empleado_id'] = 0

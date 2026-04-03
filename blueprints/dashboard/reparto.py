@@ -31,10 +31,8 @@ def register(bp):
         data = request.get_json(silent=True) or {}
         pedido_id   = data.get("pedido_id")
         empleado_id = data.get("empleado_id")
-
         if not pedido_id or not empleado_id:
             return _err("Faltan campos: pedido_id, empleado_id")
-
         ok, msg = gestor_dashboard.asignar_repartidor(int(pedido_id), int(empleado_id))
         if not ok:
             return _err(msg)

@@ -1,6 +1,6 @@
 import logging
 
-from flask import render_template, request
+from flask import render_template, request, session
 
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard, gestor_empleado
@@ -12,15 +12,18 @@ logger = logging.getLogger(__name__)
 def register(bp):
     """Registra las vistas y acciones relacionadas con turnos y rendimiento."""
     @bp.route("/dashboard/turnos")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def turnos():
         """Renderiza la vista de gestión de turnos."""
         return render_template("dashboard/turnos.html")
 
     @bp.route("/dashboard/turnos/hoy")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def turnos_hoy():
         """Devuelve los turnos programados para hoy."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_turnos_hoy
+            return _ok(get_demo_turnos_hoy())
         try:
             return _ok(gestor_empleado.turnos_hoy())
         except Exception as e:
@@ -28,9 +31,12 @@ def register(bp):
             return _err("Error interno", 500)
 
     @bp.route("/dashboard/turnos/historial")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def turnos_historial():
         """Devuelve el historial paginado de turnos ejecutados."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_turnos_historial
+            return _ok(get_demo_turnos_historial())
         try:
             desde       = request.args.get("desde")
             hasta       = request.args.get("hasta")
@@ -47,9 +53,12 @@ def register(bp):
             return _err("Error interno", 500)
 
     @bp.route("/dashboard/turnos/planificacion")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def turnos_planificacion():
         """Devuelve la planificación futura de turnos con filtros."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_turnos_planificacion
+            return _ok(get_demo_turnos_planificacion())
         try:
             desde       = request.args.get('desde') or None
             hasta       = request.args.get('hasta') or None
@@ -139,15 +148,18 @@ def register(bp):
             return _err("Error interno", 500)
 
     @bp.route("/dashboard/rendimiento")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def rendimiento():
         """Renderiza la vista de rendimiento por empleado."""
         return render_template("dashboard/rendimiento.html")
 
     @bp.route("/dashboard/rendimiento-datos")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def rendimiento_datos():
         """Resume el rendimiento de la plantilla para el periodo elegido."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_rendimiento_resumen
+            return _ok(get_demo_rendimiento_resumen())
         try:
             periodo = request.args.get("periodo", "hoy")
             rol     = request.args.get("rol") or None
@@ -157,9 +169,12 @@ def register(bp):
             return _err("Error interno", 500)
 
     @bp.route("/dashboard/rendimiento/<int:empleado_id>")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def rendimiento_empleado(empleado_id):
         """Devuelve el detalle de rendimiento de un empleado concreto."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_rendimiento_empleado
+            return _ok(get_demo_rendimiento_empleado(empleado_id))
         try:
             periodo = request.args.get("periodo", "semana")
             data = gestor_dashboard.rendimiento_empleado(empleado_id, periodo=periodo)
@@ -171,15 +186,18 @@ def register(bp):
             return _err("Error interno", 500)
 
     @bp.route("/dashboard/estadisticas")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def estadisticas():
         """Renderiza la vista de estadísticas agregadas."""
         return render_template("dashboard/estadisticas.html")
 
     @bp.route("/dashboard/estadisticas-datos")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def estadisticas_datos():
         """Devuelve series agregadas para la vista de estadísticas."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_estadisticas
+            return _ok(get_demo_estadisticas())
         desde        = request.args.get('desde') or None
         hasta        = request.args.get('hasta') or None
         granularidad = request.args.get('granularidad', 'dia')

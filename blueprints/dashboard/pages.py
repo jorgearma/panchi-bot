@@ -30,6 +30,9 @@ def register(bp):
     @requiere_rol('manager', 'admin', demo_ok=True)
     def monitor_datos():
         """Agrupa datos clave para alimentar el monitor operativo."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_monitor_datos
+            return _ok(get_demo_monitor_datos())
         try:
             monitor_data = gestor_dashboard.monitor_empleados()
             metricas_data = gestor_dashboard.metricas()
@@ -108,14 +111,12 @@ def register(bp):
         """
         if session.get('demo_mode'):
             rol = request.args.get("rol")
-            if rol == 'picker' or rol is None:
-                return _ok([{"id": 11, "nombre": "Luis R.", "rol": "picker"}])
-            if rol == 'repartidor':
-                return _ok([
-                    {"id": 21, "nombre": "Pedro M.", "rol": "repartidor"},
-                    {"id": 22, "nombre": "Sara V.", "rol": "repartidor"},
-                ])
-            return _ok([])
+            todos = [
+                {"id": 11, "nombre": "Luis R.",  "rol": "picker"},
+                {"id": 21, "nombre": "Pedro M.", "rol": "repartidor"},
+                {"id": 22, "nombre": "Sara V.",  "rol": "repartidor"},
+            ]
+            return _ok([e for e in todos if rol is None or e['rol'] == rol])
         try:
             rol = request.args.get("rol")
             operacion = request.args.get("operacion", "").lower() == "true"
