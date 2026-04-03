@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="/auth/manifest.json">
     <title>Panchi Bot - Acceso</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
@@ -13,6 +17,8 @@
             --login-ink-soft: #51453f;
             --login-shadow: 0 28px 60px rgba(232, 93, 37, 0.18);
         }
+
+        html, body { overscroll-behavior: none; }
 
         body.login-page {
             min-height: 100vh;
@@ -461,8 +467,9 @@
                 <h2>Bienvenido de vuelta</h2>
                 <p>Entra con tu cuenta para seguir con comandas, reparto y operativa del dia.</p>
 
-                <form class="login-form" method="post">
+                <form class="login-form" id="login-form">
                     {% if error %}<div class="login-error">{{ error }}</div>{% endif %}
+                    <div id="login-error-js" class="login-error" style="display:none"></div>
 
                     <div class="login-field">
                         <label for="email">Email</label>
@@ -474,7 +481,7 @@
                         <input id="password" type="password" name="password" placeholder="Introduce tu contrasena" autocomplete="current-password" required>
                     </div>
 
-                    <button class="login-submit" type="submit">Entrar al panel</button>
+                    <button class="login-submit" type="submit" id="login-btn">Entrar al panel</button>
                 </form>
 
                 <div class="login-note">
@@ -483,5 +490,42 @@
             </div>
         </section>
     </main>
+  <script>
+    const form = document.getElementById('login-form');
+    const btn  = document.getElementById('login-btn');
+    const err  = document.getElementById('login-error-js');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Entrando...';
+      err.style.display = 'none';
+
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email:    document.getElementById('email').value,
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          window.location.replace(data.redirect);
+        } else {
+          err.textContent = data.error || 'Credenciales incorrectas';
+          err.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Entrar al panel';
+        }
+      } catch {
+        err.textContent = 'Error de conexión. Inténtalo de nuevo.';
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Entrar al panel';
+      }
+    });
+  </script>
 </body>
 </html>

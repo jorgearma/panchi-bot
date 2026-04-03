@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <title>Panchi — Reparto</title>
   <meta name="theme-color" content="#111827" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -1208,5 +1208,15 @@
 
   <!-- ======== JAVASCRIPT ======== -->
   <script src="{{ url_for('static', filename='js/features/repartidor/index.js') }}"></script>
+
+  <!-- ======== PWA: Service Worker ======== -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/repartidor/sw.js', { scope: '/repartidor/' })
+          .catch(err => console.warn('SW repartidor no registrado:', err));
+      });
+    }
+  </script>
 </body>
 </html>

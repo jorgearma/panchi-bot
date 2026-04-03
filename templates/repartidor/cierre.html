@@ -2,12 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <title>Panchi — Cierre de caja</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
+    html, body { overscroll-behavior: none; }
+    body { padding-bottom: env(safe-area-inset-bottom); }
     .slide-up { animation: slideUp .25s ease-out; }
     @keyframes slideUp {
       from { opacity:0; transform:translateY(12px); }

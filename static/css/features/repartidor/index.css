@@ -95,9 +95,13 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .leaflet-control-attribution a { color: #6b7280 !important; }
 
+html, body { overscroll-behavior: none; }
+
 .repartidor-shell {
   background: #111827;
   color: var(--rep-ink);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .glass-panel {
