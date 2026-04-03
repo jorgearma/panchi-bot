@@ -102,84 +102,86 @@
       gap: 1.25rem;
     }
 
-    /* ── Phone frame ── */
+    /* ── Phone frame — proporciones iPhone 14 (310×670, ratio 1:2.16) ── */
     .phone-frame {
       position: relative;
-      width: 340px;
-      height: 680px;
-      border-radius: 44px;
-      border: 8px solid #1e293b;
-      background: #0a0a0a;
+      width: 310px;
+      height: 670px;
+      border-radius: 48px;
+      border: 12px solid #1a2234;
+      background: #080c14;
       box-shadow:
-        0 0 0 1px #334155,
-        0 30px 80px rgba(0,0,0,0.7),
-        0 10px 30px rgba(0,0,0,0.5),
-        inset 0 0 0 1px #0f172a;
+        0 0 0 1px rgba(255,255,255,0.07),
+        inset 0 0 0 1px rgba(255,255,255,0.04),
+        0 60px 120px rgba(0,0,0,0.85),
+        0 20px 50px rgba(0,0,0,0.55),
+        0 4px 12px rgba(0,0,0,0.4);
       overflow: hidden;
-    }
-
-    /* Dynamic island */
-    .phone-frame::before {
-      content: '';
-      position: absolute;
-      top: 14px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 110px;
-      height: 32px;
-      background: #000;
-      border-radius: 999px;
-      z-index: 10;
-      pointer-events: none;
     }
 
     /* Home indicator */
     .phone-frame::after {
       content: '';
       position: absolute;
-      bottom: 10px;
+      bottom: 8px;
       left: 50%;
       transform: translateX(-50%);
-      width: 120px;
+      width: 100px;
       height: 4px;
-      background: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.25);
       border-radius: 999px;
       z-index: 10;
       pointer-events: none;
     }
 
-    /* Side buttons — volume */
+    /* Side buttons — volumen */
     .phone-frame .btn-volume {
       position: absolute;
-      left: -11px;
-      top: 100px;
-      width: 3px;
-      height: 28px;
-      background: #1e293b;
+      left: -15px;
+      top: 90px;
+      width: 4px;
+      height: 32px;
+      background: #1a2234;
       border-radius: 2px 0 0 2px;
     }
     .phone-frame .btn-volume.lower {
-      top: 140px;
+      top: 135px;
     }
     /* Power button */
     .phone-frame .btn-power {
       position: absolute;
-      right: -11px;
-      top: 120px;
-      width: 3px;
-      height: 56px;
-      background: #1e293b;
+      right: -15px;
+      top: 110px;
+      width: 4px;
+      height: 60px;
+      background: #1a2234;
       border-radius: 0 2px 2px 0;
     }
 
-    /* Screen glow */
+    /* Screen */
     .phone-screen {
       position: absolute;
       inset: 0;
       border-radius: 36px;
       overflow: hidden;
     }
-    .phone-screen iframe {
+
+    /*
+      Escala: inner width = 310 - 2×12 = 286px
+      viewport móvil = 375px
+      scale = 286/375 = 0.763
+      El contenido llena exactamente la pantalla del teléfono.
+    */
+    .iframe-scaler {
+      position: absolute;
+      top: 0;
+      left: calc((100% - 375px * 0.763) / 2);
+      width: 375px;
+      height: calc(100% / 0.763);
+      transform: scale(0.763);
+      transform-origin: top left;
+    }
+    .iframe-scaler iframe {
       width: 100%;
       height: 100%;
       border: none;
@@ -349,13 +351,15 @@
               <div class="spinner"></div>
               <p>Cargando picking…</p>
             </div>
-            <iframe
-              src="/demo/autologin?role=picker"
-              title="Vista Picking"
-              loading="lazy"
-              onload="hideLoading('loading-picker')"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation-by-user-activation"
-            ></iframe>
+            <div class="iframe-scaler">
+              <iframe
+                src="/demo/autologin?role=picker"
+                title="Vista Picking"
+                loading="lazy"
+                onload="hideLoading('loading-picker')"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation-by-user-activation"
+              ></iframe>
+            </div>
           </div>
         </div>
         <div class="phone-label">
@@ -375,13 +379,15 @@
               <div class="spinner"></div>
               <p>Cargando reparto…</p>
             </div>
-            <iframe
-              src="/demo/autologin?role=repartidor"
-              title="Vista Repartidor"
-              loading="lazy"
-              onload="hideLoading('loading-repartidor')"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation-by-user-activation"
-            ></iframe>
+            <div class="iframe-scaler">
+              <iframe
+                src="/demo/autologin?role=repartidor"
+                title="Vista Repartidor"
+                loading="lazy"
+                onload="hideLoading('loading-repartidor')"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-top-navigation-by-user-activation"
+              ></iframe>
+            </div>
           </div>
         </div>
         <div class="phone-label">
