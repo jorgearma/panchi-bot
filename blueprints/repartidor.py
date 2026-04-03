@@ -35,7 +35,7 @@ def demo_view():
 
 
 @blueprint_repartidor.route("/repartidor", strict_slashes=False)
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def index():
     """Renderiza la PWA principal del repartidor autenticado."""
     repartidor_id = session.get('empleado_id')
@@ -58,7 +58,7 @@ def apple_touch_icon():
 
 
 @blueprint_repartidor.route("/repartidor/manifest.json")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def manifest():
     """Genera el manifest de la PWA con el contexto del repartidor actual."""
     repartidor_id = session.get('empleado_id')
@@ -81,7 +81,7 @@ def service_worker():
 
 
 @blueprint_repartidor.route("/repartidor/mis-pedidos")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def mis_pedidos():
     """Lista los repartos asignados al repartidor actual."""
     if session.get('demo_mode'):
@@ -96,7 +96,7 @@ def mis_pedidos():
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/salida", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def marcar_salida(reparto_id: int):
     """Marca un reparto como salido a entrega."""
     if session.get('demo_mode'):
@@ -112,7 +112,7 @@ def marcar_salida(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/entregar", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def marcar_entregado(reparto_id: int):
     """Marca un reparto como entregado al cliente."""
     if session.get('demo_mode'):
@@ -128,7 +128,7 @@ def marcar_entregado(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/no-entregar", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def marcar_no_entregado(reparto_id: int):
     """Registra una incidencia de no entrega y avisa al cliente."""
     if session.get('demo_mode'):
@@ -150,7 +150,7 @@ def marcar_no_entregado(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/registrar-cobro", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def registrar_cobro(reparto_id: int):
     """Guarda el desglose del cobro realizado durante la entrega."""
     if session.get('demo_mode'):
@@ -177,7 +177,7 @@ def registrar_cobro(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/cierre")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def cierre():
     """Renderiza la pantalla de cierre de caja del repartidor."""
     repartidor_id = session.get('empleado_id')
@@ -185,9 +185,11 @@ def cierre():
 
 
 @blueprint_repartidor.route("/repartidor/cierre/datos")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def cierre_datos():
     """Devuelve el resumen de caja del repartidor para una fecha dada."""
+    if session.get('demo_mode'):
+        return jsonify({"ok": True, "datos": []})
     repartidor_id = session.get('empleado_id')
     fecha_str = request.args.get("fecha")
     try:
@@ -199,7 +201,7 @@ def cierre_datos():
 
 
 @blueprint_repartidor.route("/repartidor/cola")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def cola():
     """Devuelve la cola de repartos todavía sin asignar."""
     if session.get('demo_mode'):
@@ -214,7 +216,7 @@ def cola():
 
 
 @blueprint_repartidor.route("/repartidor/cola/coger/<int:pedido_id>", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def coger_reparto(pedido_id: int):
     """Permite al repartidor reclamar un pedido pendiente de reparto."""
     if session.get('demo_mode'):

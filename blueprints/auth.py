@@ -104,14 +104,14 @@ def logout():
     """Cierra la sesión y limpia el rol activo persistido del empleado."""
     empleado_id = session.get('empleado_id')
     # Nular rol_activo en BD para forzar check-in en el próximo turno
-    if empleado_id:
+    if empleado_id and not session.get('demo_mode'):
         gestor_empleado.limpiar_rol_activo(empleado_id)
     session.clear()
     logger.info("AUTH_LOGOUT empleado_id=%s", empleado_id)
     return redirect(url_for('auth.login'))
 
 
-def requiere_rol(*roles_permitidos):
+def requiere_rol(*roles_permitidos, demo_ok=False):
     """Restringe una ruta a empleados autenticados con uno de los roles indicados."""
     def decorator(f):
         @wraps(f)
@@ -120,6 +120,8 @@ def requiere_rol(*roles_permitidos):
                 if request.method == 'GET' and not request.is_json:
                     return redirect(url_for('auth.login'))
                 return jsonify({'error': 'No autenticado'}), 401
+            if session.get('demo_mode') and not demo_ok:
+                return jsonify({'error': 'No disponible en demo'}), 403
             if roles_permitidos and session.get('rol') not in roles_permitidos:
                 return jsonify({'error': 'Sin permisos para este panel'}), 403
             return f(*args, **kwargs)
