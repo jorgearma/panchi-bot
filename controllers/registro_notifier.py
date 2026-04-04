@@ -67,16 +67,24 @@ def _enviar_confirmacion_direccion(numero_cliente, direccion):
     )
 
 
-def _enviar_direccion_invalida(numero_cliente, sugerencia=None):
+def _enviar_direccion_invalida(numero_cliente, sugerencia=None, alta_confianza=False):
     """Explica que la dirección no pudo validarse. Si hay sugerencia, la incluye."""
     if sugerencia:
         nombre = sugerencia.title()
-        mensaje = (
-            f"⛔ *No reconocí esa dirección*\n\n"
-            f"¿Quisiste decir *{nombre}*? ✍️\n\n"
-            f"Escríbela con el número de portal. Por ejemplo:\n"
-            f"•_{nombre} 5_\n•_{nombre} 12, 2B_"
-        )
+        if alta_confianza:
+            mensaje = (
+                f"⛔ *No reconocí esa dirección*\n\n"
+                f"¿Quisiste decir *{nombre}*? ✍️\n\n"
+                f"Escríbela con el número de portal. Por ejemplo:\n"
+                f"•_{nombre} 5_\n•_{nombre} 12, 2B_"
+            )
+        else:
+            mensaje = (
+                f"⛔ *No reconocí esa dirección*\n\n"
+                f"¿Te refieres a *{nombre}*? ✍️\n\n"
+                f"Si es así, escríbela con el número de portal.\n"
+                f"Si no, prueba con otro nombre de calle y el número."
+            )
     else:
         mensaje = (
             "⛔ *La dirección no es válida* ⛔\n\nPor favor, revisa los *detalles* 📝.\n"
