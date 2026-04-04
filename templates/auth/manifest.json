@@ -1,0 +1,25 @@
+{
+  "name": "Panchi — Panel",
+  "short_name": "Panchi",
+  "description": "Acceso al panel operativo de Panchi",
+  "start_url": "/auth/login",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#ff6b35",
+  "background_color": "#fff7f1",
+  "icons": [
+    {
+      "src": "/static/picker/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/picker/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

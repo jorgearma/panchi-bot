@@ -9,6 +9,7 @@ function picker(pickerId) {
     pedidos: [],
     vistaActual: 'lista',
     ticketActual: null,
+    navStack: [],
     cargando: false,
     finalizando: false,
     isOnline: true,
@@ -36,6 +37,17 @@ function picker(pickerId) {
       query: '',
       resultados: [],
       buscando: false,
+    },
+
+    get puedeVolver() {
+      return this.navStack.length > 0;
+    },
+
+    get labelAnterior() {
+      const prev = this.navStack[this.navStack.length - 1];
+      if (!prev) return '';
+      if (prev.vistaActual === 'lista') return prev.tabActiva === 'cola' ? 'Cola' : 'Mis pedidos';
+      return 'Atrás';
     },
 
     get itemsOrdenados() {
@@ -75,12 +87,20 @@ function picker(pickerId) {
         this.isOnline = false;
       });
       await Promise.all([this.recargar(), this.cargarCola()]);
+
+      // Detectar modo demo para polling más rápido
+      const esDemoMode = window.location.href.includes('/demo') || window.location.href.includes('/picker/demo');
+      const pollingInterval = esDemoMode ? 2000 : 60000;
+
       setInterval(() => {
         if (this.vistaActual === 'lista') {
-          this.recargar();
+          this.recargar(true);
+        }
+        // En demo: actualizar cola siempre (incluso fuera de lista)
+        if (esDemoMode || this.vistaActual === 'lista') {
           this.cargarCola();
         }
-      }, 60000);
+      }, pollingInterval);
     },
 
     async recargar(silencioso = false) {
@@ -161,12 +181,23 @@ function picker(pickerId) {
     },
 
     abrirTicket(pedido) {
+      this.navStack.push({ vistaActual: this.vistaActual, tabActiva: this.tabActiva, ticketActual: this.ticketActual });
       this.ticketActual = pedido;
       this.vistaActual = 'ticket';
       window.scrollTo({ top: 0, behavior: 'instant' });
     },
 
+    goBack() {
+      const prev = this.navStack.pop();
+      if (!prev) return;
+      this.ticketActual = prev.ticketActual;
+      this.vistaActual = prev.vistaActual;
+      this.tabActiva = prev.tabActiva;
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    },
+
     volverALista() {
+      this.navStack = [];
       this.vistaActual = 'lista';
       this.ticketActual = null;
       this.recargar();

@@ -1,7 +1,7 @@
 import logging
 from functools import wraps
 
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 from database import get_db
@@ -18,6 +18,14 @@ _ROLES_VALIDOS = {'manager', 'picker', 'repartidor', 'admin'}
 def _get_empleado_by_email(email: str):
     """Busca un empleado activo por email para iniciar sesión."""
     return get_db().query(Empleado).filter_by(Email=email, activo=True).first()
+
+
+@blueprint_auth.route('/auth/manifest.json')
+def manifest():
+    return Response(
+        render_template('auth/manifest.json'),
+        mimetype='application/manifest+json',
+    )
 
 
 @blueprint_auth.route('/auth/login', methods=['GET', 'POST'])
@@ -96,14 +104,14 @@ def logout():
     """Cierra la sesión y limpia el rol activo persistido del empleado."""
     empleado_id = session.get('empleado_id')
     # Nular rol_activo en BD para forzar check-in en el próximo turno
-    if empleado_id:
+    if empleado_id and not session.get('demo_mode'):
         gestor_empleado.limpiar_rol_activo(empleado_id)
     session.clear()
     logger.info("AUTH_LOGOUT empleado_id=%s", empleado_id)
     return redirect(url_for('auth.login'))
 
 
-def requiere_rol(*roles_permitidos):
+def requiere_rol(*roles_permitidos, demo_ok=False):
     """Restringe una ruta a empleados autenticados con uno de los roles indicados."""
     def decorator(f):
         @wraps(f)
@@ -112,6 +120,11 @@ def requiere_rol(*roles_permitidos):
                 if request.method == 'GET' and not request.is_json:
                     return redirect(url_for('auth.login'))
                 return jsonify({'error': 'No autenticado'}), 401
+            # Si la sesión pertenece a un empleado real, demo_mode nunca debe ser True
+            if session.get('demo_mode') and session.get('empleado_id') != 0:
+                session.pop('demo_mode', None)
+            if session.get('demo_mode') and not demo_ok:
+                return jsonify({'error': 'No disponible en demo'}), 403
             if roles_permitidos and session.get('rol') not in roles_permitidos:
                 return jsonify({'error': 'Sin permisos para este panel'}), 403
             return f(*args, **kwargs)

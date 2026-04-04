@@ -6,15 +6,15 @@ from unittest.mock import patch, PropertyMock, MagicMock
 
 def test_turnos_hoy_devuelve_claves_esperadas(app):
     """turnos_hoy() devuelve dict con empleados y resumen."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             mock_session.return_value.query.return_value.filter_by.return_value.order_by.return_value.all.return_value = []
             mock_session.return_value.query.return_value.filter.return_value.all.return_value = []
 
-            result = gestor_dashboard.turnos_hoy()
+            result = gestor_empleado.turnos_hoy()
 
             assert 'empleados' in result
             assert 'resumen' in result
@@ -27,15 +27,15 @@ def test_turnos_hoy_devuelve_claves_esperadas(app):
 
 def test_turnos_hoy_resumen_sin_empleados(app):
     """turnos_hoy() con lista vacía da resumen a cero."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             mock_session.return_value.query.return_value.filter_by.return_value.order_by.return_value.all.return_value = []
             mock_session.return_value.query.return_value.filter.return_value.all.return_value = []
 
-            result = gestor_dashboard.turnos_hoy()
+            result = gestor_empleado.turnos_hoy()
 
             assert result['resumen']['total'] == 0
             assert result['resumen']['con_checkin'] == 0
@@ -43,10 +43,10 @@ def test_turnos_hoy_resumen_sin_empleados(app):
 
 def test_turnos_historial_devuelve_claves_esperadas(app):
     """turnos_historial() devuelve dict con turnos, total, page, pages."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             mock_q = mock_session.return_value.query.return_value
             mock_q.join.return_value = mock_q
@@ -57,7 +57,7 @@ def test_turnos_historial_devuelve_claves_esperadas(app):
             mock_q.limit.return_value = mock_q
             mock_q.all.return_value = []
 
-            result = gestor_dashboard.turnos_historial()
+            result = gestor_empleado.turnos_historial()
 
             assert 'turnos' in result
             assert 'total' in result
@@ -69,10 +69,10 @@ def test_turnos_historial_devuelve_claves_esperadas(app):
 
 def test_turnos_historial_paginacion_por_defecto(app):
     """turnos_historial() usa page=1 y per_page=25 por defecto."""
-    from container import gestor_dashboard
+    from container import gestor_empleado
     with app.app_context():
         with patch.object(
-            type(gestor_dashboard), 'session', new_callable=PropertyMock
+            type(gestor_empleado), 'session', new_callable=PropertyMock
         ) as mock_session:
             mock_q = mock_session.return_value.query.return_value
             mock_q.join.return_value = mock_q
@@ -83,7 +83,7 @@ def test_turnos_historial_paginacion_por_defecto(app):
             mock_q.limit.return_value = mock_q
             mock_q.all.return_value = []
 
-            result = gestor_dashboard.turnos_historial()
+            result = gestor_empleado.turnos_historial()
 
             assert result['page'] == 1
             assert result['pages'] == 2   # ceil(50/25)
@@ -110,14 +110,14 @@ def test_turnos_html_requiere_auth(client):
 def test_turnos_hoy_json_devuelve_estructura(client):
     """GET /dashboard/turnos/hoy devuelve {empleados, resumen}."""
     from unittest.mock import patch
-    from container import gestor_dashboard
+    from container import gestor_empleado
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
         sess['rol'] = 'admin'
 
     with patch.object(
-        gestor_dashboard, 'turnos_hoy',
+        gestor_empleado, 'turnos_hoy',
         return_value={'empleados': [], 'resumen': {'con_checkin': 0, 'en_pausa': 0, 'desconectados': 0, 'total': 0}}
     ):
         resp = client.get('/dashboard/turnos/hoy')
@@ -130,14 +130,14 @@ def test_turnos_hoy_json_devuelve_estructura(client):
 def test_turnos_historial_json_devuelve_estructura(client):
     """GET /dashboard/turnos/historial devuelve {turnos, total, page, pages}."""
     from unittest.mock import patch
-    from container import gestor_dashboard
+    from container import gestor_empleado
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
         sess['rol'] = 'admin'
 
     with patch.object(
-        gestor_dashboard, 'turnos_historial',
+        gestor_empleado, 'turnos_historial',
         return_value={'turnos': [], 'total': 0, 'page': 1, 'pages': 1}
     ):
         resp = client.get('/dashboard/turnos/historial')
@@ -150,14 +150,14 @@ def test_turnos_historial_json_devuelve_estructura(client):
 def test_turnos_historial_json_pasa_filtros(client):
     """GET /dashboard/turnos/historial pasa params al manager."""
     from unittest.mock import patch
-    from container import gestor_dashboard
+    from container import gestor_empleado
 
     with client.session_transaction() as sess:
         sess['empleado_id'] = 1
         sess['rol'] = 'admin'
 
     with patch.object(
-        gestor_dashboard, 'turnos_historial',
+        gestor_empleado, 'turnos_historial',
         return_value={'turnos': [], 'total': 0, 'page': 1, 'pages': 1}
     ) as mock_hist:
         client.get('/dashboard/turnos/historial?rol=picker&page=2')

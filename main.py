@@ -63,6 +63,9 @@ def create_app(config: dict = None) -> Flask:
 
     app = Flask(__name__)
     app.secret_key = app_config.SECRET_KEY
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = app_config.SESSION_COOKIE_SECURE
     app.teardown_appcontext(close_db)
     CORS(app, resources={r"/api/*": {"origins": app_config.ALLOWED_ORIGIN or "*"}})
 
@@ -81,6 +84,7 @@ def create_app(config: dict = None) -> Flask:
     from blueprints.empleado import blueprint_empleado
     from blueprints.metricas_operacion import blueprint_metricas_operacion
     from blueprints.metricas_analitica import blueprint_metricas_analitica
+    from blueprints.demo import blueprint_demo
 
     app.register_blueprint(blueprint_auth)
     app.register_blueprint(blueprint_webhook)
@@ -94,6 +98,7 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(blueprint_empleado)
     app.register_blueprint(blueprint_metricas_operacion)
     app.register_blueprint(blueprint_metricas_analitica)
+    app.register_blueprint(blueprint_demo)
 
     @app.context_processor
     def inject_app_mode():

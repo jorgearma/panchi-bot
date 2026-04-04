@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <title>Panchi — Reparto</title>
   <meta name="theme-color" content="#111827" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -68,25 +68,23 @@
     </div>
 
     <!-- Contenido del header -->
-    <div class="relative flex items-center justify-between px-4 py-3">
-      <!-- Izquierda: back + título -->
-      <div class="flex items-center gap-2">
-        <button x-show="vista !== 'lista'"
-                @click="volverALista()"
-                class="p-2 -ml-2 text-gray-400 active:text-white transition text-2xl leading-none">‹</button>
-        <div x-show="vista === 'lista'">
-          <p class="panchi-shimmer text-[11px] font-semibold uppercase tracking-[0.18em] leading-none mb-0.5">Panchi</p>
-          <p class="text-base font-black text-white leading-none tracking-tight">Repartos</p>
-        </div>
-        <span class="font-bold text-lg" x-cloak>
-          <span x-show="vista === 'pedido'">Pedido #<span x-text="actual?.pedido_id"></span></span>
-          <span x-show="vista === 'resumen'">Resumen #<span x-text="actual?.pedido_id"></span></span>
-        </span>
+    <div class="relative flex items-center px-4 py-3 select-none"
+         @click="puedeVolver ? goBack() : window.location.href='/empleado'">
+
+      <!-- Raíz: sin historial -->
+      <div x-show="!puedeVolver">
+        <p class="panchi-shimmer text-[11px] font-semibold uppercase tracking-[0.18em] leading-none mb-0.5">Panchi</p>
+        <p class="text-base font-black text-white leading-none tracking-tight">Repartos</p>
       </div>
-      <!-- Derecha: estado + recargar -->
-      <div class="flex items-center gap-2">
-        <span x-show="!conexionOk" class="text-xs text-red-400 font-medium" x-cloak>Sin conexión</span>
+
+      <!-- Sub-vista: hay historial -->
+      <div x-show="puedeVolver" x-cloak class="flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        <span class="text-sm font-semibold text-white/80" x-text="labelAnterior"></span>
       </div>
+
     </div>
 
   </div>
@@ -383,32 +381,36 @@
       </div>
 
       <!-- Lista -->
-      <div x-show="cola.length > 0" class="space-y-4">
+      <div x-show="cola.length > 0" class="space-y-2">
         <template x-for="p in cola" :key="p.pedido_id">
-          <div class="queue-card rounded-2xl p-3 text-white slide-up"
-               :class="p.ya_cogido ? 'opacity-45 saturate-50' : ''">
-            <div class="flex items-start justify-between gap-4">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span x-show="!p.ya_cogido" class="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-100">
+          <div class="rounded-xl active:scale-95 transition-transform slide-up overflow-hidden"
+               :class="p.ya_cogido
+                 ? 'border-2 border-red-800 bg-red-950 opacity-50 saturate-50'
+                 : 'border-2 border-orange-800 bg-orange-950'">
+            <div class="px-4 py-3 flex items-center gap-3">
+              <!-- Info principal -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-lg font-black text-white tracking-tight" x-text="p.pedido_id"></span>
+                  <span x-show="!p.ya_cogido"
+                        class="text-xs px-1.5 py-0.5 rounded font-semibold bg-orange-900 text-orange-300">
                     Disponible
                   </span>
-                  <span x-show="!p.ya_cogido"
-                        class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-slate-200"
-                        x-text="p.segundos_esperando < 60 ? p.segundos_esperando + 's' : Math.floor(p.segundos_esperando / 60) + ' min'"></span>
                   <span x-show="p.ya_cogido"
-                        class="rounded-full bg-red-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-100">
+                        class="text-xs px-1.5 py-0.5 rounded font-semibold bg-red-900 text-red-300">
                     Bloqueado
                   </span>
                 </div>
-                <div class="mt-2 text-base font-bold">Pedido #<span x-text="p.pedido_id"></span></div>
-                <p class="mt-1 text-xs text-red-100" x-show="p.ya_cogido">Ya cogido por otro repartidor</p>
+                <div class="text-xs text-gray-400" x-show="!p.ya_cogido"
+                     x-text="p.segundos_esperando < 60 ? p.segundos_esperando + 's esperando' : Math.floor(p.segundos_esperando / 60) + ' min esperando'"></div>
+                <div class="text-xs text-red-400" x-show="p.ya_cogido">Ya cogido por otro repartidor</div>
               </div>
+              <!-- Acción -->
               <button @click="cogerReparto(p.pedido_id)"
                       :disabled="p.ya_cogido || cogiendo !== null"
-                      class="rounded-xl px-3 py-2 text-xs font-bold transition flex-shrink-0"
+                      class="flex-shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition"
                       :class="p.ya_cogido
-                        ? 'bg-white/10 text-slate-300 cursor-not-allowed'
+                        ? 'bg-white/10 text-gray-500 cursor-not-allowed'
                         : 'bg-white text-slate-900 active:scale-95'">
                 <span x-show="!p.ya_cogido && cogiendo !== p.pedido_id">Coger →</span>
                 <span x-show="p.ya_cogido">Cogido</span>
@@ -435,110 +437,165 @@
   ================================================================ -->
   <div x-show="vista === 'pedido' && actual" x-cloak class="pb-40">
 
-    <!-- DIRECCIÓN + MAPS -->
-    <div class="px-4 pt-4 pb-0">
-      <div class="bg-gray-800 rounded-2xl border border-gray-700 shadow-sm overflow-hidden">
-
-        <!-- Cabecera: estado del reparto -->
-        <div class="flex items-center justify-between px-4 pt-3 pb-2">
-          <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Dirección de entrega</span>
-          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
-                :class="actual?.estado_reparto === 'asignado'
-                  ? 'bg-orange-900 text-orange-300'
-                  : 'bg-blue-900 text-blue-300'">
-            <span x-show="actual?.estado_reparto === 'asignado'">⏳ Pendiente de salida</span>
-            <span x-show="actual?.estado_reparto === 'en_camino'" x-cloak>🛵 En camino</span>
-          </span>
-        </div>
-
-        <!-- Dirección -->
-        <div class="px-4 pb-3">
-          <p class="font-bold text-gray-900 text-base leading-snug" x-text="actual?.direccion_entrega"></p>
-        </div>
-
-        <!-- CTA Maps — bloqueado hasta haber salido -->
-        <div class="border-t border-gray-700">
-
-          <!-- Estado asignado: Maps desactivado con aviso -->
-          <div x-show="actual?.estado_reparto === 'asignado'"
-               class="flex items-center gap-3 px-4 py-3 bg-gray-800 cursor-not-allowed">
-            <span class="text-xl opacity-30">🗺️</span>
-            <div class="flex-1">
-              <p class="text-sm text-gray-400 font-medium">Maps se abrirá al pulsar</p>
-              <p class="text-xs text-gray-400">"Salir a repartir" en la parte inferior</p>
+    <!-- Pedido # + Dirección + Info crítica -->
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl text-white shadow-sm overflow-hidden relative mx-3 mt-3">
+        <div class="relative px-4 py-4">
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <p class="text-xs text-gray-400 font-medium uppercase tracking-wide">Pedido</p>
+              <p class="text-4xl font-black text-white leading-none mt-1" x-text="actual?.pedido_id"></p>
             </div>
-            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0 0v2m0-2h2m-2 0H10m9-7a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
+            <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
+                  :class="actual?.estado_reparto === 'asignado'
+                    ? 'bg-orange-900/50 text-orange-300 border border-orange-700'
+                    : 'bg-blue-900/50 text-blue-300 border border-blue-700'">
+              <span x-show="actual?.estado_reparto === 'asignado'">⏳</span>
+              <span x-show="actual?.estado_reparto === 'en_camino'" x-cloak>🛵</span>
+              <span x-text="actual?.estado_reparto === 'asignado' ? 'Pendiente' : 'En camino'"></span>
+            </span>
+          </div>
+          <div class="flex items-center justify-between gap-3 mt-3">
+            <div>
+              <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-0.5">Cliente</p>
+              <p class="text-base font-bold text-white leading-tight" x-text="actual?.cliente_nombre"></p>
+            </div>
+            <a :href="'tel:' + actual?.cliente_telefono"
+               class="flex items-center gap-2 bg-green-950 border border-green-800 rounded-xl px-4 py-2.5 active:bg-green-900 transition flex-shrink-0">
+              <span class="text-xl">📞</span>
+              <span class="text-xs text-green-400 font-semibold">Llamar</span>
+            </a>
+          </div>
+          <!-- Dirección: estado asignado (no clicable) -->
+          <div x-show="actual?.estado_reparto === 'asignado'"
+               class="mt-3 flex items-stretch gap-0 rounded-xl overflow-hidden border border-gray-600/40 bg-gray-700/25 opacity-70 cursor-not-allowed">
+            <div class="flex-1 min-w-0 px-3 py-2.5">
+              <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-0.5">📍 Entregar en</p>
+              <p class="text-sm font-bold text-gray-300 leading-snug" x-text="actual?.direccion_entrega"></p>
+            </div>
+            <div class="flex-shrink-0 w-12 flex items-center justify-center bg-gray-600/30 border-l border-gray-600/40">
+              <span class="text-xl">🗺️</span>
+            </div>
           </div>
 
-          <!-- Estado en_camino: Maps activo -->
+          <!-- Dirección: estado en_camino (botón activo) -->
           <a x-show="actual?.estado_reparto === 'en_camino'"
              x-cloak
              :href="mapsUrl(actual?.direccion_entrega)"
              target="_blank"
-             class="flex items-center gap-3 px-4 py-3.5 bg-blue-600 active:bg-blue-700 transition active:scale-[0.98] cursor-pointer">
-            <span class="text-xl">🗺️</span>
-            <div class="flex-1">
-              <p class="text-sm font-bold text-white">Abrir en Google Maps</p>
-              <p class="text-xs text-blue-200">Navegación directa al destino</p>
+             class="mt-3 flex items-stretch gap-0 rounded-xl overflow-hidden border border-blue-500/50 bg-blue-950/40 active:bg-blue-950/70 active:scale-[0.98] transition cursor-pointer">
+            <div class="flex-1 min-w-0 px-3 py-2.5">
+              <p class="text-xs text-blue-400 font-medium uppercase tracking-wide mb-0.5">📍 Entregar en</p>
+              <p class="text-sm font-bold text-white leading-snug" x-text="actual?.direccion_entrega"></p>
             </div>
-            <svg class="w-5 h-5 text-white/60 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
+            <div class="flex-shrink-0 flex items-center justify-center px-3">
+              <span class="maps-pulse flex items-center justify-center w-10 h-10 bg-blue-600 rounded-xl text-xl">🗺️</span>
+            </div>
           </a>
-
         </div>
-      </div>
     </div>
 
-    <!-- PAGO -->
-    <div class="px-4 pt-3 pb-0">
+    <!-- NOTAS DEL CLIENTE -->
+    <div class="relative rounded-2xl overflow-hidden border border-amber-700/40 bg-amber-950/25 mx-3 mt-3">
+        <!-- Barra izquierda de acento -->
+        <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600"></div>
+
+        <div class="pl-4 pr-3 py-3">
+          <!-- Cabecera -->
+          <div class="flex items-center gap-2 mb-2.5">
+            <span class="text-base leading-none">⚠️</span>
+            <p class="text-xs font-bold text-amber-400 uppercase tracking-widest">Notas del cliente</p>
+          </div>
+
+          <!-- Lista de notas (placeholder visual) -->
+          <ul class="space-y-1.5">
+            <li class="flex items-start gap-2">
+              <span class="mt-1 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              <span class="text-sm text-amber-100/90 leading-snug">No timbrar, llamar por teléfono al llegar</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="mt-1 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              <span class="text-sm text-amber-100/90 leading-snug">Portal azul, 2º piso puerta derecha</span>
+            </li>
+          </ul>
+        </div>
+    </div>
+
+    <!-- PAGO — SECCIÓN MÁS IMPORTANTE -->
+    <div class="px-3 pt-2 pb-0 space-y-2">
+      <style>
+        @keyframes mapsPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6), 0 0 8px 2px rgba(59, 130, 246, 0); }
+          50%       { box-shadow: 0 0 0 5px rgba(59, 130, 246, 0), 0 0 14px 4px rgba(59, 130, 246, 0.35); }
+        }
+        .maps-pulse {
+          animation: mapsPulse 2s ease-in-out infinite;
+        }
+        .maps-pulse:active { animation: none; }
+
+        @keyframes cobroPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.5); }
+          50% { box-shadow: 0 0 0 12px rgba(234, 88, 12, 0); }
+        }
+        .cobro-pulse {
+          animation: cobroPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .cobro-pulse:active {
+          animation: none;
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+      </style>
 
       <!-- Pagado online: sin acción -->
       <div x-show="actual?.pago?.estado === 'pagado_online'"
-           class="rounded-2xl p-4 text-center bg-green-950 border border-green-800">
-        <div class="text-3xl mb-1">💳</div>
-        <div class="font-bold text-xl text-green-300">Pagado online</div>
-        <div class="text-sm text-green-600 mt-0.5">No cobrar nada al cliente</div>
+           class="rounded-xl px-4 py-3 flex items-center gap-3 bg-green-950/50 border border-green-800/50">
+        <span class="text-2xl">💳</span>
+        <div>
+          <div class="font-bold text-sm text-green-300">Pagado online</div>
+          <div class="text-xs text-green-600 font-medium">✓ No cobrar nada</div>
+        </div>
       </div>
 
-      <!-- Cobro pendiente o confirmado -->
+      <!-- Cobro en efectivo: DESTACADO -->
       <div x-show="actual?.pago?.estado !== 'pagado_online'"
-           class="bg-gray-800 rounded-2xl border shadow-sm overflow-hidden transition-colors duration-300"
-           :class="pagoConfirmado ? 'border-green-300' : 'border-orange-800'">
+           class="rounded-2xl border-2 overflow-hidden transition-all duration-300"
+           :class="pagoConfirmado
+             ? 'border-green-500/60 bg-green-950/30'
+             : 'border-orange-500/60 bg-orange-950/40 cobro-pulse'">
 
-        <!-- Importe + estado -->
-        <div class="px-4 py-2.5 text-center transition-colors duration-300"
-             :class="pagoConfirmado ? 'bg-green-50' : 'bg-orange-50'">
-          <div class="text-3xl font-black transition-colors duration-300"
-               :class="pagoConfirmado ? 'text-green-400' : 'text-orange-900'"
+        <!-- Monto grande + estado -->
+        <div class="px-5 py-5 text-center">
+          <p class="text-xs text-gray-400 uppercase tracking-wider font-medium mb-2">Importe a cobrar</p>
+          <div class="text-5xl font-black transition-colors duration-300 mb-2"
+               :class="pagoConfirmado ? 'text-green-400' : 'text-orange-400'"
                x-text="actual?.pago?.importe?.toFixed(2) + ' €'"></div>
           <div x-show="pagoConfirmado"
-               class="text-sm font-medium mt-0.5 text-green-600">✓ Cobrado</div>
+               class="text-base font-semibold text-green-400 flex items-center justify-center gap-1.5">
+            <span>✓</span>
+            <span x-text="resumeCobro"></span>
+          </div>
         </div>
 
-        <!-- CTA: cobrar o resumen de lo cobrado -->
+        <!-- CTA Botón: cobrar o cambiar -->
         <div class="border-t transition-colors duration-300"
-             :class="pagoConfirmado ? 'border-green-200' : 'border-orange-200'">
+             :class="pagoConfirmado ? 'border-green-500/30' : 'border-orange-500/30'">
 
-          <!-- Sin confirmar -->
+          <!-- Sin confirmar: botón GRANDE NARANJA -->
           <button x-show="!pagoConfirmado"
                   @click="mostrarCobro = true"
-                  class="w-full flex items-center justify-center gap-2 py-2.5 bg-orange-500 active:bg-orange-600 text-white font-bold text-base transition active:scale-[0.98]">
-            <span>💰</span>
-            <span>Cobrar</span>
+                  class="w-full flex items-center justify-center gap-3 py-4 px-5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-black text-lg transition active:scale-[0.98] cursor-pointer">
+            <span class="text-3xl">💰</span>
+            <span>COBRAR AHORA</span>
           </button>
 
-          <!-- Confirmado: resumen + opción de editar -->
+          <!-- Confirmado: estado + botón cambiar -->
           <div x-show="pagoConfirmado"
-               class="flex items-center justify-between px-4 py-3">
-            <div class="flex items-center gap-1.5 text-sm text-gray-300">
-              <span class="text-green-500">✓</span>
-              <span x-text="resumeCobro"></span>
+               class="px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl text-green-400">✓</span>
+              <span class="text-sm font-semibold text-green-300">Cobro confirmado</span>
             </div>
             <button @click="resetCobro()"
-                    class="text-xs text-gray-400 underline active:text-gray-300 transition ml-3 flex-shrink-0">
+                    class="text-xs font-bold text-orange-400 hover:text-orange-300 uppercase tracking-wide transition">
               Cambiar
             </button>
           </div>
@@ -547,24 +604,9 @@
 
     </div>
 
-    <!-- CLIENTE -->
-    <div class="bg-gray-800 mx-4 mt-3 rounded-2xl border border-gray-700 shadow-sm overflow-hidden mb-3">
-      <div class="p-4 flex items-center justify-between">
-        <div>
-          <div class="text-xs text-gray-400 mb-0.5">Cliente</div>
-          <div class="font-bold text-lg" x-text="actual?.cliente_nombre"></div>
-          <div class="text-sm text-gray-400 mt-0.5" x-text="actual?.cliente_telefono"></div>
-        </div>
-        <a :href="'tel:' + actual?.cliente_telefono"
-           class="flex flex-col items-center gap-1 bg-green-950 border border-green-800 rounded-xl px-4 py-3 active:bg-green-900 transition">
-          <span class="text-2xl">📞</span>
-          <span class="text-xs text-green-400 font-semibold">Llamar</span>
-        </a>
-      </div>
-    </div>
-
     <!-- PRODUCTOS -->
-    <div class="bg-gray-800 mx-4 rounded-2xl border border-gray-700 shadow-sm overflow-hidden mb-3"
+
+    <div class="bg-gray-800 mx-4 mt-3 rounded-2xl border border-gray-700 shadow-sm overflow-hidden mb-3"
          x-data="{ abierto: false }">
       <button @click="abierto = !abierto"
               class="w-full px-4 py-3 flex items-center justify-between active:bg-gray-700 transition">
@@ -877,7 +919,7 @@
        BOTONES FIJOS INFERIORES — vista PEDIDO
   ================================================================ -->
   <div x-show="vista === 'pedido' && actual && !mostrarNoEntregar" x-cloak
-       class="fixed bottom-0 left-0 right-0 p-4 bg-gray-900 border-t border-gray-700 shadow-lg z-20 space-y-2">
+       class="fixed bottom-0 left-0 right-0 px-3 py-2 bg-gray-900 border-t border-gray-700 shadow-lg z-20 space-y-1.5">
 
     <!-- Salida a repartir -->
     <div x-show="actual?.estado_reparto === 'asignado'">
@@ -1178,5 +1220,15 @@
 
   <!-- ======== JAVASCRIPT ======== -->
   <script src="{{ url_for('static', filename='js/features/repartidor/index.js') }}"></script>
+
+  <!-- ======== PWA: Service Worker ======== -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/repartidor/sw.js', { scope: '/repartidor/' })
+          .catch(err => console.warn('SW repartidor no registrado:', err));
+      });
+    }
+  </script>
 </body>
 </html>

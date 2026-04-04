@@ -12,15 +12,18 @@ logger = logging.getLogger(__name__)
 def register(bp):
     """Registra las rutas de consulta y edición de pedidos desde el dashboard."""
     @bp.route("/dashboard/historial")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def historial():
         """Renderiza la vista de historial de pedidos."""
         return render_template("dashboard/historial.html")
 
     @bp.route("/dashboard/historial-pedidos")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def historial_pedidos():
         """Devuelve el historial paginado de pedidos con filtros."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_historial_pedidos
+            return _ok(get_demo_historial_pedidos())
         try:
             desde     = request.args.get("desde")
             hasta     = request.args.get("hasta")
@@ -38,9 +41,12 @@ def register(bp):
             return _err("Error interno", 500)
 
     @bp.route("/dashboard/pedidos-activos")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def pedidos_activos():
         """Lista los pedidos activos visibles en operación."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_dashboard_pedidos
+            return _ok(get_demo_dashboard_pedidos())
         try:
             estado = request.args.get("estado")
             return _ok(gestor_dashboard.pedidos_activos(estado=estado))
@@ -49,9 +55,12 @@ def register(bp):
             return _err("Error interno", 500)
 
     @bp.route("/dashboard/pedido/<int:pedido_id>/detalle")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def detalle_pedido(pedido_id):
         """Devuelve el detalle completo de un pedido."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_pedido_detalle
+            return _ok(get_demo_pedido_detalle(pedido_id))
         try:
             data = gestor_dashboard.detalle_pedido(pedido_id)
             if data is None:
@@ -67,15 +76,12 @@ def register(bp):
         """Cancela un pedido, registra el motivo y avisa al cliente."""
         data = request.get_json(silent=True) or {}
         motivo = data.get("motivo")
-        empleado_id = session.get('empleado_id')
-
         if not motivo:
             return _err("Falta el campo: motivo")
-
+        empleado_id = session.get('empleado_id')
         ok, msg, telefono = gestor_pedidos.cancelar_pedido(pedido_id, motivo, empleado_id)
         if not ok:
             return _err(msg)
-
         motivo_label = _MOTIVOS_LABEL.get(motivo, motivo)
         _notificar(
             telefono,

@@ -1,6 +1,6 @@
 """Empleados — listados y consultas básicas."""
 import logging
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import and_
 
@@ -37,11 +37,13 @@ class GestorEmpleadosListaMixin:
 
         checked_in_ids = set()
         if ids and solo_con_turno:
+            # CheckIn.fecha se graba en UTC (datetime.utcnow().date()), usar la misma referencia.
+            hoy_utc = datetime.utcnow().date()
             checked_in_ids = {
                 ci.empleado_id
                 for ci in self.session.query(CheckIn.empleado_id).filter(
                     CheckIn.empleado_id.in_(ids),
-                    CheckIn.fecha == hoy,
+                    CheckIn.fecha == hoy_utc,
                     CheckIn.fin == None,
                 ).all()
             }

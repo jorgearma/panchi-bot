@@ -34,9 +34,11 @@ class GestorRepartoAsignacionMixin:
         ).all()
 
         # Check-ins abiertos hoy (fin == None)
+        # CheckIn.fecha se graba en UTC (datetime.utcnow().date()), usar la misma referencia.
+        hoy_utc = datetime.utcnow().date()
         checkins_abiertos = {
             ci.empleado_id for ci in s.query(CheckIn.empleado_id).filter(
-                CheckIn.fecha == hoy,
+                CheckIn.fecha == hoy_utc,
                 CheckIn.fin == None,
             ).all()
         }

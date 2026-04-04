@@ -1,8 +1,9 @@
 import logging
 import os
+import uuid
 from datetime import date
 
-from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, session
+from flask import Blueprint, Response, current_app, jsonify, redirect, render_template, request, send_from_directory, session
 
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard
@@ -13,8 +14,28 @@ logger = logging.getLogger(__name__)
 blueprint_repartidor = Blueprint("repartidor", __name__)
 
 
+@blueprint_repartidor.route("/repartidor/demo")
+def demo_view():
+    """Entrada directa al modo demo del repartidor sin autenticación."""
+    from blueprints.demo import DemoState
+    # Usar demo_session_id existente o crear uno nuevo
+    if 'demo_session_id' not in session:
+        session['demo_session_id'] = str(uuid.uuid4())
+        try:
+            DemoState.init_session(session['demo_session_id'])
+        except Exception:
+            pass
+    # Siempre preparar la sesión como demo
+    session['empleado_id'] = 0
+    session['empleado_nombre'] = 'Demo'
+    session['rol'] = 'manager'
+    session['demo_mode'] = True
+    session.permanent = False
+    return redirect('/repartidor')
+
+
 @blueprint_repartidor.route("/repartidor", strict_slashes=False)
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def index():
     """Renderiza la PWA principal del repartidor autenticado."""
     repartidor_id = session.get('empleado_id')
@@ -37,7 +58,7 @@ def apple_touch_icon():
 
 
 @blueprint_repartidor.route("/repartidor/manifest.json")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def manifest():
     """Genera el manifest de la PWA con el contexto del repartidor actual."""
     repartidor_id = session.get('empleado_id')
@@ -60,9 +81,12 @@ def service_worker():
 
 
 @blueprint_repartidor.route("/repartidor/mis-pedidos")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def mis_pedidos():
     """Lista los repartos asignados al repartidor actual."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        return jsonify(DemoState.get_repartidor(session.get('demo_session_id', 'default')))
     repartidor_id = session.get('empleado_id')
     try:
         return jsonify(gestor_dashboard.repartos_del_repartidor(repartidor_id))
@@ -72,9 +96,13 @@ def mis_pedidos():
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/salida", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def marcar_salida(reparto_id: int):
     """Marca un reparto como salido a entrega."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        DemoState.marcar_salida_reparto(session.get('demo_session_id', 'default'), reparto_id)
+        return jsonify({"ok": True, "mensaje": "Demo: salida marcada"})
     empleado_id = session.get('empleado_id')
     ok, msg, _ = gestor_dashboard.marcar_salida_reparto(reparto_id)
     if not ok:
@@ -84,9 +112,13 @@ def marcar_salida(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/entregar", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def marcar_entregado(reparto_id: int):
     """Marca un reparto como entregado al cliente."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        DemoState.marcar_entregado(session.get('demo_session_id', 'default'), reparto_id)
+        return jsonify({"ok": True, "mensaje": "Demo: entregado"})
     empleado_id = session.get('empleado_id')
     ok, msg, _ = gestor_dashboard.marcar_entregado(reparto_id)
     if not ok:
@@ -96,9 +128,14 @@ def marcar_entregado(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/no-entregar", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def marcar_no_entregado(reparto_id: int):
     """Registra una incidencia de no entrega y avisa al cliente."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        data = request.get_json(silent=True) or {}
+        DemoState.marcar_no_entregado(session.get('demo_session_id', 'default'), reparto_id, data.get('motivo', ''))
+        return jsonify({"ok": True, "mensaje": "Demo: no entregado registrado"})
     data = request.get_json(silent=True) or {}
     motivo = data.get("motivo", "").strip()
     if not motivo:
@@ -113,9 +150,11 @@ def marcar_no_entregado(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/reparto/<int:reparto_id>/registrar-cobro", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def registrar_cobro(reparto_id: int):
     """Guarda el desglose del cobro realizado durante la entrega."""
+    if session.get('demo_mode'):
+        return jsonify({"ok": True})
     data = request.get_json(silent=True) or {}
     metodo = data.get("metodo_cobro", "").strip()
     try:
@@ -138,7 +177,7 @@ def registrar_cobro(reparto_id: int):
 
 
 @blueprint_repartidor.route("/repartidor/cierre")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def cierre():
     """Renderiza la pantalla de cierre de caja del repartidor."""
     repartidor_id = session.get('empleado_id')
@@ -146,9 +185,11 @@ def cierre():
 
 
 @blueprint_repartidor.route("/repartidor/cierre/datos")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def cierre_datos():
     """Devuelve el resumen de caja del repartidor para una fecha dada."""
+    if session.get('demo_mode'):
+        return jsonify({"ok": True, "datos": []})
     repartidor_id = session.get('empleado_id')
     fecha_str = request.args.get("fecha")
     try:
@@ -160,9 +201,12 @@ def cierre_datos():
 
 
 @blueprint_repartidor.route("/repartidor/cola")
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def cola():
     """Devuelve la cola de repartos todavía sin asignar."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        return jsonify(DemoState.get_cola_repartidor(session.get('demo_session_id', 'default')))
     try:
         lista = gestor_dashboard.repartos_sin_asignar()
         return jsonify({"cola": lista, "total": len(lista)})
@@ -172,9 +216,15 @@ def cola():
 
 
 @blueprint_repartidor.route("/repartidor/cola/coger/<int:pedido_id>", methods=["POST"])
-@requiere_rol('repartidor', 'manager', 'admin')
+@requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def coger_reparto(pedido_id: int):
     """Permite al repartidor reclamar un pedido pendiente de reparto."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        ok = DemoState.reclamar_reparto_by_pedido(session.get('demo_session_id', 'default'), pedido_id)
+        if ok:
+            return jsonify({"ok": True, "pedido_id": pedido_id})
+        return jsonify({"error": "no_encontrado"}), 404
     empleado_id = session.get('empleado_id')
     try:
         ok, motivo = gestor_dashboard.reclamar_reparto(pedido_id, empleado_id)

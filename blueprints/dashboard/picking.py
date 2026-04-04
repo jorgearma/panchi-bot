@@ -1,6 +1,6 @@
 import logging
 
-from flask import jsonify, request
+from flask import jsonify, request, session
 
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard
@@ -12,9 +12,12 @@ logger = logging.getLogger(__name__)
 def register(bp):
     """Registra las rutas de supervisión y gestión del picking."""
     @bp.route("/dashboard/picking")
-    @requiere_rol('manager', 'admin')
+    @requiere_rol('manager', 'admin', demo_ok=True)
     def picking():
         """Devuelve el estado actual del picking en curso."""
+        if session.get('demo_mode'):
+            from blueprints.demo_data import get_demo_dashboard_picking
+            return _ok(get_demo_dashboard_picking())
         try:
             return _ok(gestor_dashboard.picking_activo())
         except Exception as e:
@@ -28,10 +31,8 @@ def register(bp):
         data = request.get_json(silent=True) or {}
         pedido_id   = data.get("pedido_id")
         empleado_id = data.get("empleado_id")
-
         if not pedido_id or not empleado_id:
             return _err("Faltan campos: pedido_id, empleado_id")
-
         ok, msg = gestor_dashboard.asignar_picker(int(pedido_id), int(empleado_id))
         if not ok:
             return _err(msg)
@@ -44,7 +45,6 @@ def register(bp):
         data = request.get_json(silent=True) or {}
         empleado_id_raw   = data.get("empleado_id")
         nuevo_empleado_id = int(empleado_id_raw) if empleado_id_raw is not None else None
-
         ok, msg = gestor_dashboard.reasignar_picker(picking_id, nuevo_empleado_id)
         if not ok:
             return _err(msg)
