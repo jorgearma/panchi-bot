@@ -6,7 +6,7 @@ from utils.es_pregunta import es_pregunta
 from container import gestor_pedidos
 from services.token_service import generar_enlace
 from services.whatsapp_service import enviar_mensaje_whatsapp
-from services.maps_service import geocodificar_direccion
+from maps_module import geocodificar_direccion
 from utils.menu_opciones import menu, mostrar_menu
 from utils.text_utils import limpiar_texto
 from schemas.twilio import PedidoInput
