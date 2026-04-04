@@ -619,10 +619,28 @@ img { display: block; max-width: 100%; }
 .hero-phone .phone-screen { border-radius: 14px; }
 
 /* --- iframe phone cliente --- */
+.hero-phone--right .phone-notch { display: none; }
+
 .phone-screen--cliente {
   overflow: hidden;
   position: relative;
   background: #1DB954;
+}
+
+/* efecto cristal encima del iframe */
+.phone-screen--cliente::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,.08) 0%,
+    rgba(255,255,255,0)   50%,
+    rgba(0,0,0,.04)       100%
+  );
+  pointer-events: none;
+  z-index: 2;
 }
 
 .phone-iframe {
@@ -633,6 +651,7 @@ img { display: block; max-width: 100%; }
   border: none;
   transform-origin: top left;
   transform: scale(0.326);
+  border-radius: 14px;
 }
 
 /* WhatsApp phone */
