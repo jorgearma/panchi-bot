@@ -1,114 +1,15 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Menú — Panchi Bot</title>
-  <link rel="stylesheet" href="/static/css/styles.css">
-  <link rel="stylesheet" href="/static/css/product-modal.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
-  <style>
-    .conf-header {
-      background: linear-gradient(145deg, #1DB954 0%, #0F6E3A 100%);
-      padding: 18px 0 22px;
-      position: relative;
-      overflow: hidden;
-      border-radius: 0 0 24px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .conf-header::before {
-      content: ''; position: absolute;
-      width: 200px; height: 200px; border-radius: 50%;
-      background: rgba(255,255,255,0.07);
-      top: -60px; right: -50px;
-    }
-    .conf-header::after {
-      content: ''; position: absolute;
-      width: 100px; height: 100px; border-radius: 50%;
-      background: rgba(255,255,255,0.05);
-      bottom: -30px; left: 16px;
-    }
-    .conf-header__row1 {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 16px;
-      position: relative; z-index: 1;
-    }
-    .conf-header__name {
-      font-family: 'Manrope', sans-serif;
-      font-weight: 900; font-size: 20px; color: #fff;
-      letter-spacing: -0.4px;
-    }
-    .conf-header__badge {
-      background: #FF6B35;
-      color: #fff; font-size: 11px; font-weight: 700;
-      padding: 5px 13px; border-radius: 20px;
-      box-shadow: 0 2px 12px rgba(255,107,53,0.45);
-      white-space: nowrap;
-      letter-spacing: 0.2px;
-    }
-    .conf-header__addr {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(0,0,0,0.15);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 14px; padding: 10px 14px;
-      margin: 0 16px;
-      position: relative; z-index: 1;
-      backdrop-filter: blur(10px);
-    }
-    .conf-header__addr-icon {
-      width: 32px; height: 32px; border-radius: 9px;
-      background: rgba(255,255,255,0.18);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; flex-shrink: 0;
-    }
-    .conf-header__addr-text { display: flex; flex-direction: column; min-width: 0; }
-    .conf-header__addr-label {
-      font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.55);
-      text-transform: uppercase; letter-spacing: 0.8px;
-    }
-    .conf-header__addr-street {
-      font-family: 'Manrope', sans-serif;
-      font-weight: 800; font-size: 13.5px; color: #fff;
-      letter-spacing: -0.2px; margin-top: 2px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
+{% extends '_layouts/client.html' %}
+{% from 'macros/ui.html' import client_header %}
 
-    /* Search bar y categorías: se pegan al top correcto sin hueco */
-    #search-bar {
-      top: 0;
-    }
-    #category-nav {
-      top: var(--search-height);
-    }
+{% block client_title %}Menú — Panchi Bot{% endblock %}
+{% block client_body_class %}menu-page{% endblock %}
+{% block client_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/product-modal.css') }}">
+{% endblock %}
 
-    /* Cart bar: safe area */
-    #cart-bar {
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding-bottom: max(14px, env(safe-area-inset-bottom));
-    }
-  </style>
-</head>
-<body>
+{% block client_body %}
 
-  <header class="conf-header">
-    <div class="conf-header__row1">
-      <span class="conf-header__name">Hola, {{ usuario.nombre.split()[0] }} 👋</span>
-      <span class="conf-header__badge">✓ Envío gratis</span>
-    </div>
-    <div class="conf-header__addr">
-      <div class="conf-header__addr-icon">📍</div>
-      <div class="conf-header__addr-text">
-        <span class="conf-header__addr-label">Dirección de entrega</span>
-        <span class="conf-header__addr-street">{{ calle }}</span>
-      </div>
-    </div>
-  </header>
+  {{ client_header(usuario.nombre.split()[0], calle) }}
 
   <!-- Search bar -->
   <div id="search-bar">
@@ -185,6 +86,9 @@
     </div>
   </div>
 
+{% endblock %}
+
+{% block client_scripts %}
   <script>
     // Module-level state — var para que product-modal.js acceda via window
     var menuData   = {};
@@ -632,11 +536,10 @@
             }
           });
 
-          document.getElementById('submitOrder').addEventListener('click', submitPedido);
+      document.getElementById('submitOrder').addEventListener('click', submitPedido);
         })
         .catch(err => console.error('Error al obtener el menú:', err));
     });
   </script>
-  <script src="/static/js/product-modal.js"></script>
-</body>
-</html>
+  <script src="{{ url_for('static', filename='js/product-modal.js') }}" defer></script>
+{% endblock %}
