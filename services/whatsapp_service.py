@@ -64,6 +64,24 @@ def _enviar_meta(mensaje: str, destinatario: str) -> None:
     logger.info("Mensaje enviado (Meta) a %s", destinatario)
 
 
+def _enviar_meta_interactive(payload: dict, destinatario: str) -> None:
+    """Envía un mensaje interactivo (botones) usando la API de Meta."""
+    numero = destinatario.replace("whatsapp:+", "")
+    url = f"https://graph.facebook.com/v21.0/{config.META_PHONE_NUMBER_ID}/messages"
+    payload = {**payload, "messaging_product": "whatsapp", "to": numero}
+
+    resp = requests.post(
+        url,
+        json=payload,
+        headers={"Authorization": f"Bearer {config.META_ACCESS_TOKEN}"},
+        timeout=10,
+    )
+    if not resp.ok:
+        logger.error("Meta API error %s: %s", resp.status_code, resp.text)
+    resp.raise_for_status()
+    logger.info("Mensaje interactivo enviado (Meta) a %s", destinatario)
+
+
 def enviar_mensaje_whatsapp(mensaje: str, destinatario: str) -> None:
     """Selecciona proveedor y envia el mensaje de WhatsApp."""
     provider = os.getenv("WHATSAPP_PROVIDER", "twilio")
@@ -71,6 +89,58 @@ def enviar_mensaje_whatsapp(mensaje: str, destinatario: str) -> None:
         _enviar_meta(mensaje, destinatario)
     else:
         _enviar_twilio(mensaje, destinatario)
+
+
+def enviar_botones_si_no(cuerpo: str, destinatario: str,
+                         id_si: str, titulo_si: str,
+                         id_no: str, titulo_no: str) -> None:
+    """Envía botones de Sí/No si el proveedor es Meta; fallback a texto en Twilio."""
+    provider = os.getenv("WHATSAPP_PROVIDER", "twilio")
+
+    if provider == "meta":
+        payload = {
+            "type": "interactive",
+            "interactive": {
+                "type": "button",
+                "body": {"text": cuerpo},
+                "action": {
+                    "buttons": [
+                        {"type": "reply", "reply": {"id": id_si, "title": titulo_si}},
+                        {"type": "reply", "reply": {"id": id_no, "title": titulo_no}},
+                    ]
+                },
+            },
+        }
+        _enviar_meta_interactive(payload, destinatario)
+        return
+
+    # Fallback a texto plano para Twilio u otros proveedores
+    mensaje = f"{cuerpo}\nResponde con: {titulo_si}/{titulo_no}"
+    _enviar_twilio(mensaje, destinatario)
+
+
+def enviar_boton_unico(cuerpo: str, destinatario: str, boton_id: str, titulo: str) -> None:
+    """Envía un solo botón (Meta) o texto con instrucción de fallback (Twilio)."""
+    provider = os.getenv("WHATSAPP_PROVIDER", "twilio")
+
+    if provider == "meta":
+        payload = {
+            "type": "interactive",
+            "interactive": {
+                "type": "button",
+                "body": {"text": cuerpo},
+                "action": {
+                    "buttons": [
+                        {"type": "reply", "reply": {"id": boton_id, "title": titulo}},
+                    ]
+                },
+            },
+        }
+        _enviar_meta_interactive(payload, destinatario)
+        return
+
+    mensaje = f"{cuerpo}\nResponde con: {titulo}"
+    _enviar_twilio(mensaje, destinatario)
 
 
 # Pool acotado para notificaciones async — máximo 10 threads concurrentes hacia Twilio/Meta.
