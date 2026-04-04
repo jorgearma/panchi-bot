@@ -198,12 +198,32 @@ def webhook_meta():
         return jsonify({"ok": True}), 200
 
     for message in messages:
-        if message.get('type') != 'text':
-            continue
+        msg_type = message.get('type')
+        numero_cliente = None
+        mensaje_cliente = None
 
-        # Normalizar número al formato interno whatsapp:+XXXXXXXXX
-        numero_cliente = f"whatsapp:+{message['from']}"
-        mensaje_cliente = limpiar_texto(message['text']['body'].lower())
+        if msg_type == 'text':
+            numero_cliente = f"whatsapp:+{message['from']}"
+            mensaje_cliente = limpiar_texto(message['text']['body'].lower())
+
+        elif msg_type == 'interactive':
+            interactive = message.get('interactive', {}) or {}
+            if interactive.get('type') != 'button_reply':
+                continue
+
+            numero_cliente = f"whatsapp:+{message['from']}"
+            button_id = (interactive.get('button_reply') or {}).get('id')
+            if not button_id:
+                continue
+
+            if button_id in {"registro_si", "direccion_si", "registro_continuar"}:
+                mensaje_cliente = "si"
+            elif button_id in {"registro_no", "direccion_no"}:
+                mensaje_cliente = "no"
+            else:
+                continue
+        else:
+            continue
 
         logger.info("Mensaje Meta recibido de %s: %s", numero_cliente, mensaje_cliente)
 

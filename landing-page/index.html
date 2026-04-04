@@ -118,16 +118,34 @@
           </div>
         </div>
 
-        <!-- RIGHT PHONE — Dashboard operativo -->
+        <!-- RIGHT PHONE — UI cliente -->
         <div class="hero-phone-col hero-phone-col--right">
           <div class="phone-mockup hero-phone hero-phone--right">
             <div class="phone-notch"></div>
-            <div class="phone-screen" style="position:relative;background:#0f172a;">
-              <img
-                src="WhatsApp Image 2026-04-03 at 06.57.26.jpeg"
-                alt="Vista Repartidor"
-                style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;pointer-events:none;"
-              />
+            <div class="phone-screen phone-screen--cliente">
+              <!-- Status bar simulada -->
+              <div class="sb">
+                <span class="sb-time">9:41</span>
+                <div class="sb-right">
+                  <div class="sb-signal">
+                    <span></span><span></span><span></span><span></span>
+                  </div>
+                  <svg class="sb-wifi" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M1.5 8.5a17 17 0 0 1 21 0M5 12a13 13 0 0 1 14 0M8.5 15.5a9 9 0 0 1 7 0M12 19h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+                  </svg>
+                  <div class="sb-battery">
+                    <div class="sb-battery-fill"></div>
+                    <div class="sb-battery-tip"></div>
+                  </div>
+                </div>
+              </div>
+              <!-- Screenshot app -->
+              <div class="phone-img-wrap">
+                <img
+                  src="Screenshot from 2026-04-04 07-29-25.png"
+                  alt="Vista Cliente"
+                />
+              </div>
             </div>
           </div>
         </div>
