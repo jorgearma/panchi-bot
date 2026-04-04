@@ -103,6 +103,7 @@ class PedidoDetalle(Base):
     PrecioUnitario = Column(DECIMAL(10, 2), nullable=True)
     NombreProducto = Column(String(255), nullable=True)
     Subtotal = Column(DECIMAL(18, 2), nullable=False)
+    Notas = Column(String(300), nullable=True)  # instrucciones especiales p.ej. "Sin: cebolla, ajo"
 
     pedido = relationship("Pedido", back_populates="detalles")
     producto = relationship("Producto", back_populates="detalles")

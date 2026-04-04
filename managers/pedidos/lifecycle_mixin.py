@@ -102,7 +102,10 @@ class GestorPedidosLifecycleMixin:
         inserts the new ones. The caller is responsible for committing.
 
         :param pedido: Pedido ORM instance.
-        :param productos: List of (product_id, quantity) tuples.
+        :param productos: List of dicts {producto_id, cantidad, notas} — each dict
+                          is a separate line item. The same producto_id may appear
+                          multiple times with different notas (e.g. pizza sin cebolla
+                          and pizza con todo).
         :return: True if lines were staged, False if no valid products were found.
         """
         self.session.query(PedidoDetalle).filter_by(PedidoID=pedido.PedidoID).delete()
@@ -111,7 +114,11 @@ class GestorPedidosLifecycleMixin:
         total = self._to_decimal("0.0")
         detalles = []
 
-        for producto_id, cantidad in productos:
+        for item in productos:
+            producto_id = item["producto_id"]
+            cantidad    = item["cantidad"]
+            notas       = item.get("notas") or None
+
             producto = self.session.query(Producto).filter_by(
                 ProductoID=producto_id,
             ).first()
@@ -125,6 +132,7 @@ class GestorPedidosLifecycleMixin:
                     PrecioUnitario=precio_unitario,
                     NombreProducto=producto.Nombre,
                     Subtotal=subtotal,
+                    Notas=notas,
                 ))
                 total += subtotal
 
