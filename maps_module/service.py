@@ -81,7 +81,17 @@ def geocodificar_direccion(address: str, territory: str = "tarancon") -> tuple[f
         return None
 
 
-def validar_direccion(address: str, territory: str = "tarancon") -> tuple[bool, str | None]:
+def validar_direccion(address: str, territory: str = "tarancon") -> tuple[bool, str | None, str | None]:
+    """
+    Valida una dirección y devuelve (valida, direccion_formateada, motivo_rechazo).
+
+    Motivos de rechazo:
+      "no_encontrada"   — Google no devuelve resultados
+      "fuera_de_zona"   — coordenadas fuera del polígono
+      "demasiado_generica" — resultado sin especificidad suficiente (ej: "Tarancón, Cuenca")
+      "sin_numero"      — dentro del polígono pero sin número de portal (tipo route, etc.)
+      "error_api"       — fallo de conexión con Google Maps
+    """
     t = _load_territory(territory)
     clean = limpiar_direccion(address, territory)
     url = _build_url(clean, territory)
@@ -98,7 +108,7 @@ def validar_direccion(address: str, territory: str = "tarancon") -> tuple[bool, 
 
         if data.get("status") != "OK" or not data.get("results"):
             logger.warning("Dirección no válida o no encontrada: %s", data.get("status"))
-            return False, None
+            return False, None, "no_encontrada"
 
         result = data["results"][0]
         formatted = result["formatted_address"]
@@ -111,20 +121,20 @@ def validar_direccion(address: str, territory: str = "tarancon") -> tuple[bool, 
 
         if not validar_coordenadas(coords, territory):
             logger.warning("Dirección fuera de los límites de %s: %s", territory, formatted)
-            return False, formatted
+            return False, formatted, "fuera_de_zona"
 
         if formatted in t.get("excluded_addresses", []):
             logger.warning("Dirección demasiado general: %s", formatted)
-            return False, None
+            return False, None, "demasiado_generica"
 
         valid_types = set(t.get("valid_address_types", []))
         if not any(tp in types for tp in valid_types):
             logger.warning("La dirección no parece ser específica: %s", types)
-            return False, formatted
+            return False, formatted, "sin_numero"
 
         logger.info("Dirección válida: %s", formatted)
-        return True, formatted
+        return True, formatted, None
 
     except requests.exceptions.RequestException as e:
         logger.error("Error al conectar con la API de Google Maps: %s", e)
-        return False, None
+        return False, None, "error_api"
