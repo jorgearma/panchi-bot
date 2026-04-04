@@ -9,69 +9,70 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
   <style>
     .conf-header {
-      background: linear-gradient(135deg, #FF6B35 0%, #FF4500 100%);
-      padding: 16px 0 20px;
+      background: linear-gradient(145deg, #1DB954 0%, #0F6E3A 100%);
+      padding: 18px 0 22px;
       position: relative;
       overflow: hidden;
-      border-radius: 0 0 24px 24px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
     .conf-header::before {
       content: ''; position: absolute;
-      width: 160px; height: 160px; border-radius: 50%;
-      background: rgba(255,255,255,0.08);
-      top: -40px; right: -30px;
+      width: 200px; height: 200px; border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      top: -60px; right: -50px;
     }
     .conf-header::after {
       content: ''; position: absolute;
-      width: 90px; height: 90px; border-radius: 50%;
-      background: rgba(255,255,255,0.06);
-      bottom: -20px; left: 10px;
+      width: 100px; height: 100px; border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      bottom: -30px; left: 16px;
     }
     .conf-header__row1 {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 14px;
+      padding: 0 16px;
       position: relative; z-index: 1;
     }
     .conf-header__name {
       font-family: 'Manrope', sans-serif;
-      font-weight: 900; font-size: 19px; color: #fff;
-      letter-spacing: -0.3px;
+      font-weight: 900; font-size: 20px; color: #fff;
+      letter-spacing: -0.4px;
     }
     .conf-header__badge {
-      background: var(--success);
+      background: #FF6B35;
       color: #fff; font-size: 11px; font-weight: 700;
-      padding: 5px 11px; border-radius: 20px;
-      box-shadow: 0 2px 10px rgba(34,197,94,0.45);
+      padding: 5px 13px; border-radius: 20px;
+      box-shadow: 0 2px 12px rgba(255,107,53,0.45);
       white-space: nowrap;
+      letter-spacing: 0.2px;
     }
     .conf-header__addr {
-      display: flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
-      border-radius: 12px; padding: 9px 12px;
-      margin: 0 14px;
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px; padding: 10px 14px;
+      margin: 0 16px;
       position: relative; z-index: 1;
+      backdrop-filter: blur(10px);
     }
     .conf-header__addr-icon {
-      width: 30px; height: 30px; border-radius: 8px;
-      background: rgba(255,255,255,0.2);
+      width: 32px; height: 32px; border-radius: 9px;
+      background: rgba(255,255,255,0.18);
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; flex-shrink: 0;
+      font-size: 15px; flex-shrink: 0;
     }
     .conf-header__addr-text { display: flex; flex-direction: column; min-width: 0; }
     .conf-header__addr-label {
-      font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.65);
-      text-transform: uppercase; letter-spacing: 0.6px;
+      font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.55);
+      text-transform: uppercase; letter-spacing: 0.8px;
     }
     .conf-header__addr-street {
       font-family: 'Manrope', sans-serif;
-      font-weight: 800; font-size: 13px; color: #fff;
-      letter-spacing: -0.2px; margin-top: 1px;
+      font-weight: 800; font-size: 13.5px; color: #fff;
+      letter-spacing: -0.2px; margin-top: 2px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
@@ -83,15 +84,12 @@
       top: var(--search-height);
     }
 
-    /* Cart bar: barra flotante con safe area */
+    /* Cart bar: safe area */
     #cart-bar {
       bottom: 0;
       left: 0;
       right: 0;
-      border-radius: 20px 20px 0 0;
-      box-shadow: 0 -2px 20px rgba(0,0,0,0.22);
-      padding: 12px 12px 10px 16px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
     }
   </style>
 </head>

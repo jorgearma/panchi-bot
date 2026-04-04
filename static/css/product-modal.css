@@ -13,8 +13,9 @@
 }
 
 .menu-item--selected {
-  background: rgba(255, 107, 53, 0.07);
-  border-color: rgba(255, 107, 53, 0.25);
+  background: rgba(26, 157, 85, 0.06);
+  border-color: rgba(26, 157, 85, 0.3);
+  box-shadow: 0 2px 12px rgba(26, 157, 85, 0.12);
 }
 
 .menu-item-img-wrap {
@@ -55,7 +56,7 @@
   right: -7px;
   min-width: 22px;
   height: 22px;
-  background: #FF6B35;
+  background: #1A9D55;
   color: #fff;
   border-radius: 11px;
   font-size: 0.72rem;
@@ -66,7 +67,7 @@
   padding: 0 5px;
   display: none;
   border: 2.5px solid #fff;
-  box-shadow: 0 2px 6px rgba(255, 107, 53, 0.45);
+  box-shadow: 0 2px 6px rgba(26, 157, 85, 0.45);
 }
 
 .menu-item-qty-badge.visible {
@@ -83,7 +84,7 @@
 .menu-item-add-btn {
   width: 36px;
   height: 36px;
-  background: #FF6B35;
+  background: #1A9D55;
   border: none;
   border-radius: 50%;
   color: #fff;
@@ -95,13 +96,13 @@
   align-self: flex-end;
   margin-bottom: 2px;
   padding: 0;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.38);
+  box-shadow: 0 2px 8px rgba(26, 157, 85, 0.38);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 .menu-item-add-btn:active {
   transform: scale(0.88);
-  box-shadow: 0 1px 4px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 1px 4px rgba(26, 157, 85, 0.3);
 }
 
 .menu-item-add-btn svg {
@@ -167,10 +168,10 @@
 .cart-sheet-item-del:active { transform: scale(0.88); }
 
 .cart-sheet-item-edit {
-  background: rgba(255, 107, 53, 0.1);
-  color: #FF6B35;
+  background: rgba(26, 157, 85, 0.1);
+  color: #1A9D55;
 }
-.cart-sheet-item-edit:hover  { background: rgba(255, 107, 53, 0.2); }
+.cart-sheet-item-edit:hover  { background: rgba(26, 157, 85, 0.2); }
 .cart-sheet-item-edit:active { transform: scale(0.88); }
 
 
@@ -235,7 +236,7 @@
 
 .pm-image-wrap {
   width: 100%;
-  height: 215px;
+  height: 140px;
   position: relative;
   flex-shrink: 0;
   background: #F5F0EC;
@@ -324,7 +325,7 @@
   font-family: 'Manrope', sans-serif;
   font-size: 1.3rem;
   font-weight: 800;
-  color: #FF6B35;
+  color: #1A9D55;
   margin: 0 0 10px;
 }
 
@@ -339,7 +340,7 @@
 
 .pm-lines-section {
   display: none;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .pm-lines-section.visible {
@@ -358,64 +359,83 @@
 .pm-line-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #F9F9F9;
-  border: 1px solid #EFEFEF;
-  border-radius: 12px;
-  padding: 10px 12px;
+  gap: 12px;
+  background: #FFF8F5;
+  border: 1.5px solid rgba(26, 157, 85, 0.15);
+  border-radius: 14px;
+  padding: 12px 10px 12px 14px;
   margin-bottom: 8px;
 }
 
+/* Left: label + precio unitario */
 .pm-line-row-info {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .pm-line-row-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #333;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #1A1A1A;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.pm-line-row-qty {
+.pm-line-row-unit-price {
   font-size: 0.75rem;
   color: #999;
+  font-weight: 500;
 }
 
-.pm-line-row-price {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #FF6B35;
+/* Right: cantidad + precio total */
+.pm-line-row-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
   flex-shrink: 0;
 }
 
+.pm-line-row-qty {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #888;
+}
+
+.pm-line-row-price {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1A9D55;
+  font-family: 'Manrope', sans-serif;
+}
+
+/* Botón eliminar — rojo sólido, grande y visible */
 .pm-line-row-del {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 50%;
-  background: rgba(239, 68, 68, 0.1);
-  color: #EF4444;
-  font-size: 0.75rem;
-  font-weight: 700;
+  border-radius: 10px;
+  background: #EF4444;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
-  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.1s;
   -webkit-tap-highlight-color: transparent;
 }
 
-.pm-line-row-del:hover  { background: rgba(239, 68, 68, 0.2); }
-.pm-line-row-del:active { transform: scale(0.88); }
+.pm-line-row-del:hover  { background: #DC2626; box-shadow: 0 3px 10px rgba(239,68,68,0.45); }
+.pm-line-row-del:active { transform: scale(0.88); box-shadow: none; }
 
 /* ─── Ingredient chips ──────────────────────── */
 
@@ -449,9 +469,9 @@
   gap: 5px;
   padding: 7px 13px;
   border-radius: 20px;
-  border: 1.5px solid #FF6B35;
-  background: rgba(255, 107, 53, 0.07);
-  color: #FF6B35;
+  border: 1.5px solid #1A9D55;
+  background: rgba(26, 157, 85, 0.07);
+  color: #1A9D55;
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
@@ -487,19 +507,37 @@
   border-top: 1px solid #F0F0F0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .pm-stepper-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+}
+
+/* Label izquierda: "Cantidad" grande + "X unidades" dinámico */
+.pm-stepper-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .pm-stepper-label {
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #888;
+  color: #AEAEAE;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.pm-stepper-units {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1A1A1A;
+  line-height: 1.1;
 }
 
 .pm-stepper {
@@ -507,16 +545,16 @@
   align-items: center;
   background: #F3F3F3;
   border-radius: 50px;
-  padding: 4px;
-  gap: 2px;
+  padding: 5px;
+  gap: 24px;
 }
 
 .pm-stepper-btn {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: 50%;
-  font-size: 1.25rem;
+  font-size: 1.45rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -531,13 +569,13 @@
 .pm-stepper-btn.dec {
   background: #fff;
   color: #1A1A1A;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
 }
 
 .pm-stepper-btn.inc {
-  background: #FF6B35;
+  background: #1A9D55;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
+  box-shadow: 0 3px 10px rgba(26, 157, 85, 0.45);
 }
 
 .pm-stepper-btn:not(:disabled):active {
@@ -549,21 +587,16 @@
   cursor: not-allowed;
 }
 
+/* El número dentro del stepper — oculto, usamos pm-stepper-units */
 .pm-stepper-qty {
-  min-width: 44px;
-  text-align: center;
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #1A1A1A;
-  font-family: 'Manrope', sans-serif;
-  line-height: 1;
+  display: none;
 }
 
 /* CTA button */
 .pm-cta {
   width: 100%;
   padding: 15px 18px;
-  background: #FF6B35;
+  background: #1A9D55;
   color: #fff;
   border: none;
   border-radius: 14px;

@@ -14,7 +14,7 @@
       nameEl, priceEl, descEl,
       linesSection, linesListEl,
       ingrSection, chipsEl,
-      qtyEl, decBtn, incBtn,
+      qtyEl, unitsEl, decBtn, incBtn,
       ctaBtn, ctaTextEl, ctaPriceEl;
 
   // ─── Tiny ID generator ───────────────────────────────────────────
@@ -49,7 +49,10 @@
       '  </div>' +
       '  <div class="pm-footer">' +
       '    <div class="pm-stepper-row">' +
-      '      <span class="pm-stepper-label">Cantidad</span>' +
+      '      <div class="pm-stepper-label-wrap">' +
+      '        <span class="pm-stepper-label">Cantidad</span>' +
+      '        <span class="pm-stepper-units" id="pm-units">1 unidad</span>' +
+      '      </div>' +
       '      <div class="pm-stepper">' +
       '        <button class="pm-stepper-btn dec" id="pm-dec" type="button">−</button>' +
       '        <span  class="pm-stepper-qty"      id="pm-qty">1</span>' +
@@ -78,6 +81,7 @@
     ingrSection   = document.getElementById('pm-ing-section');
     chipsEl       = document.getElementById('pm-chips');
     qtyEl         = document.getElementById('pm-qty');
+    unitsEl       = document.getElementById('pm-units');
     decBtn        = document.getElementById('pm-dec');
     incBtn        = document.getElementById('pm-inc');
     ctaBtn        = document.getElementById('pm-cta');
@@ -233,15 +237,19 @@
         : 'Completa';
 
       var subtotal = precio * ci.qty;
+      var uds = ci.qty === 1 ? '1 unidad' : ci.qty + ' unidades';
       var row = document.createElement('div');
       row.className = 'pm-line-row';
       row.dataset.lineId = ci.lineId;
       row.innerHTML =
         '<div class="pm-line-row-info">' +
           '<span class="pm-line-row-label">' + _esc(label) + '</span>' +
-          '<span class="pm-line-row-qty">× ' + ci.qty + '</span>' +
+          '<span class="pm-line-row-unit-price">' + precio.toFixed(2).replace('.', ',') + ' € / ud</span>' +
         '</div>' +
-        '<span class="pm-line-row-price">' + subtotal.toFixed(2).replace('.', ',') + ' €</span>' +
+        '<div class="pm-line-row-right">' +
+          '<span class="pm-line-row-qty">' + uds + '</span>' +
+          '<span class="pm-line-row-price">' + subtotal.toFixed(2).replace('.', ',') + ' €</span>' +
+        '</div>' +
         '<button class="pm-line-row-del" type="button" data-line-id="' + ci.lineId + '" aria-label="Eliminar">✕</button>';
 
       row.querySelector('.pm-line-row-del').addEventListener('click', function () {
@@ -323,7 +331,9 @@
   }
 
   function renderControls(precio) {
-    qtyEl.textContent = _qty;
+    qtyEl.textContent   = _qty;
+    unitsEl.textContent = _qty === 1 ? '1 unidad' : _qty + ' unidades';
+
     var isEdit = _editLineId !== null;
 
     // En modo edición, mínimo 0 (permite quitar); en modo nuevo, mínimo 1
