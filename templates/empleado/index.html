@@ -7,191 +7,302 @@
   <meta name="theme-color" content="#111827">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Mi zona">
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
     button { -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background-color: #0f172a;
+      color: #ffffff;
+    }
+
+    /* Header glow animación */
+    @keyframes headerGlow {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 0.4; }
+    }
+    .header-glow {
+      animation: headerGlow 3s ease-in-out infinite;
+    }
+
+    /* CTA Button animación */
+    @keyframes ctaPulse {
+      0%, 100% {
+        box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2), 0 0 0 0 rgba(234, 88, 12, 0.25);
+      }
+      50% {
+        box-shadow: 0 6px 18px rgba(234, 88, 12, 0.3), 0 0 0 6px rgba(234, 88, 12, 0);
+      }
+    }
+    .cta-button {
+      animation: ctaPulse 2s ease-in-out infinite;
+      position: relative;
+    }
+    .cta-button::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .cta-button:active {
+      animation: none;
+      transform: scale(0.97) translateY(2px);
+      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.3), inset 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    /* Smooth transitions */
+    * {
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    /* Scroll smooth */
+    html { scroll-behavior: smooth; }
+
+    .panchi-shimmer {
+      background: linear-gradient(90deg, #60a5fa, #3b82f6, #60a5fa);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
   </style>
 </head>
-<body class="bg-gray-900 min-h-screen"
+<body class="min-h-screen"
       x-data="empleadoHub({{ empleado_id or 'null' }}, '{{ rol or '' }}', '{{ app_mode or 'warehouse' }}')"
       x-init="init()">
 
   <!-- ======== HEADER ======== -->
-  <header class="border-b border-gray-800 bg-gray-900 px-4 py-3">
-    <div class="max-w-md mx-auto flex items-center justify-between gap-3">
-      <p class="min-w-0 truncate text-sm font-bold text-white" x-text="nombreCompleto"></p>
-      <span class="rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400 flex-shrink-0"
-            x-text="rolLabel"></span>
+  <header class="px-3 pt-3 pb-1 flex justify-center">
+  <div class="bg-gray-800 border border-gray-700 rounded-2xl text-white shadow-sm overflow-hidden relative max-w-md w-full">
+
+    <!-- Arte CSS: skyline + glow -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+      <!-- Gradiente azul pulsante -->
+      <div class="header-glow absolute right-0 inset-y-0 w-32 bg-gradient-to-l from-blue-500/20 to-transparent"></div>
+      <!-- Skyline minimalista -->
+      <div style="position:absolute;bottom:0;right:10px;display:flex;align-items:flex-end;gap:2px;opacity:0.45">
+        <!-- B1 -->
+        <div style="width:9px;height:22px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:4px;left:2px;width:2px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 5px 3px rgba(59,130,246,0.55)"></div>
+        </div>
+        <!-- B2 -->
+        <div style="width:14px;height:38px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:5px;left:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.5)"></div>
+          <div style="position:absolute;top:5px;right:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.5)"></div>
+          <div style="position:absolute;top:13px;left:2px;width:3px;height:2px;background:#2563eb;border-radius:1px;box-shadow:0 0 5px 2px rgba(37,99,235,0.4)"></div>
+        </div>
+        <!-- B3 -->
+        <div style="width:8px;height:28px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+        </div>
+        <!-- B4 tall -->
+        <div style="width:11px;height:50px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:6px;left:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 7px 3px rgba(59,130,246,0.6)"></div>
+          <div style="position:absolute;top:6px;right:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 7px 3px rgba(59,130,246,0.6)"></div>
+          <div style="position:absolute;top:16px;left:2px;width:3px;height:2px;background:#2563eb;border-radius:1px;box-shadow:0 0 5px 2px rgba(37,99,235,0.35)"></div>
+          <div style="position:absolute;top:26px;right:2px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.5)"></div>
+        </div>
+        <!-- B5 -->
+        <div style="width:16px;height:32px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:5px;left:3px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.55)"></div>
+          <div style="position:absolute;top:5px;right:3px;width:3px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.55)"></div>
+          <div style="position:absolute;top:14px;left:3px;width:3px;height:2px;background:#2563eb;border-radius:1px;box-shadow:0 0 5px 2px rgba(37,99,235,0.4)"></div>
+        </div>
+        <!-- B6 -->
+        <div style="width:9px;height:42px;background:#0f172a;border-radius:2px 2px 0 0;position:relative">
+          <div style="position:absolute;top:7px;left:2px;width:4px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 8px 4px rgba(59,130,246,0.6)"></div>
+          <div style="position:absolute;top:18px;left:2px;width:4px;height:2px;background:#3b82f6;border-radius:1px;box-shadow:0 0 6px 3px rgba(59,130,246,0.45)"></div>
+        </div>
+        <!-- B7 short -->
+        <div style="width:12px;height:18px;background:#0f172a;border-radius:2px 2px 0 0"></div>
+      </div>
     </div>
+
+    <!-- Contenido del header -->
+    <div class="relative flex items-center justify-start px-4 py-3">
+      <!-- Izquierda: título -->
+      <div>
+        <p class="panchi-shimmer text-[11px] font-semibold uppercase tracking-[0.18em] leading-none mb-0.5">Panchi</p>
+        <p class="text-base font-black text-white leading-none tracking-tight" x-text="nombreCompleto || 'Mi zona'"></p>
+      </div>
+    </div>
+
+  </div>
   </header>
 
   <!-- ======== CONTENIDO ======== -->
-  <main class="max-w-md mx-auto px-4 py-4 space-y-3">
+  <main class="max-w-md mx-auto px-3 py-5 pb-24 space-y-4">
 
-    <!-- Turno de hoy + fichaje -->
-    <div class="bg-blue-950 rounded-xl p-3 border border-blue-900">
+    <!-- Turno de hoy + fichaje (compacto) -->
+    <div class="bg-gray-800/50 border border-gray-700 rounded-2xl p-3.5 backdrop-blur">
       <template x-if="turno">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-xs text-blue-300 uppercase tracking-wide">Turno hoy</p>
-            <p class="text-white font-semibold text-sm mt-0.5"
-               x-text="turno.hora_inicio + ' – ' + turno.hora_fin"></p>
-            <p x-show="fichajeActivo && fichajeInicio" x-cloak
-               class="text-xs text-blue-300 mt-0.5"
-               x-text="'En curso desde las ' + formatHoraISO(fichajeInicio)"></p>
-            <p x-show="turno.notas" x-cloak class="text-gray-400 text-xs mt-0.5" x-text="turno.notas"></p>
-          </div>
-          <div class="flex flex-col items-end gap-1">
-            <!-- Sin turno abierto: botón iniciar -->
-            <div x-show="!fichajeActivo" class="flex flex-col items-center">
-              <button @click="iniciarTurno()"
-                      :disabled="!puedeIniciarTurno"
-                      :class="puedeIniciarTurno
-                        ? 'bg-green-600 text-white active:bg-green-700'
-                        : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-60'"
-                      class="text-xs px-3 py-1.5 rounded-lg transition font-semibold">
-                ▶ Iniciar turno
-              </button>
-              <span x-show="!puedeIniciarTurno" x-text="razonNoIniciar" class="text-xs text-gray-500 mt-1 text-center block"></span>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">Turno hoy</p>
+              <p class="text-white font-bold text-sm mt-1"
+                 x-text="turno.hora_inicio + ' – ' + turno.hora_fin"></p>
             </div>
-            <!-- Con turno abierto: cerrar -->
-            <button x-show="fichajeActivo"
-                    @click="cerrarTurno()"
-                    class="bg-gray-700 text-red-400 text-xs px-3 py-1.5 rounded-lg transition active:bg-gray-600">
-              ⏹ Cerrar turno
-            </button>
+            <!-- Fichaje button aquí arriba, más visible -->
+            <div class="flex flex-col items-end gap-1">
+              <div x-show="!fichajeActivo" class="flex flex-col items-center">
+                <button @click="iniciarTurno()"
+                        :disabled="!puedeIniciarTurno"
+                        :class="puedeIniciarTurno
+                          ? 'bg-green-600 text-white active:bg-green-700 shadow-lg'
+                          : 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50'"
+                        class="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all">
+                  ▶ Iniciar
+                </button>
+              </div>
+              <button x-show="fichajeActivo"
+                      @click="cerrarTurno()"
+                      class="bg-red-900/30 text-red-400 text-xs px-3 py-1.5 rounded-lg transition active:bg-red-900/50">
+                ⏹ Cerrar
+              </button>
+            </div>
           </div>
+          <p x-show="fichajeActivo && fichajeInicio" x-cloak
+             class="text-xs text-green-400 font-medium"
+             x-text="'En curso desde las ' + formatHoraISO(fichajeInicio)"></p>
+          <p x-show="turno.notas" x-cloak class="text-gray-500 text-xs" x-text="turno.notas"></p>
         </div>
       </template>
       <template x-if="!turno">
-        <div class="flex items-center gap-3">
-          <span class="text-xl">🗓️</span>
+        <div class="flex items-start gap-3">
+          <span class="text-2xl mt-0.5">🗓️</span>
           <div>
-            <p class="text-gray-400 text-sm">Sin turno registrado</p>
-            <p class="text-gray-600 text-xs mt-0.5">El manager lo añadirá pronto</p>
+            <p class="text-gray-300 text-sm font-medium">Sin turno registrado</p>
+            <p class="text-gray-500 text-xs mt-0.5">El manager lo asignará pronto</p>
           </div>
         </div>
       </template>
     </div>
 
-    <!-- Colas globales -->
+    <!-- CTA principal — DESTACADO Y GRANDE -->
+    <a :href="appUrl"
+       class="cta-button block rounded-2xl transition-all"
+       :class="appGradient">
+      <div class="relative px-5 py-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-white/60 uppercase tracking-widest mb-1">Ir a mi puesto</p>
+          <p class="text-2xl font-black text-white leading-none tracking-tight" x-text="appLabel"></p>
+        </div>
+        <div class="flex-shrink-0 flex items-center justify-center w-12 h-12 bg-white/15 rounded-xl border border-white/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <!-- Colas globales (info rápida) -->
     <div>
-      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Colas ahora</p>
-      <div class="grid grid-cols-2 gap-2">
-        <div class="bg-gray-800 rounded-xl p-3 flex items-center justify-between">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2.5">Colas ahora</p>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-gray-800/40 border border-gray-700/50 rounded-xl p-3 flex items-center justify-between backdrop-blur">
           <div>
-            <p class="text-xs text-gray-500" x-text="appMode === 'restaurant' ? 'Sin cocinero' : 'Sin picker'"></p>
-            <p class="text-xl font-bold mt-0.5"
+            <p class="text-xs text-gray-400" x-text="appMode === 'restaurant' ? 'Sin cocinero' : 'Sin picker'"></p>
+            <p class="text-lg font-bold mt-1"
                :class="metricas.sin_picker > 0 ? 'text-amber-400' : 'text-gray-600'"
                x-text="metricas.sin_picker ?? '—'"></p>
           </div>
-          <span class="text-2xl">📦</span>
+          <span class="text-2xl opacity-70">📦</span>
         </div>
-        <div class="bg-gray-800 rounded-xl p-3 flex items-center justify-between">
+        <div class="bg-gray-800/40 border border-gray-700/50 rounded-xl p-3 flex items-center justify-between backdrop-blur">
           <div>
-            <p class="text-xs text-gray-500">Sin repartidor</p>
-            <p class="text-xl font-bold mt-0.5"
+            <p class="text-xs text-gray-400">Sin repartidor</p>
+            <p class="text-lg font-bold mt-1"
                :class="metricas.sin_repartidor > 0 ? 'text-orange-400' : 'text-gray-600'"
                x-text="metricas.sin_repartidor ?? '—'"></p>
           </div>
-          <span class="text-2xl">🛵</span>
+          <span class="text-2xl opacity-70">🛵</span>
         </div>
       </div>
     </div>
-
-    <!-- CTA principal — App operativa -->
-    <a :href="appUrl"
-       :class="appGradient"
-       class="block rounded-xl p-4 active:opacity-90 transition">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-xs uppercase tracking-wide" :class="appSubtitleColor">Mi app</p>
-          <p class="text-white font-bold text-base mt-1" x-text="appLabel"></p>
-          <p class="text-xs mt-1" :class="appSubtitleColor"
-             x-text="pedidosAsignados === 0 ? '0 asignados ahora' : pedidosAsignados + ' asignado' + (pedidosAsignados > 1 ? 's' : '')"></p>
-        </div>
-        <span class="bg-white text-sm font-bold px-3 py-2 rounded-lg" :class="appBtnColor">
-          Entrar →
-        </span>
-      </div>
-    </a>
 
     <!-- Cambiar rol — solo visible si polivalente -->
     <template x-if="capacidades.length > 1">
       <button @click="cambiarRol()"
               class="w-full rounded-xl border px-4 py-3 text-sm font-semibold transition active:opacity-70"
               :class="rol === 'repartidor'
-                ? 'border-blue-800 bg-blue-950/50 text-blue-300'
-                : 'border-orange-800 bg-orange-950/50 text-orange-300'">
+                ? 'border-blue-700 bg-blue-950/40 text-blue-300 hover:bg-blue-950/60'
+                : 'border-orange-700 bg-orange-950/40 text-orange-300 hover:bg-orange-950/60'">
         ⇄ Cambiar a <span x-text="rolOpuesto"></span>
       </button>
     </template>
 
     <!-- Stats del día -->
     <div>
-      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Hoy</p>
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1.5">Hoy</p>
       <div class="grid grid-cols-3 gap-2">
-        <div class="bg-gray-800 rounded-xl p-3 text-center">
-          <p class="text-xl font-bold text-blue-400" x-text="metricas.pedidos_completados ?? '—'"></p>
-          <p class="text-xs text-gray-500 mt-1" x-text="metricaLabel1"></p>
+        <div class="bg-gray-800/40 border border-gray-700/50 rounded-xl py-2 px-1 text-center backdrop-blur">
+          <p class="text-lg font-bold text-blue-400 leading-none" x-text="metricas.pedidos_completados ?? '—'"></p>
+          <p class="text-[10px] text-gray-400 mt-1" x-text="metricaLabel1"></p>
         </div>
-        <div class="bg-gray-800 rounded-xl p-3 text-center">
-          <p class="text-xl font-bold text-green-400"
+        <div class="bg-gray-800/40 border border-gray-700/50 rounded-xl py-2 px-1 text-center backdrop-blur">
+          <p class="text-lg font-bold text-green-400 leading-none"
              x-text="metricas.tiempo_medio_min ? metricas.tiempo_medio_min + 'm' : '—'"></p>
-          <p class="text-xs text-gray-500 mt-1">T. medio</p>
+          <p class="text-[10px] text-gray-400 mt-1">T. medio</p>
         </div>
-        <div class="bg-gray-800 rounded-xl p-3 text-center">
-          <p class="text-xl font-bold text-amber-400" x-text="metricas.incidencias_hoy ?? '—'"></p>
-          <p class="text-xs text-gray-500 mt-1" x-text="metricaLabel3"></p>
+        <div class="bg-gray-800/40 border border-gray-700/50 rounded-xl py-2 px-1 text-center backdrop-blur">
+          <p class="text-lg font-bold text-amber-400 leading-none" x-text="metricas.incidencias_hoy ?? '—'"></p>
+          <p class="text-[10px] text-gray-400 mt-1" x-text="metricaLabel3"></p>
         </div>
       </div>
-      <!-- Mi turno de hoy -->
+      <!-- Fichaje detail -->
       <div x-show="fichajeResumen && (fichajeResumen.activo || fichajeResumen.fin)" x-cloak
-           class="mt-2 bg-gray-800 rounded-xl p-3 space-y-2">
+           class="mt-2 bg-gray-800/30 border border-gray-700/40 rounded-xl px-3 py-2 space-y-1 backdrop-blur">
         <div class="flex items-center justify-between">
-          <p class="text-sm font-semibold text-white"
+          <p class="text-xs text-gray-300"
              x-text="formatHoraISO(fichajeResumen?.inicio) + (fichajeResumen?.fin ? ' → ' + formatHoraISO(fichajeResumen.fin) : ' → ahora')"></p>
-          <span class="text-xs text-gray-400"
-                x-text="formatMinutos(fichajeResumen?.duracion_total_min)"></span>
+          <span class="text-xs text-gray-500" x-text="formatMinutos(fichajeResumen?.duracion_total_min)"></span>
         </div>
         <template x-for="t in (fichajeResumen?.tramos || [])" :key="t.rol">
           <div class="flex items-center justify-between text-xs">
-            <span class="text-gray-300" x-text="t.rol === 'picker' ? '📦 Picker' : '🛵 Repartidor'"></span>
-            <span class="text-gray-400" x-text="formatMinutos(t.minutos)"></span>
+            <span class="text-gray-400" x-text="t.rol === 'picker' ? '📦 Picker' : '🛵 Repartidor'"></span>
+            <span class="text-gray-500" x-text="formatMinutos(t.minutos)"></span>
           </div>
         </template>
-        <div x-show="fichajeResumen?.activo" class="text-[11px] text-green-400 font-medium">● En curso</div>
+        <div x-show="fichajeResumen?.activo" class="text-xs text-green-400 font-semibold">● En curso</div>
       </div>
     </div>
 
     <!-- Accesos secundarios -->
     <div>
-      <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Más</p>
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1.5">Más</p>
       <div class="grid grid-cols-3 gap-2">
-        <button class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition">
-          <p class="text-xl">📊</p>
-          <p class="text-xs text-gray-400 mt-1">Desempeño</p>
+        <button class="bg-gray-800/40 border border-gray-700/50 rounded-xl py-2 px-1 text-center active:bg-gray-700/50 transition backdrop-blur">
+          <p class="text-lg mb-1">📊</p>
+          <p class="text-[10px] text-gray-400">Desempeño</p>
         </button>
         <a href="/empleado/turnos"
-           class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition block">
-          <p class="text-xl">🗓️</p>
-          <p class="text-xs text-gray-400 mt-1">Turnos</p>
+           class="bg-gray-800/40 border border-gray-700/50 rounded-xl py-2 px-1 text-center active:bg-gray-700/50 transition backdrop-blur block">
+          <p class="text-lg mb-1">🗓️</p>
+          <p class="text-[10px] text-gray-400">Turnos</p>
         </a>
         <template x-if="rol === 'repartidor'">
           <a href="/repartidor/cierre"
-             class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition block">
-            <p class="text-xl">🔒</p>
-            <p class="text-xs text-gray-400 mt-1">Cierre</p>
+             class="bg-gray-800/40 border border-gray-700/50 rounded-xl py-2 px-1 text-center active:bg-gray-700/50 transition backdrop-blur block">
+            <p class="text-lg mb-1">🔒</p>
+            <p class="text-[10px] text-gray-400">Cierre</p>
           </a>
         </template>
         <template x-if="rol !== 'repartidor'">
-          <button class="bg-gray-800 rounded-xl p-3 text-center active:bg-gray-700 transition">
-            <p class="text-xl">ℹ️</p>
-            <p class="text-xs text-gray-400 mt-1">Empresa</p>
+          <button class="bg-gray-800/40 border border-gray-700/50 rounded-xl py-2 px-1 text-center active:bg-gray-700/50 transition backdrop-blur">
+            <p class="text-lg mb-1">ℹ️</p>
+            <p class="text-[10px] text-gray-400">Empresa</p>
           </button>
         </template>
       </div>
@@ -200,38 +311,43 @@
     <!-- Cerrar sesión -->
     <form action="/auth/logout" method="post">
       <button type="submit"
-              class="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm font-semibold text-gray-500 transition active:bg-gray-800">
+              class="w-full rounded-xl border border-gray-700/50 bg-gray-800/20 px-4 py-3 text-sm font-semibold text-gray-400 transition active:bg-gray-700/40 backdrop-blur">
         Cerrar sesión
       </button>
     </form>
 
     <!-- Modal bloqueo de cambio de rol -->
     <div x-show="mostrarModalBloqueo" x-cloak
-         class="fixed inset-0 bg-black/70 z-50 flex items-end justify-center p-4">
-      <div class="bg-gray-900 rounded-2xl w-full max-w-md p-5 border border-red-900">
-        <p class="text-red-400 font-bold text-sm mb-2">🔒 No puedes cambiar de rol ahora</p>
-        <p class="text-gray-400 text-xs mb-3">
-          Tienes tareas activas. Termínalas primero:
-        </p>
-        <div class="space-y-2 mb-4">
+         class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center p-4 pb-6">
+      <div class="bg-gray-800 rounded-3xl w-full max-w-md p-6 border border-red-900/50 shadow-2xl">
+        <div class="flex items-start gap-3 mb-3">
+          <span class="text-3xl">🔒</span>
+          <div>
+            <p class="text-red-400 font-bold text-base">No puedes cambiar ahora</p>
+            <p class="text-gray-400 text-xs mt-0.5">
+              Tienes tareas activas. Termínalas primero:
+            </p>
+          </div>
+        </div>
+        <div class="space-y-2 mb-5">
           <template x-for="p in pedidosBloqueantes" :key="p.id">
-            <div class="bg-gray-800 rounded-lg px-3 py-2 flex justify-between">
-              <span class="text-sm text-red-300 font-medium" x-text="p.tipo + ' #' + p.id"></span>
-              <span class="text-xs text-gray-500" x-text="p.estado"></span>
+            <div class="bg-gray-700/50 rounded-lg px-4 py-2.5 flex justify-between border border-gray-600/30">
+              <span class="text-sm text-red-300 font-semibold" x-text="p.tipo + ' #' + p.id"></span>
+              <span class="text-xs text-gray-500 font-medium" x-text="p.estado"></span>
             </div>
           </template>
         </div>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-2 gap-3 mb-3">
           <a :href="appUrl"
-             class="bg-blue-700 text-white text-sm font-semibold rounded-xl py-2.5 text-center active:opacity-90">
+             class="bg-blue-600 text-white text-sm font-bold rounded-xl py-3 text-center active:bg-blue-700 transition">
             Ir a terminarlos
           </a>
           <button @click="mostrarModalBloqueo = false"
-                  class="bg-gray-700 text-gray-300 text-sm rounded-xl py-2.5 active:bg-gray-600">
+                  class="bg-gray-700/50 text-gray-300 text-sm font-semibold rounded-xl py-3 active:bg-gray-600 transition">
             Cancelar
           </button>
         </div>
-        <p class="text-center text-gray-600 text-xs mt-3">El manager puede transferir los pedidos desde el dashboard</p>
+        <p class="text-center text-gray-500 text-xs">El manager puede transferir desde el dashboard</p>
       </div>
     </div>
 
@@ -281,7 +397,7 @@
         return { disponible: 'bg-green-950 border-green-900', ocupado: 'bg-amber-950 border-amber-900', en_pausa: 'bg-purple-950 border-purple-900', desconectado: 'bg-gray-800 border-gray-700' }[this.perfil.estado_operativo] || 'bg-gray-800 border-gray-700';
       },
       get appUrl()          { return this.rol === 'repartidor' ? '/repartidor' : (this.appMode === 'restaurant' ? '/cocina' : '/picker'); },
-      get appLabel()        { return this.rol === 'repartidor' ? '🛵 App Reparto' : (this.appMode === 'restaurant' ? '👨‍🍳 App Cocina' : '🛒 App Picking'); },
+      get appLabel()        { return this.rol === 'repartidor' ? 'App Reparto' : (this.appMode === 'restaurant' ? 'App Cocina' : 'App Picking'); },
       get appGradient()     { return this.rol === 'repartidor' ? 'bg-gradient-to-r from-orange-600 to-orange-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'; },
       get appSubtitleColor(){ return this.rol === 'repartidor' ? 'text-orange-200' : 'text-blue-200'; },
       get appBtnColor()     { return this.rol === 'repartidor' ? 'text-orange-600' : 'text-blue-600'; },

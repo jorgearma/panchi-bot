@@ -6,204 +6,202 @@
   <title>Panchi-Bot — Automatiza tu restaurante con WhatsApp</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Outfit:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@1,9..144,300..900&display=swap" rel="stylesheet" />
 </head>
 <body>
 
+  <!-- GRAIN OVERLAY -->
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- ACCENT BAR -->
+  <div class="accent-bar"></div>
+
   <!-- NAV -->
-  <nav class="nav">
+  <nav class="nav" id="mainNav">
     <div class="nav-inner">
       <a href="#" class="logo">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect width="32" height="32" rx="8" fill="#25D366"/>
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#1A9D55"/>
           <path d="M16 6C10.477 6 6 10.477 6 16c0 1.89.52 3.66 1.43 5.17L6 26l4.94-1.4A9.94 9.94 0 0016 26c5.523 0 10-4.477 10-10S21.523 6 16 6z" fill="white"/>
-          <path d="M13 12.5c-.3-.7-.6-.7-.9-.7h-.8c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.5 3.1 1.2 3.7.97 4.4.9.7-.07 2.2-.9 2.5-1.76.3-.86.3-1.6.2-1.76-.1-.15-.3-.22-.6-.37-.3-.14-1.8-.9-2.1-1-.3-.1-.5-.14-.7.15-.2.29-.8.97-1 1.17-.2.2-.37.22-.7.07-.3-.14-1.3-.48-2.5-1.55-.92-.82-1.55-1.83-1.73-2.14-.18-.3-.02-.47.13-.62.14-.13.3-.37.45-.55.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.07-.14-.7-1.7-.96-2.33z" fill="#25D366"/>
+          <path d="M13 12.5c-.3-.7-.6-.7-.9-.7h-.8c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.5 3.1 1.2 3.7.97 4.4.9.7-.07 2.2-.9 2.5-1.76.3-.86.3-1.6.2-1.76-.1-.15-.3-.22-.6-.37-.3-.14-1.8-.9-2.1-1-.3-.1-.5-.14-.7.15-.2.29-.8.97-1 1.17-.2.2-.37.22-.7.07-.3-.14-1.3-.48-2.5-1.55-.92-.82-1.55-1.83-1.73-2.14-.18-.3-.02-.47.13-.62.14-.13.3-.37.45-.55.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.07-.14-.7-1.7-.96-2.33z" fill="#1A9D55"/>
         </svg>
-        <span>Panchi<strong>Bot</strong></span>
+        <span>Panchi<em>Bot</em></span>
       </a>
       <ul class="nav-links">
         <li><a href="#features">Características</a></li>
         <li><a href="#demo">Demo</a></li>
         <li><a href="#pricing">Precios</a></li>
-        <li><a href="#contact" class="btn btn-outline-sm">Contacto</a></li>
-        <li><a href="#contact" class="btn btn-primary-sm">Solicitar demo</a></li>
+        <li><a href="#contact" class="nav-cta">Solicitar demo</a></li>
       </ul>
-      <button class="nav-toggle" id="navToggle">
+      <button class="nav-toggle" id="navToggle" aria-label="Abrir menú">
         <span></span><span></span><span></span>
       </button>
     </div>
   </nav>
 
-  <!-- HERO -->
-  <section class="hero">
+  <!-- ============================================================
+       HERO
+       ============================================================ -->
+  <section class="hero" id="heroSection">
     <div class="hero-bg">
-      <div class="hero-blob hero-blob-1"></div>
-      <div class="hero-blob hero-blob-2"></div>
-      <div class="grid-pattern"></div>
+      <div class="hero-glow hero-glow--1"></div>
+      <div class="hero-glow hero-glow--2"></div>
+      <div class="hero-glow hero-glow--3"></div>
     </div>
-    <div class="container hero-content">
-      <div class="hero-showcase">
-        <div class="hero-side hero-side--left">
-          <div class="phone-mockup-wrap hero-phone-wrap">
-            <div class="phone-mockup hero-phone hero-phone--left">
-              <div class="phone-screen">
-                <div class="wa-header">
-                  <div class="wa-avatar">🍔</div>
-                  <div class="wa-info">
-                    <span class="wa-name">Panchi Bot</span>
-                    <span class="wa-status">responde al instante</span>
-                  </div>
+
+    <div class="container">
+      <div class="hero-layout">
+
+        <!-- LEFT PHONE — WhatsApp chat -->
+        <div class="hero-phone-col hero-phone-col--left">
+          <div class="phone-mockup hero-phone hero-phone--left">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="wa-header">
+                <div class="wa-avatar">🍔</div>
+                <div class="wa-info">
+                  <span class="wa-name">Panchi Bot</span>
+                  <span class="wa-status">responde al instante</span>
                 </div>
-                <div class="wa-chat hero-chat-static">
-                  <div class="wa-bubble wa-bubble-user">
-                    Quiero repetir mi pedido del viernes
-                    <div class="wa-bubble-time">20:11</div>
-                  </div>
-                  <div class="wa-bubble wa-bubble-bot">
-                    Perfecto. Te preparo burger trufada, patatas y bebida.
-                    <div class="wa-bubble-time">20:11</div>
-                  </div>
-                  <div class="wa-bubble wa-bubble-bot">
-                    Pago online en un toque y entrega estimada en 22 min.
-                    <div class="wa-bubble-time">20:12</div>
-                  </div>
-                  <div class="hero-chat-highlights">
-                    <span>Recompra automática</span>
-                    <span>Upselling inteligente</span>
-                    <span>Atención 24/7</span>
-                  </div>
+              </div>
+              <div class="wa-chat hero-chat-static">
+                <div class="wa-bubble wa-bubble-user">
+                  Quiero repetir mi pedido del viernes
+                  <div class="wa-bubble-time">20:11</div>
                 </div>
-                <div class="hero-phone-footer">
-                  <span>Ticket medio</span>
-                  <strong>+18% por pedido</strong>
+                <div class="wa-bubble wa-bubble-bot">
+                  Perfecto. Te preparo burger trufada, patatas y bebida.
+                  <div class="wa-bubble-time">20:11</div>
                 </div>
+                <div class="wa-bubble wa-bubble-bot">
+                  Pago online en un toque y entrega estimada en 22 min.
+                  <div class="wa-bubble-time">20:12</div>
+                </div>
+                <div class="hero-chat-highlights">
+                  <span>Recompra automática</span>
+                  <span>Upselling inteligente</span>
+                  <span>24/7</span>
+                </div>
+              </div>
+              <div class="hero-phone-footer">
+                <span>Ticket medio</span>
+                <strong>+18%</strong>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="hero-copy">
+        <!-- COPY -->
+        <div class="hero-top" data-reveal>
           <div class="hero-badge">
-            <span class="badge-dot"></span>
-            Potenciado por WhatsApp Business API
+            <span class="badge-pulse"></span>
+            Funciona 24/7 sin que hagas nada
           </div>
+
           <h1 class="hero-title">
-            Tu restaurante en piloto<br/>
-            automático con <span class="text-green">WhatsApp</span>
+            Tu restaurante<br/>en piloto automático<br/>
+            con <span class="title-accent">WhatsApp</span>
           </h1>
+
           <p class="hero-subtitle">
-            Panchi-Bot gestiona pedidos, pagos y entregas de tu restaurante 24/7
-            directamente en WhatsApp. Sin apps, sin fricciones — solo más ventas.
+            Tus clientes piden por WhatsApp, pagan en segundos, y tu restaurante funciona solo.
+            Cero apps nuevas. Cero teléfonos sonando. Cero complicaciones.
           </p>
+
           <div class="hero-actions">
             <a href="#demo" class="btn btn-primary btn-lg">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              Ver Demo
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Ver demo en vivo
             </a>
-            <a href="#contact" class="btn btn-ghost btn-lg">Habla con ventas →</a>
-          </div>
-          <div class="hero-stats">
-            <div class="stat"><strong>+300</strong><span>Pedidos/día</span></div>
-            <div class="stat-divider"></div>
-            <div class="stat"><strong>98%</strong><span>Uptime garantizado</span></div>
-            <div class="stat-divider"></div>
-            <div class="stat"><strong>3 min</strong><span>Setup inicial</span></div>
+            <a href="#contact" class="btn btn-ghost btn-lg">Habla con ventas</a>
           </div>
         </div>
 
-        <div class="hero-side hero-side--right">
-          <div class="phone-mockup-wrap hero-phone-wrap">
-            <div class="phone-mockup hero-phone hero-phone--right">
-              <div class="phone-screen">
-                <div class="hero-ops-header">
-                  <span class="hero-ops-eyebrow">Operativa en tiempo real</span>
-                  <strong>Turno de cena</strong>
-                </div>
-                <div class="hero-ops-body">
-                  <div class="hero-ops-grid">
-                    <div class="hero-ops-card">
-                      <span>Pedidos activos</span>
-                      <strong>18</strong>
-                    </div>
-                    <div class="hero-ops-card">
-                      <span>Pago online</span>
-                      <strong>74%</strong>
-                    </div>
-                    <div class="hero-ops-card">
-                      <span>Tiempo medio</span>
-                      <strong>16 min</strong>
-                    </div>
-                    <div class="hero-ops-card">
-                      <span>Valoración</span>
-                      <strong>4.9/5</strong>
-                    </div>
-                  </div>
-                  <div class="hero-orders">
-                    <div class="hero-orders-title">Pedidos en curso</div>
-                    <div class="hero-order-row">
-                      <span>#2481</span>
-                      <strong>Preparando</strong>
-                      <small>8 min</small>
-                    </div>
-                    <div class="hero-order-row">
-                      <span>#2482</span>
-                      <strong>Listo para rider</strong>
-                      <small>2 min</small>
-                    </div>
-                    <div class="hero-order-row">
-                      <span>#2483</span>
-                      <strong>En reparto</strong>
-                      <small>12 min</small>
-                    </div>
-                  </div>
-                </div>
-                <div class="tracking-bar hero-tracking-bar">
-                  <div class="tracking-steps">
-                    <div class="track-step done">
-                      <div class="track-dot"></div>
-                      <span>Pedido</span>
-                    </div>
-                    <div class="track-line done"></div>
-                    <div class="track-step done">
-                      <div class="track-dot"></div>
-                      <span>Cocina</span>
-                    </div>
-                    <div class="track-line done"></div>
-                    <div class="track-step active">
-                      <div class="track-dot"></div>
-                      <span>Rider</span>
-                    </div>
-                    <div class="track-line"></div>
-                    <div class="track-step">
-                      <div class="track-dot"></div>
-                      <span>Entrega</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <!-- RIGHT PHONE — Dashboard operativo -->
+        <div class="hero-phone-col hero-phone-col--right">
+          <div class="phone-mockup hero-phone hero-phone--right">
+            <div class="phone-notch"></div>
+            <div class="phone-screen" style="position:relative;background:#0f172a;">
+              <img
+                src="WhatsApp Image 2026-04-03 at 06.57.26.jpeg"
+                alt="Vista Repartidor"
+                style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;pointer-events:none;"
+              />
             </div>
           </div>
+        </div>
+
+      </div>
+
+      <!-- STATS -->
+      <div class="hero-stats" data-reveal>
+        <div class="stat">
+          <strong data-count="300">+300</strong>
+          <span>Pedidos al día</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <strong>98%</strong>
+          <span>Uptime garantizado</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <strong>3 min</strong>
+          <span>Setup inicial</span>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- FEATURES -->
+  <!-- ============================================================
+       TRUST BAR
+       ============================================================ -->
+  <section class="trust-bar" data-reveal>
+    <div class="container">
+      <div class="trust-badges">
+        <div class="trust-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1A9D55"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          WhatsApp Business API
+        </div>
+        <div class="trust-sep">·</div>
+        <div class="trust-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1A9D55"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Pagos Monei
+        </div>
+        <div class="trust-sep">·</div>
+        <div class="trust-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1A9D55"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Google Maps
+        </div>
+        <div class="trust-sep">·</div>
+        <div class="trust-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1A9D55"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Hecho en España
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FEATURES
+       ============================================================ -->
   <section class="features" id="features">
     <div class="container">
-      <div class="section-header">
-        <span class="section-label">Características</span>
-        <h2>Todo lo que necesita tu restaurante</h2>
-        <p>Una plataforma completa que conecta tu cocina con tus clientes sin fricciones.</p>
+      <div class="section-header" data-reveal>
+        <span class="section-eyebrow">Características</span>
+        <h2>Todo lo que necesita<br/>tu restaurante</h2>
+        <p>Una plataforma completa que conecta tu cocina con tus clientes.</p>
       </div>
       <div class="features-grid">
 
-        <div class="feature-card feature-card--highlight">
+        <div class="feature-card" data-reveal data-tilt>
+          <div class="feature-num">01</div>
           <div class="feature-icon feature-icon--green">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           </div>
           <h3>Pedidos por WhatsApp</h3>
-          <p>Tus clientes hacen pedidos desde el mismo WhatsApp que ya usan. Sin apps nuevas, sin registros. El bot guía el proceso completo con lenguaje natural.</p>
+          <p>Tus clientes hacen pedidos desde el mismo WhatsApp que ya usan. Sin apps nuevas, sin registros.</p>
           <ul class="feature-list">
             <li>Menú interactivo personalizable</li>
             <li>Gestión de modificaciones y alergias</li>
@@ -211,25 +209,27 @@
           </ul>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon feature-icon--blue">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <div class="feature-card" data-reveal data-tilt>
+          <div class="feature-num">02</div>
+          <div class="feature-icon feature-icon--amber">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
           </div>
           <h3>Pagos integrados</h3>
-          <p>Acepta pagos online al momento del pedido con Monei. El cliente paga en segundos y recibe confirmación automática.</p>
+          <p>Acepta pagos online al momento del pedido con Monei. El cliente paga en segundos.</p>
           <ul class="feature-list">
             <li>Tarjeta, Bizum y más</li>
-            <li>Verificación HMAC segura</li>
+            <li>Verificación segura</li>
             <li>También acepta efectivo</li>
           </ul>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon feature-icon--purple">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        <div class="feature-card" data-reveal data-tilt>
+          <div class="feature-num">03</div>
+          <div class="feature-icon feature-icon--teal">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
           </div>
           <h3>Dashboard de operaciones</h3>
-          <p>Panel en tiempo real para cocina, repartidores y gerencia. Cada rol ve exactamente lo que necesita sin información de más.</p>
+          <p>Panel en tiempo real para cocina, repartidores y gerencia. Cada rol ve lo que necesita.</p>
           <ul class="feature-list">
             <li>Vista de cocina / picker</li>
             <li>Cola de repartidores con mapa</li>
@@ -237,12 +237,13 @@
           </ul>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon feature-icon--orange">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div class="feature-card" data-reveal data-tilt>
+          <div class="feature-num">04</div>
+          <div class="feature-icon feature-icon--rose">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
           <h3>Tracking en tiempo real</h3>
-          <p>El cliente recibe notificaciones automáticas en cada etapa: confirmación, preparación, en reparto y entregado.</p>
+          <p>El cliente recibe notificaciones automáticas en cada etapa hasta la entrega.</p>
           <ul class="feature-list">
             <li>Notificaciones automáticas</li>
             <li>Enlace de seguimiento en vivo</li>
@@ -254,17 +255,58 @@
     </div>
   </section>
 
-  <!-- DEMO INTERACTIVA -->
+  <!-- ============================================================
+       HOW IT WORKS
+       ============================================================ -->
+  <section class="how-section">
+    <div class="container">
+      <div class="section-header" data-reveal>
+        <span class="section-eyebrow">El proceso</span>
+        <h2>Funciona en 3 pasos</h2>
+        <p>Sin complicaciones, sin tecnología. Solo tu restaurante funcionando mejor.</p>
+      </div>
+      <div class="how-steps" data-reveal>
+        <div class="how-step">
+          <div class="how-num">1</div>
+          <h3>El cliente escribe</h3>
+          <p>Tu cliente te escribe por WhatsApp. El bot detecta que quiere hacer un pedido.</p>
+        </div>
+        <div class="how-connector">
+          <svg width="60" height="24" viewBox="0 0 60 24" fill="none">
+            <path d="M0 12h50m-8-8l8 8-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="how-step">
+          <div class="how-num">2</div>
+          <h3>Elige y paga</h3>
+          <p>Recibe un enlace de menú, elige lo que quiere y paga en segundos.</p>
+        </div>
+        <div class="how-connector">
+          <svg width="60" height="24" viewBox="0 0 60 24" fill="none">
+            <path d="M0 12h50m-8-8l8 8-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="how-step">
+          <div class="how-num">3</div>
+          <h3>Tú preparas</h3>
+          <p>Recibes el pedido en tu cocina. El bot maneja todo lo demás.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       DEMO INTERACTIVA
+       ============================================================ -->
   <section class="demo-section" id="demo">
     <div class="container">
-      <div class="section-header">
-        <span class="section-label">Demo interactiva</span>
-        <h2>Así funciona en la práctica</h2>
+      <div class="section-header" data-reveal>
+        <span class="section-eyebrow">Demo interactiva</span>
+        <h2>Así funciona<br/>en la práctica</h2>
         <p>Desde el primer mensaje hasta la entrega — totalmente automatizado.</p>
       </div>
 
       <div class="demo-wrapper">
-        <!-- Barra de progreso de escenas -->
         <div class="scene-progress">
           <button class="scene-btn active" data-scene="0">
             <span class="scene-num">1</span>
@@ -282,7 +324,6 @@
           </button>
         </div>
 
-        <!-- Área de demo -->
         <div class="demo-stage">
 
           <!-- ESCENA 1 -->
@@ -299,6 +340,7 @@
               </div>
               <div class="phone-mockup-wrap">
                 <div class="phone-mockup">
+                  <div class="phone-notch"></div>
                   <div class="phone-screen">
                     <div class="wa-header">
                       <div class="wa-avatar">🍕</div>
@@ -307,9 +349,7 @@
                         <span class="wa-status">en línea</span>
                       </div>
                     </div>
-                    <div class="wa-chat" id="chat1">
-                      <!-- mensajes se inyectan por JS -->
-                    </div>
+                    <div class="wa-chat" id="chat1"></div>
                     <div class="wa-input">
                       <span class="wa-input-text" id="typingCursor1"></span>
                     </div>
@@ -324,7 +364,7 @@
             <div class="scene-content">
               <div class="scene-text">
                 <h3>El cliente elige del menú</h3>
-                <p>El enlace abre una página web optimizada para móvil donde el cliente navega el menú, añade productos al carrito y paga en segundos.</p>
+                <p>El enlace abre una página web optimizada para móvil donde el cliente navega el menú, añade productos y paga.</p>
                 <div class="scene-steps">
                   <div class="step step-2-1"><span class="step-dot"></span>Menú web personalizado</div>
                   <div class="step step-2-2"><span class="step-dot"></span>Selección y carrito interactivo</div>
@@ -333,6 +373,7 @@
               </div>
               <div class="phone-mockup-wrap">
                 <div class="phone-mockup phone-mockup--menu">
+                  <div class="phone-notch"></div>
                   <div class="phone-screen">
                     <div class="menu-header">
                       <span class="menu-logo">🍕 Panchi</span>
@@ -343,20 +384,14 @@
                       <div class="menu-item" id="item1">
                         <div class="item-info">
                           <span class="item-emoji">🍕</span>
-                          <div>
-                            <div class="item-name">Margarita</div>
-                            <div class="item-price">€9.90</div>
-                          </div>
+                          <div><div class="item-name">Margarita</div><div class="item-price">€9.90</div></div>
                         </div>
                         <button class="item-add" data-item="Margarita" data-price="9.90">+</button>
                       </div>
                       <div class="menu-item" id="item2">
                         <div class="item-info">
                           <span class="item-emoji">🍕</span>
-                          <div>
-                            <div class="item-name">Cuatro quesos</div>
-                            <div class="item-price">€12.50</div>
-                          </div>
+                          <div><div class="item-name">Cuatro quesos</div><div class="item-price">€12.50</div></div>
                         </div>
                         <button class="item-add" data-item="Cuatro quesos" data-price="12.50">+</button>
                       </div>
@@ -364,20 +399,14 @@
                       <div class="menu-item" id="item3">
                         <div class="item-info">
                           <span class="item-emoji">🥤</span>
-                          <div>
-                            <div class="item-name">Refresco 33cl</div>
-                            <div class="item-price">€2.50</div>
-                          </div>
+                          <div><div class="item-name">Refresco 33cl</div><div class="item-price">€2.50</div></div>
                         </div>
                         <button class="item-add" data-item="Refresco" data-price="2.50">+</button>
                       </div>
                       <div class="menu-item" id="item4">
                         <div class="item-info">
                           <span class="item-emoji">🍺</span>
-                          <div>
-                            <div class="item-name">Cerveza</div>
-                            <div class="item-price">€1.00</div>
-                          </div>
+                          <div><div class="item-name">Cerveza</div><div class="item-price">€1.00</div></div>
                         </div>
                         <button class="item-add" data-item="Cerveza" data-price="1.00">+</button>
                       </div>
@@ -407,6 +436,7 @@
               </div>
               <div class="phone-mockup-wrap">
                 <div class="phone-mockup">
+                  <div class="phone-notch"></div>
                   <div class="phone-screen">
                     <div class="wa-header">
                       <div class="wa-avatar">🍕</div>
@@ -415,29 +445,16 @@
                         <span class="wa-status">en línea</span>
                       </div>
                     </div>
-                    <div class="wa-chat" id="chat3">
-                    </div>
+                    <div class="wa-chat" id="chat3"></div>
                     <div class="tracking-bar" id="trackingBar">
                       <div class="tracking-steps">
-                        <div class="track-step" id="ts1">
-                          <div class="track-dot"></div>
-                          <span>Preparando</span>
-                        </div>
+                        <div class="track-step" id="ts1"><div class="track-dot"></div><span>Preparando</span></div>
                         <div class="track-line"></div>
-                        <div class="track-step" id="ts2">
-                          <div class="track-dot"></div>
-                          <span>Preparado</span>
-                        </div>
+                        <div class="track-step" id="ts2"><div class="track-dot"></div><span>Preparado</span></div>
                         <div class="track-line"></div>
-                        <div class="track-step" id="ts3">
-                          <div class="track-dot"></div>
-                          <span>En reparto</span>
-                        </div>
+                        <div class="track-step" id="ts3"><div class="track-dot"></div><span>En reparto</span></div>
                         <div class="track-line"></div>
-                        <div class="track-step" id="ts4">
-                          <div class="track-dot"></div>
-                          <span>Entregado</span>
-                        </div>
+                        <div class="track-step" id="ts4"><div class="track-dot"></div><span>Entregado</span></div>
                       </div>
                     </div>
                   </div>
@@ -448,7 +465,6 @@
 
         </div><!-- end demo-stage -->
 
-        <!-- Controles -->
         <div class="demo-controls">
           <button class="demo-nav demo-prev" id="demoPrev" disabled>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -464,63 +480,117 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
-
-      </div><!-- end demo-wrapper -->
+      </div>
     </div>
   </section>
 
-  <!-- PRICING -->
+  <!-- ============================================================
+       TESTIMONIALS (dark section)
+       ============================================================ -->
+  <section class="testimonials">
+    <div class="container">
+      <div class="section-header section-header--light" data-reveal>
+        <span class="section-eyebrow">Lo que dicen nuestros clientes</span>
+        <h2>Restaurantes reales,<br/>resultados reales</h2>
+      </div>
+      <div class="testimonials-grid">
+        <div class="testimonial-card" data-reveal>
+          <div class="testimonial-stars">★★★★★</div>
+          <blockquote class="testimonial-quote">
+            "Antes pasaba una hora entera al teléfono respondiendo pedidos. Ahora el bot se encarga de todo y yo solo cocino. Subimos un 30% en pedidos."
+          </blockquote>
+          <div class="testimonial-footer">
+            <div class="testimonial-avatar">CM</div>
+            <div>
+              <div class="testimonial-author">Carlos Martínez</div>
+              <div class="testimonial-restaurant">Restaurante El Romero, Tarancón</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card" data-reveal>
+          <div class="testimonial-stars">★★★★★</div>
+          <blockquote class="testimonial-quote">
+            "No sé de tecnología, pero esto funciona como si fuera magia. Mis clientes piden de noche sin que tenga que estar yo respondiendo."
+          </blockquote>
+          <div class="testimonial-footer">
+            <div class="testimonial-avatar">ML</div>
+            <div>
+              <div class="testimonial-author">María López</div>
+              <div class="testimonial-restaurant">Pizzería La Palmera, Cuenca</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card" data-reveal>
+          <div class="testimonial-stars">★★★★★</div>
+          <blockquote class="testimonial-quote">
+            "Empecé con reparto solo por WhatsApp. Panchi-Bot me permitió escalar sin contratar más personal. Hoy hacemos 200 pedidos al día."
+          </blockquote>
+          <div class="testimonial-footer">
+            <div class="testimonial-avatar">JG</div>
+            <div>
+              <div class="testimonial-author">Javier García</div>
+              <div class="testimonial-restaurant">Burgers House, Guadalajara</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PRICING
+       ============================================================ -->
   <section class="pricing" id="pricing">
     <div class="container">
-      <div class="section-header">
-        <span class="section-label">Precios</span>
+      <div class="section-header" data-reveal>
+        <span class="section-eyebrow">Precios</span>
         <h2>Simple y predecible</h2>
         <p>Sin sorpresas. Sin comisión por pedido. Paga solo por lo que usas.</p>
       </div>
       <div class="pricing-grid">
 
-        <div class="pricing-card">
+        <div class="pricing-card" data-reveal data-tilt>
           <div class="plan-name">Starter</div>
           <div class="plan-price"><span class="price-amount">€49</span><span class="price-period">/mes</span></div>
-          <p class="plan-desc">Perfecto para restaurantes que quieren empezar con WhatsApp.</p>
+          <p class="plan-desc">Perfecto para empezar con pedidos por WhatsApp.</p>
           <ul class="plan-features">
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Bot de pedidos WhatsApp</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Hasta 150 pedidos/mes</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Menú web personalizable</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Pagos online (Monei)</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> <span class="plan-off">Dashboard avanzado</span></li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> <span class="plan-off">Métricas e informes</span></li>
+            <li>Bot de pedidos WhatsApp</li>
+            <li>Hasta 150 pedidos/mes</li>
+            <li>Menú web personalizable</li>
+            <li>Pagos online (Monei)</li>
+            <li class="plan-off">Dashboard avanzado</li>
+            <li class="plan-off">Métricas e informes</li>
           </ul>
           <a href="#contact" class="btn btn-outline btn-full">Empezar gratis 14 días</a>
         </div>
 
-        <div class="pricing-card pricing-card--featured">
+        <div class="pricing-card pricing-card--featured" data-reveal data-tilt>
           <div class="plan-badge">Más popular</div>
           <div class="plan-name">Pro</div>
           <div class="plan-price"><span class="price-amount">€129</span><span class="price-period">/mes</span></div>
-          <p class="plan-desc">Para restaurantes con volumen y equipo operativo propio.</p>
+          <p class="plan-desc">Para restaurantes con volumen y equipo operativo.</p>
           <ul class="plan-features">
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Todo lo de Starter</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Pedidos ilimitados</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Dashboard completo (cocina/reparto)</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Tracking en tiempo real</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Métricas e informes</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Soporte prioritario</li>
+            <li>Todo lo de Starter</li>
+            <li>Pedidos ilimitados</li>
+            <li>Dashboard completo (cocina/reparto)</li>
+            <li>Tracking en tiempo real</li>
+            <li>Métricas e informes</li>
+            <li>Soporte prioritario</li>
           </ul>
-          <a href="#contact" class="btn btn-white btn-full">Empezar gratis 14 días</a>
+          <a href="#contact" class="btn btn-primary btn-full">Empezar gratis 14 días</a>
         </div>
 
-        <div class="pricing-card">
+        <div class="pricing-card" data-reveal data-tilt>
           <div class="plan-name">Enterprise</div>
           <div class="plan-price"><span class="price-amount">Custom</span></div>
           <p class="plan-desc">Para cadenas, franquicias o integraciones a medida.</p>
           <ul class="plan-features">
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Todo lo de Pro</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Multi-local / franquicia</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> API propia + webhooks</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Integraciones a medida</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> SLA garantizado 99.9%</li>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Account manager dedicado</li>
+            <li>Todo lo de Pro</li>
+            <li>Multi-local / franquicia</li>
+            <li>API propia + webhooks</li>
+            <li>Integraciones a medida</li>
+            <li>SLA garantizado 99.9%</li>
+            <li>Account manager dedicado</li>
           </ul>
           <a href="#contact" class="btn btn-outline btn-full">Hablar con ventas</a>
         </div>
@@ -529,17 +599,49 @@
     </div>
   </section>
 
-  <!-- CTA FINAL -->
+  <!-- ============================================================
+       FAQ
+       ============================================================ -->
+  <section class="faq">
+    <div class="container">
+      <div class="section-header" data-reveal>
+        <span class="section-eyebrow">Preguntas frecuentes</span>
+        <h2>Resolvemos tus dudas</h2>
+      </div>
+      <div class="faq-items" data-reveal>
+        <div class="faq-item">
+          <button class="faq-question">¿Mis clientes necesitan instalar una app?</button>
+          <div class="faq-answer"><p>No. Todo funciona por WhatsApp, que ya tienen. No necesitan nada nuevo. Les envías un enlace de menú, eligen y pagan en segundos.</p></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question">¿Necesito saber de informática o tecnología?</button>
+          <div class="faq-answer"><p>Para nada. Panchi-Bot está diseñado para restaurantes, no para técnicos. Si sabes enviar mensajes por WhatsApp, puedes usarlo.</p></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question">¿Funciona si ya tengo WhatsApp Business?</button>
+          <div class="faq-answer"><p>Sí. Panchi-Bot se integra perfectamente con WhatsApp Business API. Si no lo tienes, te ayudamos a configurarlo en 3 minutos.</p></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question">¿Cuánto tarda el setup?</button>
+          <div class="faq-answer"><p>Menos de 3 minutos. Añades tu menú, conectas WhatsApp Business y listo. Tus clientes ya pueden pedir.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CTA / CONTACT
+       ============================================================ -->
   <section class="cta-section" id="contact">
     <div class="container">
       <div class="cta-card">
-        <div class="cta-text">
-          <h2>¿Listo para automatizar tu restaurante?</h2>
+        <div class="cta-text" data-reveal>
+          <h2>¿Listo para automatizar<br/>tu restaurante?</h2>
           <p>Cuéntanos sobre tu negocio y te preparamos una demo personalizada. Sin compromiso, sin tarjeta de crédito.</p>
           <div class="cta-perks">
-            <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Setup en menos de 3 minutos</span>
-            <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 14 días gratis</span>
-            <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Soporte en español</span>
+            <span>Setup en menos de 3 minutos</span>
+            <span>14 días gratis</span>
+            <span>Soporte en español</span>
           </div>
         </div>
         <form class="cta-form" id="ctaForm" novalidate>
@@ -551,13 +653,15 @@
             <label for="formRestaurant">Restaurante</label>
             <input type="text" id="formRestaurant" placeholder="Nombre del restaurante" required />
           </div>
-          <div class="form-group">
-            <label for="formPhone">Teléfono / WhatsApp</label>
-            <input type="tel" id="formPhone" placeholder="+34 600 000 000" required />
-          </div>
-          <div class="form-group">
-            <label for="formEmail">Email</label>
-            <input type="email" id="formEmail" placeholder="tu@restaurante.es" required />
+          <div class="form-row">
+            <div class="form-group">
+              <label for="formPhone">Teléfono / WhatsApp</label>
+              <input type="tel" id="formPhone" placeholder="+34 600 000 000" required />
+            </div>
+            <div class="form-group">
+              <label for="formEmail">Email</label>
+              <input type="email" id="formEmail" placeholder="tu@restaurante.es" required />
+            </div>
           </div>
           <div class="form-group">
             <label for="formMsg">¿Cuántos pedidos gestionas al día?</label>
@@ -574,24 +678,26 @@
           </button>
           <p class="form-disclaimer">Al enviar aceptas nuestra política de privacidad. Sin spam.</p>
           <div class="form-success" id="formSuccess">
-            ✅ ¡Recibido! Te contactaremos en menos de 24h.
+            ¡Recibido! Te contactaremos en menos de 24h.
           </div>
         </form>
       </div>
     </div>
   </section>
 
-  <!-- FOOTER -->
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
   <footer class="footer">
     <div class="container footer-inner">
       <div class="footer-brand">
         <a href="#" class="logo">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="8" fill="#25D366"/>
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="#1A9D55"/>
             <path d="M16 6C10.477 6 6 10.477 6 16c0 1.89.52 3.66 1.43 5.17L6 26l4.94-1.4A9.94 9.94 0 0016 26c5.523 0 10-4.477 10-10S21.523 6 16 6z" fill="white"/>
-            <path d="M13 12.5c-.3-.7-.6-.7-.9-.7h-.8c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.5 3.1 1.2 3.7.97 4.4.9.7-.07 2.2-.9 2.5-1.76.3-.86.3-1.6.2-1.76-.1-.15-.3-.22-.6-.37-.3-.14-1.8-.9-2.1-1-.3-.1-.5-.14-.7.15-.2.29-.8.97-1 1.17-.2.2-.37.22-.7.07-.3-.14-1.3-.48-2.5-1.55-.92-.82-1.55-1.83-1.73-2.14-.18-.3-.02-.47.13-.62.14-.13.3-.37.45-.55.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.07-.14-.7-1.7-.96-2.33z" fill="#25D366"/>
+            <path d="M13 12.5c-.3-.7-.6-.7-.9-.7h-.8c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.5 3.1 1.2 3.7.97 4.4.9.7-.07 2.2-.9 2.5-1.76.3-.86.3-1.6.2-1.76-.1-.15-.3-.22-.6-.37-.3-.14-1.8-.9-2.1-1-.3-.1-.5-.14-.7.15-.2.29-.8.97-1 1.17-.2.2-.37.22-.7.07-.3-.14-1.3-.48-2.5-1.55-.92-.82-1.55-1.83-1.73-2.14-.18-.3-.02-.47.13-.62.14-.13.3-.37.45-.55.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.07-.14-.7-1.7-.96-2.33z" fill="#1A9D55"/>
           </svg>
-          <span>Panchi<strong>Bot</strong></span>
+          <span>Panchi<em>Bot</em></span>
         </a>
         <p>Automatización de pedidos para restaurantes vía WhatsApp Business API.</p>
       </div>
@@ -624,8 +730,7 @@
     </div>
     <div class="footer-bottom">
       <div class="container">
-        <span>© 2025 Panchi-Bot. Hecho con ❤️ en España.</span>
-        <span>WhatsApp Business API · Monei · Google Maps</span>
+        <span>© 2025 Panchi-Bot. Hecho en España.</span>
       </div>
     </div>
   </footer>

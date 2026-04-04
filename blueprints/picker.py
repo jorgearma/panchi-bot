@@ -1,7 +1,8 @@
 import logging
 import os
+import uuid
 
-from flask import Blueprint, Response, current_app, jsonify, render_template, request, send_from_directory, session
+from flask import Blueprint, Response, current_app, jsonify, redirect, render_template, request, send_from_directory, session
 
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard
@@ -12,8 +13,28 @@ logger = logging.getLogger(__name__)
 blueprint_picker = Blueprint("picker", __name__)
 
 
+@blueprint_picker.route("/picker/demo")
+def demo_view():
+    """Entrada directa al modo demo del picker sin autenticación."""
+    from blueprints.demo import DemoState
+    # Usar demo_session_id existente o crear uno nuevo
+    if 'demo_session_id' not in session:
+        session['demo_session_id'] = str(uuid.uuid4())
+        try:
+            DemoState.init_session(session['demo_session_id'])
+        except Exception:
+            pass
+    # Siempre preparar la sesión como demo
+    session['empleado_id'] = 0
+    session['empleado_nombre'] = 'Demo'
+    session['rol'] = 'manager'
+    session['demo_mode'] = True
+    session.permanent = False
+    return redirect('/picker')
+
+
 @blueprint_picker.route("/picker", strict_slashes=False)
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def index():
     """Renderiza la PWA principal del picker autenticado."""
     picker_id = session.get('empleado_id')
@@ -37,7 +58,7 @@ def apple_touch_icon():
 
 
 @blueprint_picker.route("/picker/manifest.json")
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def manifest():
     """Genera el manifest de la PWA con el contexto del picker actual."""
     picker_id = session.get('empleado_id')
@@ -60,9 +81,12 @@ def service_worker():
 
 
 @blueprint_picker.route("/picker/mis-pedidos")
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def mis_pedidos():
     """Lista los pickings asignados al picker actual."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        return jsonify(DemoState.get_picker(session.get('demo_session_id', 'default')))
     picker_id = session.get('empleado_id')
     try:
         return jsonify(gestor_dashboard.pickings_del_picker(picker_id))
@@ -72,9 +96,21 @@ def mis_pedidos():
 
 
 @blueprint_picker.route("/picker/item/<int:item_id>/estado", methods=["POST"])
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def actualizar_item(item_id: int):
     """Actualiza el estado de una línea de picking, incluida su sustitución."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        data = request.get_json(silent=True) or {}
+        ok = DemoState.update_item(
+            session.get('demo_session_id', 'default'),
+            item_id,
+            data.get('estado', ''),
+            data.get('cantidad_encontrada'),
+            data.get('notas'),
+            data.get('producto_sustituto_id'),
+        )
+        return jsonify({"ok": ok, "mensaje": "Demo: item actualizado"})
     data = request.get_json(silent=True) or {}
     estado = data.get("estado")
     if not estado:
@@ -102,9 +138,11 @@ def actualizar_item(item_id: int):
 
 
 @blueprint_picker.route("/picker/buscar-productos")
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def buscar_productos():
     """Busca productos para proponer sustituciones durante el picking."""
+    if session.get('demo_mode'):
+        return jsonify([])
     q = request.args.get("q", "").strip()
     if len(q) < 2:
         return jsonify([])
@@ -116,9 +154,13 @@ def buscar_productos():
 
 
 @blueprint_picker.route("/picker/picking/<int:picking_id>/finalizar", methods=["POST"])
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def finalizar_picking(picking_id: int):
     """Marca un picking como completado por el picker actual."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        DemoState.finalizar_picking(session.get('demo_session_id', 'default'), picking_id)
+        return jsonify({"ok": True, "mensaje": "Demo: picking finalizado"})
     picker_id = session.get('empleado_id')
     ok, msg, _ = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
     if not ok:
@@ -128,9 +170,12 @@ def finalizar_picking(picking_id: int):
 
 
 @blueprint_picker.route("/picker/cola")
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def cola():
     """Devuelve la cola de pickings aún sin asignar."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        return jsonify(DemoState.get_cola_picker(session.get('demo_session_id', 'default')))
     try:
         lista = gestor_dashboard.pickings_sin_asignar()
         return jsonify({"cola": lista, "total": len(lista)})
@@ -140,9 +185,15 @@ def cola():
 
 
 @blueprint_picker.route("/picker/cola/coger/<int:picking_id>", methods=["POST"])
-@requiere_rol('picker', 'manager', 'admin')
+@requiere_rol('picker', 'manager', 'admin', demo_ok=True)
 def coger_picking(picking_id: int):
     """Permite al picker reclamar un picking pendiente de la cola."""
+    if session.get('demo_mode'):
+        from blueprints.demo import DemoState
+        ok = DemoState.reclamar_picking(session.get('demo_session_id', 'default'), picking_id)
+        if ok:
+            return jsonify({"ok": True, "picking_id": picking_id})
+        return jsonify({"error": "no_encontrado"}), 404
     empleado_id = session.get('empleado_id')
     try:
         ok, motivo = gestor_dashboard.reclamar_picking(picking_id, empleado_id)

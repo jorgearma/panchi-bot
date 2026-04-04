@@ -1,5 +1,6 @@
 import logging
 from flask import Blueprint, jsonify, render_template, request
+from blueprints.auth import requiere_rol
 from container import gestor_productos
 
 logger = logging.getLogger(__name__)
@@ -8,12 +9,14 @@ blueprint_productos = Blueprint("productos_admin", __name__)
 
 
 @blueprint_productos.route("/productos-admin")
+@requiere_rol('manager', 'admin')
 def index():
     """Renderiza la vista de administración de productos."""
     return render_template("productos/index.html")
 
 
 @blueprint_productos.route("/productos-admin/lista")
+@requiere_rol('manager', 'admin')
 def lista():
     """Devuelve el catálogo preparado para el panel de productos."""
     try:
@@ -24,6 +27,7 @@ def lista():
 
 
 @blueprint_productos.route("/productos-admin/<int:producto_id>/stock", methods=["PATCH"])
+@requiere_rol('manager', 'admin')
 def actualizar_stock(producto_id: int):
     """Actualiza el stock con un valor absoluto o con un delta."""
     data = request.get_json(silent=True) or {}
@@ -42,6 +46,7 @@ def actualizar_stock(producto_id: int):
 
 
 @blueprint_productos.route("/productos-admin/<int:producto_id>/disponible", methods=["PATCH"])
+@requiere_rol('manager', 'admin')
 def toggle_disponible(producto_id: int):
     """Activa o desactiva la disponibilidad comercial de un producto."""
     data = request.get_json(silent=True) or {}
@@ -54,6 +59,7 @@ def toggle_disponible(producto_id: int):
 
 
 @blueprint_productos.route("/productos-admin/<int:producto_id>/precio", methods=["PATCH"])
+@requiere_rol('manager', 'admin')
 def actualizar_precio(producto_id: int):
     """Actualiza el precio de venta de un producto."""
     data = request.get_json(silent=True) or {}

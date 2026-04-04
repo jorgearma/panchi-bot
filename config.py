@@ -7,6 +7,7 @@ OPENAI_API_KEY: str | None = os.environ.get("OPENAI_API_KEY")
 
 # Flask
 SECRET_KEY: str | None = os.environ.get("SECRET_KEY")
+SESSION_COOKIE_SECURE: bool = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
 
 # Twilio
 TWILIO_ACCOUNT_SID: str | None = os.environ.get("TWILIO_ACCOUNT_SID")

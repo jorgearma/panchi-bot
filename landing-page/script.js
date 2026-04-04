@@ -1,20 +1,49 @@
 /* ============================================================
-   PANCHI-BOT LANDING PAGE — script.js
+   PANCHI-BOT LANDING — script.js
+   Artisan Tech edition
    ============================================================ */
-
 'use strict';
 
-/* ---- NAV TOGGLE (mobile) ---- */
+/* ============================================================
+   NAV
+   ============================================================ */
 const navToggle = document.getElementById('navToggle');
 const navLinks  = document.querySelector('.nav-links');
+const mainNav   = document.getElementById('mainNav');
+
 navToggle.addEventListener('click', () => {
   navLinks.classList.toggle('open');
+  // Animate hamburger to X
+  const spans = navToggle.querySelectorAll('span');
+  if (navLinks.classList.contains('open')) {
+    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+    spans[1].style.opacity = '0';
+    spans[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
+  } else {
+    spans[0].style.transform = '';
+    spans[1].style.opacity = '';
+    spans[2].style.transform = '';
+  }
 });
 document.querySelectorAll('.nav-links a').forEach(a => {
-  a.addEventListener('click', () => navLinks.classList.remove('open'));
+  a.addEventListener('click', () => {
+    navLinks.classList.remove('open');
+    const spans = navToggle.querySelectorAll('span');
+    spans[0].style.transform = '';
+    spans[1].style.opacity = '';
+    spans[2].style.transform = '';
+  });
 });
 
-/* ---- SMOOTH SCROLL on nav links ---- */
+// Nav background on scroll
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  mainNav.classList.toggle('scrolled', y > 40);
+  lastScroll = y;
+}, { passive: true });
+
+/* ---- SMOOTH SCROLL ---- */
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   anchor.addEventListener('click', e => {
     const target = document.querySelector(anchor.getAttribute('href'));
@@ -26,11 +55,57 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 /* ============================================================
+   SCROLL REVEAL
+   ============================================================ */
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      // Stagger children if they have data-reveal
+      const el = entry.target;
+      const delay = el.dataset.revealDelay || 0;
+      setTimeout(() => {
+        el.classList.add('revealed');
+      }, Number(delay));
+      revealObserver.unobserve(el);
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('[data-reveal]').forEach((el, i) => {
+  // Auto-stagger siblings
+  const parent = el.parentElement;
+  const siblings = parent.querySelectorAll(':scope > [data-reveal]');
+  if (siblings.length > 1) {
+    const idx = Array.from(siblings).indexOf(el);
+    el.dataset.revealDelay = idx * 120;
+  }
+  revealObserver.observe(el);
+});
+
+/* Phones use CSS entrance animation only — no JS float */
+
+/* ============================================================
+   3D TILT on cards
+   ============================================================ */
+document.querySelectorAll('[data-tilt]').forEach(card => {
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const rotateY = (x - 0.5) * 6;
+    const rotateX = (y - 0.5) * -6;
+    card.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = '';
+  });
+});
+
+/* ============================================================
    DEMO SCENE CONTROLLER
    ============================================================ */
 const TOTAL_SCENES = 3;
 let currentScene = 0;
-let sceneRunning = false;
 
 const prevBtn = document.getElementById('demoPrev');
 const nextBtn = document.getElementById('demoNext');
@@ -38,26 +113,21 @@ const nextBtn = document.getElementById('demoNext');
 function goToScene(n) {
   if (n < 0 || n >= TOTAL_SCENES) return;
 
-  // Update active scene panel
   document.querySelectorAll('.scene').forEach((s, i) => {
     s.classList.toggle('active', i === n);
   });
 
-  // Update scene buttons
   document.querySelectorAll('.scene-btn').forEach((btn, i) => {
     btn.classList.remove('active', 'done');
     if (i === n) btn.classList.add('active');
     if (i < n)  btn.classList.add('done');
   });
 
-  // Update dots
   document.querySelectorAll('.demo-dot').forEach((dot, i) => {
     dot.classList.toggle('active', i === n);
   });
 
-  // Nav buttons
   prevBtn.disabled = n === 0;
-  nextBtn.disabled = n === TOTAL_SCENES - 1;
   nextBtn.textContent = '';
   nextBtn.innerHTML = n === TOTAL_SCENES - 1
     ? 'Ver de nuevo <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>'
@@ -74,7 +144,7 @@ nextBtn.addEventListener('click', () => {
   if (currentScene < TOTAL_SCENES - 1) {
     goToScene(currentScene + 1);
   } else {
-    goToScene(0); // restart
+    goToScene(0);
   }
 });
 document.querySelectorAll('.scene-btn, .demo-dot').forEach(btn => {
@@ -106,14 +176,6 @@ function playScene1() {
   cursor.textContent = '';
   cursor.className = '';
 
-  const messages = [
-    { type: 'user',  text: 'Hola, quiero hacer un pedido 🍕', delay: 600 },
-    { type: 'bot',   text: '¡Hola Carlos! 👋 Me alegra verte por aquí.', delay: 1800 },
-    { type: 'bot',   text: 'Aquí tienes tu enlace de menú personalizado:', delay: 3000 },
-    { type: 'link',  delay: 4200 },
-  ];
-
-  // Typewriter effect for first user message
   scene1Timer.push(setTimeout(() => {
     activateStep('1', 1);
     typeInInput(cursor, 'Hola, quiero hacer un pedido 🍕', 55, () => {
@@ -128,18 +190,18 @@ function playScene1() {
     showTypingIndicator(chat, () => {
       addBubble(chat, 'bot', '¡Hola Carlos! 👋 Me alegra verte por aquí.');
     });
-  }, messages[1].delay));
+  }, 1800));
 
   scene1Timer.push(setTimeout(() => {
     showTypingIndicator(chat, () => {
       addBubble(chat, 'bot', 'Aquí tienes tu enlace de menú personalizado:');
     });
-  }, messages[2].delay));
+  }, 3000));
 
   scene1Timer.push(setTimeout(() => {
     activateStep('1', 3);
     addLinkBubble(chat);
-  }, messages[3].delay));
+  }, 4200));
 }
 
 function typeInInput(el, text, speed, cb) {
@@ -156,7 +218,7 @@ function showTypingIndicator(chat, cb) {
   const indicator = document.createElement('div');
   indicator.className = 'wa-bubble wa-bubble-bot';
   indicator.innerHTML = '<span style="letter-spacing:2px;font-size:.85rem">●●●</span>';
-  indicator.style.opacity = '.7';
+  indicator.style.opacity = '.6';
   chat.appendChild(indicator);
   chat.scrollTop = chat.scrollHeight;
   setTimeout(() => { chat.removeChild(indicator); if (cb) cb(); }, 900);
@@ -188,7 +250,7 @@ function getTime() {
 }
 
 /* ============================================================
-   SCENE 2 — Menu interaction animation
+   SCENE 2 — Menu interaction
    ============================================================ */
 let scene2Timer = [];
 let cartItems = [];
@@ -198,7 +260,6 @@ function playScene2() {
   clearTimers(scene2Timer);
   activateStep('2', 0);
 
-  // Reset cart state
   cartItems = [];
   cartTotal = 0;
   document.getElementById('cartCount').textContent = '0 artículos';
@@ -236,7 +297,7 @@ function playScene2() {
     activateStep('2', 2);
     const cartBtn = document.getElementById('cartBtn');
     cartBtn.textContent = '✅ Pagar';
-    cartBtn.style.background = '#1da851';
+    cartBtn.style.background = '#0F7A3E';
   }, 4400));
 
   scene2Timer.push(setTimeout(() => {
@@ -246,7 +307,6 @@ function playScene2() {
   }, 5600));
 }
 
-// Reset menu cart btn when coming back to scene 2
 function resetScene2() {
   const cartBtn = document.getElementById('cartBtn');
   if (cartBtn) {
@@ -256,7 +316,7 @@ function resetScene2() {
 }
 
 /* ============================================================
-   SCENE 3 — Confirmation + tracking animation
+   SCENE 3 — Confirmation + tracking
    ============================================================ */
 let scene3Timer = [];
 
@@ -267,14 +327,13 @@ function playScene3() {
   const chat = document.getElementById('chat3');
   chat.innerHTML = '';
 
-  // Reset tracking
   ['ts1','ts2','ts3','ts4'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('done','active');
   });
   document.querySelectorAll('.track-line').forEach(l => l.classList.remove('done'));
 
-  const confirmMsg  = '✅ *Pedido confirmado* #1842\n\n🍕 Cuatro quesos ×1\n🥤 Refresco ×1\n🍺 Cerveza ×1\n\n*Total: €16.00*\nTiempo estimado: ⏱ 30 min';
+  const confirmMsg = '✅ *Pedido confirmado* #1842\n\n🍕 Cuatro quesos ×1\n🥤 Refresco ×1\n🍺 Cerveza ×1\n\n*Total: €16.00*\nTiempo estimado: ⏱ 30 min';
   const trackStates = [
     { id: 'ts1', msg: '🔄 Estado: *EN PREPARACIÓN*', delay: 2200 },
     { id: 'ts2', msg: '✅ Estado: *PREPARADO* — ¡listo para entregar!', delay: 5000 },
@@ -295,15 +354,12 @@ function playScene3() {
       addBubble(chat, 'bot', msg);
       chat.scrollTop = chat.scrollHeight;
 
-      // Advance tracking dots
       const el = document.getElementById(id);
       if (el) {
-        // Mark previous as done
         trackStates.slice(0, idx).forEach(prev => {
           const p = document.getElementById(prev.id);
           if (p) { p.classList.remove('active'); p.classList.add('done'); }
         });
-        // Mark all connector lines up to this index
         document.querySelectorAll('.track-line').forEach((line, li) => {
           if (li < idx) line.classList.add('done');
         });
@@ -323,27 +379,27 @@ function playScene(n) {
 }
 
 /* ============================================================
-   INTERSECTION OBSERVER — auto-start demo when in view
+   INTERSECTION OBSERVER — auto-start demo
    ============================================================ */
 const demoSection = document.getElementById('demo');
 let demoStarted = false;
 
-const observer = new IntersectionObserver(entries => {
+const demoObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
     if (entry.isIntersecting && !demoStarted) {
       demoStarted = true;
       goToScene(0);
     }
   });
-}, { threshold: 0.35 });
+}, { threshold: 0.3 });
 
-if (demoSection) observer.observe(demoSection);
+if (demoSection) demoObserver.observe(demoSection);
 
 /* ============================================================
    CONTACT FORM
    ============================================================ */
-const form    = document.getElementById('ctaForm');
-const success = document.getElementById('formSuccess');
+const form      = document.getElementById('ctaForm');
+const success   = document.getElementById('formSuccess');
 const submitBtn = document.getElementById('formSubmit');
 
 form.addEventListener('submit', e => {
@@ -366,7 +422,6 @@ form.addEventListener('submit', e => {
   submitBtn.textContent = 'Enviando...';
   submitBtn.disabled = true;
 
-  // Simulate submission (replace with real endpoint)
   setTimeout(() => {
     submitBtn.style.display = 'none';
     success.style.display   = 'block';
@@ -374,31 +429,24 @@ form.addEventListener('submit', e => {
 });
 
 /* ============================================================
-   ANIMATE ON SCROLL — generic reveal
+   FAQ ACCORDION
    ============================================================ */
-const revealElements = document.querySelectorAll(
-  '.feature-card, .pricing-card, .stat'
-);
+document.querySelectorAll('.faq-question').forEach(question => {
+  question.addEventListener('click', () => {
+    const item = question.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
 
-const revealObserver = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.style.opacity = '1';
-      entry.target.style.transform = 'translateY(0)';
-      revealObserver.unobserve(entry.target);
-    }
+    document.querySelectorAll('.faq-item.open').forEach(openItem => {
+      if (openItem !== item) openItem.classList.remove('open');
+    });
+
+    item.classList.toggle('open', !isOpen);
   });
-}, { threshold: 0.1 });
-
-revealElements.forEach(el => {
-  el.style.opacity = '0';
-  el.style.transform = 'translateY(20px)';
-  el.style.transition = 'opacity .5s ease, transform .5s ease';
-  revealObserver.observe(el);
 });
 
-/* Init on page load */
+/* ============================================================
+   Init
+   ============================================================ */
 window.addEventListener('DOMContentLoaded', () => {
-  // Keep buttons disabled until IntersectionObserver fires
   prevBtn.disabled = true;
 });
