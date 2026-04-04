@@ -724,25 +724,25 @@ def get_demo_rendimiento_resumen():
     return {
         "empleados": [
             {
-                "id": 21, "nombre": "Pedro M.", "rol": "repartidor",
+                "id": 21, "nombre": "Pedro M.", "rol_operativo": "repartidor",
                 "pedidos": 8, "tiempo_medio_min": 24, "entregas_a_tiempo": 7,
                 "pct_a_tiempo": 87.5, "horas_trabajadas": 8.0,
                 "pedidos_por_hora": 1.0, "incidencias": 0,
             },
             {
-                "id": 11, "nombre": "Luis R.", "rol": "picker",
+                "id": 11, "nombre": "Luis R.", "rol_operativo": "picker",
                 "pedidos": 11, "tiempo_medio_min": 9, "entregas_a_tiempo": 10,
                 "pct_a_tiempo": 90.9, "horas_trabajadas": 8.0,
                 "pedidos_por_hora": 1.4, "incidencias": 1,
             },
             {
-                "id": 22, "nombre": "Sara V.", "rol": "repartidor",
+                "id": 22, "nombre": "Sara V.", "rol_operativo": "repartidor",
                 "pedidos": 5, "tiempo_medio_min": 27, "entregas_a_tiempo": 5,
                 "pct_a_tiempo": 100.0, "horas_trabajadas": 4.0,
                 "pedidos_por_hora": 1.25, "incidencias": 0,
             },
             {
-                "id": 31, "nombre": "Jorge P.", "rol": "picker",
+                "id": 31, "nombre": "Jorge P.", "rol_operativo": "picker",
                 "pedidos": 3, "tiempo_medio_min": 12, "entregas_a_tiempo": 3,
                 "pct_a_tiempo": 100.0, "horas_trabajadas": 4.0,
                 "pedidos_por_hora": 0.75, "incidencias": 0,
@@ -753,33 +753,47 @@ def get_demo_rendimiento_resumen():
 
 def get_demo_rendimiento_empleado(empleado_id):
     """Detalle de rendimiento por empleado para demo."""
+    from datetime import date, timedelta
     nombres = {11: "Luis R.", 21: "Pedro M.", 22: "Sara V.", 31: "Jorge P."}
     roles   = {11: "picker",  21: "repartidor", 22: "repartidor", 31: "picker"}
     nombre  = nombres.get(empleado_id, "Empleado Demo")
     rol     = roles.get(empleado_id, "picker")
+    datos = {
+        11: {"pedidos": 11, "tiempo_medio_min": 9, "pct_a_tiempo": 90.9, "horas_trabajadas": 40.0, "incidencias": 1, "serie": [2, 3, 1, 2, 1, 2]},
+        21: {"pedidos": 8,  "tiempo_medio_min": 24, "pct_a_tiempo": 87.5, "horas_trabajadas": 8.0, "incidencias": 0, "serie": [1, 2, 1, 1, 1, 2]},
+        22: {"pedidos": 5,  "tiempo_medio_min": 27, "pct_a_tiempo": 100.0, "horas_trabajadas": 4.0, "incidencias": 0, "serie": [1, 1, 0, 1, 1, 1]},
+        31: {"pedidos": 3,  "tiempo_medio_min": 12, "pct_a_tiempo": 100.0, "horas_trabajadas": 4.0, "incidencias": 0, "serie": [0, 1, 0, 1, 0, 1]},
+    }
+    d = datos.get(empleado_id, datos[11])
+    hoy = date.today()
     return {
         "empleado": {"id": empleado_id, "nombre": nombre, "rol": rol},
-        "resumen": {
-            "pedidos": 11, "tiempo_medio_min": 9, "pct_a_tiempo": 90.9,
-            "horas_trabajadas": 40.0, "incidencias": 1,
+        "kpis": {
+            "pedidos": d["pedidos"], "tiempo_medio_min": d["tiempo_medio_min"],
+            "pct_a_tiempo": d["pct_a_tiempo"], "horas_trabajadas": d["horas_trabajadas"],
+            "incidencias": d["incidencias"],
         },
-        "serie_pedidos_dia": [
-            {"fecha": "2026-03-29", "pedidos": 2},
-            {"fecha": "2026-03-30", "pedidos": 3},
-            {"fecha": "2026-03-31", "pedidos": 1},
-            {"fecha": "2026-04-01", "pedidos": 2},
-            {"fecha": "2026-04-02", "pedidos": 1},
-            {"fecha": "2026-04-03", "pedidos": 2},
+        "pedidos_por_dia": [
+            {"fecha": (hoy - timedelta(days=5 - i)).isoformat(), "pedidos": p}
+            for i, p in enumerate(d["serie"])
+        ],
+        "ultimos_pedidos": [
+            {"id": 1000 + empleado_id + i, "estado": "ENTREGADO", "minutos": d["tiempo_medio_min"] + i}
+            for i in range(min(d["pedidos"], 5))
         ],
     }
 
 
 def get_demo_estadisticas():
-    """Estadísticas agregadas para demo (última semana)."""
-    dias = ["2026-03-29", "2026-03-30", "2026-03-31", "2026-04-01", "2026-04-02", "2026-04-03", "2026-04-04"]
+    """Estadísticas agregadas para demo (últimos 7 días desde hoy)."""
+    from datetime import date, timedelta
+    hoy = date.today()
+    dias = [(hoy - timedelta(days=6 - i)).isoformat() for i in range(7)]
+    pedidos_dia    = [12, 15, 9, 18, 14, 17, 6]
+    tiempos_dia    = [28, 25, 31, 24, 27, 26, 23]
     serie = [
         {"fecha": d, "pedidos": p, "ingresos": round(p * 21.5, 2)}
-        for d, p in zip(dias, [12, 15, 9, 18, 14, 17, 6])
+        for d, p in zip(dias, pedidos_dia)
     ]
     return {
         "kpis": {
@@ -802,7 +816,7 @@ def get_demo_estadisticas():
         ],
         "serie_tiempos": [
             {"fecha": d, "tiempo_medio_min": t}
-            for d, t in zip(dias, [28, 25, 31, 24, 27, 26, 23])
+            for d, t in zip(dias, tiempos_dia)
         ],
     }
 
