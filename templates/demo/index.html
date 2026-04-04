@@ -534,45 +534,51 @@
         transform: scale(0.715);
       }
 
-      /* ── Sección dashboard: portrait "slab" ── */
+      /* ── Dashboard deslizable en móvil ── */
       .tablet-section { padding: 1.5rem 0.75rem 2rem; }
-      .tablet-section-header {
-        margin-bottom: 1.25rem;
-      }
+      .tablet-section-header { margin-bottom: 1.25rem; }
       .tablet-section-header h2 { font-size: 1.25rem; }
       .tablet-section-header p  { font-size: 0.8rem; }
       .mobile-dashboard-hint { display: block !important; }
       .tablet-stage { max-width: 100%; gap: 1.5rem; }
       .tablet-wrapper { max-width: 100%; width: 100%; align-items: center; }
 
-      /*
-        Frame del dashboard como slab portrait:
-        360px ancho × 520px alto — border 10px
-        inner: 340 × 500px
-      */
+      /* Frame portrait */
       .tablet-frame {
         width: min(calc(100vw - 1.5rem), 360px);
-        height: 520px;
+        height: 480px;
         border-radius: 20px;
         border-width: 10px;
       }
-      .tablet-screen { border-radius: 10px; }
-      /* Ocultar botones físicos del tablet en móvil */
+      /* Screen deslizable horizontalmente */
+      .tablet-screen {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 10px;
+        scroll-behavior: smooth;
+      }
       .tablet-btn-power,
       .tablet-btn-vol { display: none !important; }
 
       /*
-        Scaler recalculado para portrait:
-        scale = 0.42
-        → ancho visible = 340 / (1600 × 0.42) × 1600 ≈ 810px del dashboard
-        → altura: 100%/0.42 para que el contenido llene el frame
+        Scaler pasa a flujo normal (position: relative) para que
+        overflow-x del screen funcione correctamente.
+        iframe: 1600px × (100%/0.5) con scale(0.5) → visual 800px × 100%
+        Scroll disponible: 800 − 340(inner frame) = 460px deslizables
       */
       .tablet-iframe-scaler {
-        top: 0;
-        left: 0;
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 800px;
+        height: 100%;
+        transform: none;
+      }
+      .tablet-iframe-scaler iframe {
         width: 1600px;
-        height: calc(100% / 0.42);
-        transform: scale(0.42);
+        height: calc(100% / 0.5);
+        transform: scale(0.5);
         transform-origin: top left;
       }
     }
@@ -709,7 +715,7 @@
         <h2>Panel de control</h2>
         <p>Vista del administrador — gestión completa de pedidos, picking y reparto en tiempo real</p>
         <p class="mobile-dashboard-hint" style="display:none; margin-top:0.5rem; font-size:0.75rem; color:#f97316; letter-spacing:0.03em;">
-          ← Desplázate dentro del panel para ver más
+          ← Desliza dentro del panel para ver más →
         </p>
       </div>
 
