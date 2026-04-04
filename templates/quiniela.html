@@ -394,6 +394,83 @@
         filterMenu(q);
       });
 
+      // ── Sección Elegidos ─────────────────────────────────────────────
+
+      // Botón de nav para "Elegidos" (se inserta al principio cuando hay items)
+      const elegidosNavBtn = document.createElement('button');
+      elegidosNavBtn.type = 'button';
+      elegidosNavBtn.textContent = '⭐ Elegidos';
+      elegidosNavBtn.dataset.category = '__elegidos__';
+      elegidosNavBtn.style.display = 'none';
+      elegidosNavBtn.addEventListener('click', () => {
+        document.querySelectorAll('#category-nav button').forEach(b => b.classList.remove('active'));
+        elegidosNavBtn.classList.add('active');
+        document.getElementById('elegidos-section').scrollIntoView({ behavior: 'smooth' });
+      });
+      navDiv.prepend(elegidosNavBtn);
+
+      // Sección elegidos en el menú (primer hijo de #menu)
+      const elegidosSection = document.createElement('div');
+      elegidosSection.id = 'elegidos-section';
+      elegidosSection.className = 'category-section';
+      elegidosSection.style.display = 'none';
+      menuDiv.prepend(elegidosSection);
+
+      function _renderElegidos() {
+        // Agrupar cartItems por producto
+        const grouped = {};
+        cartItems.forEach(ci => {
+          if (!grouped[ci.itemName]) grouped[ci.itemName] = { qty: 0, category: ci.category };
+          grouped[ci.itemName].qty += ci.qty;
+        });
+
+        const names = Object.keys(grouped);
+        const hasItems = names.length > 0;
+
+        elegidosNavBtn.style.display = hasItems ? '' : 'none';
+        elegidosSection.style.display = hasItems ? '' : 'none';
+
+        if (!hasItems) return;
+
+        elegidosSection.innerHTML = '<h2 class="category-title">⭐ Elegidos</h2>';
+
+        names.forEach(itemName => {
+          const { qty, category } = grouped[itemName];
+          const cat = category || Object.keys(menuData).find(c => menuData[c][itemName]);
+          if (!cat || !menuData[cat] || !menuData[cat][itemName]) return;
+          const producto = menuData[cat][itemName];
+          const precio   = parseFloat(producto.Precio);
+          const subtotal = precio * qty;
+
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'menu-item menu-item--selected';
+          itemDiv.dataset.name     = itemName;
+          itemDiv.dataset.item     = itemName;
+          itemDiv.dataset.category = cat;
+          itemDiv.innerHTML = `
+            <div class="menu-item-img-wrap">
+              <img src="${producto.Imagen}" alt="${itemName}"
+                   onerror="this.closest('.menu-item-img-wrap').classList.add('no-img')">
+              <div class="menu-item-img-placeholder">🍽️</div>
+              <span class="menu-item-qty-badge visible">${qty}</span>
+            </div>
+            <div class="menu-details">
+              <p class="item-name">${itemName}</p>
+              <p class="item-price">${subtotal.toFixed(2).replace('.', ',')} €</p>
+              <p class="menu-ingredients">${qty} ud${qty > 1 ? 's' : ''}</p>
+            </div>
+            <button class="menu-item-add-btn" type="button" aria-label="Ver ${itemName}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5"  y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
+          `;
+          elegidosSection.appendChild(itemDiv);
+        });
+      }
+
       function buildMenu() {
         Object.keys(menuData).forEach((category, index) => {
           const btn = document.createElement('button');
@@ -453,6 +530,15 @@
         });
       }
 
+      function _refreshCardHighlight(itemName) {
+        const total = cartItems
+          .filter(ci => ci.itemName === itemName)
+          .reduce((s, ci) => s + ci.qty, 0);
+        // Solo la tarjeta del catálogo real (no la de elegidos, que se re-renderiza entera)
+        document.querySelectorAll(`.category-section:not(#elegidos-section) .menu-item[data-item="${CSS.escape(itemName)}"]`)
+          .forEach(el => el.classList.toggle('menu-item--selected', total > 0));
+      }
+
       function updateCartBar() {
         const total     = _cartTotal();
         const itemCount = cartItems.reduce((s, ci) => s + ci.qty, 0);
@@ -464,6 +550,7 @@
 
         cartBar.classList.toggle('visible', total > 0);
         sessionStorage.setItem(CART_KEY, JSON.stringify(cartItems));
+        _renderElegidos();
       }
 
       // Exponer a product-modal.js
@@ -474,13 +561,15 @@
           .filter(ci => ci.itemName === itemName)
           .reduce((s, ci) => s + ci.qty, 0);
         const badge = document.getElementById('badge-' + itemName);
-        if (!badge) return;
-        if (total > 0) {
-          badge.textContent = total;
-          badge.classList.add('visible');
-        } else {
-          badge.classList.remove('visible');
+        if (badge) {
+          if (total > 0) {
+            badge.textContent = total;
+            badge.classList.add('visible');
+          } else {
+            badge.classList.remove('visible');
+          }
         }
+        _refreshCardHighlight(itemName);
       };
 
       function restoreCart() {
@@ -503,10 +592,11 @@
           });
         });
 
-        // Actualizar badges para todos los productos restaurados
+        // Actualizar badges y highlights para todos los productos restaurados
         const uniqueNames = [...new Set(cartItems.map(ci => ci.itemName))];
         uniqueNames.forEach(name => window.updateCardBadge(name));
         updateCartBar();
+        _renderElegidos();
       }
 
       fetch('/api/productos')
