@@ -397,7 +397,7 @@
       // Botón de nav para "Elegidos" (se inserta al principio cuando hay items)
       const elegidosNavBtn = document.createElement('button');
       elegidosNavBtn.type = 'button';
-      elegidosNavBtn.textContent = '⭐ Elegidos';
+      elegidosNavBtn.textContent = 'Elegidos';
       elegidosNavBtn.dataset.category = '__elegidos__';
       elegidosNavBtn.style.display = 'none';
       elegidosNavBtn.addEventListener('click', () => {
@@ -430,7 +430,7 @@
 
         if (!hasItems) return;
 
-        elegidosSection.innerHTML = '<h2 class="category-title">⭐ Elegidos</h2>';
+        elegidosSection.innerHTML = '<h2 class="category-title">Elegidos</h2>';
 
         names.forEach(itemName => {
           const { qty, category } = grouped[itemName];
@@ -455,7 +455,7 @@
             <div class="menu-details">
               <p class="item-name">${itemName}</p>
               <p class="item-price">${subtotal.toFixed(2).replace('.', ',')} €</p>
-              <p class="menu-ingredients">${qty} ud${qty > 1 ? 's' : ''}</p>
+              <p class="menu-ingredients">${qty} ud${qty > 1 ? 's' : ''} · ${precio.toFixed(2).replace('.', ',')} € / ud</p>
             </div>
             <button class="menu-item-add-btn" type="button" aria-label="Ver ${itemName}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
