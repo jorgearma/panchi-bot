@@ -1,336 +1,11 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Seguimiento de pedido — Panchi Bot</title>
-  <link rel="stylesheet" href="/static/css/styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800;900&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
-  <style>
-    /* ── Cabecera ── */
-    .conf-header {
-      background: linear-gradient(145deg, #1DB954 0%, #0F6E3A 100%);
-      padding: 18px 0 22px;
-      position: relative; overflow: hidden;
-      border-radius: 0 0 24px 24px;
-      display: flex; flex-direction: column; gap: 14px;
-    }
-    .conf-header::before {
-      content: ''; position: absolute;
-      width: 200px; height: 200px; border-radius: 50%;
-      background: rgba(255,255,255,0.07);
-      top: -60px; right: -50px;
-    }
-    .conf-header::after {
-      content: ''; position: absolute;
-      width: 100px; height: 100px; border-radius: 50%;
-      background: rgba(255,255,255,0.05);
-      bottom: -30px; left: 16px;
-    }
-    .conf-header__row1 {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 0 16px; position: relative; z-index: 1;
-    }
-    .conf-header__name {
-      font-family: 'Manrope', sans-serif;
-      font-weight: 900; font-size: 20px; color: #fff; letter-spacing: -0.4px;
-    }
-    .conf-header__badge {
-      background: #FF6B35; color: #fff;
-      font-size: 11px; font-weight: 700;
-      padding: 5px 13px; border-radius: 20px;
-      box-shadow: 0 2px 12px rgba(255,107,53,0.45);
-      white-space: nowrap; letter-spacing: 0.2px;
-    }
-    .conf-header__addr {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(0,0,0,0.15);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 14px; padding: 10px 14px;
-      margin: 0 16px; position: relative; z-index: 1;
-      backdrop-filter: blur(10px);
-    }
-    .conf-header__addr-icon {
-      width: 32px; height: 32px; border-radius: 9px;
-      background: rgba(255,255,255,0.18);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; flex-shrink: 0;
-    }
-    .conf-header__addr-text { display: flex; flex-direction: column; min-width: 0; }
-    .conf-header__addr-label {
-      font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.55);
-      text-transform: uppercase; letter-spacing: 0.8px;
-    }
-    .conf-header__addr-street {
-      font-family: 'Manrope', sans-serif;
-      font-weight: 800; font-size: 13.5px; color: #fff;
-      letter-spacing: -0.2px; margin-top: 2px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
+{% extends '_layouts/client.html' %}
+{% from 'macros/ui.html' import client_header %}
 
-    /* ── Animaciones preparing ── */
-    @keyframes icon-rock {
-      0%, 100% { transform: rotate(0deg); }
-      25%       { transform: rotate(-8deg); }
-      75%       { transform: rotate(8deg); }
-    }
-    @keyframes steam-rise {
-      0%   { transform: translateY(0) scaleX(1); opacity: 0.6; }
-      100% { transform: translateY(-18px) scaleX(1.4); opacity: 0; }
-    }
-    @keyframes dot-blink {
-      0%, 80%, 100% { opacity: 0; }
-      40%            { opacity: 1; }
-    }
-    .status-icon-wrap {
-      position: relative; display: inline-flex;
-      flex-direction: column; align-items: center; margin-bottom: 6px;
-    }
-    .status-steam {
-      position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 6px;
-    }
-    .status-steam span {
-      width: 4px; height: 10px; border-radius: 2px;
-      background: var(--primary); opacity: 0;
-      animation: steam-rise 1.6s ease-out infinite;
-    }
-    .status-steam span:nth-child(2) { animation-delay: 0.4s; }
-    .status-steam span:nth-child(3) { animation-delay: 0.8s; }
-    [data-status="receiving"] #status-icon {
-      display: inline-block;
-      animation: icon-rock 2s ease-in-out infinite;
-    }
-    .status-dots span {
-      animation: dot-blink 1.4s ease-in-out infinite;
-    }
-    .status-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .status-dots span:nth-child(3) { animation-delay: 0.4s; }
-    /* Detener animaciones en otros estados */
-    :not([data-status="receiving"]) .status-steam,
-    :not([data-status="receiving"]) .status-dots { display: none; }
-    :not([data-status="receiving"]) #status-icon { animation: none; }
+{% block client_title %}Seguimiento de pedido — Panchi Bot{% endblock %}
+{% block client_body_class %}tracking-page{% endblock %}
 
-    /* ── Loader bar ── */
-    @keyframes shimmer {
-      0%   { transform: translateX(-100%); }
-      100% { transform: translateX(250%); }
-    }
-    .status-loader {
-      width: 140px; height: 4px;
-      background: var(--border); border-radius: 99px;
-      overflow: hidden; margin: 8px auto 0;
-    }
-    .status-loader__bar {
-      width: 40%; height: 100%; border-radius: 99px;
-      background: linear-gradient(90deg, transparent, var(--primary), transparent);
-      animation: shimmer 1.6s ease-in-out infinite;
-    }
-    /* Ocultar en estados terminales */
-    .status-hero[data-status="delivered"] .status-loader,
-    .status-hero[data-status="cancelled"] .status-loader,
-    .status-hero[data-status="refunded"]  .status-loader { display: none; }
-
-    /* ── Status hero ── */
-    .status-hero {
-      background: var(--surface);
-      padding: 10px 16px 10px;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-    }
-    .status-hero[data-status="delivered"] { background: #f0fdf4; border-bottom-color: #bbf7d0; }
-    .status-hero[data-status="cancelled"] { background: #fef2f2; border-bottom-color: #fecaca; }
-    .status-hero[data-status="refunded"]  { background: #f9fafb; border-bottom-color: var(--border); }
-
-    #status-icon  { display: none; }
-    #status-title {
-      font-size: 16px; font-weight: 900; color: var(--text);
-      font-family: 'Manrope', sans-serif;
-      letter-spacing: -0.4px;
-    }
-    .status-hero[data-status="delivered"] #status-title { color: #15803d; }
-    .status-hero[data-status="cancelled"] #status-title { color: var(--danger); }
-    #status-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-    .order-ref__label {
-      font-size: 10px; font-weight: 600; color: var(--primary);
-      text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .order-ref__num {
-      font-family: 'Manrope', sans-serif; font-weight: 900;
-      font-size: 18px; color: var(--text); letter-spacing: 1px;
-    }
-    .order-ref {
-      display: inline-flex; flex-direction: column; align-items: center;
-      margin-top: 6px; background: #F2FAF6;
-      border: 1.5px solid #C6E8D5; border-radius: 10px;
-      padding: 4px 14px;
-    }
-
-    /* ── Timeline ── */
-    .tracker-section {
-      background: var(--surface);
-      padding: 16px 16px 4px;
-      margin-top: 10px;
-    }
-    .tl-item { display: flex; align-items: flex-start; gap: 12px; }
-    .tl-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
-    .tl-dot {
-      width: 28px; height: 28px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; flex-shrink: 0;
-      background: var(--border); color: var(--text-muted);
-      transition: background 0.3s, box-shadow 0.3s;
-    }
-    .tl-dot.done    { background: var(--primary); color: #fff; }
-    .tl-dot.active  { background: var(--primary-deep); color: #fff; box-shadow: 0 0 0 4px rgba(26,157,85,.22); }
-    .tl-line { width: 2px; height: 26px; margin: 3px 0; background: var(--border); transition: background 0.3s; }
-    .tl-line.done { background: var(--primary); }
-    .tl-body { padding-bottom: 18px; }
-    .tl-label {
-      font-size: 14px; font-weight: 600; color: var(--text-muted);
-      padding-top: 4px; transition: color 0.3s;
-    }
-    .tl-label.active  { color: var(--primary-deep); font-weight: 700; }
-    .tl-label.done    { color: var(--text); }
-    .tl-time { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-
-    /* ── Tarjeta repartidor ── */
-    .rep-card {
-      margin: 10px 16px 0;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); box-shadow: var(--shadow);
-      padding: 12px 14px; display: flex; align-items: center; gap: 12px;
-    }
-    .rep-pending {
-      margin: 10px 16px 0;
-      background: #F2FAF6; border: 1px solid #C6E8D5;
-      border-radius: var(--radius); padding: 12px 14px;
-      font-size: 13px; color: #0F6E3A; text-align: center;
-    }
-    .rep-avatar {
-      width: 42px; height: 42px; border-radius: 50%;
-      background: var(--primary); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; flex-shrink: 0;
-    }
-    .rep-info { flex: 1; min-width: 0; }
-    .rep-name { font-size: 14px; font-weight: 700; color: var(--text); }
-    .rep-role { font-size: 12px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wa-btn {
-      background: #25D366; color: #fff; border: none;
-      border-radius: var(--radius-sm); padding: 9px 11px;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; text-decoration: none;
-    }
-    .wa-btn svg { width: 22px; height: 22px; fill: #fff; }
-
-    /* ── Secciones ── */
-    .section-title {
-      font-size: 11px; font-weight: 700; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: .06em;
-      padding: 14px 16px 8px;
-    }
-
-    /* ── Items pedido ── */
-    .items-card {
-      background: var(--surface); margin: 0 16px;
-      border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
-    }
-    .conf-items {
-      list-style: none; margin: 0; padding: 8px;
-      display: flex; flex-direction: column; gap: 5px;
-    }
-    .conf-item {
-      display: flex; align-items: center; gap: 8px;
-      background: var(--bg); border-radius: 8px;
-      padding: 8px 9px; border: 1px solid var(--border);
-      min-height: 48px;
-    }
-    .conf-item__qty {
-      width: 30px; height: 30px; border-radius: 7px;
-      background: var(--primary); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 14px;
-      flex-shrink: 0;
-    }
-    .conf-item__info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
-    .conf-item__name { font-weight: 600; font-size: 14px; }
-    .conf-item__unit { font-size: 11px; color: var(--text-muted); font-weight: 500; }
-    .conf-item__price { font-weight: 700; font-size: 14px; white-space: nowrap; }
-    .item-total-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 12px; border-top: 2px dashed var(--border); margin: 0 4px;
-      border-top: 2px solid var(--border);
-      font-weight: 700; font-size: 15px;
-    }
-    .item-total-val { color: var(--primary); }
-
-    /* ── Info almacén ── */
-    .store-card {
-      background: var(--surface); margin: 0 16px;
-      border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
-    }
-    .store-row {
-      display: flex; align-items: center; gap: 10px;
-      padding: 11px 16px; border-bottom: 1px solid var(--border);
-      font-size: 13px; color: var(--text-muted);
-    }
-    .store-row:last-child { border-bottom: none; }
-
-    /* ── Refresh bar ── */
-    .refresh-bar {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 12px 16px 20px; font-size: 11px; color: var(--text-muted);
-    }
-    .refresh-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--primary); animation: pulse 1.5s infinite;
-    }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-    .hidden { display: none !important; }
-
-    /* ── Items colapsables ── */
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 14px 16px 8px;
-    }
-    .section-header .section-title {
-      padding: 0;
-      font-family: 'Manrope', sans-serif;
-      font-size: 16px; font-weight: 900;
-      color: var(--text); text-transform: none; letter-spacing: -0.3px;
-    }
-    .section-header .section-title span {
-      color: var(--primary);
-    }
-    .toggle-btn {
-      background: var(--bg); border: 1.5px solid var(--border);
-      border-radius: 20px; cursor: pointer;
-      font-size: 12px; font-weight: 700; color: var(--primary);
-      display: flex; align-items: center; gap: 5px;
-      padding: 6px 12px;
-    }
-    .toggle-icon { font-size: 11px; transition: transform 0.2s; }
-    .toggle-icon.open { transform: rotate(180deg); }
-  </style>
-</head>
-<body>
-
-  <!-- Cabecera -->
-  <header class="conf-header">
-    <div class="conf-header__row1">
-      <span class="conf-header__name">Hola, {{ name.split()[0] }} 👋</span>
-      <span class="conf-header__badge">✓ Envío gratis</span>
-    </div>
-    <div class="conf-header__addr">
-      <div class="conf-header__addr-icon">📍</div>
-      <div class="conf-header__addr-text">
-        <span class="conf-header__addr-label">Dirección de entrega</span>
-        <span class="conf-header__addr-street">{{ calle }}</span>
-      </div>
-    </div>
-  </header>
+{% block client_body %}
+  {{ client_header(name.split()[0], calle, badge_text='') }}
 
   <!-- Status hero (actualizado por JS) -->
   <div class="status-hero" id="status-hero" data-status="receiving">
@@ -455,7 +130,9 @@
     <div class="refresh-dot"></div>
     <span id="refresh-label">Actualizando…</span>
   </div>
+{% endblock %}
 
+{% block client_scripts %}
   <script>
     const ORDER_REDIS_ID = "{{ redis_id }}";
     const PEDIDO_ID = {{ pedidoID | int }};
@@ -577,6 +254,22 @@
       if (bar) bar.classList.add("hidden");
     }
 
+    function startTimer() {
+      if (timer) return;
+      timer = setInterval(tick, 1000);
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        // re-sincroniza al volver a primer plano
+        countdown = REFRESH_INTERVAL;
+        poll();
+        startTimer();
+      }
+    });
+
     // ── Items toggle ──
     function toggleItems() {
       const card = document.getElementById("items-card");
@@ -589,8 +282,6 @@
 
     // Arrancar: primera consulta inmediata + intervalo
     poll();
-    timer = setInterval(tick, 1000);
+    startTimer();
   </script>
-
-</body>
-</html>
+{% endblock %}
