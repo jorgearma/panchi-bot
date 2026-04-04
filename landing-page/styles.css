@@ -618,6 +618,107 @@ img { display: block; max-width: 100%; }
 .hero-phone .phone-notch  { width: 38px; height: 3px; top: 7px; }
 .hero-phone .phone-screen { border-radius: 14px; }
 
+/* --- Status bar simulada --- */
+.phone-screen--cliente {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.sb {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 6px 2px;
+  background: #fff;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.sb-time {
+  font-size: .32rem;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: -.01em;
+  font-family: -apple-system, sans-serif;
+}
+
+.sb-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Signal bars */
+.sb-signal {
+  display: flex;
+  align-items: flex-end;
+  gap: .5px;
+  height: 5px;
+}
+.sb-signal span {
+  width: 1.2px;
+  background: #111;
+  border-radius: .5px;
+}
+.sb-signal span:nth-child(1) { height: 2px; }
+.sb-signal span:nth-child(2) { height: 3px; }
+.sb-signal span:nth-child(3) { height: 4px; }
+.sb-signal span:nth-child(4) { height: 5px; }
+
+/* Wifi */
+.sb-wifi {
+  width: 6px;
+  height: 6px;
+  color: #111;
+}
+
+/* Battery */
+.sb-battery {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+.sb-battery-fill {
+  width: 9px;
+  height: 5px;
+  border: .8px solid #111;
+  border-radius: .8px;
+  position: relative;
+  overflow: hidden;
+}
+.sb-battery-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0.8px;
+  right: 1.5px;
+  background: #111;
+  border-radius: .3px;
+}
+.sb-battery-tip {
+  width: 1px;
+  height: 2.5px;
+  background: #111;
+  border-radius: 0 .5px .5px 0;
+}
+
+/* Image fills remaining space */
+.phone-img-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+}
+.phone-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+  image-rendering: high-quality;
+}
+
 /* WhatsApp phone */
 .hero-phone .wa-header                  { padding: 7px 7px 5px; gap: 5px; }
 .hero-phone .wa-avatar                  { width: 18px; height: 18px; font-size: 9px; }
