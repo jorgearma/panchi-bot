@@ -494,10 +494,87 @@
     }
     .mobile-msg a:hover { background: #ea6b0a; }
 
+    /* ━━━ MOBILE (≤ 767px) — Demo interactiva visible en móvil ━━━ */
     @media (max-width: 767px) {
-      .desktop-only { display: none !important; }
-      .mobile-msg   { display: flex !important; }
-      .page-wrapper { padding: 2rem 1rem; }
+
+      /* Mostrar secciones interactivas; ocultar el fallback de "solo escritorio" */
+      .desktop-only { display: flex !important; }
+      .mobile-msg   { display: none !important; }
+
+      /* ── Info section ── */
+      .info-section { padding: 2rem 1rem 1.5rem; }
+      .hero-sub { font-size: 1rem; max-width: 100%; }
+
+      /* ── Sección teléfonos: apilar verticalmente ── */
+      .phone-section { padding: 1.5rem 0.75rem 2rem; }
+      .phone-stage {
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+      }
+
+      /*
+        Teléfonos reducidos al 93.5% para caber cómodamente:
+        310 → 290px ancho / 670 → 628px alto
+        border 12 → 11px
+      */
+      .phone-frame {
+        width: 290px;
+        height: 628px;
+        border-width: 11px;
+        border-radius: 44px;
+      }
+      /* inner = 290 − 22 = 268px; scale = 268/375 = 0.715 */
+      .phone-screen { border-radius: 33px; }
+      .iframe-scaler {
+        top: 41px;
+        left: calc((100% - 375px * 0.715) / 2);
+        width: 375px;
+        height: calc((100% - 41px) / 0.715);
+        transform: scale(0.715);
+      }
+
+      /* ── Sección dashboard: portrait "slab" ── */
+      .tablet-section { padding: 1.5rem 0.75rem 2rem; }
+      .tablet-section-header {
+        margin-bottom: 1.25rem;
+      }
+      .tablet-section-header h2 { font-size: 1.25rem; }
+      .tablet-section-header p  { font-size: 0.8rem; }
+      .mobile-dashboard-hint { display: block !important; }
+      .tablet-stage { max-width: 100%; gap: 1.5rem; }
+      .tablet-wrapper { max-width: 100%; width: 100%; align-items: center; }
+
+      /*
+        Frame del dashboard como slab portrait:
+        360px ancho × 520px alto — border 10px
+        inner: 340 × 500px
+      */
+      .tablet-frame {
+        width: min(calc(100vw - 1.5rem), 360px);
+        height: 520px;
+        border-radius: 20px;
+        border-width: 10px;
+      }
+      .tablet-screen { border-radius: 10px; }
+      /* Ocultar botones físicos del tablet en móvil */
+      .tablet-btn-power,
+      .tablet-btn-vol { display: none !important; }
+
+      /*
+        Scaler recalculado para portrait:
+        scale = 0.42
+        → ancho visible = 340 / (1600 × 0.42) × 1600 ≈ 810px del dashboard
+        → altura: 100%/0.42 para que el contenido llene el frame
+      */
+      .tablet-iframe-scaler {
+        top: 0;
+        left: 0;
+        width: 1600px;
+        height: calc(100% / 0.42);
+        transform: scale(0.42);
+        transform-origin: top left;
+      }
     }
   </style>
 </head>
@@ -631,6 +708,9 @@
       <div class="tablet-section-header">
         <h2>Panel de control</h2>
         <p>Vista del administrador — gestión completa de pedidos, picking y reparto en tiempo real</p>
+        <p class="mobile-dashboard-hint" style="display:none; margin-top:0.5rem; font-size:0.75rem; color:#f97316; letter-spacing:0.03em;">
+          ← Desplázate dentro del panel para ver más
+        </p>
       </div>
 
       <div class="tablet-wrapper">
