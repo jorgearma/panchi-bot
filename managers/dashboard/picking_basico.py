@@ -221,6 +221,23 @@ class GestorPickingBasicoMixin:
                     "notas": item.notas,
                 })
 
+            # En modo restaurant no se crean PickingItems — leer detalles directamente
+            if not items_data and app_config.APP_MODE == 'restaurant' and pk.pedido:
+                items_data = [
+                    {
+                        "item_id": None,
+                        "detalle_id": d.DetalleID,
+                        "nombre": d.NombreProducto or (d.producto.Nombre if d.producto else "—"),
+                        "cantidad": d.Cantidad,
+                        "ubicacion": None,
+                        "imagen": d.producto.ImagenURL if d.producto else None,
+                        "estado": "pendiente",
+                        "cantidad_encontrada": None,
+                        "notas": d.Notas,
+                    }
+                    for d in pk.pedido.detalles
+                ]
+
             pendientes = sum(1 for i in items_data if i["estado"] == "pendiente")
             listos = len(items_data) - pendientes
             es_restaurant = app_config.APP_MODE == 'restaurant'

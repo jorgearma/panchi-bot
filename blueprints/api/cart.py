@@ -108,6 +108,7 @@ def register(bp):
                     "Codigo": producto["Codigo"],
                     "Precio": producto["Precio"],
                     "ingredientes": producto["Ingredientes"],
+                    "ingredientes_removibles": producto["IngredientesRemovibles"] or "",
                     "Imagen": producto["Imagen"]
                 }
 

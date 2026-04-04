@@ -115,7 +115,9 @@
                       <span class="text-gray-400 font-mono text-sm font-bold" x-text="'×' + item.cantidad"></span>
                       <span class="text-white text-sm" x-text="item.nombre"></span>
                     </div>
-                    <span x-show="item.notas" x-cloak class="text-xs text-gray-500 italic" x-text="item.notas"></span>
+                    <span x-show="item.notas" x-cloak
+                          class="text-xs text-orange-400 font-semibold bg-orange-950/40 border border-orange-900/40 px-2 py-0.5 rounded-md"
+                          x-text="item.notas"></span>
                   </div>
                 </template>
               </div>

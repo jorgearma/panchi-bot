@@ -44,6 +44,7 @@ class Producto(Base):
     Precio = Column(DECIMAL(10, 2), nullable=False)
     Categoria = Column(String(50), nullable=False)   # legacy — usar categoria_id en código nuevo
     Ingredientes = Column(String(255), nullable=True)
+    IngredientesRemovibles = Column(String(255), nullable=True)
     Ubicacion = Column(String(255), nullable=True)
     Stock = Column(Integer, nullable=False, default=0)
     ImagenURL = Column(String(255), nullable=True)
@@ -103,6 +104,7 @@ class PedidoDetalle(Base):
     PrecioUnitario = Column(DECIMAL(10, 2), nullable=True)
     NombreProducto = Column(String(255), nullable=True)
     Subtotal = Column(DECIMAL(18, 2), nullable=False)
+    Notas = Column(String(300), nullable=True)  # instrucciones especiales p.ej. "Sin: cebolla, ajo"
 
     pedido = relationship("Pedido", back_populates="detalles")
     producto = relationship("Producto", back_populates="detalles")
