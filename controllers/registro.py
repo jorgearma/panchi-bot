@@ -90,8 +90,11 @@ class RegistroUsuario:
                 self.estado_usuario.actualizar_estado(EstadoRegistro.CONFIRMANDO_DIRECCION, {"direccion": direccion_resultante})
                 return "Solicitud de confirmación de dirección enviada", 200
             else:
-                sugerencia = sugerir_calle(mensaje_cliente) if motivo != "fuera_de_zona" else None
-                _enviar_direccion_invalida(self.numero_cliente, sugerencia)
+                if motivo != "fuera_de_zona":
+                    sugerencia, alta_confianza = sugerir_calle(mensaje_cliente)
+                else:
+                    sugerencia, alta_confianza = None, None
+                _enviar_direccion_invalida(self.numero_cliente, sugerencia, alta_confianza)
                 return "Dirección inválida", 400
 
         elif estado_actual == EstadoRegistro.CONFIRMANDO_DIRECCION:

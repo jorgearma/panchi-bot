@@ -22,6 +22,7 @@
         [-3.0191362233887844, 40.01775348398729]
       ],
       "valid_address_types": ["street_address", "premise", "subpremise"],
+      "excluded_result_types": ["locality", "administrative_area_level_1", "administrative_area_level_2", "country", "postal_code"],
       "excluded_addresses": [
         "Tarancón, Cuenca, Spain",
         "Cuenca, Spain"
@@ -35,6 +36,51 @@
         {
           "pattern": "\\bportal\\b",
           "replacement": "",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bc/\\s*|\\bclle\\b|\\bcl\\b(?=\\s)",
+          "replacement": "calle ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bavda\\.?\\b|\\bavd\\.?\\b|\\bav\\.\\s",
+          "replacement": "avenida ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bpza\\.?\\b|\\bpl\\.\\s",
+          "replacement": "plaza ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bpso\\.?\\b",
+          "replacement": "paseo ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bcno\\.?\\b",
+          "replacement": "camino ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bglta\\.?\\b",
+          "replacement": "glorieta ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\brdа\\.?\\b|\\brda\\.?\\b",
+          "replacement": "ronda ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\btrav\\.?\\b",
+          "replacement": "travesía ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\s{2,}",
+          "replacement": " ",
           "flags": "IGNORECASE"
         }
       ]

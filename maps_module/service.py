@@ -6,6 +6,7 @@ from pathlib import Path
 
 import requests
 from shapely.geometry import Point, Polygon
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 import config
 
@@ -15,6 +16,7 @@ BASE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
 
 _TERRITORIES_PATH = Path(__file__).parent / "territories.json"
 _territories_cache: dict = {}
+_polygon_cache: dict = {}
 
 
 def _load_territory(name: str) -> dict:
@@ -26,6 +28,13 @@ def _load_territory(name: str) -> dict:
     if name not in _territories_cache:
         raise ValueError(f"Territory '{name}' not found in configuration")
     return _territories_cache[name]
+
+
+def _get_polygon(territory: str) -> Polygon:
+    if territory not in _polygon_cache:
+        t = _load_territory(territory)
+        _polygon_cache[territory] = Polygon(t["polygon"])
+    return _polygon_cache[territory]
 
 
 def _apply_normalizations(address: str, normalizations: list) -> str:
@@ -53,31 +62,44 @@ def _build_url(address: str, territory: str) -> str:
     return f"{BASE_URL}?address={encoded},+{postal}+{locality},+{region},+España&key={config.GOOGLE_MAPS_API_KEY}"
 
 
-def _build_polygon(territory: str) -> Polygon:
-    t = _load_territory(territory)
-    return Polygon(t["polygon"])
-
-
 def validar_coordenadas(coords: dict, territory: str = "tarancon") -> bool:
-    polygon = _build_polygon(territory)
+    polygon = _get_polygon(territory)
     point = Point(coords["lng"], coords["lat"])
     return polygon.contains(point)
+
+
+@retry(
+    retry=retry_if_exception_type(requests.exceptions.RequestException),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
+    reraise=False,
+)
+def _google_geocode(url: str) -> dict | None:
+    """Llama a la API de Google Maps con retry automático ante fallos de red."""
+    response = requests.get(url, timeout=5)
+    response.raise_for_status()
+    return response.json()
+
+
+def _es_resultado_generico(types: list, territory: str) -> bool:
+    """Devuelve True si el tipo de resultado de Google indica zona/país, no dirección concreta."""
+    t = _load_territory(territory)
+    excluded_types = set(t.get("excluded_result_types", []))
+    return bool(excluded_types.intersection(types))
 
 
 def geocodificar_direccion(address: str, territory: str = "tarancon") -> tuple[float, float] | None:
     clean = limpiar_direccion(address, territory)
     url = _build_url(clean, territory)
     try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        if data.get("status") != "OK" or not data.get("results"):
+        data = _google_geocode(url)
+        if data is None or data.get("status") != "OK" or not data.get("results"):
             logger.warning("geocodificar_direccion: no results for '%s'", address)
             return None
         location = data["results"][0]["geometry"]["location"]
         return location["lat"], location["lng"]
-    except requests.exceptions.RequestException as e:
-        logger.error("geocodificar_direccion: request error for '%s': %s", address, e)
+    except Exception as e:
+        logger.error("geocodificar_direccion: error for '%s': %s", address, e)
         return None
 
 
@@ -86,11 +108,11 @@ def validar_direccion(address: str, territory: str = "tarancon") -> tuple[bool, 
     Valida una dirección y devuelve (valida, direccion_formateada, motivo_rechazo).
 
     Motivos de rechazo:
-      "no_encontrada"   — Google no devuelve resultados
-      "fuera_de_zona"   — coordenadas fuera del polígono
-      "demasiado_generica" — resultado sin especificidad suficiente (ej: "Tarancón, Cuenca")
-      "sin_numero"      — dentro del polígono pero sin número de portal (tipo route, etc.)
-      "error_api"       — fallo de conexión con Google Maps
+      "no_encontrada"      — Google no devuelve resultados
+      "fuera_de_zona"      — coordenadas fuera del polígono
+      "demasiado_generica" — Google devuelve zona/país en vez de dirección concreta
+      "sin_numero"         — dentro del polígono pero tipo no entregable
+      "error_api"          — fallo de conexión con Google Maps tras reintentos
     """
     t = _load_territory(territory)
     clean = limpiar_direccion(address, territory)
@@ -100,14 +122,10 @@ def validar_direccion(address: str, territory: str = "tarancon") -> tuple[bool, 
     logger.debug("Dirección limpia: %r", clean)
 
     try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
+        data = _google_geocode(url)
 
-        logger.debug("Status API: %s", data.get("status"))
-
-        if data.get("status") != "OK" or not data.get("results"):
-            logger.warning("Dirección no válida o no encontrada: %s", data.get("status"))
+        if data is None or data.get("status") != "OK" or not data.get("results"):
+            logger.warning("Dirección no válida o no encontrada: %s", data.get("status") if data else "None")
             return False, None, "no_encontrada"
 
         result = data["results"][0]
@@ -119,10 +137,16 @@ def validar_direccion(address: str, territory: str = "tarancon") -> tuple[bool, 
         logger.debug("Coordenadas: %s", coords)
         logger.debug("Types: %s", types)
 
+        # Rechazar por tipo genérico antes de comprobar polígono
+        if _es_resultado_generico(types, territory):
+            logger.warning("Resultado demasiado genérico (tipos: %s): %s", types, formatted)
+            return False, None, "demasiado_generica"
+
         if not validar_coordenadas(coords, territory):
             logger.warning("Dirección fuera de los límites de %s: %s", territory, formatted)
             return False, formatted, "fuera_de_zona"
 
+        # Fallback de exclusión por string exacto (por si acaso)
         if formatted in t.get("excluded_addresses", []):
             logger.warning("Dirección demasiado general: %s", formatted)
             return False, None, "demasiado_generica"
@@ -135,6 +159,6 @@ def validar_direccion(address: str, territory: str = "tarancon") -> tuple[bool, 
         logger.info("Dirección válida: %s", formatted)
         return True, formatted, None
 
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         logger.error("Error al conectar con la API de Google Maps: %s", e)
         return False, None, "error_api"
