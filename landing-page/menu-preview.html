@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menú — Panchi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green:  #1A9D55;
+      --deep:   #0A4A27;
+      --dark:   #0F6E3A;
+      --bg:     #F3F8F5;
+      --border: #E0EBE5;
+      --text:   #111D17;
+      --muted:  #6B7C72;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.4;
+      overflow-x: hidden;
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px 6px;
+      background: #1DB954;
+    }
+    .sb-time { font-size: 13px; font-weight: 700; color: #fff; font-family: -apple-system,sans-serif; }
+    .sb-right { display: flex; align-items: center; gap: 5px; }
+    .sb-signal { display: flex; align-items: flex-end; gap: 1.5px; height: 10px; }
+    .sb-signal span { width: 2.5px; background: rgba(255,255,255,.9); border-radius: 1px; }
+    .sb-signal span:nth-child(1){height:3px} .sb-signal span:nth-child(2){height:5px}
+    .sb-signal span:nth-child(3){height:7px} .sb-signal span:nth-child(4){height:10px}
+    .sb-wifi { width: 12px; height: 12px; }
+    .sb-battery { display: flex; align-items: center; }
+    .sb-battery-body {
+      width: 18px; height: 9px;
+      border: 1.5px solid rgba(255,255,255,.8);
+      border-radius: 2px; position: relative; overflow: hidden;
+    }
+    .sb-battery-body::after {
+      content: ''; position: absolute;
+      inset: 1.5px 2px 1.5px 1.5px;
+      background: rgba(255,255,255,.85); border-radius: 1px;
+    }
+    .sb-battery-tip { width: 2px; height: 5px; background: rgba(255,255,255,.8); border-radius: 0 1px 1px 0; }
+
+    /* ── Header ── */
+    .conf-header {
+      background: linear-gradient(145deg,#1DB954 0%,#0F6E3A 100%);
+      padding: 14px 0 18px;
+      position: relative; overflow: hidden;
+      border-radius: 0 0 24px 24px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .conf-header::before {
+      content:''; position:absolute; width:200px; height:200px; border-radius:50%;
+      background:rgba(255,255,255,.07); top:-60px; right:-50px;
+    }
+    .conf-header::after {
+      content:''; position:absolute; width:100px; height:100px; border-radius:50%;
+      background:rgba(255,255,255,.05); bottom:-30px; left:16px;
+    }
+    .conf-header__row1 {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:0 16px; position:relative; z-index:1;
+    }
+    .conf-header__name {
+      font-family:'Manrope',sans-serif; font-weight:900; font-size:20px;
+      color:#fff; letter-spacing:-0.4px;
+    }
+    .conf-header__badge {
+      background:#FF6B35; color:#fff; font-size:11px; font-weight:700;
+      padding:5px 13px; border-radius:20px;
+      box-shadow:0 2px 12px rgba(255,107,53,.45);
+    }
+    .conf-header__addr {
+      display:flex; align-items:center; gap:10px;
+      background:rgba(0,0,0,.15); border:1px solid rgba(255,255,255,.15);
+      border-radius:14px; padding:10px 14px; margin:0 16px;
+      position:relative; z-index:1; backdrop-filter:blur(10px);
+    }
+    .conf-header__addr-icon {
+      width:32px; height:32px; border-radius:9px;
+      background:rgba(255,255,255,.18);
+      display:flex; align-items:center; justify-content:center;
+      font-size:15px; flex-shrink:0;
+    }
+    .conf-header__addr-text { display:flex; flex-direction:column; min-width:0; }
+    .conf-header__addr-label {
+      font-size:9px; font-weight:700; color:rgba(255,255,255,.55);
+      text-transform:uppercase; letter-spacing:0.8px;
+    }
+    .conf-header__addr-street {
+      font-family:'Manrope',sans-serif; font-weight:800; font-size:13px;
+      color:#fff; letter-spacing:-0.2px; margin-top:2px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+
+    /* ── Search ── */
+    #search-bar {
+      position:sticky; top:0; z-index:150;
+      background:var(--bg); padding:10px 14px;
+      display:flex; align-items:center;
+    }
+    .search-input-wrap {
+      display:flex; align-items:center; background:#fff;
+      border:1.5px solid var(--border); border-radius:24px;
+      padding:0 16px; gap:10px; height:44px; width:100%;
+      box-shadow:0 2px 10px rgba(0,0,0,.06);
+    }
+    .search-icon { width:17px; height:17px; color:#C0C0C0; flex-shrink:0; }
+    #search-input {
+      flex:1; border:none; outline:none;
+      font-size:15px; font-family:'Inter',sans-serif;
+      background:none; color:var(--text);
+    }
+    #search-input::placeholder { color:#C4C4C4; }
+
+    /* ── Category nav ── */
+    #category-nav {
+      display:flex; overflow-x:auto; white-space:nowrap;
+      padding:10px 14px; gap:7px;
+      background:#fff; border-bottom:1px solid var(--border);
+      position:sticky; top:64px; z-index:100; scrollbar-width:none;
+    }
+    #category-nav::-webkit-scrollbar { display:none; }
+    #category-nav button {
+      flex:0 0 auto; padding:0 14px; height:32px;
+      font-family:'Manrope',sans-serif; font-size:.76rem; font-weight:700;
+      letter-spacing:.5px; text-transform:uppercase;
+      background:transparent; color:#AEAEAE;
+      border:1.5px solid #E4E4E4; border-radius:6px; cursor:pointer;
+      transition:all .18s;
+    }
+    #category-nav button.active {
+      background:var(--deep); color:#fff; border-color:var(--deep);
+    }
+
+    /* ── Menu items ── */
+    #menu { padding:10px 14px 120px; }
+    .category-section { margin-top:20px; }
+    .category-title {
+      font-family:'Nunito',sans-serif; font-size:.8rem; font-weight:900;
+      text-transform:uppercase; letter-spacing:2.5px; margin:0 0 12px;
+      display:inline-block;
+      background:linear-gradient(100deg,#0A4A27 0%,#2DB86A 50%,#0A4A27 100%);
+      background-size:200% auto; background-position:0% center;
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+    .menu-item {
+      display:flex; align-items:center; gap:12px;
+      background:#fff; border-radius:16px; padding:12px; margin-bottom:10px;
+      box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04);
+      border:1.5px solid rgba(26,157,85,.08);
+      cursor:pointer; transition:transform .12s,box-shadow .12s,border-color .18s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .menu-item:active { transform:scale(.985); }
+    .menu-item.in-cart {
+      background:rgba(26,157,85,.05);
+      border-color:rgba(26,157,85,.3);
+      box-shadow:0 2px 12px rgba(26,157,85,.12);
+    }
+    .img-wrap { position:relative; width:80px; height:80px; flex-shrink:0; }
+    .img-placeholder {
+      width:80px; height:80px; border-radius:10px;
+      background:linear-gradient(135deg,#FFF3EE,#FFE8DD);
+      display:flex; align-items:center; justify-content:center; font-size:1.8rem;
+    }
+    .qty-badge {
+      position:absolute; top:-6px; right:-6px;
+      min-width:20px; height:20px;
+      background:#1A9D55; color:#fff; border-radius:10px;
+      font-size:.68rem; font-weight:800; font-family:'Manrope',sans-serif;
+      display:none; align-items:center; justify-content:center;
+      padding:0 4px; border:2px solid #fff;
+      box-shadow:0 2px 6px rgba(26,157,85,.45);
+    }
+    .qty-badge.show {
+      display:flex;
+      animation:badge-pop .22s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes badge-pop {
+      from { transform:scale(.3); opacity:0; }
+      to   { transform:scale(1);   opacity:1; }
+    }
+    .menu-details { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+    .item-name {
+      font-family:'Manrope',sans-serif; font-size:.9rem; font-weight:800;
+      color:var(--text); margin:0; line-height:1.25;
+    }
+    .item-price {
+      font-family:'Manrope',sans-serif; font-size:1rem; font-weight:800;
+      color:var(--green); margin:0;
+    }
+    .item-desc {
+      font-size:.72rem; color:#C0C0C0; margin:0; line-height:1.4;
+      overflow:hidden; display:-webkit-box;
+      -webkit-line-clamp:2; -webkit-box-orient:vertical;
+    }
+    .add-btn {
+      width:34px; height:34px; background:var(--green); border:none;
+      border-radius:50%; color:#fff; display:flex; align-items:center;
+      justify-content:center; flex-shrink:0; align-self:flex-end; margin-bottom:2px;
+      box-shadow:0 2px 8px rgba(26,157,85,.38); cursor:pointer;
+      transition:transform .12s;
+    }
+    .add-btn:active { transform:scale(.85); }
+    .add-btn svg { width:16px; height:16px; pointer-events:none; }
+
+    /* ── Cart bar ── */
+    #cart-bar {
+      position:fixed; bottom:0; left:0; right:0;
+      background:var(--deep); color:#fff;
+      display:flex; align-items:center; gap:12px;
+      padding:12px 12px 16px 18px; z-index:300;
+      box-shadow:0 -4px 24px rgba(0,0,0,.22);
+      transform:translateY(100%);
+      transition:transform .3s cubic-bezier(.32,.72,0,1);
+    }
+    #cart-bar.visible { transform:translateY(0); }
+    .cart-left { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
+    .cart-icon { width:20px; height:20px; opacity:.7; flex-shrink:0; }
+    .cart-info { display:flex; flex-direction:column; gap:1px; }
+    .cart-count { font-size:.7rem; color:rgba(255,255,255,.5); font-weight:500; }
+    .cart-total { font-family:'Manrope',sans-serif; font-size:1.1rem; font-weight:800; }
+    .cart-pill {
+      display:inline-flex; align-items:center; gap:4px;
+      background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.15);
+      border-radius:20px; padding:5px 10px 5px 8px;
+      font-size:.7rem; font-weight:600; color:rgba(255,255,255,.7);
+      white-space:nowrap; flex-shrink:0; cursor:pointer;
+    }
+    .cart-btn {
+      background:var(--green); color:#fff; border:none; border-radius:12px;
+      padding:11px 18px; font-family:'Manrope',sans-serif;
+      font-size:.88rem; font-weight:800; flex-shrink:0; cursor:pointer;
+      box-shadow:0 3px 12px rgba(26,157,85,.45);
+      transition:transform .12s;
+    }
+    .cart-btn:active { transform:scale(.95); }
+
+    /* ── Success screen ── */
+    #success-screen {
+      position:fixed; inset:0; background:#fff; z-index:500;
+      display:flex; flex-direction:column; align-items:center;
+      transform:translateY(100%);
+      transition:transform .4s cubic-bezier(.32,.72,0,1);
+    }
+    #success-screen.open { transform:translateY(0); }
+
+    .success-top {
+      width:100%; padding:60px 24px 40px;
+      background:linear-gradient(145deg,#1DB954,#0A4A27);
+      display:flex; flex-direction:column; align-items:center; gap:16px;
+      position:relative; overflow:hidden;
+    }
+    .success-top::before {
+      content:''; position:absolute; width:300px; height:300px; border-radius:50%;
+      background:rgba(255,255,255,.06); top:-100px; right:-80px;
+    }
+    .checkmark-wrap {
+      width:72px; height:72px; border-radius:50%;
+      background:rgba(255,255,255,.2); border:3px solid rgba(255,255,255,.6);
+      display:flex; align-items:center; justify-content:center;
+      animation:pop-in .5s .3s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    @keyframes pop-in {
+      from { transform:scale(0); opacity:0; }
+      to   { transform:scale(1); opacity:1; }
+    }
+    .checkmark-wrap svg { width:36px; height:36px; color:#fff; }
+    .success-title {
+      font-family:'Manrope',sans-serif; font-size:24px; font-weight:900;
+      color:#fff; text-align:center; margin:0;
+      animation:fade-up .4s .5s ease both;
+    }
+    .success-sub {
+      font-size:14px; color:rgba(255,255,255,.75); text-align:center; margin:0;
+      animation:fade-up .4s .6s ease both;
+    }
+    @keyframes fade-up {
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .success-body { padding:28px 24px; width:100%; display:flex; flex-direction:column; gap:20px; }
+
+    /* Tracking steps */
+    .track-steps { display:flex; flex-direction:column; gap:0; }
+    .track-step {
+      display:flex; align-items:flex-start; gap:14px; position:relative;
+    }
+    .track-step:not(:last-child)::after {
+      content:''; position:absolute; left:15px; top:32px;
+      width:2px; height:28px; background:var(--border);
+    }
+    .track-dot {
+      width:32px; height:32px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; margin-top:4px;
+    }
+    .track-dot.done { background:var(--green); }
+    .track-dot.active { background:var(--green); animation:pulse-dot 1.2s ease infinite; }
+    .track-dot.pending { background:var(--border); }
+    @keyframes pulse-dot {
+      0%,100% { box-shadow:0 0 0 0 rgba(26,157,85,.4); }
+      50%      { box-shadow:0 0 0 8px rgba(26,157,85,0); }
+    }
+    .track-info { padding:6px 0; }
+    .track-label { font-family:'Manrope',sans-serif; font-size:.88rem; font-weight:800; color:var(--text); }
+    .track-time { font-size:.75rem; color:var(--muted); margin-top:2px; }
+
+    /* Order summary */
+    .order-card {
+      background:#fff; border-radius:16px;
+      box-shadow:0 2px 8px rgba(0,0,0,.07); overflow:hidden;
+    }
+    .order-card-header {
+      padding:12px 16px; border-bottom:1px solid var(--border);
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .order-card-title { font-family:'Manrope',sans-serif; font-size:.9rem; font-weight:800; margin:0; }
+    .order-id { font-size:.8rem; color:var(--muted); }
+    .order-item {
+      display:flex; align-items:center; gap:10px;
+      padding:10px 16px; border-bottom:1px solid var(--border);
+    }
+    .order-item:last-of-type { border-bottom:none; }
+    .order-item-emoji { font-size:1.2rem; width:32px; text-align:center; flex-shrink:0; }
+    .order-item-name { flex:1; font-size:.88rem; font-weight:600; }
+    .order-item-qty {
+      background:var(--green); color:#fff; font-size:.7rem; font-weight:700;
+      padding:2px 8px; border-radius:20px; flex-shrink:0;
+    }
+    .order-item-price { font-size:.88rem; font-weight:700; white-space:nowrap; }
+    .order-total {
+      display:flex; justify-content:space-between; padding:12px 16px;
+      background:var(--bg); border-top:2px solid var(--border);
+      font-weight:700; font-size:1rem;
+    }
+    .order-total span:last-child { color:var(--green); font-size:1.1rem; }
+
+    .back-btn {
+      width:100%; padding:14px; background:var(--bg);
+      border:1.5px solid var(--border); border-radius:14px;
+      font-family:'Manrope',sans-serif; font-size:.9rem; font-weight:800;
+      color:var(--muted); cursor:pointer; transition:background .15s;
+    }
+    .back-btn:active { background:#E5EFE9; }
+  </style>
+</head>
+<body>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span class="sb-time">9:41</span>
+    <div class="sb-right">
+      <div class="sb-signal"><span></span><span></span><span></span><span></span></div>
+      <svg class="sb-wifi" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="2.5" stroke-linecap="round">
+        <path d="M1.5 8.5a17 17 0 0 1 21 0M5 12.5a13 13 0 0 1 14 0M8.5 16a9 9 0 0 1 7 0M12 20h.01"/>
+      </svg>
+      <div class="sb-battery">
+        <div class="sb-battery-body"></div>
+        <div class="sb-battery-tip"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="conf-header">
+    <div class="conf-header__row1">
+      <span class="conf-header__name">Hola, Jorge 👋</span>
+      <span class="conf-header__badge">✓ Envío gratis</span>
+    </div>
+    <div class="conf-header__addr">
+      <div class="conf-header__addr-icon">📍</div>
+      <div class="conf-header__addr-text">
+        <span class="conf-header__addr-label">Dirección de entrega</span>
+        <span class="conf-header__addr-street">Calle Mayor, 15 · Tarancón</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search -->
+  <div id="search-bar">
+    <div class="search-input-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Buscar producto…" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- Category nav -->
+  <div id="category-nav">
+    <button class="active" onclick="setActive(this)">Hamburguesas</button>
+    <button onclick="setActive(this)">Pastas</button>
+    <button onclick="setActive(this)">Pizzas</button>
+    <button onclick="setActive(this)">Postres</button>
+    <button onclick="setActive(this)">Bebidas</button>
+  </div>
+
+  <!-- Menu -->
+  <div id="menu">
+
+    <div class="category-section">
+      <h2 class="category-title">Hamburguesas</h2>
+      <div class="menu-item" onclick="addItem(this)" data-name="Hamburguesa Clásica" data-price="8.50" data-emoji="🍔">
+        <div class="img-wrap">
+          <div class="img-placeholder">🍔</div>
+          <span class="qty-badge">0</span>
+        </div>
+        <div class="menu-details">
+          <p class="item-name">Hamburguesa Clásica</p>
+          <p class="item-price">8,50 €</p>
+          <p class="item-desc">Ternera, lechuga, tomate, cebolla caramelizada, queso cheddar</p>
+        </div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="menu-item" onclick="addItem(this)" data-name="Burger Bacon BBQ" data-price="10.00" data-emoji="🥓">
+        <div class="img-wrap">
+          <div class="img-placeholder">🥓</div>
+          <span class="qty-badge">0</span>
+        </div>
+        <div class="menu-details">
+          <p class="item-name">Burger Bacon BBQ</p>
+          <p class="item-price">10,00 €</p>
+          <p class="item-desc">Ternera, bacon crujiente, salsa BBQ, pepinillos, queso gouda</p>
+        </div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="menu-item" onclick="addItem(this)" data-name="Burger Picante" data-price="9.50" data-emoji="🌶️">
+        <div class="img-wrap">
+          <div class="img-placeholder">🌶️</div>
+          <span class="qty-badge">0</span>
+        </div>
+        <div class="menu-details">
+          <p class="item-name">Burger Picante</p>
+          <p class="item-price">9,50 €</p>
+          <p class="item-desc">Ternera, jalapeños, sriracha, aguacate, pepper jack</p>
+        </div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="category-section">
+      <h2 class="category-title">Pastas</h2>
+      <div class="menu-item" onclick="addItem(this)" data-name="Pasta Carbonara" data-price="9.00" data-emoji="🍝">
+        <div class="img-wrap">
+          <div class="img-placeholder">🍝</div>
+          <span class="qty-badge">0</span>
+        </div>
+        <div class="menu-details">
+          <p class="item-name">Pasta Carbonara</p>
+          <p class="item-price">9,00 €</p>
+          <p class="item-desc">Pasta fresca, bacon, nata, parmesano, yema de huevo</p>
+        </div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="menu-item" onclick="addItem(this)" data-name="Pasta Boloñesa" data-price="8.50" data-emoji="🍅">
+        <div class="img-wrap">
+          <div class="img-placeholder">🍅</div>
+          <span class="qty-badge">0</span>
+        </div>
+        <div class="menu-details">
+          <p class="item-name">Pasta Boloñesa</p>
+          <p class="item-price">8,50 €</p>
+          <p class="item-desc">Pasta, carne picada, tomate natural, albahaca, parmesano</p>
+        </div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="category-section">
+      <h2 class="category-title">Postres</h2>
+      <div class="menu-item" onclick="addItem(this)" data-name="Brownie de Chocolate" data-price="4.00" data-emoji="🍫">
+        <div class="img-wrap">
+          <div class="img-placeholder">🍫</div>
+          <span class="qty-badge">0</span>
+        </div>
+        <div class="menu-details">
+          <p class="item-name">Brownie de Chocolate</p>
+          <p class="item-price">4,00 €</p>
+          <p class="item-desc">Chocolate negro 70%, mantequilla, huevos, azúcar, nueces</p>
+        </div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="menu-item" onclick="addItem(this)" data-name="Tarta de Queso" data-price="4.50" data-emoji="🍮">
+        <div class="img-wrap">
+          <div class="img-placeholder">🍮</div>
+          <span class="qty-badge">0</span>
+        </div>
+        <div class="menu-details">
+          <p class="item-name">Tarta de Queso</p>
+          <p class="item-price">4,50 €</p>
+          <p class="item-desc">Queso crema, nata, huevos, galleta, mermelada de frutos rojos</p>
+        </div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Cart bar -->
+  <div id="cart-bar">
+    <div class="cart-left">
+      <svg class="cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 01-8 0"/>
+      </svg>
+      <div class="cart-info">
+        <span class="cart-count" id="cart-count">0 productos</span>
+        <span class="cart-total" id="cart-total">0,00 €</span>
+      </div>
+      <span class="cart-pill">
+        ver
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <polyline points="18 15 12 9 6 15"/>
+        </svg>
+      </span>
+    </div>
+    <button class="cart-btn" onclick="submitOrder()">Continuar →</button>
+  </div>
+
+  <!-- Success screen -->
+  <div id="success-screen">
+    <div class="success-top">
+      <div class="checkmark-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h2 class="success-title">¡Pedido recibido!</h2>
+      <p class="success-sub">Estamos preparando tu pedido 🍔</p>
+    </div>
+
+    <div class="success-body">
+      <!-- Tracking -->
+      <div class="track-steps">
+        <div class="track-step">
+          <div class="track-dot done">✓</div>
+          <div class="track-info">
+            <div class="track-label">Pedido confirmado</div>
+            <div class="track-time">Ahora mismo</div>
+          </div>
+        </div>
+        <div class="track-step">
+          <div class="track-dot active" id="dot-prep">🍳</div>
+          <div class="track-info">
+            <div class="track-label">En preparación</div>
+            <div class="track-time" id="time-prep">~15 min</div>
+          </div>
+        </div>
+        <div class="track-step">
+          <div class="track-dot pending" id="dot-delivery">🛵</div>
+          <div class="track-info">
+            <div class="track-label">En reparto</div>
+            <div class="track-time">Pronto</div>
+          </div>
+        </div>
+        <div class="track-step">
+          <div class="track-dot pending" id="dot-done">🏠</div>
+          <div class="track-info">
+            <div class="track-label">Entregado</div>
+            <div class="track-time">~35 min</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order summary -->
+      <div class="order-card" id="order-summary"></div>
+
+      <button class="back-btn" onclick="resetDemo()">← Volver al menú</button>
+    </div>
+  </div>
+
+  <script>
+    const cart = {};
+
+    function setActive(btn) {
+      document.querySelectorAll('#category-nav button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function addItem(card) {
+      const name  = card.dataset.name;
+      const price = parseFloat(card.dataset.price);
+      if (!cart[name]) cart[name] = { price, qty: 0, emoji: card.dataset.emoji };
+      cart[name].qty++;
+
+      // update badge
+      const badge = card.querySelector('.qty-badge');
+      badge.textContent = cart[name].qty;
+      badge.classList.remove('show');
+      void badge.offsetWidth;
+      badge.classList.add('show');
+
+      card.classList.add('in-cart');
+      updateCartBar();
+    }
+
+    function updateCartBar() {
+      const items = Object.values(cart).filter(i => i.qty > 0);
+      const totalQty   = items.reduce((s, i) => s + i.qty, 0);
+      const totalPrice = items.reduce((s, i) => s + i.qty * i.price, 0);
+
+      document.getElementById('cart-count').textContent =
+        totalQty === 1 ? '1 producto' : `${totalQty} productos`;
+      document.getElementById('cart-total').textContent =
+        totalPrice.toFixed(2).replace('.', ',') + ' €';
+
+      document.getElementById('cart-bar').classList.toggle('visible', totalQty > 0);
+    }
+
+    function submitOrder() {
+      const items = Object.entries(cart).filter(([,v]) => v.qty > 0);
+      if (!items.length) return;
+
+      // Build order summary
+      const totalPrice = items.reduce((s,[,v]) => s + v.qty * v.price, 0);
+      const orderId = '#' + Math.floor(Math.random() * 9000 + 1000);
+
+      let html = `
+        <div class="order-card-header">
+          <span class="order-card-title">Tu pedido</span>
+          <span class="order-id">${orderId}</span>
+        </div>
+      `;
+      items.forEach(([name, v]) => {
+        html += `
+          <div class="order-item">
+            <span class="order-item-emoji">${v.emoji}</span>
+            <span class="order-item-name">${name}</span>
+            <span class="order-item-qty">×${v.qty}</span>
+            <span class="order-item-price">${(v.qty * v.price).toFixed(2).replace('.', ',')} €</span>
+          </div>
+        `;
+      });
+      html += `
+        <div class="order-total">
+          <span>Total</span>
+          <span>${totalPrice.toFixed(2).replace('.', ',')} €</span>
+        </div>
+      `;
+      document.getElementById('order-summary').innerHTML = html;
+
+      // Show success screen
+      document.getElementById('success-screen').classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      // Animate tracking after 2s
+      setTimeout(() => {
+        const dotPrep = document.getElementById('dot-prep');
+        dotPrep.classList.remove('active');
+        dotPrep.classList.add('done');
+        dotPrep.textContent = '✓';
+        document.getElementById('time-prep').textContent = 'Listo';
+
+        const dotDelivery = document.getElementById('dot-delivery');
+        dotDelivery.classList.remove('pending');
+        dotDelivery.classList.add('active');
+      }, 2000);
+    }
+
+    function resetDemo() {
+      // Reset cart
+      Object.keys(cart).forEach(k => { cart[k].qty = 0; });
+      document.querySelectorAll('.qty-badge').forEach(b => {
+        b.textContent = '0'; b.classList.remove('show');
+      });
+      document.querySelectorAll('.menu-item').forEach(c => c.classList.remove('in-cart'));
+      document.getElementById('cart-bar').classList.remove('visible');
+
+      // Reset success screen
+      document.getElementById('success-screen').classList.remove('open');
+      document.body.style.overflow = '';
+
+      // Reset tracking dots
+      document.getElementById('dot-prep').className = 'track-dot active';
+      document.getElementById('dot-prep').textContent = '🍳';
+      document.getElementById('time-prep').textContent = '~15 min';
+      document.getElementById('dot-delivery').className = 'track-dot pending';
+    }
+  </script>
+</body>
+</html>

@@ -1,19 +1,27 @@
 # Capa de notificación para el flujo de registro
 # Responsable de todos los mensajes WhatsApp hacia el usuario durante el registro
 
-from services.whatsapp_service import enviar_mensaje_whatsapp
+from services.whatsapp_service import (
+    enviar_boton_unico,
+    enviar_botones_si_no,
+    enviar_mensaje_whatsapp,
+)
 
 
 # Notificaciones del flujo principal
 
 def _enviar_bienvenida(numero_cliente):
     """Abre la conversación de registro e invita al usuario a continuar."""
-    enviar_mensaje_whatsapp(
-        "*Registro en el Sistema*💻\n\n"
+    cuerpo = (
+        "*Panchi-Bot* \n\n"
         "¡Hola!👋 Aun no estás registrado en nuestro sistema. "
-        "¿Te gustaría continuar con tu registro? 📝\n\n"
-        "▪️Escribe: *Si*",
-        numero_cliente
+        "¿Te gustaría continuar con tu registro? "
+    )
+    enviar_boton_unico(
+        cuerpo=cuerpo,
+        destinatario=numero_cliente,
+        boton_id="registro_continuar",
+        titulo="Continuar",
     )
 
 
@@ -37,18 +45,25 @@ def _solicitar_direccion(numero_cliente):
     """Pide la dirección completa con ejemplos del formato esperado."""
     enviar_mensaje_whatsapp(
         "📍 *Registro de Dirección* 📍\n\nGracias. Ahora, por favor envía tu *Dirección Completa* 🏠.\n\n"
-        "👇 *Ejemplos:* 👇 \n\n🔹_Calle Labradores, 3, 1B_\n🔹_Avenida Pablo Iglesias, 79, 1B_\n\n",
+        ,
         numero_cliente
     )
 
 
 def _enviar_confirmacion_direccion(numero_cliente, direccion):
     """Muestra la dirección interpretada y pide confirmación explícita."""
-    enviar_mensaje_whatsapp(
-        f"{direccion} \n\n ⬆️ *Verifica tu Ubicación* ⬆️\n\n"
-        "👉 *Escribe:* *Si* para confirmar\n"
-        "👉 *Escribe:* *No* para corregir\n\n",
-        numero_cliente
+    cuerpo = (
+        f"{direccion}\n\n"  # Dirección interpretada
+        "⬆️ *Verifica tu Ubicación* ⬆️\n\n"
+        "Selecciona una opción:"
+    )
+    enviar_botones_si_no(
+        cuerpo=cuerpo,
+        destinatario=numero_cliente,
+        id_si="direccion_si",
+        titulo_si="Correcta",
+        id_no="direccion_no",
+        titulo_no="Incorrecta",
     )
 
 
