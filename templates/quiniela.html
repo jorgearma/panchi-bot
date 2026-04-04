@@ -6,7 +6,7 @@
   <title>Menú — Panchi Bot</title>
   <link rel="stylesheet" href="/static/css/styles.css">
   <link rel="stylesheet" href="/static/css/product-modal.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
   <style>
     .conf-header {
       background: linear-gradient(145deg, #1DB954 0%, #0F6E3A 100%);
@@ -430,7 +430,7 @@
 
         if (!hasItems) return;
 
-        elegidosSection.innerHTML = '<h2 class="category-title">Elegidos</h2>';
+        elegidosSection.innerHTML = '<h2 class="category-title in-view">Elegidos</h2>';
 
         names.forEach(itemName => {
           const { qty, category } = grouped[itemName];
@@ -603,6 +603,23 @@
           menuData = data;
           buildMenu();
           restoreCart();
+
+          // Efecto esmeralda al hacer scroll sobre el título de categoría
+          const titleObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (!entry.isIntersecting || entry.target._shining) return;
+              const title = entry.target;
+              title._shining = true;
+              title.classList.remove('in-view');
+              void title.offsetWidth;
+              title.classList.add('in-view');
+              setTimeout(() => { title._shining = false; }, 2400);
+            });
+          }, { threshold: 0.8 });
+
+          document.querySelectorAll('.category-title').forEach(el => {
+            titleObserver.observe(el);
+          });
 
           document.addEventListener('click', event => {
             const menuItem = event.target.closest('.menu-item');
