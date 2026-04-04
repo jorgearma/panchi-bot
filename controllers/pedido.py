@@ -113,11 +113,14 @@ def confirmar_carrito(
         precio_unitario = float(precio_db)
         precio_total = round(precio_unitario * cantidad, 2)
 
+        removed = p.get("ingredientes_removidos", [])
+        notas   = f"Sin: {', '.join(removed)}" if removed else ""
         productos.append({
             "nombre": nombre_producto,
             "cantidad": cantidad,
             "precio": precio_total,
             "codigo": codigo,
+            "notas": notas,
         })
         total += precio_total
 

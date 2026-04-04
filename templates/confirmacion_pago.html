@@ -59,11 +59,13 @@
         {% for producto in productos %}
         <li class="conf-item"
             data-codigo="{{ producto.codigo }}"
+            data-notas="{{ producto.notas or '' }}"
             data-unit="{{ (producto.precio / producto.cantidad) | round(2) }}">
           <div class="conf-item__qty">{{ producto.cantidad }}</div>
           <div class="conf-item__info">
             <span class="conf-item__name">{{ producto.nombre }}</span>
             <span class="conf-item__unit">{{ (producto.precio / producto.cantidad) | round(2) }} € / ud</span>
+            {% if producto.notas %}<span class="conf-item__notas">{{ producto.notas }}</span>{% endif %}
           </div>
           <span class="conf-item__price">{{ producto.precio }} €</span>
           <button class="conf-item__remove" onclick="quitarUnidad(this)" title="Quitar una unidad">×</button>
@@ -284,7 +286,8 @@
     }
     .conf-item__info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
     .conf-item__name { font-weight: 600; font-size: 14px; }
-    .conf-item__unit { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .conf-item__unit  { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .conf-item__notas { font-size: 11px; color: #FF6B35; font-weight: 600; font-style: italic; }
     .conf-item__price { font-weight: 700; font-size: 14px; white-space: nowrap; margin-right: 6px; }
     .conf-item__remove {
       width: 20px; height: 20px;
@@ -545,6 +548,7 @@
         nombre:   li.querySelector('.conf-item__name').textContent.trim(),
         cantidad: parseInt(li.querySelector('.conf-item__qty').textContent, 10),
         precio:   parseFloat(li.querySelector('.conf-item__price').textContent.replace('€', '').trim()),
+        notas:    li.getAttribute('data-notas') || '',
       }));
 
       return {
