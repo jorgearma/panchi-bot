@@ -18,10 +18,12 @@ from maps_module.service import (
     validar_coordenadas,
     limpiar_direccion,
 )
+from maps_module.street_suggest import sugerir_calle
 
 __all__ = [
     "validar_direccion",
     "geocodificar_direccion",
     "validar_coordenadas",
     "limpiar_direccion",
+    "sugerir_calle",
 ]

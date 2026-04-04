@@ -1,7 +1,7 @@
 # Orquestador de la máquina de estados de registro
 import logging
 import re
-from maps_module import validar_direccion
+from maps_module import validar_direccion, sugerir_calle
 from managers.estado_usuario import EstadoUsuario
 from states import EstadoRegistro
 from utils.menu_opciones import mostrar_menu
@@ -84,13 +84,14 @@ class RegistroUsuario:
                 return "Nombre inválido", 400
 
         elif estado_actual == EstadoRegistro.ESPERANDO_DIRECCION:
-            validada, direccion_resultante = validar_direccion(mensaje_cliente)
+            validada, direccion_resultante, motivo = validar_direccion(mensaje_cliente)
             if validada:
                 _enviar_confirmacion_direccion(self.numero_cliente, direccion_resultante)
                 self.estado_usuario.actualizar_estado(EstadoRegistro.CONFIRMANDO_DIRECCION, {"direccion": direccion_resultante})
                 return "Solicitud de confirmación de dirección enviada", 200
             else:
-                _enviar_direccion_invalida(self.numero_cliente)
+                sugerencia = sugerir_calle(mensaje_cliente) if motivo != "fuera_de_zona" else None
+                _enviar_direccion_invalida(self.numero_cliente, sugerencia)
                 return "Dirección inválida", 400
 
         elif estado_actual == EstadoRegistro.CONFIRMANDO_DIRECCION:
