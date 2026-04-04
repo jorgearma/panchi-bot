@@ -1,7 +1,7 @@
 # Orquestador de la máquina de estados de registro
 import logging
 import re
-from services.maps_service import validar_direccion
+from maps_module import validar_direccion
 from managers.estado_usuario import EstadoUsuario
 from states import EstadoRegistro
 from utils.menu_opciones import mostrar_menu
