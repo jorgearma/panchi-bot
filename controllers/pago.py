@@ -8,18 +8,28 @@ logger = logging.getLogger(__name__)
 
 
 def _validar_carrito(productos_recibidos, gestor_productos):
-    """Recalcula el carrito con datos de BD para evitar importes manipulados."""
+    """Recalcula el carrito con datos de BD para evitar importes manipulados.
+
+    Devuelve una lista de dicts {producto_id, cantidad, notas} — un dict por línea
+    de pedido. El mismo producto puede aparecer varias veces con notas distintas
+    (e.g. pizza sin cebolla + pizza con todo = dos líneas separadas).
+    """
     productos_validos = []
     total = 0.0
     for item in productos_recibidos:
-        codigo = item.get("codigo")
+        codigo   = item.get("codigo")
         cantidad = item.get("cantidad", 1)
+        notas    = item.get("notas", "") or None
         producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
         if not producto_db:
             logger.error("_validar_carrito: producto %s no encontrado en BD", codigo)
             return None, None, f"Producto con código {codigo} no encontrado"
         total += float(producto_db["Precio"]) * cantidad
-        productos_validos.append([codigo, cantidad])
+        productos_validos.append({
+            "producto_id": codigo,  # codigo == ProductoID en este sistema
+            "cantidad":    cantidad,
+            "notas":       notas,
+        })
     return productos_validos, total, None
 
 
