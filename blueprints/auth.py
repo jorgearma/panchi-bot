@@ -120,6 +120,9 @@ def requiere_rol(*roles_permitidos, demo_ok=False):
                 if request.method == 'GET' and not request.is_json:
                     return redirect(url_for('auth.login'))
                 return jsonify({'error': 'No autenticado'}), 401
+            # Si la sesión pertenece a un empleado real, demo_mode nunca debe ser True
+            if session.get('demo_mode') and session.get('empleado_id') != 0:
+                session.pop('demo_mode', None)
             if session.get('demo_mode') and not demo_ok:
                 return jsonify({'error': 'No disponible en demo'}), 403
             if roles_permitidos and session.get('rol') not in roles_permitidos:

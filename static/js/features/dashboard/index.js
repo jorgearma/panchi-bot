@@ -570,6 +570,7 @@ function dashboard() {
           };
         }
       });
+      this.actualizarMapa();
     },
 
     mapaColorPedido(p) {
