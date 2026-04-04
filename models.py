@@ -44,6 +44,7 @@ class Producto(Base):
     Precio = Column(DECIMAL(10, 2), nullable=False)
     Categoria = Column(String(50), nullable=False)   # legacy — usar categoria_id en código nuevo
     Ingredientes = Column(String(255), nullable=True)
+    IngredientesRemovibles = Column(String(255), nullable=True)
     Ubicacion = Column(String(255), nullable=True)
     Stock = Column(Integer, nullable=False, default=0)
     ImagenURL = Column(String(255), nullable=True)

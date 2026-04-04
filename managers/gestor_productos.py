@@ -26,8 +26,9 @@ class ProductoManager:
                     "Precio": producto.Precio,
                     "Categoria": producto.Categoria,
                     "Ingredientes": producto.Ingredientes,
+                    "IngredientesRemovibles": producto.IngredientesRemovibles,
                     "Imagen": producto.ImagenURL,
-                    "Codigo": producto.ProductoID  # Ruta de la imagen en el servidor
+                    "Codigo": producto.ProductoID
                 })
             
             return lista_productos

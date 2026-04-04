@@ -164,12 +164,13 @@
     priceEl.textContent = precio.toFixed(2).replace('.', ',') + ' €';
     descEl.textContent  = ingStr;
 
-    // Ingredient chips — show when 2+ comma-separated ingredients
-    var ingList = ingStr
-      ? ingStr.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+    // Ingredient chips — only from ingredientes_removibles (not all ingredientes)
+    var removiblesStr = (prod.ingredientes_removibles || '').trim();
+    var ingList = removiblesStr
+      ? removiblesStr.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
       : [];
 
-    if (ingList.length >= 2) {
+    if (ingList.length >= 1) {
       ingrSection.classList.add('visible');
       chipsEl.innerHTML = '';
       var savedRemoved = existingRemoved || [];
