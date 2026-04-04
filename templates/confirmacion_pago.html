@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Confirmar pedido — Panchi Bot</title>
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800;900&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -59,11 +59,11 @@
         {% for producto in productos %}
         <li class="conf-item"
             data-codigo="{{ producto.codigo }}"
+            data-nombre="{{ producto.nombre }}"
             data-notas="{{ producto.notas or '' }}"
             data-unit="{{ (producto.precio / producto.cantidad) | round(2) }}">
-          <div class="conf-item__qty">{{ producto.cantidad }}</div>
           <div class="conf-item__info">
-            <span class="conf-item__name">{{ producto.nombre }}</span>
+            <span class="conf-item__name">{{ producto.nombre }} <span class="conf-item__qty-inline">× {{ producto.cantidad }}</span></span>
             <span class="conf-item__unit">{{ (producto.precio / producto.cantidad) | round(2) }} € / ud</span>
             {% if producto.notas %}<span class="conf-item__notas">{{ producto.notas }}</span>{% endif %}
           </div>
@@ -98,12 +98,15 @@
     <div class="conf-bar__btns">
       <button class="conf-bar__online" onclick="abrirModal('modal-online')">
         <span class="conf-bar__btn-icon">💳</span>
-        <span class="conf-bar__btn-title">Pagar con tarjeta online</span>
+        <span class="conf-bar__btn-title">Online</span>
         <span class="conf-bar__btn-arrow">›</span>
       </button>
       <button class="conf-bar__cash" onclick="abrirModal('modal-efectivo')">
-        <span class="conf-bar__btn-icon">💵</span>
-        <span class="conf-bar__btn-title">Pagar al recibir el pedido</span>
+        <span class="conf-bar__btn-icon">🏠</span>
+        <div class="conf-bar__btn-body">
+          <span class="conf-bar__btn-title">Pagar en casa</span>
+          <span class="conf-bar__btn-sub">Cash · Tarjeta</span>
+        </div>
         <span class="conf-bar__btn-arrow">›</span>
       </button>
     </div>
@@ -155,69 +158,70 @@
   <style>
     /* ── Cabecera ── */
     .conf-header {
-      background: linear-gradient(135deg, #FF6B35 0%, #FF4500 100%);
-      padding: 16px 0 20px;
+      background: linear-gradient(145deg, #1DB954 0%, #0F6E3A 100%);
+      padding: 18px 0 22px;
       position: relative;
       overflow: hidden;
-      border-radius: 0 0 24px 24px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
     .conf-header::before {
       content: ''; position: absolute;
-      width: 160px; height: 160px; border-radius: 50%;
-      background: rgba(255,255,255,0.08);
-      top: -40px; right: -30px;
+      width: 200px; height: 200px; border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      top: -60px; right: -50px;
     }
     .conf-header::after {
       content: ''; position: absolute;
-      width: 90px; height: 90px; border-radius: 50%;
-      background: rgba(255,255,255,0.06);
-      bottom: -20px; left: 10px;
+      width: 100px; height: 100px; border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      bottom: -30px; left: 16px;
     }
     .conf-header__row1 {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 14px;
+      padding: 0 16px;
       position: relative; z-index: 1;
     }
     .conf-header__name {
       font-family: 'Manrope', sans-serif;
-      font-weight: 900; font-size: 19px; color: #fff;
-      letter-spacing: -0.3px;
+      font-weight: 900; font-size: 20px; color: #fff;
+      letter-spacing: -0.4px;
     }
     .conf-header__badge {
-      background: var(--success);
+      background: #FF6B35;
       color: #fff; font-size: 11px; font-weight: 700;
-      padding: 5px 11px; border-radius: 20px;
-      box-shadow: 0 2px 10px rgba(34,197,94,0.45);
+      padding: 5px 13px; border-radius: 20px;
+      box-shadow: 0 2px 12px rgba(255,107,53,0.45);
       white-space: nowrap;
+      letter-spacing: 0.2px;
     }
     .conf-header__addr {
-      display: flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
-      border-radius: 12px; padding: 9px 12px;
-      margin: 0 14px;
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px; padding: 10px 14px;
+      margin: 0 16px;
       position: relative; z-index: 1;
+      backdrop-filter: blur(10px);
     }
     .conf-header__addr-icon {
-      width: 30px; height: 30px; border-radius: 8px;
-      background: rgba(255,255,255,0.2);
+      width: 32px; height: 32px; border-radius: 9px;
+      background: rgba(255,255,255,0.18);
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; flex-shrink: 0;
+      font-size: 15px; flex-shrink: 0;
     }
     .conf-header__addr-text { display: flex; flex-direction: column; min-width: 0; }
     .conf-header__addr-label {
-      font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.65);
-      text-transform: uppercase; letter-spacing: 0.6px;
+      font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.55);
+      text-transform: uppercase; letter-spacing: 0.8px;
     }
     .conf-header__addr-street {
       font-family: 'Manrope', sans-serif;
-      font-weight: 800; font-size: 13px; color: #fff;
-      letter-spacing: -0.2px; margin-top: 1px;
+      font-weight: 800; font-size: 13.5px; color: #fff;
+      letter-spacing: -0.2px; margin-top: 2px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
@@ -246,7 +250,7 @@
       font-weight: 800; font-size: 14px;
     }
     .conf-card__order-id {
-      background: #FFF8F5; border-bottom: 1px solid #FFD5C2;
+      background: #F2FAF6; border-bottom: 1px solid #C6E8D5;
       padding: 10px 12px;
       display: flex; align-items: center; justify-content: space-between;
     }
@@ -277,15 +281,12 @@
       padding: 8px 9px; border: 1px solid var(--border);
       min-height: 48px;
     }
-    .conf-item__qty {
-      width: 30px; height: 30px; border-radius: 7px;
-      background: var(--primary); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 14px;
-      flex-shrink: 0;
-    }
     .conf-item__info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
     .conf-item__name { font-weight: 600; font-size: 14px; }
+    .conf-item__qty-inline {
+      font-weight: 700; font-size: 13px;
+      color: var(--text-muted);
+    }
     .conf-item__unit  { font-size: 11px; color: var(--text-muted); font-weight: 500; }
     .conf-item__notas { font-size: 11px; color: #FF6B35; font-weight: 600; font-style: italic; }
     .conf-item__price { font-weight: 700; font-size: 14px; white-space: nowrap; margin-right: 6px; }
@@ -303,13 +304,13 @@
     /* ── Notas ── */
     .conf-notes {
       margin: 0 8px 8px;
-      border: 1.5px solid #FFD5C2;
+      border: 1.5px solid #C6E8D5;
       border-radius: 8px; overflow: hidden;
     }
     .conf-notes__label {
-      background: #FFF8F5; padding: 6px 10px;
+      background: #F2FAF6; padding: 6px 10px;
       font-size: 11px; font-weight: 700; color: var(--primary);
-      border-bottom: 1px solid #FFE0D0;
+      border-bottom: 1px solid #D8F0E4;
     }
     .conf-notes__area {
       display: block; width: 100%; box-sizing: border-box;
@@ -348,7 +349,7 @@
     .conf-time__pulse::after {
       content: ''; position: absolute;
       width: 40px; height: 40px; border-radius: 50%;
-      background: rgba(255,107,53,0.15);
+      background: rgba(26,157,85,0.18);
       animation: ring-out 2s ease-out infinite;
     }
     .conf-time__pulse::after { animation-delay: 0.8s; }
@@ -388,33 +389,63 @@
       z-index: 100;
     }
     .conf-bar__btns {
-      display: flex; gap: 8px;
+      display: flex; gap: 10px; align-items: stretch;
     }
-    .conf-bar__online,
+
+    /* Botón principal — Pagar en casa */
     .conf-bar__cash {
       flex: 1;
-      border-radius: 14px; padding: 13px 12px;
+      border-radius: 14px; padding: 13px 14px;
       display: flex; align-items: center; gap: 10px;
       cursor: pointer; border: none;
-      transition: filter 0.15s;
+      background: linear-gradient(150deg, #1DB954 0%, #0F6E3A 100%);
+      box-shadow: 0 4px 14px rgba(26,157,85,0.38);
+      transition: filter 0.15s, transform 0.12s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .conf-bar__online:active { filter: brightness(0.88); }
-    .conf-bar__cash:active   { filter: brightness(0.88); }
+    .conf-bar__cash:active { filter: brightness(0.9); transform: scale(0.98); }
+
+    /* Botón secundario — Online (más compacto) */
     .conf-bar__online {
-      background: linear-gradient(160deg, #FF8255 0%, #FF5500 100%);
-      box-shadow: 0 4px 16px rgba(255,107,53,0.45);
+      flex: 0 0 auto;
+      border-radius: 14px; padding: 13px 16px;
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer;
+      background: transparent;
+      border: 2px solid rgba(26,157,85,0.35);
+      transition: background 0.18s, border-color 0.18s, transform 0.12s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .conf-bar__cash {
-      background: linear-gradient(160deg, #34D470 0%, #16A34A 100%);
-      box-shadow: 0 4px 16px rgba(34,197,94,0.4);
-    }
+    .conf-bar__online:hover  { background: rgba(26,157,85,0.07); border-color: rgba(26,157,85,0.55); }
+    .conf-bar__online:active { transform: scale(0.96); }
+
     .conf-bar__btn-icon { font-size: 20px; flex-shrink: 0; }
+
+    .conf-bar__btn-body { flex: 1; display: flex; flex-direction: column; gap: 1px; }
     .conf-bar__btn-title {
-      flex: 1;
-      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 12px;
-      color: #fff; text-align: left;
+      font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 13px;
+      color: #fff; text-align: left; line-height: 1;
     }
-    .conf-bar__btn-arrow { font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.7); }
+    .conf-bar__btn-sub {
+      font-size: 10px; font-weight: 600;
+      color: rgba(255,255,255,0.65); text-align: left;
+      letter-spacing: 0.3px;
+    }
+
+    /* En el botón online el título es verde oscuro */
+    .conf-bar__online .conf-bar__btn-title {
+      color: var(--primary-deep);
+      font-size: 12px;
+    }
+    .conf-bar__online .conf-bar__btn-icon { font-size: 18px; }
+
+    .conf-bar__btn-arrow {
+      font-size: 18px; font-weight: 700;
+      color: rgba(255,255,255,0.6); flex-shrink: 0;
+    }
+    .conf-bar__online .conf-bar__btn-arrow {
+      color: rgba(10,74,39,0.45); font-size: 16px;
+    }
     .conf-bar__back {
       background: none; border: none;
       font-size: 12px; font-weight: 600; color: var(--text-muted);
@@ -444,8 +475,8 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 28px; margin: 0 auto 10px;
     }
-    .conf-sheet__icon--online { background: #FFF0EB; }
-    .conf-sheet__icon--cash   { background: #F0FDF4; }
+    .conf-sheet__icon--online { background: #F0FDF4; }
+    .conf-sheet__icon--cash   { background: #F2FAF6; }
     .conf-sheet__title {
       font-family: 'Manrope', sans-serif;
       font-weight: 900; font-size: 17px;
@@ -473,8 +504,8 @@
       font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 14px;
       text-align: center; color: #fff; border: none; cursor: pointer;
     }
-    .conf-sheet__confirm--online { background: var(--primary); box-shadow: 0 4px 12px rgba(255,107,53,0.35); }
-    .conf-sheet__confirm--cash   { background: var(--success); box-shadow: 0 4px 12px rgba(34,197,94,0.35); }
+    .conf-sheet__confirm--online { background: var(--primary);      box-shadow: 0 4px 12px rgba(26,157,85,0.35); }
+    .conf-sheet__confirm--cash   { background: var(--primary-deep); box-shadow: 0 4px 12px rgba(10,74,39,0.35); }
     .conf-sheet__confirm:disabled { opacity: 0.6; cursor: not-allowed; }
     .conf-sheet__cancel {
       background: none; border: none;
@@ -488,17 +519,17 @@
     // ── Quitar una unidad ──
     function quitarUnidad(btn) {
       const li      = btn.closest('li');
-      const qtyEl   = li.querySelector('.conf-item__qty');
+      const qtyEl   = li.querySelector('.conf-item__qty-inline');
       const priceEl = li.querySelector('.conf-item__price');
       const unit    = parseFloat(li.dataset.unit);
 
-      let qty = parseInt(qtyEl.textContent, 10);
+      let qty = parseInt(qtyEl.textContent.replace('×', '').trim(), 10);
 
       if (qty <= 1) {
         li.remove();
       } else {
         qty--;
-        qtyEl.textContent   = qty;
+        qtyEl.textContent   = '× ' + qty;
         priceEl.textContent = (unit * qty).toFixed(2) + ' €';
       }
       recalcularTotal();
@@ -518,13 +549,30 @@
 
     // ── Volver al menú ──
     async function handleBack() {
-      const updatedQty = {};
+      const CART_KEY = 'cart_{{ token }}';
+
+      // Leer el carrito guardado en el formato correcto (array de líneas)
+      let cartItems = [];
+      try {
+        const saved = sessionStorage.getItem(CART_KEY);
+        if (saved) cartItems = JSON.parse(saved);
+        if (!Array.isArray(cartItems)) cartItems = [];
+      } catch(e) { cartItems = []; }
+
+      // Cantidades actuales en el DOM de confirmación (por nombre de producto)
+      const currentQty = {};
       document.querySelectorAll('#productos li').forEach(li => {
-        const nombre = li.querySelector('.conf-item__name').textContent.trim();
-        const qty    = parseInt(li.querySelector('.conf-item__qty').textContent, 10);
-        if (qty > 0) updatedQty[nombre] = qty;
+        const nombre = li.dataset.nombre;
+        const qty    = parseInt(li.querySelector('.conf-item__qty-inline').textContent.replace('×','').trim(), 10);
+        if (nombre && qty > 0) currentQty[nombre] = (currentQty[nombre] || 0) + qty;
       });
-      sessionStorage.setItem('cart_{{ token }}', JSON.stringify(updatedQty));
+
+      // Actualizar el carrito: ajustar cantidades o eliminar líneas borradas
+      const updatedCart = cartItems
+        .filter(ci => currentQty[ci.itemName] > 0)
+        .map(ci => ({ ...ci, qty: Math.min(ci.qty, currentQty[ci.itemName]) }));
+
+      sessionStorage.setItem(CART_KEY, JSON.stringify(updatedCart));
 
       try {
         await fetch('/api/volver_al_menu', {
@@ -546,7 +594,7 @@
       const productos = Array.from(items).map(li => ({
         codigo:   li.getAttribute('data-codigo'),
         nombre:   li.querySelector('.conf-item__name').textContent.trim(),
-        cantidad: parseInt(li.querySelector('.conf-item__qty').textContent, 10),
+        cantidad: parseInt(li.querySelector('.conf-item__qty-inline').textContent.replace('×', '').trim(), 10),
         precio:   parseFloat(li.querySelector('.conf-item__price').textContent.replace('€', '').trim()),
         notas:    li.getAttribute('data-notas') || '',
       }));
