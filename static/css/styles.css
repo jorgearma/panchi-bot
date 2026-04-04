@@ -244,8 +244,8 @@ body {
   display: flex;
   overflow-x: auto;
   white-space: nowrap;
-  padding: 10px 14px;
-  gap: 8px;
+  padding: 12px 14px;
+  gap: 7px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -257,30 +257,33 @@ body {
 
 #category-nav button {
   flex: 0 0 auto;
-  padding: 8px 18px;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.84rem;
-  font-weight: 600;
-  background: #F2F2F2;
-  color: #888;
-  border: none;
-  border-radius: 20px;
+  padding: 0 16px;
+  height: 34px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  background: transparent;
+  color: #AEAEAE;
+  border: 1.5px solid #E4E4E4;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
-  min-height: 36px;
-  letter-spacing: 0.1px;
+  transition: color 0.18s, border-color 0.18s, background 0.18s;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
 }
 
 #category-nav button.active {
-  background: var(--primary);
-  color: white;
-  box-shadow: 0 3px 10px rgba(26, 157, 85, 0.35);
+  background: var(--primary-deep);
+  color: #fff;
+  border-color: var(--primary-deep);
+  letter-spacing: 0.8px;
 }
 
 #category-nav button:hover:not(.active) {
-  background: #E8E8E8;
   color: var(--text);
+  border-color: #C0C0C0;
 }
 
 /* =============================================
@@ -297,13 +300,15 @@ body {
 
 .category-title {
   font-family: 'Manrope', sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  color: #B0B0B0;
+  color: var(--primary-deep);
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.8px;
   margin: 0 0 12px;
-  padding-left: 2px;
+  padding: 0 4px 6px;
+  border-bottom: 2px solid rgba(10, 74, 39, 0.12);
+  display: inline-block;
 }
 
 .menu-item {
