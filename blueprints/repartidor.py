@@ -1,13 +1,11 @@
 import logging
-import os
-import uuid
 from datetime import date
 
-from flask import Blueprint, Response, current_app, jsonify, redirect, render_template, request, send_from_directory, session
+from flask import Blueprint, jsonify, redirect, render_template, request, session
 
 from blueprints.auth import requiere_rol
+from blueprints import _pwa
 from container import gestor_dashboard
-from services.whatsapp_service import notificar_async as _notificar
 
 logger = logging.getLogger(__name__)
 
@@ -17,21 +15,7 @@ blueprint_repartidor = Blueprint("repartidor", __name__)
 @blueprint_repartidor.route("/repartidor/demo")
 def demo_view():
     """Entrada directa al modo demo del repartidor sin autenticación."""
-    from blueprints.demo import DemoState
-    # Usar demo_session_id existente o crear uno nuevo
-    if 'demo_session_id' not in session:
-        session['demo_session_id'] = str(uuid.uuid4())
-        try:
-            DemoState.init_session(session['demo_session_id'])
-        except Exception:
-            pass
-    # Siempre preparar la sesión como demo
-    session['empleado_id'] = 0
-    session['empleado_nombre'] = 'Demo'
-    session['rol'] = 'manager'
-    session['demo_mode'] = True
-    session.permanent = False
-    return redirect('/repartidor')
+    return _pwa.setup_demo_session('/repartidor')
 
 
 @blueprint_repartidor.route("/repartidor", strict_slashes=False)
@@ -50,34 +34,20 @@ def index():
 @blueprint_repartidor.route("/repartidor/apple-touch-icon-180x180.png")
 def apple_touch_icon():
     """Sirve el icono compartido de la PWA de reparto."""
-    return send_from_directory(
-        os.path.join(current_app.root_path, "static", "repartidor"),
-        "icon-180.png",
-        mimetype="image/png",
-    )
+    return _pwa.icon_response('repartidor')
 
 
 @blueprint_repartidor.route("/repartidor/manifest.json")
 @requiere_rol('repartidor', 'manager', 'admin', demo_ok=True)
 def manifest():
     """Genera el manifest de la PWA con el contexto del repartidor actual."""
-    repartidor_id = session.get('empleado_id')
-    return Response(
-        render_template("repartidor/manifest.json", repartidor_id=repartidor_id),
-        mimetype="application/manifest+json",
-    )
+    return _pwa.manifest_response("repartidor/manifest.json", repartidor_id=session.get('empleado_id'))
 
 
 @blueprint_repartidor.route("/repartidor/sw.js")
 def service_worker():
     """Entrega el service worker sin caché para forzar versiones frescas."""
-    response = Response(
-        render_template("repartidor/sw.js"),
-        mimetype="application/javascript",
-    )
-    response.headers["Cache-Control"] = "no-cache"
-    response.headers["Service-Worker-Allowed"] = "/repartidor"
-    return response
+    return _pwa.sw_response("repartidor/sw.js", "/repartidor")
 
 
 @blueprint_repartidor.route("/repartidor/mis-pedidos")
@@ -85,7 +55,7 @@ def service_worker():
 def mis_pedidos():
     """Lista los repartos asignados al repartidor actual."""
     if session.get('demo_mode'):
-        from blueprints.demo import DemoState
+        from services.demo_state import DemoState
         return jsonify(DemoState.get_repartidor(session.get('demo_session_id', 'default')))
     repartidor_id = session.get('empleado_id')
     try:
@@ -100,7 +70,7 @@ def mis_pedidos():
 def marcar_salida(reparto_id: int):
     """Marca un reparto como salido a entrega."""
     if session.get('demo_mode'):
-        from blueprints.demo import DemoState
+        from services.demo_state import DemoState
         DemoState.marcar_salida_reparto(session.get('demo_session_id', 'default'), reparto_id)
         return jsonify({"ok": True, "mensaje": "Demo: salida marcada"})
     empleado_id = session.get('empleado_id')
@@ -116,7 +86,7 @@ def marcar_salida(reparto_id: int):
 def marcar_entregado(reparto_id: int):
     """Marca un reparto como entregado al cliente."""
     if session.get('demo_mode'):
-        from blueprints.demo import DemoState
+        from services.demo_state import DemoState
         DemoState.marcar_entregado(session.get('demo_session_id', 'default'), reparto_id)
         return jsonify({"ok": True, "mensaje": "Demo: entregado"})
     empleado_id = session.get('empleado_id')
@@ -132,7 +102,7 @@ def marcar_entregado(reparto_id: int):
 def marcar_no_entregado(reparto_id: int):
     """Registra una incidencia de no entrega y avisa al cliente."""
     if session.get('demo_mode'):
-        from blueprints.demo import DemoState
+        from services.demo_state import DemoState
         data = request.get_json(silent=True) or {}
         DemoState.marcar_no_entregado(session.get('demo_session_id', 'default'), reparto_id, data.get('motivo', ''))
         return jsonify({"ok": True, "mensaje": "Demo: no entregado registrado"})
@@ -141,11 +111,10 @@ def marcar_no_entregado(reparto_id: int):
     if not motivo:
         return jsonify({"error": "Indica el motivo de no entrega"}), 400
     empleado_id = session.get('empleado_id')
-    ok, msg, telefono = gestor_dashboard.marcar_no_entregado(reparto_id, motivo)
+    ok, msg = gestor_dashboard.marcar_no_entregado(reparto_id, motivo)
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[REPARTO] Empleado %s marca no entregado reparto %s — motivo: %s", empleado_id, reparto_id, motivo)
-    _notificar(telefono, "⚠️ Lo sentimos, no hemos podido entregar tu pedido. Nuestro equipo se pondrá en contacto contigo muy pronto.")
     return jsonify({"ok": True, "mensaje": msg})
 
 
@@ -205,7 +174,7 @@ def cierre_datos():
 def cola():
     """Devuelve la cola de repartos todavía sin asignar."""
     if session.get('demo_mode'):
-        from blueprints.demo import DemoState
+        from services.demo_state import DemoState
         return jsonify(DemoState.get_cola_repartidor(session.get('demo_session_id', 'default')))
     try:
         lista = gestor_dashboard.repartos_sin_asignar()
@@ -220,7 +189,7 @@ def cola():
 def coger_reparto(pedido_id: int):
     """Permite al repartidor reclamar un pedido pendiente de reparto."""
     if session.get('demo_mode'):
-        from blueprints.demo import DemoState
+        from services.demo_state import DemoState
         ok = DemoState.reclamar_reparto_by_pedido(session.get('demo_session_id', 'default'), pedido_id)
         if ok:
             return jsonify({"ok": True, "pedido_id": pedido_id})

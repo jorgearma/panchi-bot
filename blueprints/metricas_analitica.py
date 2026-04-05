@@ -1,24 +1,14 @@
 import logging
 from datetime import date, timedelta
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request
 
 from blueprints.auth import requiere_rol
-from managers.gestor_metricas import GestorMetricas
+from blueprints._metricas_common import _ok, _err
+from container import gestor_metricas
 
 logger = logging.getLogger(__name__)
 blueprint_metricas_analitica = Blueprint('metricas_analitica', __name__)
-gestor_metricas = GestorMetricas()
-
-
-def _ok(data):
-    """Envuelve la respuesta analítica en un payload estándar de éxito."""
-    return jsonify({'ok': True, 'data': data})
-
-
-def _err(msg, code=400):
-    """Devuelve un error uniforme para endpoints analíticos."""
-    return jsonify({'ok': False, 'error': msg}), code
 
 
 def _parse_rango():

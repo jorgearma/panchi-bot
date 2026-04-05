@@ -11,11 +11,11 @@ from controllers.mensajes_registrados_notifier import (
     _enviar_enlace_pago,
     _enviar_error_generico,
     _enviar_estado_en_curso,
+    _enviar_respuesta_pedido,
 )
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from tenacity import RetryError
 from states import EstadoPedido
-from services.whatsapp_service import enviar_mensaje_whatsapp
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class ManejadorMensajesRegistrados:
         if estado_del_pedido == EstadoPedido.PENDIENTE:
             mensaje = procesar_pedido(mensaje_cliente, numero_cliente, id_pedido_activo, usuario_datos)
             logger.debug("Mensaje procesado para usuario: %s", numero_cliente)
-            enviar_mensaje_whatsapp(mensaje, numero_cliente)
+            _enviar_respuesta_pedido(mensaje, numero_cliente)
             return " mensaje enviado", 200
 
         if estado_del_pedido == EstadoPedido.ENLACE or estado_del_pedido == EstadoPedido.ENLACE2:

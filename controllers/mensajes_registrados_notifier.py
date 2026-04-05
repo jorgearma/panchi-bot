@@ -9,6 +9,11 @@ from states import EstadoPedido
 logger = logging.getLogger(__name__)
 
 
+def _enviar_respuesta_pedido(mensaje, numero_cliente):
+    """Envía al cliente la respuesta generada por el procesador de pedido."""
+    enviar_mensaje_whatsapp(mensaje, numero_cliente)
+
+
 def _enviar_error_usuario_no_encontrado(numero_cliente):
     """Informa que no se pudo recuperar el perfil del usuario registrado."""
     enviar_mensaje_whatsapp(
