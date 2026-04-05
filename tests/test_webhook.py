@@ -60,12 +60,12 @@ class TestWebhookTwilio:
         resp = client.post("/webhook", data={"From": TWILIO_FROM, "Body": "  "})
         assert resp.status_code == 400
 
-    def test_usuario_bloqueado_retorna_403(self, client):
-        """Si el número está bloqueado por rate-limit → 403 sin procesar."""
-        with patch("services.inbound_whatsapp.redismanager") as mock_redis:
-            mock_redis.esta_bloqueado.return_value = True
+    def test_mensaje_valido_encola_y_retorna_200(self, client):
+        """Mensaje válido → encola y responde 200 inmediatamente (rate-limit es asunto del worker)."""
+        with patch("services.inbound_whatsapp.encolar_mensaje") as mock_enc:
             resp = client.post("/webhook", data={"From": TWILIO_FROM, "Body": TWILIO_BODY})
-        assert resp.status_code == 403
+        assert resp.status_code == 200
+        mock_enc.assert_called_once_with(TWILIO_FROM, TWILIO_BODY.lower())
 
     def test_firma_invalida_retorna_403(self, client, app):
         """Con TESTING=False, una firma Twilio inválida → 403."""
@@ -85,8 +85,8 @@ class TestWebhookTwilio:
             app.config["TESTING"] = True
         assert resp.status_code == 403
 
-    def test_firma_valida_no_bloquea(self, client, app):
-        """Con TESTING=False, una firma Twilio válida pasa la verificación."""
+    def test_firma_valida_encola(self, client, app):
+        """Con TESTING=False, una firma Twilio válida pasa la verificación y encola."""
         app.config["TESTING"] = False
         try:
             with patch("services.inbound_whatsapp.RequestValidator") as mock_cls:
@@ -94,45 +94,30 @@ class TestWebhookTwilio:
                 with patch("blueprints.webhook.config") as mock_cfg:
                     mock_cfg.TWILIO_AUTH_TOKEN = "tok"
                     mock_cfg.PUBLIC_URL = "https://test.com"
-                    with patch("services.inbound_whatsapp.redismanager") as mock_redis:
-                        mock_redis.esta_bloqueado.return_value = False
-                        with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
-                            mock_gu.verificar_usuario.return_value = None
-                            with patch("services.inbound_whatsapp.manejar_registro", return_value=("ok", 200)):
-                                resp = client.post(
-                                    "/webhook",
-                                    data={"From": TWILIO_FROM, "Body": TWILIO_BODY},
-                                    headers={"X-Twilio-Signature": "firma-valida"},
-                                )
+                    with patch("services.inbound_whatsapp.encolar_mensaje") as mock_enc:
+                        resp = client.post(
+                            "/webhook",
+                            data={"From": TWILIO_FROM, "Body": TWILIO_BODY},
+                            headers={"X-Twilio-Signature": "firma-valida"},
+                        )
         finally:
             app.config["TESTING"] = True
         assert resp.status_code == 200
+        mock_enc.assert_called_once()
 
-    def test_usuario_no_registrado_llama_manejar_registro(self, client):
-        """Usuario desconocido → delega a manejar_registro."""
-        with patch("services.inbound_whatsapp.redismanager") as mock_redis:
-            mock_redis.esta_bloqueado.return_value = False
-            with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
-                mock_gu.verificar_usuario.return_value = None
-                with patch("services.inbound_whatsapp.manejar_registro", return_value=("ok", 200)) as mock_reg:
-                    resp = client.post("/webhook", data={"From": TWILIO_FROM, "Body": TWILIO_BODY})
+    def test_encola_numero_y_mensaje_normalizados(self, client):
+        """Webhook encola numero y mensaje en minúsculas."""
+        with patch("services.inbound_whatsapp.encolar_mensaje") as mock_enc:
+            resp = client.post("/webhook", data={"From": TWILIO_FROM, "Body": "  HOLA  "})
         assert resp.status_code == 200
-        mock_reg.assert_called_once()
+        mock_enc.assert_called_once_with(TWILIO_FROM, "hola")
 
-    def test_usuario_registrado_llama_manejador(self, client):
-        """Usuario registrado → delega a ManejadorMensajesRegistrados."""
-        usuario_mock = MagicMock()
-        with patch("services.inbound_whatsapp.redismanager") as mock_redis:
-            mock_redis.esta_bloqueado.return_value = False
-            with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
-                mock_gu.verificar_usuario.return_value = usuario_mock
-                with patch(
-                    "services.inbound_whatsapp.ManejadorMensajesRegistrados.manejar_mensajes_registrados",
-                    return_value=("ok", 200)
-                ) as mock_man:
-                    resp = client.post("/webhook", data={"From": TWILIO_FROM, "Body": TWILIO_BODY})
+    def test_encola_usuario_registrado(self, client):
+        """Usuario registrado → webhook encola igualmente y retorna 200."""
+        with patch("services.inbound_whatsapp.encolar_mensaje") as mock_enc:
+            resp = client.post("/webhook", data={"From": TWILIO_FROM, "Body": TWILIO_BODY})
         assert resp.status_code == 200
-        mock_man.assert_called_once()
+        mock_enc.assert_called_once_with(TWILIO_FROM, TWILIO_BODY.lower())
 
 
 # ─────────────────────────────────────────────
@@ -347,39 +332,25 @@ class TestWebhookMeta:
 
     # ── POST: routing a lógica de negocio ────────────────────
 
-    def test_post_usuario_no_registrado_llama_manejar_registro(self, client):
-        """Mensaje válido de usuario no registrado → llama a manejar_registro."""
+    def test_post_encola_mensaje_y_retorna_200(self, client):
+        """Mensaje válido → encola con numero/mensaje/wamid y retorna 200 inmediatamente."""
         body = meta_body(from_number="34600000000", text="hola")
         sig = make_meta_signature(META_SECRET, body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.META_APP_SECRET = META_SECRET
-            with patch("services.inbound_whatsapp.redismanager") as mock_redis:
-                mock_redis.esta_bloqueado.return_value = False
-                with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
-                    mock_gu.verificar_usuario.return_value = None
-                    with patch("services.inbound_whatsapp.manejar_registro", return_value=("ok", 200)) as mock_reg:
-                        resp = self._post(client, body, signature=sig)
+            with patch("services.inbound_whatsapp.encolar_mensaje") as mock_enc:
+                resp = self._post(client, body, signature=sig)
         assert resp.status_code == 200
-        mock_reg.assert_called_once()
-        # Verificar que el número se normaliza correctamente
-        args = mock_reg.call_args.args
-        assert args[0] == "whatsapp:+34600000000"
+        mock_enc.assert_called_once_with("whatsapp:+34600000000", "hola", None)
 
-    def test_post_usuario_registrado_llama_manejador(self, client):
-        """Mensaje válido de usuario registrado → llama a ManejadorMensajesRegistrados."""
+    def test_post_encola_numero_normalizado(self, client):
+        """El número se formatea como whatsapp:+<numero> al encolar."""
         body = meta_body(from_number="34600000001", text="ver pedido")
         sig = make_meta_signature(META_SECRET, body)
-        usuario_mock = MagicMock()
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.META_APP_SECRET = META_SECRET
-            with patch("services.inbound_whatsapp.redismanager") as mock_redis:
-                mock_redis.esta_bloqueado.return_value = False
-                with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
-                    mock_gu.verificar_usuario.return_value = usuario_mock
-                    with patch(
-                        "services.inbound_whatsapp.ManejadorMensajesRegistrados.manejar_mensajes_registrados",
-                        return_value=("ok", 200)
-                    ) as mock_man:
-                        resp = self._post(client, body, signature=sig)
+            with patch("services.inbound_whatsapp.encolar_mensaje") as mock_enc:
+                resp = self._post(client, body, signature=sig)
         assert resp.status_code == 200
-        mock_man.assert_called_once()
+        call_args = mock_enc.call_args.args
+        assert call_args[0] == "whatsapp:+34600000001"

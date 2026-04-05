@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panchi-Bot — Automatiza tu restaurante con WhatsApp</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/landing/styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Outfit:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@1,9..144,300..900&display=swap" rel="stylesheet" />
@@ -29,10 +29,11 @@
         <span>Panchi<em>Bot</em></span>
       </a>
       <ul class="nav-links">
-        <li><a href="#features">Características</a></li>
-        <li><a href="#demo">Demo</a></li>
+        <li><a href="/por-que-funciona">Por qué funciona</a></li>
+        <li><a href="/about">Nosotros</a></li>
         <li><a href="#pricing">Precios</a></li>
-        <li><a href="#contact" class="nav-cta">Solicitar demo</a></li>
+        <li><a href="#contact" class="nav-cta">Más información</a></li>
+        <li><a href="/demo" class="nav-demo-live">Demo live</a></li>
       </ul>
       <button class="nav-toggle" id="navToggle" aria-label="Abrir menú">
         <span></span><span></span><span></span>
@@ -96,7 +97,7 @@
         <div class="hero-top" data-reveal>
           <div class="hero-badge">
             <span class="badge-pulse"></span>
-            Funciona 24/7 sin que hagas nada
+            Gestión automática de pedidos
           </div>
 
           <h1 class="hero-title">
@@ -124,7 +125,7 @@
             <div class="phone-notch"></div>
             <div class="phone-screen phone-screen--cliente">
               <iframe
-                src="menu-preview.html"
+                src="/landing/menu-preview.html"
                 scrolling="no"
                 tabindex="-1"
                 class="phone-iframe"
@@ -138,18 +139,18 @@
       <!-- STATS -->
       <div class="hero-stats" data-reveal>
         <div class="stat">
-          <strong data-count="300">+300</strong>
-          <span>Pedidos al día</span>
+          <strong>+30%</strong>
+          <span>Pedidos recuperados</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat">
-          <strong>98%</strong>
-          <span>Uptime garantizado</span>
+          <strong>0%</strong>
+          <span>Llamadas perdidas</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat">
-          <strong>3 min</strong>
-          <span>Setup inicial</span>
+          <strong>+20%</strong>
+          <span>Eficiencia operativa</span>
         </div>
       </div>
     </div>
@@ -552,11 +553,11 @@
 
         <div class="pricing-card" data-reveal data-tilt>
           <div class="plan-name">Starter</div>
-          <div class="plan-price"><span class="price-amount">€49</span><span class="price-period">/mes</span></div>
+          <div class="plan-price"><span class="price-amount">€25</span><span class="price-period">/mes</span></div>
           <p class="plan-desc">Perfecto para empezar con pedidos por WhatsApp.</p>
           <ul class="plan-features">
             <li>Bot de pedidos WhatsApp</li>
-            <li>Hasta 150 pedidos/mes</li>
+            <li>3 dispositivos</li>
             <li>Menú web personalizable</li>
             <li>Pagos online (Monei)</li>
             <li class="plan-off">Dashboard avanzado</li>
@@ -568,11 +569,11 @@
         <div class="pricing-card pricing-card--featured" data-reveal data-tilt>
           <div class="plan-badge">Más popular</div>
           <div class="plan-name">Pro</div>
-          <div class="plan-price"><span class="price-amount">€129</span><span class="price-period">/mes</span></div>
+          <div class="plan-price"><span class="price-amount">€60</span><span class="price-period">/mes</span></div>
           <p class="plan-desc">Para restaurantes con volumen y equipo operativo.</p>
           <ul class="plan-features">
             <li>Todo lo de Starter</li>
-            <li>Pedidos ilimitados</li>
+            <li>7 dispositivos</li>
             <li>Dashboard completo (cocina/reparto)</li>
             <li>Tracking en tiempo real</li>
             <li>Métricas e informes</li>
@@ -696,7 +697,7 @@
           <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
             <rect width="32" height="32" rx="8" fill="#1A9D55"/>
             <path d="M16 6C10.477 6 6 10.477 6 16c0 1.89.52 3.66 1.43 5.17L6 26l4.94-1.4A9.94 9.94 0 0016 26c5.523 0 10-4.477 10-10S21.523 6 16 6z" fill="white"/>
-            <path d="M13 12.5c-.3-.7-.6-.7-.9-.7h-.8c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.5 3.1 1.2 3.7.97 4.4.9.7-.07 2.2-.9 2.5-1.76.3-.86.3-1.6.2-1.76-.1-.15-.3-.22-.6-.37-.3-.14-1.8-.9-2.1-1-.3-.1-.5-.14-.7.15-.2.29-.8.97-1 1.17-.2.2-.37.22-.7.07-.3-.14-1.3-.48-2.5-1.55-.92-.82-1.55-1.83-1.73-2.14-.18-.3-.02-.47.13-.62.14-.13.3-.37.45-.55.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.07-.14-.7-1.7-.96-2.33z" fill="#1A9D55"/>
+            <path transform="translate(1, -1.5)" d="M13 12.5c-.3-.7-.6-.7-.9-.7h-.8c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.5 3.1 1.2 3.7.97 4.4.9.7-.07 2.2-.9 2.5-1.76.3-.86.3-1.6.2-1.76-.1-.15-.3-.22-.6-.37-.3-.14-1.8-.9-2.1-1-.3-.1-.5-.14-.7.15-.2.29-.8.97-1 1.17-.2.2-.37.22-.7.07-.3-.14-1.3-.48-2.5-1.55-.92-.82-1.55-1.83-1.73-2.14-.18-.3-.02-.47.13-.62.14-.13.3-.37.45-.55.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.07-.14-.7-1.7-.96-2.33z" fill="#1A9D55"/>
           </svg>
           <span>Panchi<em>Bot</em></span>
         </a>
@@ -706,17 +707,16 @@
         <div class="footer-col">
           <h4>Producto</h4>
           <ul>
-            <li><a href="#features">Características</a></li>
-            <li><a href="#demo">Demo</a></li>
             <li><a href="#pricing">Precios</a></li>
+            <li><a href="/demo">Demo live</a></li>
           </ul>
         </div>
         <div class="footer-col">
           <h4>Empresa</h4>
           <ul>
-            <li><a href="#">Sobre nosotros</a></li>
-            <li><a href="#">Blog</a></li>
-            <li><a href="#">Contacto</a></li>
+            <li><a href="/about">Sobre nosotros</a></li>
+            <li><a href="/por-que-funciona">Por qué funciona</a></li>
+            <li><a href="#contact">Contacto</a></li>
           </ul>
         </div>
         <div class="footer-col">
@@ -736,6 +736,6 @@
     </div>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="/landing/script.js"></script>
 </body>
 </html>
