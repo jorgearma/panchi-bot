@@ -74,7 +74,7 @@ def marcar_salida(reparto_id: int):
         DemoState.marcar_salida_reparto(session.get('demo_session_id', 'default'), reparto_id)
         return jsonify({"ok": True, "mensaje": "Demo: salida marcada"})
     empleado_id = session.get('empleado_id')
-    ok, msg, _ = gestor_dashboard.marcar_salida_reparto(reparto_id)
+    ok, msg = gestor_dashboard.marcar_salida_reparto(reparto_id)
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[REPARTO] Empleado %s sale a entregar reparto %s", empleado_id, reparto_id)
@@ -90,7 +90,7 @@ def marcar_entregado(reparto_id: int):
         DemoState.marcar_entregado(session.get('demo_session_id', 'default'), reparto_id)
         return jsonify({"ok": True, "mensaje": "Demo: entregado"})
     empleado_id = session.get('empleado_id')
-    ok, msg, _ = gestor_dashboard.marcar_entregado(reparto_id)
+    ok, msg = gestor_dashboard.marcar_entregado(reparto_id)
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[REPARTO] Empleado %s entrega reparto %s", empleado_id, reparto_id)

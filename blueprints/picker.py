@@ -132,7 +132,7 @@ def finalizar_picking(picking_id: int):
         DemoState.finalizar_picking(session.get('demo_session_id', 'default'), picking_id)
         return jsonify({"ok": True, "mensaje": "Demo: picking finalizado"})
     picker_id = session.get('empleado_id')
-    ok, msg, _ = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
+    ok, msg = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[PICKING] Empleado %s finaliza picking %s", picker_id, picking_id)

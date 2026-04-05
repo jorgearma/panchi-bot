@@ -401,7 +401,7 @@ class TestBlueprintCocina:
             sess['empleado_id'] = 4
             sess['rol'] = 'picker'
 
-        with patch.object(gestor_dashboard, 'completar_picking', return_value=(True, 'Picking completado', None)):
+        with patch.object(gestor_dashboard, 'completar_picking', return_value=(True, 'Picking completado')):
             resp = client.post('/cocina/preparacion/9/finalizar')
 
         assert resp.status_code == 200
