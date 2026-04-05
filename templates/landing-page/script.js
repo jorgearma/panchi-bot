@@ -445,6 +445,31 @@ document.querySelectorAll('.faq-question').forEach(question => {
 });
 
 /* ============================================================
+   FEATURES GRID — scroll dots (mobile only)
+   ============================================================ */
+function initScrollDots(gridSel, trackId) {
+  const grid  = document.querySelector(gridSel);
+  const track = document.getElementById(trackId);
+  if (!grid || !track) return;
+
+  const dots = track.querySelectorAll('.features-grid-dot');
+
+  function updateDots() {
+    const firstCard = grid.querySelector('[class*="-card"]');
+    const cardWidth = firstCard ? firstCard.offsetWidth + 14 : 1;
+    const index     = Math.round(grid.scrollLeft / cardWidth);
+    dots.forEach((d, i) => d.classList.toggle('active', i === index));
+  }
+
+  grid.addEventListener('scroll', updateDots, { passive: true });
+  updateDots();
+}
+
+initScrollDots('.features-grid',      'featuresTrack');
+initScrollDots('.testimonials-grid',  'testimonialsTrack');
+initScrollDots('.pricing-grid',       'pricingTrack');
+
+/* ============================================================
    Init
    ============================================================ */
 window.addEventListener('DOMContentLoaded', () => {
