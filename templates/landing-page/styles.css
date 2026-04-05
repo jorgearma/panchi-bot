@@ -358,7 +358,7 @@ img { display: block; max-width: 100%; }
   font-size: 1.12rem;
   color: var(--ink-muted);
   max-width: 520px;
-  margin: 0 auto 40px;
+  margin: 0 auto 20px;
   line-height: 1.7;
 }
 
@@ -819,6 +819,7 @@ img { display: block; max-width: 100%; }
 .features {
   padding: 60px 0;
 }
+.features-grid-track { display: none; }
 
 .features-grid {
   display: grid;
@@ -1747,6 +1748,7 @@ img { display: block; max-width: 100%; }
 }
 
 @media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
   .nav-links { display: none; }
   .nav-links.open {
     display: flex;
@@ -1763,7 +1765,7 @@ img { display: block; max-width: 100%; }
   .nav-cta { display: inline-block; margin-top: 8px; text-align: center; }
   .nav-toggle { display: flex; }
 
-  .hero { padding: 120px 0 40px; min-height: auto; }
+  .hero { padding: 72px 0 40px; min-height: auto; }
   .hero-title { font-size: clamp(2rem, 7vw, 2.8rem); }
 
   /* Mobile: copy on top, phones side-by-side below */
@@ -1789,22 +1791,44 @@ img { display: block; max-width: 100%; }
   .hero-stats { gap: 24px; margin-top: 36px; }
   .stat-divider { display: none; }
 
+  .features {
+    overflow: hidden;
+  }
   .features-grid {
     display: flex;
     flex-direction: row;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    gap: 16px;
-    padding-bottom: 16px;
-    /* ocultar scrollbar visualmente */
+    gap: 14px;
+    /* padding lateral: primer card arranca con indent, último card deja peek del siguiente */
+    padding: 8px 24px 20px;
+    margin: 0 -24px;
     scrollbar-width: none;
   }
   .features-grid::-webkit-scrollbar { display: none; }
   .features-grid .feature-card {
-    flex: 0 0 80vw;
-    max-width: 320px;
-    scroll-snap-align: center;
+    flex: 0 0 78vw;
+    max-width: 300px;
+    scroll-snap-align: start;
+  }
+  /* indicador de scroll — track + thumb animado */
+  .features-grid-track {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .features-grid-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: width .3s var(--ease-out), background .3s;
+  }
+  .features-grid-dot.active {
+    width: 20px;
+    border-radius: 4px;
+    background: var(--green);
   }
 
   .how-steps { flex-direction: column; align-items: center; gap: 24px; }
@@ -1818,40 +1842,42 @@ img { display: block; max-width: 100%; }
   .scene-btn .scene-label { display: none; }
   .scene-btn { padding: 10px 14px; }
 
+  .testimonials { overflow: hidden; }
   .testimonials-grid {
     display: flex;
     flex-direction: row;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    gap: 16px;
-    padding-bottom: 16px;
+    gap: 14px;
+    padding: 8px 24px 20px;
+    margin: 0 -24px;
     scrollbar-width: none;
   }
   .testimonials-grid::-webkit-scrollbar { display: none; }
   .testimonials-grid .testimonial-card {
-    flex: 0 0 80vw;
-    max-width: 320px;
-    scroll-snap-align: center;
+    flex: 0 0 78vw;
+    max-width: 300px;
+    scroll-snap-align: start;
   }
 
+  .pricing { overflow: hidden; }
   .pricing-grid {
     display: flex;
     flex-direction: row;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    gap: 16px;
-    padding-bottom: 16px;
-    max-width: none;
-    margin: 0;
+    gap: 14px;
+    padding: 8px 24px 20px;
+    margin: 0 -24px;
     scrollbar-width: none;
   }
   .pricing-grid::-webkit-scrollbar { display: none; }
   .pricing-grid .pricing-card {
-    flex: 0 0 80vw;
-    max-width: 320px;
-    scroll-snap-align: center;
+    flex: 0 0 78vw;
+    max-width: 300px;
+    scroll-snap-align: start;
   }
   .pricing-card--featured { transform: none; }
   .pricing-card--featured:hover { transform: translateY(-4px); }

@@ -82,7 +82,9 @@ class DemoState:
         if raw:
             return json.loads(raw)
         from blueprints.demo_data import get_demo_cola_picker
-        return get_demo_cola_picker()
+        data = get_demo_cola_picker()
+        r.setex(cls._key_cola_picker(session_id), DEMO_TTL, json.dumps(data))
+        return data
 
     @classmethod
     def get_cola_repartidor(cls, session_id: str):
@@ -91,7 +93,9 @@ class DemoState:
         if raw:
             return json.loads(raw)
         from blueprints.demo_data import get_demo_cola_repartidor
-        return get_demo_cola_repartidor()
+        data = get_demo_cola_repartidor()
+        r.setex(cls._key_cola_rep(session_id), DEMO_TTL, json.dumps(data))
+        return data
 
     @classmethod
     def reclamar_picking(cls, session_id: str, picking_id: int):

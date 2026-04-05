@@ -402,7 +402,7 @@ const form      = document.getElementById('ctaForm');
 const success   = document.getElementById('formSuccess');
 const submitBtn = document.getElementById('formSubmit');
 
-form.addEventListener('submit', e => {
+form.addEventListener('submit', async e => {
   e.preventDefault();
   const name  = document.getElementById('formName').value.trim();
   const rest  = document.getElementById('formRestaurant').value.trim();
@@ -422,10 +422,26 @@ form.addEventListener('submit', e => {
   submitBtn.textContent = 'Enviando...';
   submitBtn.disabled = true;
 
-  setTimeout(() => {
-    submitBtn.style.display = 'none';
-    success.style.display   = 'block';
-  }, 1200);
+  try {
+    const res = await fetch('https://formspree.io/f/xzdkyzzj', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: new FormData(form),
+    });
+
+    if (res.ok) {
+      submitBtn.style.display = 'none';
+      success.style.display   = 'block';
+    } else {
+      submitBtn.textContent = 'Solicitar demo gratuita';
+      submitBtn.disabled    = false;
+      alert('Hubo un problema al enviar. Inténtalo de nuevo.');
+    }
+  } catch {
+    submitBtn.textContent = 'Solicitar demo gratuita';
+    submitBtn.disabled    = false;
+    alert('Error de red. Comprueba tu conexión e inténtalo de nuevo.');
+  }
 });
 
 /* ============================================================
@@ -443,6 +459,31 @@ document.querySelectorAll('.faq-question').forEach(question => {
     item.classList.toggle('open', !isOpen);
   });
 });
+
+/* ============================================================
+   FEATURES GRID — scroll dots (mobile only)
+   ============================================================ */
+function initScrollDots(gridSel, trackId) {
+  const grid  = document.querySelector(gridSel);
+  const track = document.getElementById(trackId);
+  if (!grid || !track) return;
+
+  const dots = track.querySelectorAll('.features-grid-dot');
+
+  function updateDots() {
+    const firstCard = grid.querySelector('[class*="-card"]');
+    const cardWidth = firstCard ? firstCard.offsetWidth + 14 : 1;
+    const index     = Math.round(grid.scrollLeft / cardWidth);
+    dots.forEach((d, i) => d.classList.toggle('active', i === index));
+  }
+
+  grid.addEventListener('scroll', updateDots, { passive: true });
+  updateDots();
+}
+
+initScrollDots('.features-grid',      'featuresTrack');
+initScrollDots('.testimonials-grid',  'testimonialsTrack');
+initScrollDots('.pricing-grid',       'pricingTrack');
 
 /* ============================================================
    Init
