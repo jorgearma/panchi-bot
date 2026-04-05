@@ -106,16 +106,16 @@
           </h1>
 
           <p class="hero-subtitle">
-            Tus clientes piden por WhatsApp, pagan en segundos, y tu restaurante funciona solo.
+            <span class="hide-mobile">Tus clientes piden por WhatsApp, pagan en segundos, y tu restaurante funciona solo.</span>
             Cero apps nuevas. Cero teléfonos sonando. Cero complicaciones.
           </p>
 
           <div class="hero-actions">
-            <a href="#demo" class="btn btn-primary btn-lg">
+            <a href="/demo" class="btn btn-primary btn-lg">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               Ver demo en vivo
             </a>
-            <a href="#contact" class="btn btn-ghost btn-lg">Habla con ventas</a>
+            <a href="#contact" class="btn btn-ghost btn-lg hide-mobile">Habla con ventas</a>
           </div>
         </div>
 
@@ -253,6 +253,17 @@
           </ul>
         </div>
 
+      </div>
+      <div class="features-grid-track" id="featuresTrack" aria-hidden="true">
+        <span class="features-grid-dot active"></span>
+        <span class="features-grid-dot"></span>
+        <span class="features-grid-dot"></span>
+        <span class="features-grid-dot"></span>
+      </div>
+      <div class="features-grid-track" id="pricingTrack" aria-hidden="true">
+        <span class="features-grid-dot active"></span>
+        <span class="features-grid-dot"></span>
+        <span class="features-grid-dot"></span>
       </div>
     </div>
   </section>
@@ -536,6 +547,11 @@
           </div>
         </div>
       </div>
+      <div class="features-grid-track" id="testimonialsTrack" aria-hidden="true">
+        <span class="features-grid-dot active"></span>
+        <span class="features-grid-dot"></span>
+        <span class="features-grid-dot"></span>
+      </div>
     </div>
   </section>
 
@@ -649,25 +665,25 @@
         <form class="cta-form" id="ctaForm" novalidate>
           <div class="form-group">
             <label for="formName">Nombre</label>
-            <input type="text" id="formName" placeholder="Tu nombre" required />
+            <input type="text" id="formName" name="nombre" placeholder="Tu nombre" required />
           </div>
           <div class="form-group">
             <label for="formRestaurant">Restaurante</label>
-            <input type="text" id="formRestaurant" placeholder="Nombre del restaurante" required />
+            <input type="text" id="formRestaurant" name="restaurante" placeholder="Nombre del restaurante" required />
           </div>
           <div class="form-row">
             <div class="form-group">
               <label for="formPhone">Teléfono / WhatsApp</label>
-              <input type="tel" id="formPhone" placeholder="+34 600 000 000" required />
+              <input type="tel" id="formPhone" name="telefono" placeholder="+34 600 000 000" required />
             </div>
             <div class="form-group">
               <label for="formEmail">Email</label>
-              <input type="email" id="formEmail" placeholder="tu@restaurante.es" required />
+              <input type="email" id="formEmail" name="email" placeholder="tu@restaurante.es" required />
             </div>
           </div>
           <div class="form-group">
             <label for="formMsg">¿Cuántos pedidos gestionas al día?</label>
-            <select id="formMsg">
+            <select id="formMsg" name="pedidos_dia">
               <option value="">Selecciona...</option>
               <option value="<50">Menos de 50</option>
               <option value="50-150">50 – 150</option>
