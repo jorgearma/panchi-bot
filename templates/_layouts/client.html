@@ -1,0 +1,31 @@
+{% extends '_base/base.html' %}
+
+{% block head_meta %}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+{% endblock %}
+
+{% block title %}{% block client_title %}Panchi{% endblock %}{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800;900&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
+  {% block client_extra_head %}{% endblock %}
+{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/client.css') }}">
+  {% block client_styles %}{% endblock %}
+{% endblock %}
+
+{% block body_attrs %}class="{% block client_body_class %}{% endblock %}"{% endblock %}
+
+{% block body %}
+  {% block client_body %}{% endblock %}
+{% endblock %}
+
+{% block scripts %}
+  {% block client_scripts %}{% endblock %}
+{% endblock %}

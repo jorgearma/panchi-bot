@@ -2,11 +2,11 @@ import json
 import logging
 
 from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from utils.es_pregunta import es_pregunta
 from container import gestor_pedidos
 from services.token_service import generar_enlace
-from services.whatsapp_service import enviar_mensaje_whatsapp
-from services.maps_service import geocodificar_direccion
+from maps_module import geocodificar_direccion
 from utils.menu_opciones import menu, mostrar_menu
 from utils.text_utils import limpiar_texto
 from schemas.twilio import PedidoInput
@@ -55,8 +55,8 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
                             gestor_pedidos.actualizar_estado(datos.id_pedido_actual, EstadoPedido.PENDIENTE)
                             return "❌ Ocurrió un error al procesar la opción. Intente nuevamente."
 
-                    except Exception as e:
-                        logger.error("Error al generar el enlace: %s", e)
+                    except (ValueError, SQLAlchemyError, OperationalError) as e:
+                        logger.error("Error al generar el enlace [%s]: %s", type(e).__name__, e)
                         return "❌ Error inesperado. Intente nuevamente."
                 return mensaje_respuesta
 
@@ -64,20 +64,11 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
     return f"❌Comando no reconocido \n▪️ Por favor, elige una *opción*  {menu_comando_no_reconocido}\nEscribe el *Número* correspondiente para elegir."
 
 
-def confirmar_carrito(
-    pedido_id_redis: str,
-    name: str,
-    token: str,
-    user_id,
-    numero: str,
-    direccion: str,
-    productos_recibidos: list,
-    cache,
-    gestor_pedidos,
-    gestor_productos,
-    public_url: str,
-) -> tuple:
-    """Guarda el carrito validado, calcula su total y lo deja listo para confirmar."""
+def _validar_productos(productos_recibidos: list, gestor_productos) -> tuple:
+    """Valida cada producto contra la BD y construye la lista con precios confirmados.
+
+    Devuelve (True, lista_productos) o (False, mensaje_error).
+    """
     productos = []
     total = 0.0
 
@@ -124,7 +115,27 @@ def confirmar_carrito(
         })
         total += precio_total
 
-    total = round(total, 2)
+    return True, (productos, round(total, 2))
+
+
+def confirmar_carrito(
+    pedido_id_redis: str,
+    name: str,
+    token: str,
+    user_id,
+    numero: str,
+    direccion: str,
+    productos_recibidos: list,
+    cache,
+    gestor_pedidos,
+    gestor_productos,
+    public_url: str,
+) -> tuple:
+    """Guarda el carrito validado, calcula su total y lo deja listo para confirmar."""
+    ok, resultado = _validar_productos(productos_recibidos, gestor_productos)
+    if not ok:
+        return False, resultado
+    productos, total = resultado
 
     pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
     if pedido_activo is None:

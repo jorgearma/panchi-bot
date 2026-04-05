@@ -42,32 +42,32 @@ class TestMenuToken:
 
     def test_token_expirado_retorna_403(self, client):
         """Token no encontrado en Redis → 403."""
-        with patch("blueprints.menu.navegacion.redismanager") as mock_redis:
+        with patch("services.menu_session.redismanager") as mock_redis:
             mock_redis.get.return_value = None
             resp = self._get(client)
         assert resp.status_code == 403
 
     def test_datos_redis_invalidos_retorna_400(self, client):
         """Datos en Redis con JSON mal formado → 400."""
-        with patch("blueprints.menu.navegacion.redismanager") as mock_redis:
+        with patch("services.menu_session.redismanager") as mock_redis:
             mock_redis.get.return_value = "esto-no-es-json-{"
             resp = self._get(client)
         assert resp.status_code == 400
 
     def test_estado_enlace_renderiza_quiniela(self, client):
         """Token válido + pedido en ENLACE → 200 con quiniela.html."""
-        with patch("blueprints.menu.navegacion.redismanager") as mock_redis:
+        with patch("services.menu_session.redismanager") as mock_redis:
             mock_redis.get.return_value = json.dumps(USER_DATA)
-            with patch("blueprints.menu.navegacion.gestor_pedidos") as mock_gp:
+            with patch("services.menu_session.gestor_pedidos") as mock_gp:
                 mock_gp.obtener_pedido_mas_reciente.return_value = make_pedido(EstadoPedido.ENLACE)
                 resp = self._get(client)
         assert resp.status_code == 200
 
     def test_estado_enlace2_redirige_a_confirmacion(self, client):
         """Token válido + pedido en ENLACE2 → redirige a /confirmacion_pago."""
-        with patch("blueprints.menu.navegacion.redismanager") as mock_redis:
+        with patch("services.menu_session.redismanager") as mock_redis:
             mock_redis.get.return_value = json.dumps(USER_DATA)
-            with patch("blueprints.menu.navegacion.gestor_pedidos") as mock_gp:
+            with patch("services.menu_session.gestor_pedidos") as mock_gp:
                 mock_gp.obtener_pedido_mas_reciente.return_value = make_pedido(EstadoPedido.ENLACE2)
                 resp = self._get(client)
         assert resp.status_code == 302
@@ -75,18 +75,18 @@ class TestMenuToken:
 
     def test_sin_pedido_activo_retorna_404(self, client):
         """Token válido pero usuario sin pedido activo → 404."""
-        with patch("blueprints.menu.navegacion.redismanager") as mock_redis:
+        with patch("services.menu_session.redismanager") as mock_redis:
             mock_redis.get.return_value = json.dumps(USER_DATA)
-            with patch("blueprints.menu.navegacion.gestor_pedidos") as mock_gp:
+            with patch("services.menu_session.gestor_pedidos") as mock_gp:
                 mock_gp.obtener_pedido_mas_reciente.return_value = None
                 resp = self._get(client)
         assert resp.status_code == 404
 
     def test_estado_desconocido_retorna_400(self, client):
         """Token válido + pedido en estado no reconocido → 400."""
-        with patch("blueprints.menu.navegacion.redismanager") as mock_redis:
+        with patch("services.menu_session.redismanager") as mock_redis:
             mock_redis.get.return_value = json.dumps(USER_DATA)
-            with patch("blueprints.menu.navegacion.gestor_pedidos") as mock_gp:
+            with patch("services.menu_session.gestor_pedidos") as mock_gp:
                 mock_gp.obtener_pedido_mas_reciente.return_value = make_pedido(EstadoPedido.PAGADO)
                 resp = self._get(client)
         assert resp.status_code == 400
@@ -115,13 +115,13 @@ class TestConfirmacionPago:
         assert resp.status_code == 404
 
     def test_pedido_expirado_retorna_404(self, client):
-        with patch("blueprints.menu.sesion.cache") as mock_cache:
+        with patch("services.menu_session.cache") as mock_cache:
             mock_cache.get.return_value = None
             resp = client.get("/confirmacion_pago?pedido_id=no-existe")
         assert resp.status_code == 404
 
     def test_pedido_valido_retorna_200(self, client):
-        with patch("blueprints.menu.sesion.cache") as mock_cache:
+        with patch("services.menu_session.cache") as mock_cache:
             mock_cache.get.return_value = json.dumps(PEDIDO_CACHE)
             resp = client.get("/confirmacion_pago?pedido_id=abc123")
         assert resp.status_code == 200

@@ -131,3 +131,81 @@
     </button>
   </div>
 {% endmacro %}
+
+
+{# ─── CLIENT UI: HERO HEADER ─────────────────────────────────────────────
+   Cabecera reutilizable para las vistas de cliente (menú, confirmación, seguimiento).
+
+   Parámetros:
+     nombre      — texto para el saludo (ej. 'Juan')
+     direccion   — calle mostrada en el chip inferior
+     badge_text  — texto corto del badge (default ✓ Envío gratis)
+     icon        — emoji/icono para la dirección (default 📍)
+#}
+{% macro client_header(nombre, direccion, badge_text='✓ Envío gratis', icon='📍') %}
+  <header class="conf-header">
+    <div class="conf-header__row1">
+      <span class="conf-header__name">Hola, {{ nombre }} 👋</span>
+      {% if badge_text %}<span class="conf-header__badge">{{ badge_text }}</span>{% endif %}
+    </div>
+    <div class="conf-header__addr">
+      <div class="conf-header__addr-icon">{{ icon }}</div>
+      <div class="conf-header__addr-text">
+        <span class="conf-header__addr-label">Dirección de entrega</span>
+        <span class="conf-header__addr-street">{{ direccion }}</span>
+      </div>
+    </div>
+  </header>
+{% endmacro %}
+
+
+{# ─── CLIENT UI: PILL ────────────────────────────────────────────────────
+   Pastilla de estado/acento.
+#}
+{% macro pill(texto, tone='success') %}
+  {% set _palette = {
+    'success': 'bg-emerald-100 text-emerald-800',
+    'warning': 'bg-amber-100 text-amber-800',
+    'accent':  'bg-orange-100 text-orange-800',
+    'muted':   'bg-slate-100 text-slate-600'
+  } %}
+  {% set _classes = _palette.get(tone, _palette['muted']) %}
+  <span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold {{ _classes }}">{{ texto }}</span>
+{% endmacro %}
+
+
+{# ─── CLIENT UI: CTA BAR ─────────────────────────────────────────────────
+   Action bar fija inferior con botón primario + secundario opcional.
+
+   Parámetros:
+     primary_label / primary_action — texto y JS/URL para el CTA principal
+     secondary_label / secondary_action — opcional; aparece a la izquierda
+     back_label / back_action — texto y acción para enlace de volver (opcional)
+#}
+{% macro cta_bar(primary_label, primary_action, secondary_label='', secondary_action='', back_label='', back_action='') %}
+  <div class="conf-bar">
+    <div class="conf-bar__btns">
+      {% if secondary_label and secondary_action %}
+        <button class="conf-bar__online" onclick="{{ secondary_action }}">
+          <span class="conf-bar__btn-icon">💳</span>
+          <div class="conf-bar__btn-body">
+            <span class="conf-bar__btn-title">{{ secondary_label }}</span>
+            <span class="conf-bar__btn-sub">Online</span>
+          </div>
+          <span class="conf-bar__btn-arrow">›</span>
+        </button>
+      {% endif %}
+      <button class="conf-bar__cash" onclick="{{ primary_action }}">
+        <span class="conf-bar__btn-icon">🏠</span>
+        <div class="conf-bar__btn-body">
+          <span class="conf-bar__btn-title">{{ primary_label }}</span>
+          {% if not secondary_label %}<span class="conf-bar__btn-sub">Continuar</span>{% endif %}
+        </div>
+        <span class="conf-bar__btn-arrow">›</span>
+      </button>
+    </div>
+    {% if back_label and back_action %}
+      <button class="conf-bar__back" onclick="{{ back_action }}">{{ back_label }}</button>
+    {% endif %}
+  </div>
+{% endmacro %}

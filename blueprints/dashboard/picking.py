@@ -4,7 +4,7 @@ from flask import jsonify, request, session
 
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard
-from blueprints.dashboard._common import _ok, _err, _notificar
+from blueprints.dashboard._common import _ok, _err
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +67,7 @@ def register(bp):
     @requiere_rol('manager', 'admin')
     def completar_picking(picking_id: int):
         """Cierra el picking y notifica al cliente que el pedido ya va en camino."""
-        ok, msg, telefono = gestor_dashboard.completar_picking(picking_id)
+        ok, msg = gestor_dashboard.completar_picking(picking_id)
         if not ok:
             return _err(msg)
-        _notificar(telefono, "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦")
         return jsonify({"ok": True, "mensaje": msg})

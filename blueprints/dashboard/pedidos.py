@@ -4,7 +4,7 @@ from flask import jsonify, render_template, request, session
 
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard, gestor_pedidos
-from blueprints.dashboard._common import _ok, _err, _notificar, _MOTIVOS_LABEL
+from blueprints.dashboard._common import _ok, _err
 
 logger = logging.getLogger(__name__)
 
@@ -79,15 +79,9 @@ def register(bp):
         if not motivo:
             return _err("Falta el campo: motivo")
         empleado_id = session.get('empleado_id')
-        ok, msg, telefono = gestor_pedidos.cancelar_pedido(pedido_id, motivo, empleado_id)
+        ok, msg = gestor_pedidos.cancelar_pedido(pedido_id, motivo, empleado_id)
         if not ok:
             return _err(msg)
-        motivo_label = _MOTIVOS_LABEL.get(motivo, motivo)
-        _notificar(
-            telefono,
-            f"❌ Tu pedido #{pedido_id} ha sido cancelado ({motivo_label}). "
-            "Si tienes alguna duda llámanos. Disculpa las molestias.",
-        )
         return jsonify({"ok": True, "mensaje": msg})
 
     @bp.route("/dashboard/pedido/<int:pedido_id>/item/<int:detalle_id>/eliminar", methods=["POST"])

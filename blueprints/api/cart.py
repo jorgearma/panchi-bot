@@ -1,5 +1,7 @@
+import json
 import uuid
 import logging
+from urllib.parse import unquote
 
 import config
 from flask import jsonify, request
@@ -11,6 +13,18 @@ from controllers.pedido import confirmar_carrito
 logger = logging.getLogger(__name__)
 
 
+def _user_id_del_token(token: str):
+    """Devuelve el id del usuario propietario del token, o None si no se puede leer."""
+    try:
+        raw = cache.get(token)
+        if not raw:
+            return None
+        datos = json.loads(unquote(raw if isinstance(raw, str) else raw.decode()))
+        return datos.get("id")
+    except Exception:
+        return None
+
+
 def register(bp):
     """Registra las rutas de confirmación y recuperación del carrito."""
     @bp.route('/api/confirmacion', methods=['POST'])
@@ -20,15 +34,21 @@ def register(bp):
         logger.debug("Datos recibidos en confirmacion: %s", data)
 
         token = data.get("token", "")
-        if not token or not cache.get(token):
+        token_user_id = _user_id_del_token(token)
+        if not token or not token_user_id:
             return jsonify({"error": "Sesión inválida o expirada"}), 401
+
+        post_user_id = data.get("userId")
+        if str(post_user_id) != str(token_user_id):
+            logger.warning("Token-userId mismatch en /api/confirmacion: token=%s post=%s", token_user_id, post_user_id)
+            return jsonify({"error": "No autorizado"}), 403
 
         pedido_id_redis = str(uuid.uuid4())
         success, result = confirmar_carrito(
             pedido_id_redis=pedido_id_redis,
             name=data.get("name", "Nombre no especificado"),
             token=data.get("token", ""),
-            user_id=data.get("userId", "ID no especificado"),
+            user_id=token_user_id,
             numero=data.get("numero", "Numero no especificado"),
             direccion=data.get("direccion", "Dirección no especificada"),
             productos_recibidos=data.get("productos", []),
@@ -48,14 +68,16 @@ def register(bp):
         """Revierte un pedido en confirmación para que el usuario vuelva al menú."""
         data = request.json
         token = data.get("token", "")
-        if not token or not cache.get(token):
+        token_user_id = _user_id_del_token(token)
+        if not token or not token_user_id:
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
-        user_id = data.get("userID")
-        if not user_id:
-            return jsonify({"error": "Usuario no identificado"}), 400
+        post_user_id = data.get("userID")
+        if str(post_user_id) != str(token_user_id):
+            logger.warning("Token-userId mismatch en /api/volver_al_menu: token=%s post=%s", token_user_id, post_user_id)
+            return jsonify({"error": "No autorizado"}), 403
 
-        pedido = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
+        pedido = gestor_pedidos.obtener_pedido_mas_reciente(token_user_id)
         if not pedido:
             return jsonify({"error": "Pedido no encontrado"}), 404
 

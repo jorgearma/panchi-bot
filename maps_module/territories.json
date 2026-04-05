@@ -1,0 +1,89 @@
+{
+  "territories": [
+    {
+      "name": "tarancon",
+      "locality": "Tarancón",
+      "region": "Cuenca",
+      "country": "Spain",
+      "postal_code": "16400",
+      "polygon": [
+        [-3.019209905495245, 40.01775348398729],
+        [-3.008857569574019, 40.01933348021197],
+        [-2.9983947104945514, 40.01594772921979],
+        [-2.9985052336542424, 40.012138558560025],
+        [-3.0010472663179826, 40.00993760749759],
+        [-3.0011946305308754, 40.007256866114204],
+        [-3.0001630810435245, 40.00412449808081],
+        [-2.9960368830968775, 40.00237482454909],
+        [-2.9979894589105527, 39.999609120097006],
+        [-3.018694130751527, 40.00178218302548],
+        [-3.0234834676546996, 40.00793411598124],
+        [-3.0245150171406863, 40.017358479214664],
+        [-3.0191362233887844, 40.01775348398729]
+      ],
+      "valid_address_types": ["street_address", "premise", "subpremise"],
+      "excluded_result_types": ["locality", "administrative_area_level_1", "administrative_area_level_2", "country", "postal_code"],
+      "excluded_addresses": [
+        "Tarancón, Cuenca, Spain",
+        "Cuenca, Spain"
+      ],
+      "normalizations": [
+        {
+          "pattern": "\\bpaseo\\s+de\\s+la\\s+estacion\\b|\\bpaseo\\s+la\\s+estacion\\b",
+          "replacement": "paseo estación",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bportal\\b",
+          "replacement": "",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bc/\\s*|\\bclle\\b|\\bcl\\b(?=\\s)",
+          "replacement": "calle ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bavda\\.?\\b|\\bavd\\.?\\b|\\bav\\.\\s",
+          "replacement": "avenida ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bpza\\.?\\b|\\bpl\\.\\s",
+          "replacement": "plaza ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bpso\\.?\\b",
+          "replacement": "paseo ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bcno\\.?\\b",
+          "replacement": "camino ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\bglta\\.?\\b",
+          "replacement": "glorieta ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\brdа\\.?\\b|\\brda\\.?\\b",
+          "replacement": "ronda ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\btrav\\.?\\b",
+          "replacement": "travesía ",
+          "flags": "IGNORECASE"
+        },
+        {
+          "pattern": "\\s{2,}",
+          "replacement": " ",
+          "flags": "IGNORECASE"
+        }
+      ]
+    }
+  ]
+}

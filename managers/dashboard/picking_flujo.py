@@ -249,12 +249,14 @@ class GestorPickingFlujoMixin:
                         _s.close()
                 Thread(target=_actualizar_disponibilidad_picker, daemon=True).start()
 
-            telefono = pedido.TelefonoEntrega if pedido else None
-            return True, "Picking completado", telefono
+            # TODO: reactivar cuando se decida notificar al cliente en este estado
+            # telefono = pedido.TelefonoEntrega if pedido else None
+            # _notificar(telefono, "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦")
+            return True, "Picking completado"
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error completando picking %s: %s", picking_id, e)
-            return False, "Error de base de datos", None
+            return False, "Error de base de datos"
 
     def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None, producto_sustituto_id: int = None, picker_id: int | None = None) -> tuple:
         """Updates a single picking item state."""

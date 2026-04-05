@@ -1,22 +1,13 @@
 import logging
-from flask import Blueprint, jsonify
+
+from flask import Blueprint
 
 from blueprints.auth import requiere_rol
-from managers.gestor_metricas import GestorMetricas
+from blueprints._metricas_common import _ok, _err
+from container import gestor_metricas
 
 logger = logging.getLogger(__name__)
 blueprint_metricas_operacion = Blueprint('metricas_operacion', __name__)
-gestor_metricas = GestorMetricas()
-
-
-def _ok(data):
-    """Envuelve la respuesta operativa en un payload estándar de éxito."""
-    return jsonify({'ok': True, 'data': data})
-
-
-def _err(msg, code=400):
-    """Devuelve un error uniforme para endpoints operativos."""
-    return jsonify({'ok': False, 'error': msg}), code
 
 
 @blueprint_metricas_operacion.route('/metricas/operacion/resumen')

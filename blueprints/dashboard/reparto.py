@@ -4,7 +4,7 @@ from flask import jsonify, request, session
 
 from blueprints.auth import requiere_rol
 from container import gestor_dashboard
-from blueprints.dashboard._common import _ok, _err, _notificar
+from blueprints.dashboard._common import _ok, _err
 
 logger = logging.getLogger(__name__)
 
@@ -42,18 +42,16 @@ def register(bp):
     @requiere_rol('manager', 'admin')
     def marcar_salida(reparto_id: int):
         """Marca el reparto como salido y avisa al cliente."""
-        ok, msg, telefono = gestor_dashboard.marcar_salida_reparto(reparto_id)
+        ok, msg = gestor_dashboard.marcar_salida_reparto(reparto_id)
         if not ok:
             return _err(msg)
-        _notificar(telefono, "🛵 Tu pedido está en camino. ¡El repartidor ya va hacia tu dirección!")
         return jsonify({"ok": True, "mensaje": msg})
 
     @bp.route("/dashboard/reparto/<int:reparto_id>/entregar", methods=["POST"])
     @requiere_rol('manager', 'admin')
     def marcar_entregado(reparto_id: int):
         """Marca el reparto como entregado y cierra la comunicación con el cliente."""
-        ok, msg, telefono = gestor_dashboard.marcar_entregado(reparto_id)
+        ok, msg = gestor_dashboard.marcar_entregado(reparto_id)
         if not ok:
             return _err(msg)
-        _notificar(telefono, "🙌 ¡Tu pedido ha sido entregado! Gracias por tu compra. ¡Hasta la próxima!")
         return jsonify({"ok": True, "mensaje": msg})
