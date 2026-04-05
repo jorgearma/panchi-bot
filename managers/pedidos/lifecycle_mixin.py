@@ -30,16 +30,33 @@ class GestorPedidosLifecycleMixin:
             logger.error("Error al iniciar el pedido: %s", error)
             raise
 
-    def guardar_enlace(self, pedido_id, enlace):
-        """Guarda el enlace asociado a un pedido."""
-        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-        if pedido:
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type((SQLAlchemyError, OperationalError)),
+    )
+    def iniciar_enlace(self, pedido_id: int, enlace: str) -> bool:
+        """Atomic: transition to ENLACE + save link in one commit.
+
+        Reemplaza la secuencia actualizar_estado(ENLACE) + guardar_enlace que
+        era vulnerable a dejar el pedido en ENLACE sin enlace si el segundo
+        commit fallaba.
+        """
+        try:
+            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido:
+                logger.warning("iniciar_enlace: pedido %s no encontrado", pedido_id)
+                return False
             pedido.enlace = enlace
+            if not self._set_estado(pedido, EstadoPedido.ENLACE):
+                return False
             self.session.commit()
-            logger.info("Enlace guardado en pedido %s", pedido_id)
+            logger.info("ENLACE_INICIADO pedido_id=%s", pedido_id)
             return True
-        logger.warning("No se encontró un pedido con el ID proporcionado.")
-        return False
+        except (SQLAlchemyError, OperationalError) as error:
+            self.session.rollback()
+            logger.error("Error al iniciar enlace pedido %s: %s", pedido_id, error)
+            raise
 
     @retry(
         stop=stop_after_attempt(3),
