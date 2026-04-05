@@ -42,21 +42,22 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      font-family: var(--font-body);
-      font-size: .8rem;
-      font-weight: 600;
-      letter-spacing: .12em;
-      text-transform: uppercase;
+      font-family: 'Fraunces', serif;
+      font-style: italic;
+      font-size: 1.25rem;
+      font-weight: 400;
+      letter-spacing: .02em;
+      text-transform: none;
       color: var(--green);
+      animation: eyebrow-glow 2s ease-out 1 forwards;
       margin-bottom: 24px;
     }
-    .about-eyebrow::before {
-      content: '';
-      display: block;
-      width: 24px; height: 2px;
-      background: var(--green);
-      border-radius: 2px;
+    @keyframes eyebrow-glow {
+      0%   { text-shadow: none; }
+      40%  { text-shadow: 0 0 12px rgba(26,157,85,.55), 0 0 24px rgba(26,157,85,.2); }
+      100% { text-shadow: none; }
     }
+    .about-eyebrow::before { display: none; }
 
     .about-hero h1 {
       font-family: var(--font-display);
@@ -281,10 +282,10 @@
     }
     .value-card:hover { background: rgba(255,255,255,.09); }
     .value-number {
-      font-family: var(--font-serif);
+      font-family: var(--font-display);
       font-size: 3.5rem;
-      font-style: italic;
-      font-weight: 300;
+      font-style: normal;
+      font-weight: 200;
       color: var(--green);
       line-height: 1;
       margin-bottom: 16px;
@@ -445,24 +446,56 @@ Para acercar esa tecnología a negocios pequeños y medianos, sin comisiones abu
               <div class="timeline-year">2015</div>
               <div class="timeline-track"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
               <div class="timeline-content">
-                <strong>10 años en el sector del reparto</strong>
-                <p>Trabajando en plataformas logísticas, almacenes y marketplaces. Viendo el sistema desde dentro.</p>
+                <strong>Dentro del reparto</strong>
+                <p>Aprendiendo cómo realmente funcionan los pedidos.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-year">2019</div>
+              <div class="timeline-track"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
+              <div class="timeline-content">
+                <strong>Detectando el problema</strong>
+                <p>Dependencia de plataformas y pérdida de margen.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-year">2021</div>
+              <div class="timeline-track"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
+              <div class="timeline-content">
+                <strong>Validando la necesidad</strong>
+                <p>Negocios sin herramientas, operando con llamadas.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-year">2023</div>
+              <div class="timeline-track"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
+              <div class="timeline-content">
+                <strong>Construyendo la solución</strong>
+                <p>Sistema directo, simple y sin intermediarios.</p>
               </div>
             </div>
             <div class="timeline-item">
               <div class="timeline-year">2024</div>
               <div class="timeline-track"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
               <div class="timeline-content">
-                <strong>Primer despliegue</strong>
-                <p>Canal directo por WhatsApp con pagos integrados. Sin ceder un euro a plataformas de terceros.</p>
+                <strong>Lanzamiento</strong>
+                <p>Pedidos por WhatsApp + pagos integrados.</p>
               </div>
             </div>
             <div class="timeline-item">
               <div class="timeline-year">2025</div>
               <div class="timeline-track"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
               <div class="timeline-content">
-                <strong>Abierto a la comunidad</strong>
-                <p>Dashboard completo, panel de reparto y métricas en tiempo real. Disponible para cualquier negocio.</p>
+                <strong>Plataforma completa</strong>
+                <p>Operaciones, reparto y control en tiempo real.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-year">2026</div>
+              <div class="timeline-track"><div class="timeline-dot"></div><div class="timeline-line"></div></div>
+              <div class="timeline-content">
+                <strong>Expansión</strong>
+                <p>Tecnología lista para cualquier negocio.</p>
               </div>
             </div>
           </div>
@@ -471,8 +504,9 @@ Para acercar esa tecnología a negocios pequeños y medianos, sin comisiones abu
         <div class="origin-aside">
           <div class="quote-block">
             <blockquote>
-              "Si Glovo se queda el 30% de cada pedido, en un mes te ha cobrado
-              más que lo que cuesta este sistema en un año entero."
+              "Panchi nace de una necesidad real detectada en el sector del delivery: pequeños y medianos negocios sin herramientas para gestionar pedidos de forma eficiente.
+
+Tras trabajar directamente en el entorno operativo del reparto, entendí que el problema no era la falta de demanda, sino la falta de sistemas."
             </blockquote>
             <div class="quote-author">
               <div class="quote-avatar">PB</div>
