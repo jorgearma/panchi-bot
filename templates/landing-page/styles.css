@@ -256,7 +256,7 @@ img { display: block; max-width: 100%; }
    HERO
    ============================================================ */
 .hero {
-  padding: 140px 0 60px;
+  padding: 100px 0 60px;
   position: relative;
   overflow: visible;
   min-height: 100vh;
@@ -1789,10 +1789,26 @@ img { display: block; max-width: 100%; }
   .hero-stats { gap: 24px; margin-top: 36px; }
   .stat-divider { display: none; }
 
-  .features-grid { grid-template-columns: 1fr; }
+  .features-grid {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 16px;
+    padding-bottom: 16px;
+    /* ocultar scrollbar visualmente */
+    scrollbar-width: none;
+  }
+  .features-grid::-webkit-scrollbar { display: none; }
+  .features-grid .feature-card {
+    flex: 0 0 80vw;
+    max-width: 320px;
+    scroll-snap-align: center;
+  }
 
   .how-steps { flex-direction: column; align-items: center; gap: 24px; }
-  .how-connector { transform: rotate(90deg); }
+  .how-connector { transform: rotate(90deg); padding-top: 0; }
 
   .scene-content { grid-template-columns: 1fr; gap: 28px; }
   .phone-mockup-wrap { order: -1; }
@@ -1802,9 +1818,41 @@ img { display: block; max-width: 100%; }
   .scene-btn .scene-label { display: none; }
   .scene-btn { padding: 10px 14px; }
 
-  .testimonials-grid { grid-template-columns: 1fr; }
+  .testimonials-grid {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 16px;
+    padding-bottom: 16px;
+    scrollbar-width: none;
+  }
+  .testimonials-grid::-webkit-scrollbar { display: none; }
+  .testimonials-grid .testimonial-card {
+    flex: 0 0 80vw;
+    max-width: 320px;
+    scroll-snap-align: center;
+  }
 
-  .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin: 0 auto; }
+  .pricing-grid {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 16px;
+    padding-bottom: 16px;
+    max-width: none;
+    margin: 0;
+    scrollbar-width: none;
+  }
+  .pricing-grid::-webkit-scrollbar { display: none; }
+  .pricing-grid .pricing-card {
+    flex: 0 0 80vw;
+    max-width: 320px;
+    scroll-snap-align: center;
+  }
   .pricing-card--featured { transform: none; }
   .pricing-card--featured:hover { transform: translateY(-4px); }
 
