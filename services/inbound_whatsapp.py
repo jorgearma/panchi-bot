@@ -85,6 +85,7 @@ def extraer_mensajes_meta(data: dict) -> list:
             result.append({
                 'numero': f"whatsapp:+{message['from']}",
                 'mensaje': message['text']['body'].lower(),
+                'wamid': message.get('id'),
             })
         elif msg_type == 'interactive':
             interactive = message.get('interactive', {}) or {}
@@ -97,7 +98,11 @@ def extraer_mensajes_meta(data: dict) -> list:
                 texto = "no"
             else:
                 continue
-            result.append({'numero': f"whatsapp:+{message['from']}", 'mensaje': texto})
+            result.append({
+                'numero': f"whatsapp:+{message['from']}",
+                'mensaje': texto,
+                'wamid': message.get('id'),
+            })
     return result
 
 
@@ -133,6 +138,33 @@ def enrutar_mensaje(numero_cliente: str, mensaje_cliente: str):
         logger.exception("Error procesando mensaje de %s:", numero_cliente)
         enviar_mensaje_whatsapp(_MSG_ERROR_PROCESANDO, numero_cliente)
         return jsonify({"error": "Error procesando el mensaje"}), 500
+
+
+# ── Cola asíncrona ───────────────────────────────────────────────────────────
+
+def _job_procesar_mensaje(numero: str, mensaje: str) -> None:
+    """Job ejecutado por el worker RQ.
+
+    Importa la app de forma lazy para evitar imports circulares y crea el
+    contexto Flask que jsonify() y la sesión de BD necesitan.
+    """
+    from main import app
+    with app.app_context():
+        enrutar_mensaje(numero, mensaje)
+
+
+def encolar_mensaje(numero: str, mensaje: str, wamid: str | None = None) -> None:
+    """Descarta duplicados por wamid y encola el mensaje para procesamiento asíncrono.
+
+    El webhook llama a esta función y devuelve 200 de inmediato. El worker
+    RQ ejecuta _job_procesar_mensaje en background.
+    """
+    if wamid and redismanager.ya_procesado_wamid(wamid):
+        logger.info("wamid %s ya procesado — duplicado descartado", wamid)
+        return
+    from message_queue import message_queue
+    message_queue.enqueue(_job_procesar_mensaje, numero, mensaje)
+    logger.debug("Mensaje de %s encolado (wamid=%s)", numero, wamid)
 
 
 # ── Pago Monei ────────────────────────────────────────────────────────────────

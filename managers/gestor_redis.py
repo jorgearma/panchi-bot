@@ -83,6 +83,22 @@ class RedisManager:
         logger.debug("Desbloqueando usuario %s", numero)
         return self.delete(key)
 
+    def ya_procesado_wamid(self, wamid: str, ttl: int = 300) -> bool:
+        """Registra el wamid atómicamente (SET NX). Devuelve True si es duplicado.
+
+        Usa SET NX para que la comprobación y el registro sean una sola operación
+        Redis — dos requests concurrentes con el mismo wamid no pueden pasar ambas.
+        En caso de error Redis devuelve False: mejor procesar un duplicado que
+        perder un mensaje.
+        """
+        key = f"wamid:{wamid}"
+        try:
+            resultado = self.client.set(key, "1", ex=ttl, nx=True)
+            return resultado is None  # None = clave ya existía = duplicado
+        except redis.RedisError as e:
+            logger.error("Error al verificar wamid %s: %s", wamid, e)
+            return False
+
 
 redismanager = RedisManager(
     host=config.REDIS_HOST,
