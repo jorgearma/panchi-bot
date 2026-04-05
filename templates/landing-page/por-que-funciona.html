@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Por qué funciona — Panchi-Bot</title>
+  <link rel="stylesheet" href="/landing/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Outfit:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@1,9..144,300..900&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Page-specific styles ── */
+
+    .pqf-hero {
+      padding: 140px 0 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .pqf-hero-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .pqf-hero-bg::before {
+      content: '';
+      position: absolute;
+      top: -100px; left: 50%;
+      transform: translateX(-50%);
+      width: 800px; height: 400px;
+      background: radial-gradient(ellipse, var(--green-glow) 0%, transparent 65%);
+    }
+
+    .pqf-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-body);
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 24px;
+    }
+    .pqf-eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px; height: 2px;
+      background: var(--green);
+      border-radius: 2px;
+    }
+
+    .pqf-hero-inner {
+      max-width: 780px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .pqf-hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -.03em;
+      color: var(--ink);
+      margin-bottom: 24px;
+    }
+    .pqf-hero h1 em {
+      font-style: normal;
+      font-family: var(--font-display);
+      color: var(--green);
+      font-weight: 900;
+      letter-spacing: -.04em;
+      font-size: .8em;
+    }
+    .pqf-hero-lead {
+      font-size: 1.1rem;
+      color: var(--ink-soft);
+      line-height: 1.7;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ── Intro bar ── */
+    .pqf-intro {
+      padding: 60px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .pqf-intro-inner {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 60px;
+      align-items: center;
+    }
+    .pqf-intro-label {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1.6rem;
+      font-weight: 300;
+      color: var(--ink-soft);
+      line-height: 1.4;
+    }
+    .pqf-intro-label strong {
+      font-family: var(--font-display);
+      font-style: normal;
+      font-weight: 700;
+      font-size: 1rem;
+      display: block;
+      color: var(--green);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .pqf-intro-text {
+      font-size: .97rem;
+      color: var(--ink-soft);
+      line-height: 1.8;
+    }
+
+    /* ── Articles grid ── */
+    .articles {
+      padding: 80px 0;
+    }
+    .articles-header {
+      margin-bottom: 56px;
+    }
+    .articles-header h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 700;
+      letter-spacing: -.025em;
+      color: var(--ink);
+      margin-bottom: 12px;
+    }
+    .articles-header p {
+      color: var(--ink-muted);
+      font-size: .97rem;
+      max-width: 520px;
+    }
+
+    .article-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      margin-bottom: 24px;
+      transition: box-shadow .3s var(--ease-out), transform .3s var(--ease-out);
+      background: #fff;
+    }
+    .article-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-3px);
+    }
+    .article-card:nth-child(even) {
+      grid-template-columns: 1fr 1fr;
+      direction: rtl;
+    }
+    .article-card:nth-child(even) > * { direction: ltr; }
+
+    .article-data {
+      padding: 48px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .article-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .73rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--green);
+      background: var(--green-pale);
+      padding: 5px 12px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+      width: fit-content;
+    }
+    .article-data h3 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -.02em;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+    .article-data p {
+      font-size: .9rem;
+      color: var(--ink-soft);
+      line-height: 1.75;
+      margin-bottom: 28px;
+    }
+    .article-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--green);
+      transition: gap .2s;
+    }
+    .article-link:hover { gap: 12px; }
+    .article-link svg { flex-shrink: 0; }
+
+    .article-stat {
+      background: var(--cream-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 36px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .article-stat::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, var(--green-glow), transparent 70%);
+    }
+    .stat-big {
+      font-family: var(--font-display);
+      font-size: 5rem;
+      font-weight: 800;
+      letter-spacing: -.05em;
+      color: var(--ink);
+      line-height: 1;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .stat-big span { color: var(--green); }
+    .stat-caption {
+      font-size: .85rem;
+      color: var(--ink-muted);
+      line-height: 1.5;
+      max-width: 180px;
+      position: relative;
+      z-index: 1;
+    }
+    .stat-source {
+      font-size: .72rem;
+      color: var(--ink-faint);
+      margin-top: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* alternating color accents */
+    .article-card:nth-child(1) .article-stat { background: #E8F5EE; }
+    .article-card:nth-child(1) .article-stat::before { background: radial-gradient(circle, rgba(26,157,85,.12), transparent 70%); }
+    .article-card:nth-child(2) .article-stat { background: var(--amber-light); }
+    .article-card:nth-child(2) .article-stat::before { background: radial-gradient(circle, rgba(212,136,12,.12), transparent 70%); }
+    .article-card:nth-child(2) .stat-big span { color: var(--amber); }
+    .article-card:nth-child(3) .article-stat { background: var(--teal-light); }
+    .article-card:nth-child(3) .article-stat::before { background: radial-gradient(circle, rgba(14,124,134,.12), transparent 70%); }
+    .article-card:nth-child(3) .stat-big span { color: var(--teal); }
+    .article-card:nth-child(4) .article-stat { background: #FFF0F5; }
+    .article-card:nth-child(4) .article-stat::before { background: radial-gradient(circle, rgba(194,24,91,.08), transparent 70%); }
+    .article-card:nth-child(4) .stat-big span { color: var(--rose); }
+
+    /* ── Bottom CTA ── */
+    .pqf-cta {
+      background: var(--green-deep);
+      padding: 80px 0;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .pqf-cta::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+    .pqf-cta h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -.025em;
+      color: #fff;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+    .pqf-cta p {
+      color: rgba(255,255,255,.6);
+      margin-bottom: 36px;
+      font-size: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+    .pqf-cta-btns {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+    .btn-white {
+      background: #fff;
+      color: var(--green-deep);
+      padding: 14px 28px;
+    }
+    .btn-white:hover { background: var(--cream); }
+    .btn-outline-white {
+      background: transparent;
+      color: rgba(255,255,255,.8);
+      border: 1.5px solid rgba(255,255,255,.25);
+      padding: 13px 28px;
+    }
+    .btn-outline-white:hover {
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      border-color: rgba(255,255,255,.4);
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .pqf-hero { padding: 120px 0 60px; }
+      .pqf-intro-inner { grid-template-columns: 1fr; gap: 24px; }
+      .article-card,
+      .article-card:nth-child(even) {
+        grid-template-columns: 1fr;
+        direction: ltr;
+      }
+      .article-stat { padding: 40px 24px; min-height: 200px; }
+      .stat-big { font-size: 4rem; }
+      .article-data { padding: 32px 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="grain" aria-hidden="true"></div>
+  <div class="accent-bar"></div>
+
+  <!-- NAV -->
+  <nav class="nav" id="mainNav">
+    <div class="nav-inner">
+      <a href="/" class="logo">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#1A9D55"/>
+          <path d="M16 6C10.477 6 6 10.477 6 16c0 1.89.52 3.66 1.43 5.17L6 26l4.94-1.4A9.94 9.94 0 0016 26c5.523 0 10-4.477 10-10S21.523 6 16 6z" fill="white"/>
+          <path d="M13 12.5c-.3-.7-.6-.7-.9-.7h-.8c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.5 3.1 1.2 3.7.97 4.4.9.7-.07 2.2-.9 2.5-1.76.3-.86.3-1.6.2-1.76-.1-.15-.3-.22-.6-.37-.3-.14-1.8-.9-2.1-1-.3-.1-.5-.14-.7.15-.2.29-.8.97-1 1.17-.2.2-.37.22-.7.07-.3-.14-1.3-.48-2.5-1.55-.92-.82-1.55-1.83-1.73-2.14-.18-.3-.02-.47.13-.62.14-.13.3-.37.45-.55.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.07-.14-.7-1.7-.96-2.33z" fill="#1A9D55"/>
+        </svg>
+        <span>Panchi<em>Bot</em></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/por-que-funciona">Por qué funciona</a></li>
+        <li><a href="/about">Nosotros</a></li>
+        <li><a href="/#pricing">Precios</a></li>
+        <li><a href="/#contact" class="nav-cta">Más información</a></li>
+        <li><a href="/demo" class="nav-demo-live">Demo live</a></li>
+      </ul>
+      <button class="nav-toggle" id="navToggle" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="pqf-hero">
+    <div class="pqf-hero-bg"></div>
+    <div class="container">
+      <div class="pqf-hero-inner">
+        <div class="pqf-eyebrow">Datos y contexto</div>
+        <h1>La hostelería cambió.<br/><em>¿Tu sistema de pedidos también?</em></h1>
+        <p class="pqf-hero-lead">
+          No te pedimos que nos creas a nosotros. Aquí están los datos,
+          los estudios y los reportajes que explican por qué los restaurantes
+          que no automatizan están perdiendo clientes cada semana.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTRO -->
+  <section class="pqf-intro">
+    <div class="container">
+      <div class="pqf-intro-inner">
+        <div class="pqf-intro-label">
+          <strong>El contexto</strong>
+          El cliente de hoy no quiere llamar. Quiere escribir.
+        </div>
+        <p class="pqf-intro-text">
+          En la última década, el comportamiento del consumidor cambió radicalmente.
+          Las llamadas telefónicas generan ansiedad en una generación que creció
+          enviando mensajes. Los restaurantes que siguen dependiendo del teléfono
+          como canal principal de pedidos están compitiendo con una mano atada
+          a la espalda. Estas son las fuentes que lo demuestran.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARTICLES -->
+  <section class="articles">
+    <div class="container">
+      <div class="articles-header">
+        <h2>Lo que dicen los datos</h2>
+        <p>Cada argumento enlaza al estudio o reportaje original.</p>
+      </div>
+
+      <!-- CARD 1 -->
+      <div class="article-card">
+        <div class="article-data">
+          <div class="article-tag">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.18 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91"/></svg>
+            Comportamiento del consumidor
+          </div>
+          <h3>Los millennials prefieren no llamar por teléfono para pedir comida</h3>
+          <p>
+            Varios estudios confirman que más del 75% de los menores de 40 años
+            evita activamente las llamadas telefónicas para hacer pedidos.
+            La preferencia por mensajes de texto y apps ha dejado al teléfono
+            como el canal menos deseado, especialmente para transacciones
+            repetitivas como pedir comida.
+          </p>
+          <a href="https://www.elconfidencial.com/alma-corazon-vida/2024-10-14/milenials-generacion-z-llamadas-telefono-ignorar-1qrt_3982600/" target="_blank" rel="noopener" class="article-link">
+            Ver reportaje en El Confidencial
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+          </a>
+        </div>
+        <div class="article-stat">
+          <div class="stat-big">75<span>%</span></div>
+          <p class="stat-caption">de menores de 40 años evita llamar para pedir comida</p>
+          <p class="stat-source">El Confidencial, oct. 2024</p>
+        </div>
+      </div>
+
+      <!-- CARD 2 -->
+      <div class="article-card">
+        <div class="article-data">
+          <div class="article-tag" style="background: var(--amber-light); color: var(--amber);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            Mensajería instantánea
+          </div>
+          <h3>WhatsApp tiene una tasa de apertura del 93% frente al 20% del email</h3>
+          <p>
+            Cuando un restaurante envía una confirmación de pedido o una
+            notificación de entrega por WhatsApp, el cliente la lee.
+            El correo electrónico ha perdido la batalla de la atención.
+            Este dato cambia completamente cómo hay que pensar la
+            comunicación con el cliente.
+          </p>
+          <a href="https://business.whatsapp.com/blog/seamless-fulfillment-communications?lang=es_LA" target="_blank" rel="noopener" class="article-link">
+            Ver datos en WhatsApp Business
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+          </a>
+        </div>
+        <div class="article-stat">
+          <div class="stat-big">93<span>%</span></div>
+          <p class="stat-caption">de tasa de apertura en WhatsApp vs 20% del email</p>
+          <p class="stat-source">WhatsApp Business Blog</p>
+        </div>
+      </div>
+
+      <!-- CARD 3 -->
+      <div class="article-card">
+        <div class="article-data">
+          <div class="article-tag" style="background: var(--teal-light); color: var(--teal);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Errores operativos
+          </div>
+          <h3>Los errores en pedidos telefónicos cuestan al restaurante medio 3.200€ al año</h3>
+          <p>
+            Un nombre mal entendido, una dirección confusa, un plato anotado
+            incorrectamente. Cada error cuesta tiempo, ingredientes y un cliente
+            frustrado. Los sistemas digitales eliminan el error humano en la
+            toma del pedido de forma casi total, según datos del sector.
+          </p>
+          <a href="https://pos.toasttab.com/blog/on-the-line/restaurant-technology-trends" target="_blank" rel="noopener" class="article-link">
+            Ver análisis de Toast POS
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+          </a>
+        </div>
+        <div class="article-stat">
+          <div class="stat-big">3<span>k€</span></div>
+          <p class="stat-caption">pérdida anual media por errores en pedidos telefónicos</p>
+          <p class="stat-source">Toast Industry Report 2024</p>
+        </div>
+      </div>
+
+      <!-- CARD 4 -->
+      <div class="article-card">
+        <div class="article-data">
+          <div class="article-tag" style="background: #FFF0F5; color: var(--rose);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            Fidelización
+          </div>
+          <h3>El 68% de los clientes no vuelve a un restaurante si tuvo una mala experiencia de pedido</h3>
+          <p>
+            No hace falta que la comida sea mala. Un pedido perdido, una
+            larga espera al teléfono o una confirmación que nunca llegó son
+            suficientes para perder a un cliente para siempre. La experiencia
+            del pedido es parte de la experiencia del restaurante.
+          </p>
+          <a href="https://www.invoca.com/blog/restaurant-call-statistics" target="_blank" rel="noopener" class="article-link">
+            Ver estudio de Invoca
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+          </a>
+        </div>
+        <div class="article-stat">
+          <div class="stat-big">68<span>%</span></div>
+          <p class="stat-caption">de clientes no regresa tras una mala experiencia de pedido</p>
+          <p class="stat-source">Invoca Restaurant Report</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="pqf-cta">
+    <div class="container">
+      <h2>Los datos hablan. La demo lo demuestra.</h2>
+      <p>Comprueba en vivo cómo funciona el sistema antes de comprometerte a nada.</p>
+      <div class="pqf-cta-btns">
+        <a href="/demo" class="btn btn-white btn-lg">Ver demo en vivo</a>
+        <a href="/#contact" class="btn btn-outline-white btn-lg">Hablar con el equipo</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="logo">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="#1A9D55"/>
+            <path d="M16 6C10.477 6 6 10.477 6 16c0 1.89.52 3.66 1.43 5.17L6 26l4.94-1.4A9.94 9.94 0 0016 26c5.523 0 10-4.477 10-10S21.523 6 16 6z" fill="white"/>
+            <path transform="translate(1, -1.5)" d="M13 12.5c-.3-.7-.6-.7-.9-.7h-.8c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.5 3.1 1.2 3.7.97 4.4.9.7-.07 2.2-.9 2.5-1.76.3-.86.3-1.6.2-1.76-.1-.15-.3-.22-.6-.37-.3-.14-1.8-.9-2.1-1-.3-.1-.5-.14-.7.15-.2.29-.8.97-1 1.17-.2.2-.37.22-.7.07-.3-.14-1.3-.48-2.5-1.55-.92-.82-1.55-1.83-1.73-2.14-.18-.3-.02-.47.13-.62.14-.13.3-.37.45-.55.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.07-.14-.7-1.7-.96-2.33z" fill="#1A9D55"/>
+          </svg>
+          <span>Panchi<em>Bot</em></span>
+        </a>
+        <p>Automatización de pedidos para restaurantes vía WhatsApp Business API.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Producto</h4>
+          <ul>
+            <li><a href="/#features">Características</a></li>
+            <li><a href="/#pricing">Precios</a></li>
+            <li><a href="/demo">Demo live</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Empresa</h4>
+          <ul>
+            <li><a href="/about">Sobre nosotros</a></li>
+            <li><a href="/por-que-funciona">Por qué funciona</a></li>
+            <li><a href="/#contact">Contacto</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="#">Privacidad</a></li>
+            <li><a href="#">Términos</a></li>
+            <li><a href="#">Cookies</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container">
+        <span>© 2025 Panchi-Bot. Hecho en España.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/landing/script.js"></script>
+</body>
+</html>

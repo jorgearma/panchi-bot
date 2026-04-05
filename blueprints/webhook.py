@@ -28,7 +28,8 @@ def webhook():
     numero = data.From
     mensaje = limpiar_texto(data.Body.lower())
     logger.info("Mensaje Twilio recibido de %s: %s", numero, mensaje)
-    return inbound.enrutar_mensaje(numero, mensaje)
+    inbound.encolar_mensaje(numero, mensaje)
+    return jsonify({"ok": True}), 200
 
 
 @blueprint_webhook.route('/webhoo/monei', methods=['POST'])  # TODO: remove once Monei dashboard points to /webhook/monei
@@ -79,6 +80,10 @@ def webhook_meta():
 
     for item in inbound.extraer_mensajes_meta(request.get_json()):
         logger.info("Mensaje Meta de %s: %s", item['numero'], item['mensaje'])
-        inbound.enrutar_mensaje(item['numero'], limpiar_texto(item['mensaje']))
+        inbound.encolar_mensaje(
+            item['numero'],
+            limpiar_texto(item['mensaje']),
+            item.get('wamid'),
+        )
 
     return jsonify({"ok": True}), 200

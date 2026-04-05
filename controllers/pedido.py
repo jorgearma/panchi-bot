@@ -42,19 +42,13 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
                 if mensaje_respuesta == "Tienda online":
                     try:
                         enlace = generar_enlace(item, usuario_datos)
-                        actualizado = gestor_pedidos.actualizar_estado(datos.id_pedido_actual, EstadoPedido.ENLACE)
-                        guardado = gestor_pedidos.guardar_enlace(datos.id_pedido_actual, enlace)
-
-                        if actualizado and guardado:
-                            logger.info(
-                                "PEDIDO_INICIADO pedido_id=%s usuario=%s",
-                                datos.id_pedido_actual, datos.numero_cliente,
-                            )
-                            return f"❕ {mensaje_respuesta} ❕\n\n🔗 *Enlace único*: {enlace}"
-                        else:
-                            gestor_pedidos.actualizar_estado(datos.id_pedido_actual, EstadoPedido.PENDIENTE)
+                        if not gestor_pedidos.iniciar_enlace(datos.id_pedido_actual, enlace):
                             return "❌ Ocurrió un error al procesar la opción. Intente nuevamente."
-
+                        logger.info(
+                            "PEDIDO_INICIADO pedido_id=%s usuario=%s",
+                            datos.id_pedido_actual, datos.numero_cliente,
+                        )
+                        return f"❕ {mensaje_respuesta} ❕\n\n🔗 *Enlace único*: {enlace}"
                     except (ValueError, SQLAlchemyError, OperationalError) as e:
                         logger.error("Error al generar el enlace [%s]: %s", type(e).__name__, e)
                         return "❌ Error inesperado. Intente nuevamente."
