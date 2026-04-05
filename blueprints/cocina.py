@@ -80,7 +80,7 @@ def coger_preparacion(picking_id: int):
 def finalizar_preparacion(picking_id: int):
     """Marca una preparación como lista (sin validación de items en restaurant mode)."""
     cocinero_id = session.get('empleado_id')
-    ok, msg, _ = gestor_dashboard.completar_picking(picking_id, picker_id=cocinero_id)
+    ok, msg = gestor_dashboard.completar_picking(picking_id, picker_id=cocinero_id)
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[COCINA] Empleado %s finaliza preparación %s", cocinero_id, picking_id)

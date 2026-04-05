@@ -172,12 +172,14 @@ class GestorRepartoTrackingMixin:
                 ))
 
             s.commit()
-            telefono = pedido.TelefonoEntrega if pedido else None
-            return True, "Repartidor marcado como en camino", telefono
+            # TODO: reactivar cuando se decida notificar al cliente en este estado
+            # telefono = pedido.TelefonoEntrega if pedido else None
+            # _notificar(telefono, "🛵 Tu pedido está en camino. ¡El repartidor ya va hacia tu dirección!")
+            return True, "Repartidor marcado como en camino"
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error marcando salida reparto %s: %s", reparto_id, e)
-            return False, "Error de base de datos", None
+            return False, "Error de base de datos"
 
     def marcar_no_entregado(self, reparto_id: int, motivo: str) -> tuple:
         """Marks a delivery as not delivered. Updates reparto only — pedido state stays as-is
@@ -195,8 +197,9 @@ class GestorRepartoTrackingMixin:
 
             pedido = reparto.pedido
             s.commit()
-            telefono = pedido.TelefonoEntrega if pedido else None
-            _notificar(telefono, "⚠️ Lo sentimos, no hemos podido entregar tu pedido. Nuestro equipo se pondrá en contacto contigo muy pronto.")
+            # TODO: reactivar cuando se decida notificar al cliente en este estado
+            # telefono = pedido.TelefonoEntrega if pedido else None
+            # _notificar(telefono, "⚠️ Lo sentimos, no hemos podido entregar tu pedido. Nuestro equipo se pondrá en contacto contigo muy pronto.")
             return True, "Marcado como no entregado"
         except SQLAlchemyError as e:
             s.rollback()
@@ -255,9 +258,11 @@ class GestorRepartoTrackingMixin:
                         _s.close()
                 Thread(target=_actualizar_disponibilidad, daemon=True).start()
 
-            telefono = pedido.TelefonoEntrega if pedido else None
-            return True, "Pedido marcado como entregado", telefono
+            # TODO: reactivar cuando se decida notificar al cliente en este estado
+            # telefono = pedido.TelefonoEntrega if pedido else None
+            # _notificar(telefono, "🙌 ¡Tu pedido ha sido entregado! Gracias por tu compra. ¡Hasta la próxima!")
+            return True, "Pedido marcado como entregado"
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error marcando entregado reparto %s: %s", reparto_id, e)
-            return False, "Error de base de datos", None
+            return False, "Error de base de datos"

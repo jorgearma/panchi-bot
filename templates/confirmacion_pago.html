@@ -87,7 +87,7 @@
       </div>
       <div class="conf-sheet__actions">
         <button id="btn-confirmar-online" class="conf-sheet__confirm conf-sheet__confirm--online"
-                onclick="confirmarPago('modal-online', '/api/pago_online', 'btn-confirmar-online')">
+                onclick="confirmarPago('modal-online', '/api/agregar_pedido', 'btn-confirmar-online')">
           Pagar ahora
         </button>
         <button class="conf-sheet__cancel" onclick="cerrarModal('modal-online')">Cancelar, volver al pedido</button>
@@ -108,7 +108,7 @@
       </div>
       <div class="conf-sheet__actions">
         <button id="btn-confirmar-efectivo" class="conf-sheet__confirm conf-sheet__confirm--cash"
-                onclick="confirmarPago('modal-efectivo', '/api/confirmar_pedido', 'btn-confirmar-efectivo')">
+                onclick="confirmarPago('modal-efectivo', '/api/agregar_pedido_efectivo', 'btn-confirmar-efectivo')">
           Confirmar pedido
         </button>
         <button class="conf-sheet__cancel" onclick="cerrarModal('modal-efectivo')">Cancelar, volver al pedido</button>
