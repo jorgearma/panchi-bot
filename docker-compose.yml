@@ -13,6 +13,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    command: redis-server --appendonly yes --appendfsync everysec
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -39,6 +40,17 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
+
+  worker:
+    build: .
+    command: python worker.py
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine
