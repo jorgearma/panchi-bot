@@ -62,7 +62,7 @@ class TestWebhookTwilio:
 
     def test_usuario_bloqueado_retorna_403(self, client):
         """Si el número está bloqueado por rate-limit → 403 sin procesar."""
-        with patch("blueprints.webhook.redismanager") as mock_redis:
+        with patch("services.inbound_whatsapp.redismanager") as mock_redis:
             mock_redis.esta_bloqueado.return_value = True
             resp = client.post("/webhook", data={"From": TWILIO_FROM, "Body": TWILIO_BODY})
         assert resp.status_code == 403
@@ -71,7 +71,7 @@ class TestWebhookTwilio:
         """Con TESTING=False, una firma Twilio inválida → 403."""
         app.config["TESTING"] = False
         try:
-            with patch("blueprints.webhook.RequestValidator") as mock_cls:
+            with patch("services.inbound_whatsapp.RequestValidator") as mock_cls:
                 mock_cls.return_value.validate.return_value = False
                 with patch("blueprints.webhook.config") as mock_cfg:
                     mock_cfg.TWILIO_AUTH_TOKEN = "tok"
@@ -89,16 +89,16 @@ class TestWebhookTwilio:
         """Con TESTING=False, una firma Twilio válida pasa la verificación."""
         app.config["TESTING"] = False
         try:
-            with patch("blueprints.webhook.RequestValidator") as mock_cls:
+            with patch("services.inbound_whatsapp.RequestValidator") as mock_cls:
                 mock_cls.return_value.validate.return_value = True
                 with patch("blueprints.webhook.config") as mock_cfg:
                     mock_cfg.TWILIO_AUTH_TOKEN = "tok"
                     mock_cfg.PUBLIC_URL = "https://test.com"
-                    with patch("blueprints.webhook.redismanager") as mock_redis:
+                    with patch("services.inbound_whatsapp.redismanager") as mock_redis:
                         mock_redis.esta_bloqueado.return_value = False
-                        with patch("blueprints.webhook.gestor_usuarios") as mock_gu:
+                        with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
                             mock_gu.verificar_usuario.return_value = None
-                            with patch("blueprints.webhook.manejar_registro", return_value=("ok", 200)):
+                            with patch("services.inbound_whatsapp.manejar_registro", return_value=("ok", 200)):
                                 resp = client.post(
                                     "/webhook",
                                     data={"From": TWILIO_FROM, "Body": TWILIO_BODY},
@@ -110,11 +110,11 @@ class TestWebhookTwilio:
 
     def test_usuario_no_registrado_llama_manejar_registro(self, client):
         """Usuario desconocido → delega a manejar_registro."""
-        with patch("blueprints.webhook.redismanager") as mock_redis:
+        with patch("services.inbound_whatsapp.redismanager") as mock_redis:
             mock_redis.esta_bloqueado.return_value = False
-            with patch("blueprints.webhook.gestor_usuarios") as mock_gu:
+            with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
                 mock_gu.verificar_usuario.return_value = None
-                with patch("blueprints.webhook.manejar_registro", return_value=("ok", 200)) as mock_reg:
+                with patch("services.inbound_whatsapp.manejar_registro", return_value=("ok", 200)) as mock_reg:
                     resp = client.post("/webhook", data={"From": TWILIO_FROM, "Body": TWILIO_BODY})
         assert resp.status_code == 200
         mock_reg.assert_called_once()
@@ -122,12 +122,12 @@ class TestWebhookTwilio:
     def test_usuario_registrado_llama_manejador(self, client):
         """Usuario registrado → delega a ManejadorMensajesRegistrados."""
         usuario_mock = MagicMock()
-        with patch("blueprints.webhook.redismanager") as mock_redis:
+        with patch("services.inbound_whatsapp.redismanager") as mock_redis:
             mock_redis.esta_bloqueado.return_value = False
-            with patch("blueprints.webhook.gestor_usuarios") as mock_gu:
+            with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
                 mock_gu.verificar_usuario.return_value = usuario_mock
                 with patch(
-                    "blueprints.webhook.ManejadorMensajesRegistrados.manejar_mensajes_registrados",
+                    "services.inbound_whatsapp.ManejadorMensajesRegistrados.manejar_mensajes_registrados",
                     return_value=("ok", 200)
                 ) as mock_man:
                     resp = client.post("/webhook", data={"From": TWILIO_FROM, "Body": TWILIO_BODY})
@@ -194,8 +194,8 @@ class TestWebhookMonei:
         sig = make_monei_signature(MONEI_SECRET, body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.MONEI_WEBHOOK_SECRET = MONEI_SECRET
-            with patch("blueprints.webhook.gestor_pedidos") as mock_gp:
-                with patch("blueprints.webhook.enviar_mensaje_whatsapp"):
+            with patch("services.inbound_whatsapp.gestor_pedidos") as mock_gp:
+                with patch("services.inbound_whatsapp.enviar_mensaje_whatsapp"):
                     resp = self._post(client, body, signature=sig)
         assert resp.status_code == 200
         mock_gp.actualizar_estado.assert_called_once_with(42, EstadoPedido.PAGADO)
@@ -217,7 +217,7 @@ class TestWebhookMonei:
         sig = make_monei_signature(MONEI_SECRET, body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.MONEI_WEBHOOK_SECRET = MONEI_SECRET
-            with patch("blueprints.webhook.gestor_pedidos") as mock_gp:
+            with patch("services.inbound_whatsapp.gestor_pedidos") as mock_gp:
                 resp = self._post(client, body, signature=sig)
         assert resp.status_code == 200
         mock_gp.actualizar_estado.assert_not_called()
@@ -316,7 +316,7 @@ class TestWebhookMeta:
         sig = make_meta_signature(META_SECRET, body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.META_APP_SECRET = META_SECRET
-            with patch("blueprints.webhook.manejar_registro") as mock_reg:
+            with patch("services.inbound_whatsapp.manejar_registro") as mock_reg:
                 resp = self._post(client, body, signature=sig)
         assert resp.status_code == 200
         mock_reg.assert_not_called()
@@ -327,8 +327,8 @@ class TestWebhookMeta:
         sig = make_meta_signature(META_SECRET, body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.META_APP_SECRET = META_SECRET
-            with patch("blueprints.webhook.manejar_registro") as mock_reg:
-                with patch("blueprints.webhook.redismanager") as mock_redis:
+            with patch("services.inbound_whatsapp.manejar_registro") as mock_reg:
+                with patch("services.inbound_whatsapp.redismanager") as mock_redis:
                     mock_redis.esta_bloqueado.return_value = False
                     resp = self._post(client, body, signature=sig)
         assert resp.status_code == 200
@@ -340,7 +340,7 @@ class TestWebhookMeta:
         sig = make_meta_signature(META_SECRET, body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.META_APP_SECRET = META_SECRET
-            with patch("blueprints.webhook.manejar_registro") as mock_reg:
+            with patch("services.inbound_whatsapp.manejar_registro") as mock_reg:
                 resp = self._post(client, body, signature=sig)
         assert resp.status_code == 200
         mock_reg.assert_not_called()
@@ -353,11 +353,11 @@ class TestWebhookMeta:
         sig = make_meta_signature(META_SECRET, body)
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.META_APP_SECRET = META_SECRET
-            with patch("blueprints.webhook.redismanager") as mock_redis:
+            with patch("services.inbound_whatsapp.redismanager") as mock_redis:
                 mock_redis.esta_bloqueado.return_value = False
-                with patch("blueprints.webhook.gestor_usuarios") as mock_gu:
+                with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
                     mock_gu.verificar_usuario.return_value = None
-                    with patch("blueprints.webhook.manejar_registro", return_value=("ok", 200)) as mock_reg:
+                    with patch("services.inbound_whatsapp.manejar_registro", return_value=("ok", 200)) as mock_reg:
                         resp = self._post(client, body, signature=sig)
         assert resp.status_code == 200
         mock_reg.assert_called_once()
@@ -372,12 +372,12 @@ class TestWebhookMeta:
         usuario_mock = MagicMock()
         with patch("blueprints.webhook.config") as mock_cfg:
             mock_cfg.META_APP_SECRET = META_SECRET
-            with patch("blueprints.webhook.redismanager") as mock_redis:
+            with patch("services.inbound_whatsapp.redismanager") as mock_redis:
                 mock_redis.esta_bloqueado.return_value = False
-                with patch("blueprints.webhook.gestor_usuarios") as mock_gu:
+                with patch("services.inbound_whatsapp.gestor_usuarios") as mock_gu:
                     mock_gu.verificar_usuario.return_value = usuario_mock
                     with patch(
-                        "blueprints.webhook.ManejadorMensajesRegistrados.manejar_mensajes_registrados",
+                        "services.inbound_whatsapp.ManejadorMensajesRegistrados.manejar_mensajes_registrados",
                         return_value=("ok", 200)
                     ) as mock_man:
                         resp = self._post(client, body, signature=sig)

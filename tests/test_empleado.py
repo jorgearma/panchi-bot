@@ -99,7 +99,9 @@ class TestBlueprintEmpleadoAuth:
             sess['empleado_id'] = 1
             sess['rol'] = 'picker'
         with app.app_context():
-            resp = client.get('/empleado')
+            with patch('blueprints.empleado.gestor_empleado') as ge_mock:
+                ge_mock.es_polivalente.return_value = False
+                resp = client.get('/empleado')
         assert resp.status_code == 200
 
     def test_rol_manager_no_accede(self, client):
@@ -156,9 +158,21 @@ class TestHooksEstadoOperativo:
 
     def test_ocupado_sobreescribe_disponible(self):
         gestor, session_mock, empleado_mock = self._gestor_con_empleado('disponible')
-        with patch.object(type(gestor), 'session', new_callable=PropertyMock, return_value=session_mock):
+        captured = {}
+
+        def capture_thread(target, daemon=True):
+            captured['target'] = target
+            return MagicMock()
+
+        with patch('managers.dashboard._base.Thread', side_effect=capture_thread), \
+             patch('database.SessionLocal', return_value=session_mock):
             gestor._actualizar_estado_operativo(1, 'ocupado')
-        assert empleado_mock.estado_operativo == 'ocupado'
+            captured['target']()  # ejecutar sincrónicamente
+
+        session_mock.query.return_value.filter.return_value.update.assert_called_once_with(
+            {'estado_operativo': 'ocupado'}, synchronize_session=False
+        )
+        session_mock.commit.assert_called_once()
 
     def test_no_sobreescribe_en_pausa(self):
         gestor, session_mock, empleado_mock = self._gestor_con_empleado('en_pausa')
@@ -199,7 +213,7 @@ class TestAuthRedireccionEmpleado:
         empleado_mock.rol.nombre = 'picker'
 
         with app.app_context():
-            with patch('blueprints.auth._get_empleado_by_email', return_value=empleado_mock):
+            with patch('services.auth_service._get_empleado_by_email', return_value=empleado_mock):
                 resp = client.post('/auth/login',
                                    json={'email': 'test@test.com', 'password': 'secret'},
                                    content_type='application/json')
@@ -218,7 +232,7 @@ class TestAuthRedireccionEmpleado:
         empleado_mock.rol.nombre = 'repartidor'
 
         with app.app_context():
-            with patch('blueprints.auth._get_empleado_by_email', return_value=empleado_mock):
+            with patch('services.auth_service._get_empleado_by_email', return_value=empleado_mock):
                 resp = client.post('/auth/login',
                                    json={'email': 'ana@test.com', 'password': 'secret'},
                                    content_type='application/json')
@@ -236,7 +250,7 @@ class TestAuthRedireccionEmpleado:
         empleado_mock.rol.nombre = 'manager'
 
         with app.app_context():
-            with patch('blueprints.auth._get_empleado_by_email', return_value=empleado_mock):
+            with patch('services.auth_service._get_empleado_by_email', return_value=empleado_mock):
                 resp = client.post('/auth/login',
                                    json={'email': 'jefe@test.com', 'password': 'secret'},
                                    content_type='application/json')
@@ -445,7 +459,7 @@ class TestAuthPolivalente:
 
     def test_polivalente_sin_rol_activo_va_a_checkin(self, client, app):
         with app.app_context():
-            with patch('blueprints.auth._get_empleado_by_email',
+            with patch('services.auth_service._get_empleado_by_email',
                        return_value=self._empleado_polivalente(rol_activo=None)):
                 resp = client.post('/auth/login',
                                    json={'email': 'ana@test.com', 'password': 'secret'},
@@ -455,7 +469,7 @@ class TestAuthPolivalente:
 
     def test_polivalente_con_rol_activo_va_a_empleado(self, client, app):
         with app.app_context():
-            with patch('blueprints.auth._get_empleado_by_email',
+            with patch('services.auth_service._get_empleado_by_email',
                        return_value=self._empleado_polivalente(rol_activo='picker')):
                 resp = client.post('/auth/login',
                                    json={'email': 'ana@test.com', 'password': 'secret'},
@@ -475,7 +489,7 @@ class TestAuthPolivalente:
         emp.capacidades = [cap]
 
         with app.app_context():
-            with patch('blueprints.auth._get_empleado_by_email', return_value=emp):
+            with patch('services.auth_service._get_empleado_by_email', return_value=emp):
                 resp = client.post('/auth/login',
                                    json={'email': 'carlos@test.com', 'password': 'secret'},
                                    content_type='application/json')
@@ -498,11 +512,9 @@ class TestBlueprintEmpleadoNuevos:
     def test_capacidades_con_sesion_devuelve_json(self, client, app):
         self._set_session(client)
         with app.app_context():
-            emp_mock = MagicMock(); emp_mock.rol_activo = 'picker'
-            with patch('blueprints.empleado.gestor_empleado') as ge_mock, \
-                 patch('blueprints.empleado.get_db') as db_mock:
+            with patch('blueprints.empleado.gestor_empleado') as ge_mock:
                 ge_mock.capacidades.return_value = ['picker']
-                db_mock.return_value.query.return_value.filter_by.return_value.first.return_value = emp_mock
+                ge_mock.obtener_rol_activo.return_value = 'picker'
                 resp = client.get('/empleado/capacidades')
         assert resp.status_code == 200
         data = resp.get_json()

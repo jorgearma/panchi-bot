@@ -132,7 +132,7 @@ class TestEsperandoDireccion:
         import json
         rm = make_redis_manager(EstadoRegistro.ESPERANDO_DIRECCION)
         with patch("controllers.registro.validar_direccion",
-                   return_value=(True, "Calle Mayor 1")):
+                   return_value=(True, "Calle Mayor 1", None)):
             with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "Calle Mayor 1", rm)
         assert result[1] == 200
@@ -144,7 +144,7 @@ class TestEsperandoDireccion:
         from controllers.registro import manejar_registro
         rm = make_redis_manager(EstadoRegistro.ESPERANDO_DIRECCION)
         with patch("controllers.registro.validar_direccion",
-                   return_value=(False, None)):
+                   return_value=(False, None, "no_encontrada")):
             with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "xyz", rm)
         assert result[1] == 400

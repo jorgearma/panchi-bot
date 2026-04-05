@@ -67,14 +67,31 @@ def _enviar_confirmacion_direccion(numero_cliente, direccion):
     )
 
 
-def _enviar_direccion_invalida(numero_cliente):
-    """Explica que la dirección no pudo validarse y da ejemplos correctos."""
-    enviar_mensaje_whatsapp(
-        "⛔ *La dirección no es válida* ⛔\n\nPor favor, revisa los *detalles* 📝.\n"
-        "¡Gracias por tu ayuda! 😊 \n\n 👇 *Ejemplos:* 👇 \n\n"
-        "•_Calle Los Labradores 3, 1B_\n•_Avenida Pablo Iglesias 79, 1B_",
-        numero_cliente
-    )
+def _enviar_direccion_invalida(numero_cliente, sugerencia=None, alta_confianza=False):
+    """Explica que la dirección no pudo validarse. Si hay sugerencia, la incluye."""
+    if sugerencia:
+        nombre = sugerencia.title()
+        if alta_confianza:
+            mensaje = (
+                f"⛔ *No reconocí esa dirección*\n\n"
+                f"¿Quisiste decir *{nombre}*? ✍️\n\n"
+                f"Escríbela con el número de portal. Por ejemplo:\n"
+                f"•_{nombre} 5_\n•_{nombre} 12, 2B_"
+            )
+        else:
+            mensaje = (
+                f"⛔ *No reconocí esa dirección*\n\n"
+                f"¿Te refieres a *{nombre}*? ✍️\n\n"
+                f"Si es así, escríbela con el número de portal.\n"
+                f"Si no, prueba con otro nombre de calle y el número."
+            )
+    else:
+        mensaje = (
+            "⛔ *La dirección no es válida* ⛔\n\nPor favor, revisa los *detalles* 📝.\n"
+            "¡Gracias por tu ayuda! 😊 \n\n 👇 *Ejemplos:* 👇 \n\n"
+            "•_Calle Los Labradores 3, 1B_\n•_Avenida Pablo Iglesias 79, 1B_"
+        )
+    enviar_mensaje_whatsapp(mensaje, numero_cliente)
 
 
 def _enviar_mensaje_registro(numero_cliente, nombre, menu_despues_registro):

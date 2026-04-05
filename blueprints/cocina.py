@@ -1,9 +1,10 @@
 """Blueprint para el modo restaurant: PWA de cocina en /cocina."""
 import logging
 
-from flask import Blueprint, Response, jsonify, render_template, request, session
+from flask import Blueprint, jsonify, render_template, request, session
 
 from blueprints.auth import requiere_rol
+from blueprints import _pwa
 from container import gestor_dashboard
 
 logger = logging.getLogger(__name__)
@@ -22,22 +23,12 @@ def index():
 @blueprint_cocina.route("/cocina/manifest.json")
 @requiere_rol('picker', 'manager', 'admin')
 def manifest():
-    cocinero_id = session.get('empleado_id')
-    return Response(
-        render_template("cocina/manifest.json", cocinero_id=cocinero_id),
-        mimetype="application/manifest+json",
-    )
+    return _pwa.manifest_response("cocina/manifest.json", cocinero_id=session.get('empleado_id'))
 
 
 @blueprint_cocina.route("/cocina/sw.js")
 def service_worker():
-    response = Response(
-        render_template("cocina/sw.js"),
-        mimetype="application/javascript",
-    )
-    response.headers["Cache-Control"] = "no-cache"
-    response.headers["Service-Worker-Allowed"] = "/cocina"
-    return response
+    return _pwa.sw_response("cocina/sw.js", "/cocina")
 
 
 @blueprint_cocina.route("/cocina/mis-pedidos")
@@ -89,7 +80,7 @@ def coger_preparacion(picking_id: int):
 def finalizar_preparacion(picking_id: int):
     """Marca una preparación como lista (sin validación de items en restaurant mode)."""
     cocinero_id = session.get('empleado_id')
-    ok, msg, _ = gestor_dashboard.completar_picking(picking_id, picker_id=cocinero_id)
+    ok, msg = gestor_dashboard.completar_picking(picking_id, picker_id=cocinero_id)
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[COCINA] Empleado %s finaliza preparación %s", cocinero_id, picking_id)
