@@ -6,6 +6,8 @@ from threading import Thread
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload, selectinload
 
+from services.whatsapp_service import notificar_async as _notificar
+
 from managers.dashboard._helpers import (
     _iso,
     _TARANCON_LAT,
@@ -194,11 +196,12 @@ class GestorRepartoTrackingMixin:
             pedido = reparto.pedido
             s.commit()
             telefono = pedido.TelefonoEntrega if pedido else None
-            return True, "Marcado como no entregado", telefono
+            _notificar(telefono, "⚠️ Lo sentimos, no hemos podido entregar tu pedido. Nuestro equipo se pondrá en contacto contigo muy pronto.")
+            return True, "Marcado como no entregado"
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error marcando no entregado reparto %s: %s", reparto_id, e)
-            return False, "Error de base de datos", None
+            return False, "Error de base de datos"
 
     def marcar_entregado(self, reparto_id: int) -> tuple:
         """Returns (ok, msg, telefono_cliente). telefono_cliente is None on error."""

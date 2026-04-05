@@ -16,7 +16,8 @@
     "backend"
   ],
   "commands": [
-    "start-cycle"
+    "start-cycle",
+    "refactorizar"
   ],
   "hooks": [
     "pre-commit.py",
