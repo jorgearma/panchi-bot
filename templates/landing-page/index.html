@@ -665,25 +665,25 @@
         <form class="cta-form" id="ctaForm" novalidate>
           <div class="form-group">
             <label for="formName">Nombre</label>
-            <input type="text" id="formName" placeholder="Tu nombre" required />
+            <input type="text" id="formName" name="nombre" placeholder="Tu nombre" required />
           </div>
           <div class="form-group">
             <label for="formRestaurant">Restaurante</label>
-            <input type="text" id="formRestaurant" placeholder="Nombre del restaurante" required />
+            <input type="text" id="formRestaurant" name="restaurante" placeholder="Nombre del restaurante" required />
           </div>
           <div class="form-row">
             <div class="form-group">
               <label for="formPhone">Teléfono / WhatsApp</label>
-              <input type="tel" id="formPhone" placeholder="+34 600 000 000" required />
+              <input type="tel" id="formPhone" name="telefono" placeholder="+34 600 000 000" required />
             </div>
             <div class="form-group">
               <label for="formEmail">Email</label>
-              <input type="email" id="formEmail" placeholder="tu@restaurante.es" required />
+              <input type="email" id="formEmail" name="email" placeholder="tu@restaurante.es" required />
             </div>
           </div>
           <div class="form-group">
             <label for="formMsg">¿Cuántos pedidos gestionas al día?</label>
-            <select id="formMsg">
+            <select id="formMsg" name="pedidos_dia">
               <option value="">Selecciona...</option>
               <option value="<50">Menos de 50</option>
               <option value="50-150">50 – 150</option>

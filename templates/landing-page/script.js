@@ -402,7 +402,7 @@ const form      = document.getElementById('ctaForm');
 const success   = document.getElementById('formSuccess');
 const submitBtn = document.getElementById('formSubmit');
 
-form.addEventListener('submit', e => {
+form.addEventListener('submit', async e => {
   e.preventDefault();
   const name  = document.getElementById('formName').value.trim();
   const rest  = document.getElementById('formRestaurant').value.trim();
@@ -422,10 +422,26 @@ form.addEventListener('submit', e => {
   submitBtn.textContent = 'Enviando...';
   submitBtn.disabled = true;
 
-  setTimeout(() => {
-    submitBtn.style.display = 'none';
-    success.style.display   = 'block';
-  }, 1200);
+  try {
+    const res = await fetch('https://formspree.io/f/xzdkyzzj', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: new FormData(form),
+    });
+
+    if (res.ok) {
+      submitBtn.style.display = 'none';
+      success.style.display   = 'block';
+    } else {
+      submitBtn.textContent = 'Solicitar demo gratuita';
+      submitBtn.disabled    = false;
+      alert('Hubo un problema al enviar. Inténtalo de nuevo.');
+    }
+  } catch {
+    submitBtn.textContent = 'Solicitar demo gratuita';
+    submitBtn.disabled    = false;
+    alert('Error de red. Comprueba tu conexión e inténtalo de nuevo.');
+  }
 });
 
 /* ============================================================
