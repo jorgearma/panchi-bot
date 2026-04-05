@@ -5,6 +5,7 @@ from flask import jsonify, request
 
 from container import gestor_pedidos, gestor_productos, get_monei, cache
 from controllers.pago import iniciar_pago, iniciar_pago_efectivo
+from blueprints.api.cart import _user_id_del_token
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +19,14 @@ def register(bp):
         logger.debug("Datos recibidos en agregar pedido: %s", data)
 
         token = data.get("token", "")
-        if not token or not cache.get(token):
+        token_user_id = _user_id_del_token(token)
+        if not token or not token_user_id:
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
-        id_usuario = data.get("userID")
-        if not id_usuario:
-            return jsonify({"error": "ID de usuario no proporcionado"}), 400
+        post_user_id = data.get("userID")
+        if str(post_user_id) != str(token_user_id):
+            logger.warning("Token-userId mismatch en /api/agregar_pedido: token=%s post=%s", token_user_id, post_user_id)
+            return jsonify({"error": "No autorizado"}), 403
 
         carrito = data.get("productos", data.get("carrito", []))
         if not carrito:
@@ -32,7 +35,7 @@ def register(bp):
         notas = data.get("notas", "")
 
         success, result = iniciar_pago(
-            user_id=id_usuario,
+            user_id=token_user_id,
             productos_recibidos=carrito,
             nombre_cliente=data.get("name"),
             numero_cliente=data.get("numero"),
@@ -60,17 +63,19 @@ def register(bp):
         logger.debug("Datos recibidos en agregar_pedido_efectivo: %s", data)
 
         token = data.get("token", "")
-        if not token or not cache.get(token):
+        token_user_id = _user_id_del_token(token)
+        if not token or not token_user_id:
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
-        id_usuario = data.get("userID")
-        if not id_usuario:
-            return jsonify({"error": "ID de usuario no proporcionado"}), 400
+        post_user_id = data.get("userID")
+        if str(post_user_id) != str(token_user_id):
+            logger.warning("Token-userId mismatch en /api/agregar_pedido_efectivo: token=%s post=%s", token_user_id, post_user_id)
+            return jsonify({"error": "No autorizado"}), 403
 
         notas = data.get("notas", "")
 
         success, result = iniciar_pago_efectivo(
-            user_id=id_usuario,
+            user_id=token_user_id,
             productos_recibidos=data.get("productos", []),
             nombre_cliente=data.get("name"),
             numero_cliente=data.get("numero"),
