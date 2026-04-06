@@ -118,7 +118,7 @@ class TestEsperandoNombre:
         with patch("controllers.registro._es_nombre_valido", return_value=False):
             with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "123abc", rm)
-        assert result[1] == 400
+        assert result[1] == 200  # 200 para evitar reintento de Meta (H3)
         rm.set.assert_not_called()
 
 
@@ -133,7 +133,7 @@ class TestEsperandoDireccion:
         rm = make_redis_manager(EstadoRegistro.ESPERANDO_DIRECCION)
         with patch("controllers.registro.validar_direccion",
                    return_value=(True, "Calle Mayor 1", None)):
-            with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
+            with patch("controllers.registro._enviar_confirmacion_direccion"):
                 result = manejar_registro(NUMERO, "Calle Mayor 1", rm)
         assert result[1] == 200
         datos = json.loads(rm.set.call_args[0][1])
@@ -147,7 +147,7 @@ class TestEsperandoDireccion:
                    return_value=(False, None, "no_encontrada")):
             with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "xyz", rm)
-        assert result[1] == 400
+        assert result[1] == 200  # 200 para evitar reintento de Meta (H3)
         rm.set.assert_not_called()
 
 
@@ -157,21 +157,21 @@ class TestEsperandoDireccion:
 
 class TestConfirmandoDireccion:
     def test_confirmar_avanza_al_handler_externo(self):
-        """confirmar_direccion devuelve algo != 1 → se propaga la respuesta."""
-        from controllers.registro import manejar_registro
+        """_confirmar_direccion devuelve algo != False → se propaga la respuesta."""
+        from controllers.registro import manejar_registro, RegistroUsuario
         rm = make_redis_manager(EstadoRegistro.CONFIRMANDO_DIRECCION)
-        with patch("controllers.registro.confirmar_direccion", return_value=("ok", 200)):
+        with patch.object(RegistroUsuario, "_confirmar_direccion", return_value=("ok", 200)):
             with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "si", rm)
         assert result == ("ok", 200)
         rm.set.assert_not_called()
 
     def test_rollback_si_usuario_dice_no(self):
-        """confirmar_direccion devuelve 1 → rollback a esperando_direccion."""
-        from controllers.registro import manejar_registro
+        """_confirmar_direccion devuelve False → rollback a esperando_direccion."""
+        from controllers.registro import manejar_registro, RegistroUsuario
         import json
         rm = make_redis_manager(EstadoRegistro.CONFIRMANDO_DIRECCION)
-        with patch("controllers.registro.confirmar_direccion", return_value=False):
+        with patch.object(RegistroUsuario, "_confirmar_direccion", return_value=False):
             with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
                 result = manejar_registro(NUMERO, "no", rm)
         assert result[1] == 200
