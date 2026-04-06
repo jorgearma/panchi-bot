@@ -52,7 +52,7 @@ class ManejadorMensajesRegistrados:
         try:
             usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
             if not usuario_datos:
-                logger.warning("Error: No se encontraron datos para el usuario %s.", numero_cliente)
+                logger.warning("Usuario no encontrado en BD: %s.", numero_cliente)
                 _enviar_error_usuario_no_encontrado(numero_cliente)
                 return "Error: Usuario no encontrado.", 404
             id_usuario = usuario_datos["id"]
