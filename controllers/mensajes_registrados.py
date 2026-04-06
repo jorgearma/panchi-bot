@@ -1,5 +1,5 @@
 import logging
-from container import gestor_pedidos, gestor_usuarios
+from container import gestor_pedidos, gestor_usuarios, redismanager
 from utils.menu_opciones import mostrar_menu
 from controllers.pedido import procesar_pedido
 from controllers.mensajes_registrados_notifier import (
@@ -25,6 +25,11 @@ class ManejadorMensajesRegistrados:
     @staticmethod
     def _iniciar_pedido_y_enviar_menu(numero_cliente, usuario_datos):
         """Abre un pedido nuevo para el usuario y le envía el menú inicial."""
+
+        lock_key = f"pedido_lock:{numero_cliente}"
+        if not redismanager.adquirir_lock(lock_key, ttl=10):
+            logger.info("LOCK_PEDIDO ya activo para %s — ignorando duplicado.", numero_cliente)
+            return "mensaje enviado", 200
 
         id_usuario = usuario_datos["id"]
         direccion_usuario = usuario_datos["direccion"]

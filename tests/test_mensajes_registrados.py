@@ -230,15 +230,16 @@ class TestPedidoContraReembolso:
 class TestFlujosNoBloqueados:
 
     def test_sin_pedido_activo_inicia_nuevo_pedido(self):
-
         """Sin pedido activo → inicia nuevo pedido (flujo normal intacto)."""
         with patch("controllers.mensajes_registrados.gestor_usuarios") as mock_gu, \
              patch("controllers.mensajes_registrados.gestor_pedidos") as mock_gp, \
+             patch("controllers.mensajes_registrados.redismanager") as mock_redis, \
              patch("controllers.mensajes_registrados_notifier.enviar_mensaje_whatsapp"), \
              patch("controllers.mensajes_registrados_notifier.config"):
             mock_gu.obtener_usuario_completo.return_value = USUARIO_DATOS
             mock_gp.obtener_pedido_mas_reciente.return_value = None
             mock_gp.iniciar_pedido.return_value = 100
+            mock_redis.adquirir_lock.return_value = True  # lock adquirido
             result = ManejadorMensajesRegistrados.manejar_mensajes_registrados(NUMERO, "1")
         mock_gp.iniciar_pedido.assert_called_once()
         assert result[1] == 200
