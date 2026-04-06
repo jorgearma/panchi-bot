@@ -102,7 +102,15 @@ class ManejadorMensajesRegistrados:
                 "Pedido %s en estado '%s' — bloqueando nuevo pedido para %s.",
                 id_pedido_activo, estado_del_pedido, numero_cliente,
             )
-            return _enviar_estado_en_curso(pedido_activo, numero_cliente)
+            resultado = _enviar_estado_en_curso(pedido_activo, numero_cliente)
+            if resultado is None:
+                logger.error(
+                    "ESTADO_NO_MANEJADO pedido=%s estado=%s usuario=%s",
+                    id_pedido_activo, estado_del_pedido, numero_cliente,
+                )
+                _enviar_error_generico(numero_cliente)
+                return "estado no contemplado", 200
+            return resultado
 
         logger.warning(
             "ESTADO_NO_CONTEMPLADO pedido=%s estado=%s usuario=%s mensaje=%r",
