@@ -14,11 +14,16 @@ def _validar_carrito(productos_recibidos, gestor_productos):
     de pedido. El mismo producto puede aparecer varias veces con notas distintas
     (e.g. pizza sin cebolla + pizza con todo = dos líneas separadas).
     """
+    if not productos_recibidos:
+        return None, None, "El carrito no puede estar vacío"
+
     productos_validos = []
     total = 0.0
     for item in productos_recibidos:
         codigo   = item.get("codigo")
         cantidad = item.get("cantidad", 1)
+        if not isinstance(cantidad, int) or cantidad <= 0:
+            return None, None, f"Cantidad inválida para el producto {codigo}"
         notas    = item.get("notas", "") or None
         producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
         if not producto_db:
