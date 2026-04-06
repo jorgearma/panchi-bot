@@ -91,7 +91,7 @@
   </header>
 
   <!-- ======== SIN ID ======== -->
-  <div x-show="!repartidorId"
+  <div x-show="repartidorId === null || repartidorId === undefined"
        class="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
     <div class="text-5xl mb-4">🔗</div>
     <h2 class="text-xl font-bold text-gray-200 mb-2">Enlace incompleto</h2>
@@ -100,7 +100,7 @@
   </div>
 
   <!-- ======== CARGANDO ======== -->
-  <div x-show="repartidorId && cargando && pedidos.length === 0"
+  <div x-show="repartidorId !== null && repartidorId !== undefined && cargando && pedidos.length === 0"
        class="flex flex-col items-center justify-center min-h-[60vh] gap-3">
     <div class="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
     <p class="text-gray-400 text-sm">Cargando entregas...</p>
@@ -109,7 +109,7 @@
   <!-- ================================================================
        VISTA LISTA
   ================================================================ -->
-  <div x-show="repartidorId && !cargando && vista === 'lista'" x-cloak>
+  <div x-show="repartidorId !== null && repartidorId !== undefined && !cargando && vista === 'lista'" x-cloak>
 
     <!-- ---- Tabs ---- -->
     <div class="pt-3 px-3 sm:px-4">
