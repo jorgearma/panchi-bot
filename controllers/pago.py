@@ -172,7 +172,13 @@ def iniciar_pago_efectivo(
         return False, "Error al registrar el pedido contra reembolso"
 
     total_euros = round(total_calculado, 2)
-    _enviar_confirmacion_efectivo(numero_cliente, nombre_cliente, total_euros, pedido_id, direccion_cliente)
+    try:
+        _enviar_confirmacion_efectivo(numero_cliente, nombre_cliente, total_euros, pedido_id, direccion_cliente)
+    except Exception as e:
+        logger.error(
+            "CONFIRMACION_EFECTIVO_WA_FALLIDA pedido=%s error=%s",
+            pedido_id, e, exc_info=True
+        )
     logger.info("iniciar_pago_efectivo: pedido %s confirmado contra reembolso", pedido_id)
 
     return True, f"{public_url}/pago_confirmado?pedido_id={redis_id}"
