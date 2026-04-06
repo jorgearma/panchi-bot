@@ -72,7 +72,15 @@ class ManejadorMensajesRegistrados:
         id_pedido_activo = pedido_activo.PedidoID
 
         if estado_del_pedido == EstadoPedido.PENDIENTE:
-            mensaje = procesar_pedido(mensaje_cliente, numero_cliente, id_pedido_activo, usuario_datos)
+            try:
+                mensaje = procesar_pedido(mensaje_cliente, numero_cliente, id_pedido_activo, usuario_datos)
+            except Exception as e:
+                logger.error(
+                    "ERROR_PROCESAR_PEDIDO usuario=%s error=%s",
+                    numero_cliente, e, exc_info=True,
+                )
+                _enviar_error_generico(numero_cliente)
+                return "error procesando pedido", 200
             logger.debug("Mensaje procesado para usuario: %s", numero_cliente)
             _enviar_respuesta_pedido(mensaje, numero_cliente)
             return " mensaje enviado", 200
