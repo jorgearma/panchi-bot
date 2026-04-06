@@ -491,3 +491,10 @@ initScrollDots('.pricing-grid',       'pricingTrack');
 window.addEventListener('DOMContentLoaded', () => {
   prevBtn.disabled = true;
 });
+
+window.addEventListener('load', () => {
+  const iframe = document.querySelector('.phone-iframe[data-src]');
+  if (iframe) {
+    iframe.src = iframe.dataset.src;
+  }
+});
