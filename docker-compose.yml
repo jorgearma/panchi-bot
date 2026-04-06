@@ -4,6 +4,8 @@ services:
     expose:
       - "5000"
     env_file: .env
+    environment:
+      - TZ=Europe/Madrid
     depends_on:
       redis:
         condition: service_healthy
@@ -45,6 +47,8 @@ services:
     build: .
     command: python worker.py
     env_file: .env
+    environment:
+      - TZ=Europe/Madrid
     depends_on:
       redis:
         condition: service_healthy
