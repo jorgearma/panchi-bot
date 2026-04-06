@@ -1,11 +1,11 @@
-cpcp# CLAUDE.md
+# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
 
 ```bash
-# Run all tests (~3 seconds, 110 tests)
+# Run all tests
 pytest
 
 # Run a single test file
@@ -17,7 +17,10 @@ pytest -v --tb=short
 # Run the app locally
 python main.py  # starts on 0.0.0.0:5000
 
-# Docker (full stack: app + Redis + Nginx)
+# Run the RQ worker (required for background WhatsApp message processing)
+python worker.py
+
+# Docker (full stack: app + Redis + SQL Server + worker + Nginx)
 docker-compose up
 docker-compose up --build  # rebuild app image
 
@@ -42,33 +45,50 @@ managers/       → DB and Redis data access (estado_usuario.py = registration s
 services/       → External API adapters (WhatsApp, Maps, tokens) — no business logic
 schemas/        → Pydantic input validation
 utils/          → Stateless helpers
-models.py       → SQLAlchemy ORM (21 tables)
+maps_module/    → Address validation package (polygon, street catalog, geocoding) — designed as extractable microservice
+models.py       → SQLAlchemy ORM (~21 tables)
 states.py       → Order/registration state enums and transition rules
 config.py       → All environment variable loading
+container.py    → Dependency injection: exports manager singletons
 database.py     → SQLAlchemy session management (SQL Server via pyodbc)
-main.py         → Flask app factory, 11 blueprint registrations
+message_queue.py → RQ queue setup for background WhatsApp processing
+worker.py       → RQ worker entry point
+main.py         → Flask app factory, 15 blueprint registrations
 ```
 
 ### Registered Blueprints
 
-| Blueprint            | Main routes                                  | Purpose                          |
-|----------------------|----------------------------------------------|----------------------------------|
-| `auth`               | `/auth/login`, `/auth/logout`                | Staff authentication             |
-| `webhook`            | `/webhook`, `/webhook/monei`, `/webhook/meta`| WhatsApp messages and payments   |
-| `menu`               | `/menu/<token>`, `/confirmacion_pago`        | Customer web menu                |
-| `api`                | `/api/confirmacion`, `/api/agregar_pedido`   | Cart and payment API             |
-| `dashboard`          | `/dashboard/*`                               | Operations panel (admin)         |
-| `picker`             | `/picker/*`                                  | Preparation queue (warehouse)    |
-| `repartidor`         | `/repartidor/*`                              | Delivery queue and tracking      |
-| `empleado`           | `/empleado/*`                                | Employee check-in and metrics    |
-| `productos`          | `/productos-admin/*`                         | Stock and price management       |
-| `metricas_operacion` | `/metricas/operacion/*`                      | Real-time metrics                |
-| `metricas_analitica` | `/metricas/analitica/*`                      | Historical analytics             |
-| *(global)*           | `/health`                                    | Health check: Redis + DB         |
+| Blueprint            | Main routes                                         | Purpose                                         |
+|----------------------|-----------------------------------------------------|-------------------------------------------------|
+| `auth`               | `/auth/login`, `/auth/logout`                       | Staff authentication                            |
+| `webhook`            | `/webhook`, `/webhook/monei`, `/webhook/meta`       | WhatsApp messages and payments                  |
+| `menu`               | `/menu/<token>`, `/confirmacion_pago`               | Customer web menu                               |
+| `api`                | `/api/confirmacion`, `/api/agregar_pedido`          | Cart and payment API (package: cart, payments, tracking) |
+| `dashboard`          | `/dashboard/*`                                      | Operations panel (package: pages, pedidos, picking, reparto, turnos) |
+| `picker`             | `/picker/*`                                         | Preparation queue (warehouse mode)              |
+| `cocina`             | `/cocina/*`                                         | Kitchen PWA (restaurant mode)                   |
+| `repartidor`         | `/repartidor/*`                                     | Delivery queue and tracking                     |
+| `empleado`           | `/empleado/*`                                       | Employee check-in and metrics                   |
+| `productos`          | `/productos-admin/*`                                | Stock and price management                      |
+| `metricas_operacion` | `/metricas/operacion/*`                             | Real-time metrics                               |
+| `metricas_analitica` | `/metricas/analitica/*`                             | Historical analytics                            |
+| `demo`               | `/demo`, `/demo/autologin`, `/demo/exit`, `/demo/reset` | Demo mode with Redis-backed session state   |
+| `landing`            | `/`, `/about`, `/por-que-funciona`                  | Public landing pages                            |
+| `maps`               | `/api/v1/maps/*`                                    | Address validation REST API                     |
+| *(global)*           | `/health`                                           | Health check: Redis + DB                        |
+
+### APP_MODE: Warehouse vs Restaurant
+
+`APP_MODE` env var (`"warehouse"` default or `"restaurant"`) switches operational mode at startup:
+
+- **Warehouse**: uses `/picker/*` with item-level picking records in the `picking` table.
+- **Restaurant**: uses `/cocina/*` PWA with simplified queue via `managers/dashboard/picking_basico.py` (no item-level detail).
+
+`blueprints/dashboard/pages.py` selects templates based on `APP_MODE`. A context processor injects `app_mode` into all templates. Invalid values cause startup failure.
 
 ### Two Independent Flows
 
-- **Bot flow**: WhatsApp → `/webhook` → controllers → managers → WhatsApp response
+- **Bot flow**: WhatsApp → `/webhook` → `message_queue.py` (RQ) → `worker.py` → controllers → managers → WhatsApp response
 - **Dashboard flow**: Browser → `/dashboard*`, `/picker*`, `/repartidor*` → managers → render HTML
 
 Both share managers and DB but have separate routing and authentication.
@@ -81,7 +101,7 @@ Both share managers and DB but have separate routing and authentication.
 Rollback is possible: if the user corrects their address, the state returns to `ESPERANDO_DIRECCION`.
 
 **WhatsApp → Order (online payment):**
-1. `POST /webhook` → user in DB → `controllers/mensajes_registrados.py`
+1. `POST /webhook` → enqueue in RQ → `worker.py` → user in DB → `controllers/mensajes_registrados.py`
 2. State `PENDIENTE` → generate token (Redis TTL) → send menu link
 3. `GET /menu/<token>` → render menu → customer adds items in JS
 4. `POST /api/confirmacion` → save cart in Redis → state `ENLACE2`
@@ -101,16 +121,32 @@ PENDIENTE → ENLACE ⇄ ENLACE2 → CONFIRMANDO_PAGO → PAGADO → EN_PREPARAC
 
 ### Redis Usage
 
-| Use                 | Key pattern          | Responsible manager |
-|---------------------|----------------------|---------------------|
-| Registration state  | `<phone>`            | `gestor_redis`      |
-| Anti-spam lock      | `bloqueo:<phone>`    | `gestor_redis`      |
-| Menu token          | `<uuid-token>`       | `token_service`     |
-| Cart (session)      | `pedido:<uuid>`      | `controllers/pago`  |
+| Use                 | Key pattern              | Responsible                   |
+|---------------------|--------------------------|-------------------------------|
+| Registration state  | `<phone>`                | `gestor_redis`                |
+| Anti-spam lock      | `bloqueo:<phone>`        | `gestor_redis`                |
+| Menu token          | `<uuid-token>`           | `token_service`               |
+| Cart (session)      | `pedido:<uuid>`          | `controllers/pago`            |
+| Demo session        | `demo:<session_id>`      | `services/demo_state.py`      |
 
 ### State Machines
 
 `states.py` defines valid state transitions. When changing order states, always go through `gestor_pedidos.py` which enforces transitions and logs history to `historial_estados_pedido`.
+
+### maps_module
+
+Standalone address validation package (`maps_module/`). Public API:
+```python
+validar_direccion(address, territory) → (bool, str|None, str|None)
+geocodificar_direccion(address, territory) → tuple[float, float] | None
+validar_coordenadas(coords, territory) → bool
+```
+
+Rejection reasons: `"no_encontrada"`, `"fuera_de_zona"`, `"demasiado_generica"`, `"sin_numero"`, `"error_api"`. Territory config is in `maps_module/territories.json`; street catalog (311 streets) in `maps_module/calles_tarancon.json`. Designed to be extracted as an independent microservice without contract changes.
+
+### Dependency Injection
+
+`container.py` exports manager singletons: `gestor_pedidos`, `gestor_usuarios`, `gestor_productos`, `gestor_dashboard`, `gestor_empleado`, `gestor_metricas`, `redismanager`, `cache`, and `get_monei()`. Import from here rather than instantiating managers directly.
 
 ### Retry Logic
 
@@ -135,6 +171,7 @@ Copy `.env.example` to `.env`. Key variables:
 | Variable                 | Required               |
 |--------------------------|------------------------|
 | `SECRET_KEY`             | Always                 |
+| `APP_MODE`               | Always (`warehouse`/`restaurant`) |
 | `WHATSAPP_PROVIDER`      | Always (`twilio`/`meta`) |
 | `SQL_SERVER`, `SQL_DATABASE`, `SQL_UID`, `SQL_PWD` | Always |
 | `REDIS_HOST`             | Always                 |
@@ -154,65 +191,11 @@ Copy `.env.example` to `.env`. Key variables:
 - **`pyodbc`** is the SQL Server driver. If the connection drops, `tenacity` retries will handle transient failures — don't remove those decorators.
 - **Price validation** in `POST /api/agregar_pedido` compares cart prices against the DB to prevent client-side manipulation — don't bypass this.
 - **Monei HMAC** must be verified in `POST /webhook/monei` before processing any payment state change.
+- **RQ worker** must be running alongside the app for WhatsApp message processing. In Docker, the `worker` service handles this.
 
 ## Known Issues (don't introduce more of these)
 
-- `gestor_dashboard.py` is a 121 KB god object — don't add more logic to it, extract to submodules instead.
-- WhatsApp notifications in `blueprints/picker.py`, `repartidor.py`, `dashboard.py` use bare `threading.Thread` with no error handling — failures are silent.
+- `gestor_dashboard.py` is a 121 KB god object — don't add more logic to it, extract to `managers/dashboard/` submodules instead.
+- WhatsApp notifications in `blueprints/picker.py`, `repartidor.py`, `dashboard/` use bare `threading.Thread` with no error handling — failures are silent.
 - `/webhoo/monei` (typo route) exists alongside `/webhook/monei` pending Monei dashboard update — don't replicate this pattern.
-- `blueprints/api.py` contains business logic that belongs in controllers — don't add more.
-
-
-
-
-
-
-### Agentes y sus roles
-
-| Agente | Entrada | Salida |
-|--------|---------|--------|
-| `reader` (entry point) | Peticion del usuario | `reader-context.json` |
-| `planner` | reader-context.json | `plan.json` |
-| `writer` | plan.json | `execution-brief.json` + `execution-brief.md` |
-| `frontend` / `backend` | execution-dispatch.json | `result.json` |
-| `reviewer` | result.json + plan.json | `review.json` |
-
-### Readers especializados
-
-El `reader` principal activa solo los readers necesarios segun el dominio de la peticion:
-
-- `project-reader` → arquitectura, modulos, flujo general (`PROJECT_MAP.md`)
-- `db-reader` → tablas, modelos, migraciones (`DB_MAP.md`)
-- `query-reader` → queries, acceso a datos, performance (`QUERY_MAP.md`)
-- `ui-reader` → vistas, componentes, estados UI (`UI_MAP.md`)
-
-Cada reader lee su `*_MAP.md` y devuelve un JSON con `files_to_open` y `files_to_review`. Para requests que cruzan dominios, el reader elige un `primary_reader` de todas formas.
-
-### Gate de aprobacion
-
-Ningun agente ejecutor (frontend/backend) puede actuar sin `operator-approval.json` con `status: "approved"`. El script `execute-plan.py` valida esto antes de generar `execution-dispatch.json`. Los agentes ejecutores verifican `selected_agents` en el dispatch para saber si deben actuar.
-
-### Contratos JSON
-
-Todos los artefactos del flujo tienen schema en `.claude/schemas/`. Los archivos de runtime en `.claude/runtime/` son generados y sobreescritos en cada ciclo — no editar manualmente salvo `operator-approval.json` via hooks.
-
-## Instalacion en un proyecto nuevo
-
-1. Copia esta carpeta al proyecto que usara Claude.
-2. Verifica que exista `.claude/plugin.json`.
-3. Rellena los `*_MAP.md` en `.claude/maps/` con el contexto real del proyecto.
-4. Ejecuta `python3 .claude/hooks/pre-commit.py` para validar la estructura.
-                                                                                   
-┌──(venv)─(siemprearmando㉿elfavo)-[~/panchi-bot] ➟ prueba-agentes
-└─$ 
-
-### Contratos JSON
-
-Todos los artefactos del flujo tienen schema en `.claude/schemas/`. Los archivos de runtime en `.claude/runtime/` son generados y sobreescritos en cada ciclo — no editar manualmente salvo `operator-approval.json` via hooks.tar manualmente salvo `operator-approval.json` via hooks.
-
-## Instalacion en un proyecto nuevo
-
-1. Copia esta carpeta al proyecto que usara Claude.
-2. Verifica que exista `.claude/plugin.json`.
-3. Rellena los `*_MAP.md` en `.claude/maps/` con el contexto real del proyecto.
-4. Ejecuta `python3 .claude/hooks/pre-commit.py` para validar la estructura.
+- `blueprints/api/` submodules contain business logic that belongs in controllers — don't add more.
