@@ -43,6 +43,13 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
 
                 if mensaje_respuesta == "Tienda online":
                     try:
+                        pedido_actual = gestor_pedidos.obtener_pedido(datos.id_pedido_actual)
+                        if not pedido_actual or pedido_actual.Estado != EstadoPedido.PENDIENTE:
+                            logger.warning(
+                                "procesar_pedido: pedido %s en estado inesperado, no se genera enlace",
+                                datos.id_pedido_actual,
+                            )
+                            return "❌ Ocurrió un error al procesar la opción. Intente nuevamente."
                         enlace = generar_enlace(item, usuario_datos)
                         if not gestor_pedidos.iniciar_enlace(datos.id_pedido_actual, enlace):
                             return "❌ Ocurrió un error al procesar la opción. Intente nuevamente."
