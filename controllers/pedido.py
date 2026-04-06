@@ -27,6 +27,7 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
         return f"❌ Error en los datos de entrada:\n{e}"
 
     if es_pregunta(datos.pedido):
+        logger.info("PREGUNTA_DETECTADA usuario=%s input=%r", numero_cliente, datos.pedido)
         return "Lo siento, no reconocí tu pregunta."
 
     pedido_limpio = limpiar_texto(datos.pedido)
@@ -54,6 +55,7 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
                         return "❌ Error inesperado. Intente nuevamente."
                 return mensaje_respuesta
 
+    logger.info("COMANDO_NO_RECONOCIDO usuario=%s input=%r", numero_cliente, pedido_limpio)
     menu_comando_no_reconocido = mostrar_menu()
     return f"❌Comando no reconocido \n▪️ Por favor, elige una *opción*  {menu_comando_no_reconocido}\nEscribe el *Número* correspondiente para elegir."
 
