@@ -170,20 +170,23 @@ def confirmar_carrito(
         return False, "Error de base de datos al confirmar el carrito. Intente más tarde."
 
     # Redis solo si DB confirma — el carrito es cache recuperable.
-    cache.set(
-        pedido_id_redis,
-        json.dumps({
-            "name": name,
-            "token": token,
-            "userID": user_id,
-            "pedidoID": pedido_id_db,
-            "numero": numero,
-            "direccion": direccion,
-            "productos": productos,
-            "total": total,
-        }),
-        ex=3600,
-    )
+    try:
+        cache.set(
+            pedido_id_redis,
+            json.dumps({
+                "name": name,
+                "token": token,
+                "userID": user_id,
+                "pedidoID": pedido_id_db,
+                "numero": numero,
+                "direccion": direccion,
+                "productos": productos,
+                "total": total,
+            }),
+            ex=3600,
+        )
+    except Exception as e:
+        logger.warning("confirmar_carrito: fallo al guardar carrito en Redis pedido=%s: %s", pedido_id_db, e)
     logger.info("CARRITO_CONFIRMADO pedido_id=%s", pedido_id_db)
 
     confirmacion_url = f"{public_url}/confirmacion_pago?pedido_id={pedido_id_redis}"
