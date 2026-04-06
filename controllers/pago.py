@@ -25,7 +25,7 @@ def _validar_carrito(productos_recibidos, gestor_productos):
     for item in productos_recibidos:
         codigo   = item.get("codigo")
         cantidad = item.get("cantidad", 1)
-        if not isinstance(cantidad, int) or cantidad <= 0:
+        if isinstance(cantidad, bool) or not isinstance(cantidad, int) or cantidad <= 0:
             return None, None, f"Cantidad inválida para el producto {codigo}"
         notas    = item.get("notas", "") or None
         producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
@@ -179,6 +179,6 @@ def iniciar_pago_efectivo(
             "CONFIRMACION_EFECTIVO_WA_FALLIDA pedido=%s error=%s",
             pedido_id, e, exc_info=True
         )
+    # Pedido confirmado en DB — devolver True aunque falle WhatsApp
     logger.info("iniciar_pago_efectivo: pedido %s confirmado contra reembolso", pedido_id)
-
     return True, f"{public_url}/pago_confirmado?pedido_id={redis_id}"
