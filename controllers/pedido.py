@@ -3,6 +3,7 @@ import logging
 
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
+from tenacity import RetryError
 from utils.es_pregunta import es_pregunta
 from container import gestor_pedidos
 from services.token_service import generar_enlace
@@ -137,7 +138,11 @@ def confirmar_carrito(
         return False, resultado
     productos, total = resultado
 
-    pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
+    try:
+        pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
+    except (SQLAlchemyError, OperationalError, RetryError) as e:
+        logger.error("confirmar_carrito: DB error obteniendo pedido usuario=%s: %s", user_id, e)
+        return False, "Error de base de datos. Intente más tarde."
     if pedido_activo is None:
         logger.error("confirmar_carrito: no active order found for user %s", user_id)
         return False, "No se encontró un pedido activo para este usuario"
@@ -173,7 +178,11 @@ def confirmar_carrito(
         logger.warning("confirmar_carrito: no se pudieron geocodificar las coordenadas del pedido %s", pedido_id_db)
 
     # Single atomic commit: redisID + coordinates + state transition to ENLACE2.
-    gestor_pedidos.fijar_carrito_confirmado(pedido_id_db, pedido_id_redis, lat=lat, lng=lng)
+    try:
+        gestor_pedidos.fijar_carrito_confirmado(pedido_id_db, pedido_id_redis, lat=lat, lng=lng)
+    except (SQLAlchemyError, OperationalError, RetryError) as e:
+        logger.error("confirmar_carrito: DB error en fijar_carrito_confirmado pedido=%s: %s", pedido_id_db, e)
+        return False, "Error de base de datos al confirmar el carrito. Intente más tarde."
     logger.info("CARRITO_CONFIRMADO pedido_id=%s", pedido_id_db)
 
     confirmacion_url = f"{public_url}/confirmacion_pago?pedido_id={pedido_id_redis}"

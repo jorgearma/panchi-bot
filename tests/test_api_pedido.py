@@ -366,6 +366,33 @@ class TestConfirmarCarrito:
         assert "vacío" in msg.lower() or "vacio" in msg.lower()
         gestor.obtener_pedido_mas_reciente.assert_not_called()
 
+    def test_confirmar_carrito_db_error_capturado(self):
+        """SQLAlchemyError en obtener_pedido_mas_reciente no debe propagarse — devuelve (False, msg)."""
+        from controllers.pedido import confirmar_carrito
+        from sqlalchemy.exc import SQLAlchemyError
+
+        gestor = MagicMock()
+        gestor.obtener_pedido_mas_reciente.side_effect = SQLAlchemyError("timeout")
+        mock_gp = MagicMock()
+        mock_gp.obtener_producto_por_codigo.return_value = {"Precio": 3.5}
+
+        success, msg = confirmar_carrito(
+            pedido_id_redis="uuid-db-error",
+            name="X",
+            token="t",
+            user_id=1,
+            numero="+34",
+            direccion="C/",
+            productos_recibidos=PRODUCTOS_RECIBIDOS,
+            cache=make_cache(),
+            gestor_pedidos=gestor,
+            gestor_productos=mock_gp,
+            public_url=PUBLIC_URL,
+        )
+
+        assert success is False
+        assert "base de datos" in msg.lower() or "error" in msg.lower()
+
 
 # ---------------------------------------------------------------------------
 # iniciar_pago
