@@ -18,11 +18,12 @@ INTERNAL_TOKEN = "test-internal-token"
 # Helpers
 # ---------------------------------------------------------------------------
 
-def make_pedido(estado: str, pedido_id: int = 1, redis_id: str = "redis-abc") -> MagicMock:
+def make_pedido(estado: str, pedido_id: int = 1, redis_id: str = "redis-abc", enlace: str = None) -> MagicMock:
     p = MagicMock()
     p.PedidoID = pedido_id
     p.Estado = estado
     p.redisID = redis_id
+    p.enlace = enlace
     return p
 
 
@@ -447,7 +448,7 @@ class TestIniciarPago:
     def test_already_in_confirmando_pago_returns_true(self):
         from controllers.pago import iniciar_pago
 
-        pedido = make_pedido(EstadoPedido.CONFIRMANDO_PAGO)
+        pedido = make_pedido(EstadoPedido.CONFIRMANDO_PAGO, enlace="https://monei.com/pay/abc123")
         gestor = make_gestor_pedidos(pedido)
 
         success, msg = iniciar_pago(
@@ -464,8 +465,31 @@ class TestIniciarPago:
         )
 
         assert success is True
-        # Debe devolver URL real (enlace) o fallback con public_url
-        assert msg.startswith(PUBLIC_URL) or msg == "/pago_en_curso"
+        # Debe devolver el enlace real que ya está guardado en el pedido
+        assert msg == "https://monei.com/pay/abc123"
+
+    def test_already_in_confirmando_pago_sin_enlace_devuelve_fallback(self):
+        from controllers.pago import iniciar_pago
+
+        pedido = make_pedido(EstadoPedido.CONFIRMANDO_PAGO, enlace=None)
+        gestor = make_gestor_pedidos(pedido)
+
+        success, msg = iniciar_pago(
+            user_id=10,
+            productos_recibidos=PRODUCTOS_VALIDOS_PAGO,
+            nombre_cliente="X",
+            numero_cliente="+34",
+            direccion_cliente="C/",
+            cache=make_cache(),
+            gestor_pedidos=gestor,
+            gestor_productos=self._make_gestor_productos(),
+            monei=self._make_monei(),
+            public_url=PUBLIC_URL,
+        )
+
+        assert success is True
+        # Cuando no hay enlace guardado, devuelve fallback con public_url
+        assert msg == f"{PUBLIC_URL}/pago_en_curso"
 
     def test_monei_api_exception_returns_false(self):
         from controllers.pago import iniciar_pago
