@@ -157,6 +157,19 @@ def confirmar_carrito(
         )
         return False, "El pedido no se encuentra en el estado correcto para confirmar el carrito"
 
+    coords = geocodificar_direccion(direccion)
+    lat, lng = (coords[0], coords[1]) if coords else (None, None)
+    if not coords:
+        logger.warning("confirmar_carrito: no se pudieron geocodificar las coordenadas del pedido %s", pedido_id_db)
+
+    # DB primero: la transición de estado es la operación crítica.
+    try:
+        gestor_pedidos.fijar_carrito_confirmado(pedido_id_db, pedido_id_redis, lat=lat, lng=lng)
+    except (SQLAlchemyError, OperationalError, RetryError) as e:
+        logger.error("confirmar_carrito: DB error en fijar_carrito_confirmado pedido=%s: %s", pedido_id_db, e)
+        return False, "Error de base de datos al confirmar el carrito. Intente más tarde."
+
+    # Redis solo si DB confirma — el carrito es cache recuperable.
     cache.set(
         pedido_id_redis,
         json.dumps({
@@ -171,18 +184,6 @@ def confirmar_carrito(
         }),
         ex=3600,
     )
-
-    coords = geocodificar_direccion(direccion)
-    lat, lng = (coords[0], coords[1]) if coords else (None, None)
-    if not coords:
-        logger.warning("confirmar_carrito: no se pudieron geocodificar las coordenadas del pedido %s", pedido_id_db)
-
-    # Single atomic commit: redisID + coordinates + state transition to ENLACE2.
-    try:
-        gestor_pedidos.fijar_carrito_confirmado(pedido_id_db, pedido_id_redis, lat=lat, lng=lng)
-    except (SQLAlchemyError, OperationalError, RetryError) as e:
-        logger.error("confirmar_carrito: DB error en fijar_carrito_confirmado pedido=%s: %s", pedido_id_db, e)
-        return False, "Error de base de datos al confirmar el carrito. Intente más tarde."
     logger.info("CARRITO_CONFIRMADO pedido_id=%s", pedido_id_db)
 
     confirmacion_url = f"{public_url}/confirmacion_pago?pedido_id={pedido_id_redis}"
