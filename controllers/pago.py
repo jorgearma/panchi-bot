@@ -99,6 +99,10 @@ def iniciar_pago(
         pedido_activo_id, productos_validos, redirect_url, notas=notas or None
     )
     if not ok:
+        logger.error(
+            "CONFIRMAR_PAGO_ONLINE_FALLIDO pedido=%s importe=%s monei_url=%s",
+            pedido_activo_id, amount_in_cents, redirect_url
+        )
         return False, "Error al registrar el pedido tras el pago"
 
     logger.info(
