@@ -127,6 +127,8 @@ class TestConfirmarCarrito:
 
         pedido = make_pedido(EstadoPedido.ENLACE)
         gestor = make_gestor_pedidos(pedido)
+        mock_gp = MagicMock()
+        mock_gp.obtener_producto_por_codigo.return_value = {"Precio": 3.5}
 
         confirmar_carrito(
             pedido_id_redis="uuid-003",
@@ -135,10 +137,10 @@ class TestConfirmarCarrito:
             user_id=1,
             numero="+34600000003",
             direccion="C/ Test 1",
-            productos_recibidos=[],
+            productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=make_cache(),
             gestor_pedidos=gestor,
-            gestor_productos=MagicMock(),
+            gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
 
@@ -153,21 +155,24 @@ class TestConfirmarCarrito:
 
         pedido = make_pedido(EstadoPedido.ENLACE2)  # already past ENLACE
         gestor = make_gestor_pedidos(pedido)
+        mock_gp = MagicMock()
+        mock_gp.obtener_producto_por_codigo.return_value = {"Precio": 3.5}
 
-        confirmar_carrito(
+        success, msg = confirmar_carrito(
             pedido_id_redis="uuid-004",
             name="X",
             token="t",
             user_id=1,
             numero="+34600000004",
             direccion="C/ Test 2",
-            productos_recibidos=[],
+            productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=make_cache(),
             gestor_pedidos=gestor,
-            gestor_productos=MagicMock(),
+            gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
 
+        assert success is False
         gestor.fijar_carrito_confirmado.assert_not_called()
 
     def test_no_active_order_returns_false(self):
@@ -175,6 +180,8 @@ class TestConfirmarCarrito:
 
         gestor = MagicMock()
         gestor.obtener_pedido_mas_reciente.return_value = None
+        mock_gp = MagicMock()
+        mock_gp.obtener_producto_por_codigo.return_value = {"Precio": 3.5}
 
         success, msg = confirmar_carrito(
             pedido_id_redis="uuid-005",
@@ -183,10 +190,10 @@ class TestConfirmarCarrito:
             user_id=1,
             numero="+34",
             direccion="C/",
-            productos_recibidos=[],
+            productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=make_cache(),
             gestor_pedidos=gestor,
-            gestor_productos=MagicMock(),
+            gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
 
@@ -334,6 +341,30 @@ class TestConfirmarCarrito:
 
         assert success is False
         assert "precio" in msg.lower() or "disponible" in msg.lower()
+
+    def test_confirmar_carrito_vacio_rechazado(self):
+        """Un carrito sin productos debe ser rechazado antes de consultar la BD."""
+        from controllers.pedido import confirmar_carrito
+
+        gestor = MagicMock()  # no debe ser llamado nunca
+
+        success, msg = confirmar_carrito(
+            pedido_id_redis="uuid-vacio",
+            name="X",
+            token="t",
+            user_id=1,
+            numero="+34",
+            direccion="C/",
+            productos_recibidos=[],
+            cache=MagicMock(),
+            gestor_pedidos=gestor,
+            gestor_productos=MagicMock(),
+            public_url=PUBLIC_URL,
+        )
+
+        assert success is False
+        assert "vacío" in msg.lower() or "vacio" in msg.lower()
+        gestor.obtener_pedido_mas_reciente.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
