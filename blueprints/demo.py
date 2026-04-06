@@ -72,6 +72,13 @@ def dashboard_demo():
     return render_template("dashboard/index.html")
 
 
+@blueprint_demo.route('/demo/exit')
+def exit_demo():
+    """Limpia la sesión demo y redirige al login."""
+    session.clear()
+    return redirect('/auth/login')
+
+
 @blueprint_demo.route('/demo/reset', methods=['POST'])
 def reset():
     """Regenera los datos demo para esta sesión."""

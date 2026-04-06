@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/features/repartidor/index.css') }}" />
 </head>
 <body class="repartidor-shell min-h-screen"
-      x-data="repartidor({{ repartidor_id or 'null' }})"
+      x-data="repartidor({{ repartidor_id if repartidor_id is not none else 'null' }})"
       x-init="init()">
 
   <!-- ======== HEADER ======== -->

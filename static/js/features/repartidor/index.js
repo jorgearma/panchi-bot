@@ -6,7 +6,7 @@ let mapaColaMarkers = [];
 let marcadorTiendaCola = null;
 
 function repartidor(repartidorId) {
-  if (!repartidorId) {
+  if (repartidorId === null || repartidorId === undefined) {
     const saved = localStorage.getItem('panchi_repartidor_id');
     if (saved) repartidorId = parseInt(saved, 10);
   }
