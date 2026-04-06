@@ -464,7 +464,8 @@ class TestIniciarPago:
         )
 
         assert success is True
-        assert "proceso de pago" in msg.lower()
+        # Debe devolver URL real (enlace) o fallback con public_url
+        assert msg.startswith(PUBLIC_URL) or msg == "/pago_en_curso"
 
     def test_monei_api_exception_returns_false(self):
         from controllers.pago import iniciar_pago

@@ -58,7 +58,8 @@ def iniciar_pago(
         return False, "No se encontró un pedido activo para este usuario"
 
     if pedido_activo.Estado == EstadoPedido.CONFIRMANDO_PAGO:
-        return True, "El pedido ya está en proceso de pago."
+        logger.info("PAGO_YA_INICIADO pedido=%s usuario=%s", pedido_activo.PedidoID, user_id)
+        return True, pedido_activo.enlace or f"{public_url}/pago_en_curso"
 
     if pedido_activo.Estado != EstadoPedido.ENLACE2:
         logger.error(
