@@ -1,5 +1,5 @@
 function picker(pickerId) {
-  if (!pickerId) {
+  if (pickerId === null || pickerId === undefined) {
     const saved = localStorage.getItem('panchi_picker_id');
     if (saved) pickerId = parseInt(saved, 10);
   }

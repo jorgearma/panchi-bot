@@ -50,7 +50,7 @@
     }
   </style>
 </head>
-<body class="picker-shell min-h-screen" x-data="picker({{ picker_id or 'null' }})" x-init="init()">
+<body class="picker-shell min-h-screen" x-data="picker({{ picker_id if picker_id is not none else 'null' }})" x-init="init()">
 
   <!-- ======== HEADER ======== -->
   <header class="px-3 pt-3 pb-1 flex justify-center">
