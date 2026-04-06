@@ -8,7 +8,7 @@ from flask import jsonify, request
 
 from container import gestor_pedidos, gestor_productos, cache
 from states import EstadoPedido
-from controllers.pedido import confirmar_carrito
+from controllers.carrito import confirmar_carrito
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def register(bp):
             direccion=data.get("direccion", "Dirección no especificada"),
             productos_recibidos=data.get("productos", []),
             cache=cache,
-            gestor_pedidos=gestor_pedidos,
+            pedidos_manager=gestor_pedidos,
             gestor_productos=gestor_productos,
             public_url=config.PUBLIC_URL or "",
         )

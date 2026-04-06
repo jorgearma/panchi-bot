@@ -65,7 +65,7 @@ PUBLIC_URL = "https://example.com"
 
 class TestConfirmarCarrito:
     def test_happy_path_returns_true_and_url(self):
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         pedido = make_pedido(EstadoPedido.ENLACE)
         cache = make_cache()
@@ -83,7 +83,7 @@ class TestConfirmarCarrito:
             direccion="Calle Mayor 1",
             productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=cache,
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -92,7 +92,7 @@ class TestConfirmarCarrito:
         assert result == f"{PUBLIC_URL}/confirmacion_pago?pedido_id=uuid-001"
 
     def test_cart_stored_in_cache(self):
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         pedido = make_pedido(EstadoPedido.ENLACE)
         store = {}
@@ -112,7 +112,7 @@ class TestConfirmarCarrito:
             direccion="Calle Ancha 5",
             productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=cache,
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -123,7 +123,7 @@ class TestConfirmarCarrito:
         assert payload["total"] == round(3.5 * 2, 2)  # precio de BD mock = 3.5
 
     def test_state_transition_to_enlace2_called(self):
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         pedido = make_pedido(EstadoPedido.ENLACE)
         gestor = make_gestor_pedidos(pedido)
@@ -139,7 +139,7 @@ class TestConfirmarCarrito:
             direccion="C/ Test 1",
             productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=make_cache(),
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -151,7 +151,7 @@ class TestConfirmarCarrito:
 
     def test_wrong_state_does_not_call_fijar_carrito_confirmado(self):
         """If the order is not in ENLACE state, no state transition is attempted."""
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         pedido = make_pedido(EstadoPedido.ENLACE2)  # already past ENLACE
         gestor = make_gestor_pedidos(pedido)
@@ -167,7 +167,7 @@ class TestConfirmarCarrito:
             direccion="C/ Test 2",
             productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=make_cache(),
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -176,7 +176,7 @@ class TestConfirmarCarrito:
         gestor.fijar_carrito_confirmado.assert_not_called()
 
     def test_no_active_order_returns_false(self):
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         gestor = MagicMock()
         gestor.obtener_pedido_mas_reciente.return_value = None
@@ -192,7 +192,7 @@ class TestConfirmarCarrito:
             direccion="C/",
             productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=make_cache(),
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -202,7 +202,7 @@ class TestConfirmarCarrito:
 
     def test_confirmacion_ignora_precio_frontend(self):
         """El total en Redis usa precio de BD, no precio_unitario del frontend."""
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
         from decimal import Decimal
 
         precio_frontend_manipulado = 0.01
@@ -231,7 +231,7 @@ class TestConfirmarCarrito:
                 "precio_unitario": precio_frontend_manipulado,
             }],
             cache=cache,
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -242,7 +242,7 @@ class TestConfirmarCarrito:
 
     def test_confirmacion_codigo_ausente_devuelve_error(self):
         """Si un item no tiene 'Codigo', confirmar_carrito devuelve (False, mensaje)."""
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         pedido = make_pedido(EstadoPedido.ENLACE)
         gestor = make_gestor_pedidos(pedido)
@@ -257,7 +257,7 @@ class TestConfirmarCarrito:
             direccion="Calle Mayor 1",
             productos_recibidos=[{"nombre": "X", "cantidad": 1}],
             cache=make_cache(),
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -267,7 +267,7 @@ class TestConfirmarCarrito:
 
     def test_confirmacion_cantidad_cero_devuelve_error(self):
         """Si cantidad <= 0, confirmar_carrito devuelve (False, mensaje)."""
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         pedido = make_pedido(EstadoPedido.ENLACE)
         gestor = make_gestor_pedidos(pedido)
@@ -282,7 +282,7 @@ class TestConfirmarCarrito:
             direccion="Calle Mayor 1",
             productos_recibidos=[{"Codigo": "P001", "nombre": "X", "cantidad": 0}],
             cache=make_cache(),
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -292,7 +292,7 @@ class TestConfirmarCarrito:
 
     def test_confirmacion_producto_no_encontrado_devuelve_error(self):
         """Si gestor_productos no encuentra el código, confirmar_carrito devuelve error."""
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         pedido = make_pedido(EstadoPedido.ENLACE)
         gestor = make_gestor_pedidos(pedido)
@@ -308,7 +308,7 @@ class TestConfirmarCarrito:
             direccion="Calle Mayor 1",
             productos_recibidos=[{"Codigo": "INEXISTENTE", "nombre": "X", "cantidad": 1}],
             cache=make_cache(),
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -318,7 +318,7 @@ class TestConfirmarCarrito:
 
     def test_confirmacion_precio_null_devuelve_error(self):
         """Si Precio en BD es NULL, confirmar_carrito devuelve (False, mensaje)."""
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         pedido = make_pedido(EstadoPedido.ENLACE)
         gestor = make_gestor_pedidos(pedido)
@@ -334,7 +334,7 @@ class TestConfirmarCarrito:
             direccion="Calle Mayor 1",
             productos_recibidos=[{"Codigo": "P001", "nombre": "X", "cantidad": 1}],
             cache=make_cache(),
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
@@ -344,7 +344,7 @@ class TestConfirmarCarrito:
 
     def test_confirmar_carrito_vacio_rechazado(self):
         """Un carrito sin productos debe ser rechazado antes de consultar la BD."""
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
 
         gestor = MagicMock()  # no debe ser llamado nunca
 
@@ -357,7 +357,7 @@ class TestConfirmarCarrito:
             direccion="C/",
             productos_recibidos=[],
             cache=MagicMock(),
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=MagicMock(),
             public_url=PUBLIC_URL,
         )
@@ -368,7 +368,7 @@ class TestConfirmarCarrito:
 
     def test_confirmar_carrito_db_error_capturado(self):
         """SQLAlchemyError en obtener_pedido_mas_reciente no debe propagarse — devuelve (False, msg)."""
-        from controllers.pedido import confirmar_carrito
+        from controllers.carrito import confirmar_carrito
         from sqlalchemy.exc import SQLAlchemyError
 
         gestor = MagicMock()
@@ -385,7 +385,7 @@ class TestConfirmarCarrito:
             direccion="C/",
             productos_recibidos=PRODUCTOS_RECIBIDOS,
             cache=make_cache(),
-            gestor_pedidos=gestor,
+            pedidos_manager=gestor,
             gestor_productos=mock_gp,
             public_url=PUBLIC_URL,
         )
