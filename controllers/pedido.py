@@ -128,6 +128,10 @@ def confirmar_carrito(
     public_url: str,
 ) -> tuple:
     """Guarda el carrito validado, calcula su total y lo deja listo para confirmar."""
+    if not productos_recibidos:
+        logger.warning("confirmar_carrito: carrito vacío para usuario %s", user_id)
+        return False, "El carrito no puede estar vacío"
+
     ok, resultado = _validar_productos(productos_recibidos, gestor_productos)
     if not ok:
         return False, resultado
