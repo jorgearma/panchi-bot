@@ -131,21 +131,21 @@
   </div>
 
   <!-- ======== SIN PICKER ID ======== -->
-  <div x-show="!pickerId" class="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
+  <div x-show="pickerId === null || pickerId === undefined" class="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
     <div class="text-5xl mb-4">🔗</div>
     <h2 class="text-xl font-bold text-gray-200 mb-2">Enlace incompleto</h2>
     <p class="text-gray-400 text-sm">Accede desde el enlace que te dio el supervisor.<br>Ejemplo: <code class="bg-gray-800 px-1 rounded">/picker?id=3</code></p>
   </div>
 
   <!-- ======== CARGANDO ======== -->
-  <div x-show="pickerId && cargando && pedidos.length === 0"
+  <div x-show="pickerId !== null && pickerId !== undefined && cargando && pedidos.length === 0"
        class="flex flex-col items-center justify-center min-h-[60vh] gap-3">
     <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     <p class="text-gray-400 text-sm">Cargando pedidos...</p>
   </div>
 
   <!-- ======== VISTA LISTA ======== -->
-  <div x-show="pickerId && !cargando && vistaActual === 'lista'" x-cloak class="px-3 pb-8 sm:px-4">
+  <div x-show="pickerId !== null && pickerId !== undefined && !cargando && vistaActual === 'lista'" x-cloak class="px-3 pb-8 sm:px-4">
 
     <!-- ---- Tabs ---- -->
     <div class="pt-3">
@@ -312,7 +312,7 @@
   </div>
 
   <!-- ======== VISTA TICKET ======== -->
-  <div x-show="pickerId && vistaActual === 'ticket' && ticketActual" x-cloak class="pb-36">
+  <div x-show="pickerId !== null && pickerId !== undefined && vistaActual === 'ticket' && ticketActual" x-cloak class="pb-36">
 
     <!-- Info del pedido + Progreso -->
     <div class="mx-3 mt-3 bg-gray-800/50 border border-gray-700 rounded-2xl overflow-hidden">
