@@ -104,5 +104,9 @@ class ManejadorMensajesRegistrados:
             )
             return _enviar_estado_en_curso(pedido_activo, numero_cliente)
 
+        logger.warning(
+            "ESTADO_NO_CONTEMPLADO pedido=%s estado=%s usuario=%s mensaje=%r",
+            id_pedido_activo, estado_del_pedido, numero_cliente, mensaje_cliente,
+        )
         _enviar_error_generico(numero_cliente)
         return " mensaje enviado", 200
