@@ -244,6 +244,20 @@ class TestFlujosNoBloqueados:
         mock_gp.iniciar_pedido.assert_called_once()
         assert result[1] == 200
 
+    def test_lock_activo_ignora_duplicado(self):
+        """Si el lock ya existe (Meta retry), no se inicia nuevo pedido y devuelve 200."""
+        with patch("controllers.mensajes_registrados.gestor_usuarios") as mock_gu, \
+             patch("controllers.mensajes_registrados.gestor_pedidos") as mock_gp, \
+             patch("controllers.mensajes_registrados.redismanager") as mock_redis, \
+             patch("controllers.mensajes_registrados_notifier.enviar_mensaje_whatsapp"), \
+             patch("controllers.mensajes_registrados_notifier.config"):
+            mock_gu.obtener_usuario_completo.return_value = USUARIO_DATOS
+            mock_gp.obtener_pedido_mas_reciente.return_value = None
+            mock_redis.adquirir_lock.return_value = False  # lock ya activo
+            result = ManejadorMensajesRegistrados.manejar_mensajes_registrados(NUMERO, "1")
+        mock_gp.iniciar_pedido.assert_not_called()
+        assert result[1] == 200
+
     def test_pedido_en_preparacion_no_inicia_pedido(self):
         """Confirma que EN_PREPARACION bloquea mientras PAGADO no lo hace."""
         _, _, mock_gp_bloq = _run(EstadoPedido.EN_PREPARACION)
