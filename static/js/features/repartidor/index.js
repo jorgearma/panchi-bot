@@ -156,7 +156,7 @@ function repartidor(repartidorId) {
     },
 
     async init() {
-      if (!this.repartidorId) return;
+      if (this.repartidorId === null || this.repartidorId === undefined) return;
       localStorage.setItem('panchi_repartidor_id', this.repartidorId);
       await Promise.all([this.recargar(), this.cargarCola()]);
 
@@ -180,7 +180,7 @@ function repartidor(repartidorId) {
     },
 
     async recargar(skipCache = false, silencioso = false) {
-      if (!this.repartidorId) return;
+      if (this.repartidorId === null || this.repartidorId === undefined) return;
       if (!silencioso) this.cargando = true;
       const _cacheKey = `panchi_rep_pedidos_${this.repartidorId}`;
       if (!skipCache) {
