@@ -80,6 +80,7 @@ class ManejadorMensajesRegistrados:
         if estado_del_pedido == EstadoPedido.ENLACE or estado_del_pedido == EstadoPedido.ENLACE2:
             enlace = pedido_activo.enlace
             if not enlace:
+                logger.info("ENLACE_CADUCADO pedido=%s usuario=%s", id_pedido_activo, numero_cliente)
                 _enviar_enlace_caducado(numero_cliente)
                 return " mensaje enviado", 200
             _enviar_enlace_pedido(enlace, numero_cliente)
