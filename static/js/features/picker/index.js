@@ -76,7 +76,7 @@ function picker(pickerId) {
     },
 
     async init() {
-      if (!this.pickerId) return;
+      if (this.pickerId === null || this.pickerId === undefined) return;
       localStorage.setItem('panchi_picker_id', this.pickerId);
       this.isOnline = navigator.onLine;
       window.addEventListener('online', () => {
@@ -104,7 +104,7 @@ function picker(pickerId) {
     },
 
     async recargar(silencioso = false) {
-      if (!this.pickerId) return;
+      if (this.pickerId === null || this.pickerId === undefined) return;
       if (!silencioso) this.cargando = true;
       const _cacheKey = `panchi_picker_pedidos_${this.pickerId}`;
       try {
