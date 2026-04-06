@@ -26,7 +26,7 @@ def _validar_productos(productos_recibidos: list, gestor_productos) -> tuple:
             return False, "Producto sin código identificador"
 
         cantidad = p.get("cantidad", 1)
-        if cantidad <= 0:
+        if isinstance(cantidad, bool) or not isinstance(cantidad, int) or cantidad <= 0:
             logger.error(
                 "confirmar_carrito: cantidad inválida %s para código %s", cantidad, codigo
             )
