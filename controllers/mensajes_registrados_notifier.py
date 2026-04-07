@@ -3,6 +3,7 @@
 
 import logging
 import config
+from sqlalchemy.orm.exc import DetachedInstanceError
 from services.whatsapp_service import enviar_mensaje_whatsapp
 from states import EstadoPedido
 
@@ -99,8 +100,15 @@ def _enviar_estado_en_curso(pedido_activo, numero_cliente):
         )
 
     elif estado == EstadoPedido.EN_REPARTO:
-        reparto = pedido_activo.reparto
-        repartidor = reparto.repartidor if reparto else None
+        try:
+            reparto = pedido_activo.reparto
+            repartidor = reparto.repartidor if reparto else None
+        except DetachedInstanceError:
+            logger.warning(
+                "_enviar_estado_en_curso: sesión cerrada al acceder a reparto del pedido %s",
+                pedido_activo.PedidoID,
+            )
+            repartidor = None
         if repartidor:
             nombre = f"{repartidor.Nombre} {repartidor.Apellido}".strip()
             telefono = repartidor.Telefono or "no disponible"
