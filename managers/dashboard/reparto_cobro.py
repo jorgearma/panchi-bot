@@ -3,9 +3,10 @@ import logging
 from datetime import date, datetime, timedelta
 
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload, selectinload
 
 from managers.dashboard._helpers import _iso
-from models import Reparto
+from models import Pedido, Reparto
 from states import EstadoReparto
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,12 @@ class GestorRepartoCobroMixin:
         s = self.session
         repartos = (
             s.query(Reparto)
+            .options(
+                joinedload(Reparto.pedido).options(
+                    joinedload(Pedido.cliente),
+                    selectinload(Pedido.pagos),
+                )
+            )
             .filter(
                 Reparto.repartidor_id == repartidor_id,
                 Reparto.estado == EstadoReparto.ENTREGADO.value,
