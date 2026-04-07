@@ -9,6 +9,8 @@ from controllers.pago_notifier import _enviar_confirmacion_efectivo
 
 logger = logging.getLogger(__name__)
 
+_DB_ERRORS = (SQLAlchemyError, RetryError)
+
 
 def _validar_carrito(productos_recibidos, gestor_productos):
     """Recalcula el carrito con datos de BD para evitar importes manipulados.
@@ -28,7 +30,11 @@ def _validar_carrito(productos_recibidos, gestor_productos):
         if isinstance(cantidad, bool) or not isinstance(cantidad, int) or cantidad <= 0:
             return None, None, f"Cantidad inválida para el producto {codigo}"
         notas    = item.get("notas", "") or None
-        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
+        try:
+            producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
+        except _DB_ERRORS as e:
+            logger.error("_validar_carrito: DB error producto=%s: %s", codigo, e)
+            return None, None, "Error de base de datos al validar el carrito"
         if not producto_db:
             logger.error("_validar_carrito: producto %s no encontrado en BD", codigo)
             return None, None, f"Producto con código {codigo} no encontrado"
@@ -146,6 +152,13 @@ def iniciar_pago_efectivo(
     if not pedido_activo:
         return False, "No se encontró un pedido activo para este usuario"
 
+    if pedido_activo.Estado == EstadoPedido.CONTRA_REEMBOLSO:
+        logger.info(
+            "EFECTIVO_YA_CONFIRMADO pedido=%s usuario=%s",
+            pedido_activo.PedidoID, user_id,
+        )
+        return True, f"{public_url}/pago_confirmado?pedido_id={pedido_activo.redisID}"
+
     if pedido_activo.Estado != EstadoPedido.ENLACE2:
         logger.error(
             "iniciar_pago_efectivo: pedido %s en estado inesperado '%s'",
@@ -169,6 +182,7 @@ def iniciar_pago_efectivo(
         logger.error("iniciar_pago_efectivo: DB error al confirmar pedido=%s: %s", pedido_id, e)
         return False, "Error de base de datos al confirmar el pedido."
     if not ok:
+        logger.error("CONFIRMAR_PAGO_EFECTIVO_FALLIDO pedido=%s", pedido_id)
         return False, "Error al registrar el pedido contra reembolso"
 
     total_euros = round(total_calculado, 2)
