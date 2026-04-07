@@ -45,24 +45,57 @@ class RegistroUsuario:
 
         from container import gestor_usuarios, gestor_pedidos
 
-        # H1: Guardia de idempotencia — evita duplicados por reintento de Meta
-        if gestor_usuarios.obtener_usuario_completo(self.numero_cliente):
-            logger.warning("REGISTRO_DUPLICADO usuario=%s — ya existe en DB", self.numero_cliente)
+        estado = data_redis
+
+        # H1: Guardia de idempotencia — el usuario ya existe en DB.
+        # Puede ser un duplicado real (reintento de Meta) o una recuperación de
+        # fallo parcial (guardar_usuario OK pero iniciar_pedido falló antes).
+        # Distinguimos comprobando si ya tiene pedido activo.
+        usuario_existente = gestor_usuarios.obtener_usuario_completo(self.numero_cliente)
+        if usuario_existente:
+            if not gestor_pedidos.hay_pedido_pendiente(usuario_existente["id"]):
+                # Recuperación: usuario en DB sin pedido — crear pedido y avisar
+                logger.warning(
+                    "REGISTRO_PARCIAL_RECUPERADO usuario=%s — creando pedido faltante",
+                    self.numero_cliente,
+                )
+                try:
+                    gestor_pedidos.iniciar_pedido(
+                        usuario_existente["id"], estado["direccion"], self.numero_cliente
+                    )
+                except Exception as e:
+                    logger.error(
+                        "RECUPERACION_FALLIDA usuario=%s error=%s", self.numero_cliente, e
+                    )
+                    return "Error en registro", 200
+            else:
+                logger.warning("REGISTRO_DUPLICADO usuario=%s — ya existe en DB con pedido", self.numero_cliente)
+
+            menu_despues_registro = mostrar_menu()
+            _enviar_mensaje_registro(self.numero_cliente, usuario_existente["nombre"], menu_despues_registro)
             self.redismanager.delete(self.numero_cliente)
             return "Usuario ya registrado", 200
 
-        estado = data_redis
-        # H5: Capturar excepciones de DB para evitar estado Redis inconsistente
+        # Caso normal: usuario nuevo — guardar primero, luego crear pedido
         try:
             gestor_usuarios.guardar_usuario(self.numero_cliente, estado["nombre"], estado["direccion"])
-            usuario_info = gestor_usuarios.obtener_usuario_completo(self.numero_cliente)
-            if usuario_info:
-                gestor_pedidos.iniciar_pedido(usuario_info["id"], estado["direccion"], self.numero_cliente)
-            logger.info("REGISTRO_COMPLETADO usuario=%s", self.numero_cliente)
         except Exception as e:
-            logger.error("REGISTRO_FALLIDO usuario=%s error=%s", self.numero_cliente, e)
-            return "Error en registro", 200  # 200 para evitar reintento de Meta
+            logger.error("REGISTRO_FALLIDO_GUARDAR usuario=%s error=%s", self.numero_cliente, e)
+            return "Error en registro", 200  # Redis queda en CONFIRMANDO_DIRECCION → reintento posible
 
+        usuario_info = gestor_usuarios.obtener_usuario_completo(self.numero_cliente)
+        if usuario_info:
+            try:
+                gestor_pedidos.iniciar_pedido(usuario_info["id"], estado["direccion"], self.numero_cliente)
+            except Exception as e:
+                # Usuario guardado pero pedido no creado. El próximo "si" del usuario
+                # entrará por la rama de recuperación de la guardia de idempotencia.
+                logger.error(
+                    "REGISTRO_PARCIAL usuario=%s — usuario guardado, pedido no creado: %s",
+                    self.numero_cliente, e,
+                )
+
+        logger.info("REGISTRO_COMPLETADO usuario=%s", self.numero_cliente)
         menu_despues_registro = mostrar_menu()
         _enviar_mensaje_registro(self.numero_cliente, estado["nombre"], menu_despues_registro)
         # H2: Limpiar estado Redis tras registro exitoso — evita estado fantasma
