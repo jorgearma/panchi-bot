@@ -3,6 +3,7 @@ import logging
 import re
 from maps_module import validar_direccion, sugerir_calle
 from managers.estado_usuario import EstadoUsuario
+from services.whatsapp_service import enviar_mensaje_whatsapp
 from states import EstadoRegistro
 from utils.menu_opciones import mostrar_menu
 from controllers.registro_notifier import (
@@ -46,6 +47,22 @@ class RegistroUsuario:
         from container import gestor_usuarios, gestor_pedidos
 
         estado = data_redis
+
+        # Guardia de integridad: nombre y dirección deben estar en Redis.
+        # Por flujo normal es imposible llegar aquí sin ellos, pero si Redis
+        # estuviera corrupto un KeyError daría 500 silencioso y el usuario
+        # quedaría bloqueado sin poder avanzar ni retroceder.
+        if not estado.get("nombre") or not estado.get("direccion"):
+            logger.error(
+                "ESTADO_REDIS_CORRUPTO usuario=%s — faltan campos en CONFIRMANDO_DIRECCION: %s",
+                self.numero_cliente, list(estado.keys()),
+            )
+            self.redismanager.delete(self.numero_cliente)
+            enviar_mensaje_whatsapp(
+                "Ha ocurrido un problema con tu registro. Por favor, escríbenos de nuevo para empezar.",
+                self.numero_cliente,
+            )
+            return "Estado Redis corrupto — registro reiniciado", 200
 
         # H1: Guardia de idempotencia — el usuario ya existe en DB.
         # Puede ser un duplicado real (reintento de Meta) o una recuperación de
