@@ -8,18 +8,17 @@ from states import EstadoPedido
 
 logger = logging.getLogger(__name__)
 
+_DB_ERRORS = (SQLAlchemyError, OperationalError, RetryError)
+
 
 def _validar_productos(productos_recibidos: list, gestor_productos) -> tuple:
     """Valida cada producto contra la BD y construye la lista con precios confirmados.
 
     Devuelve (True, lista_productos) o (False, mensaje_error).
     """
-    productos = []
-    total = 0.0
-
+    # Validar campos básicos antes de tocar la DB
+    items_parseados = []
     for p in productos_recibidos:
-        nombre_producto = p.get("nombre", "Producto desconocido")
-
         codigo = p.get("Codigo")
         if not codigo:
             logger.error("confirmar_carrito: producto sin código identificador")
@@ -32,7 +31,21 @@ def _validar_productos(productos_recibidos: list, gestor_productos) -> tuple:
             )
             return False, f"Cantidad inválida para el producto {codigo}"
 
-        producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
+        items_parseados.append((codigo, cantidad, p))
+
+    # Una sola query para todos los productos del carrito
+    codigos = [codigo for codigo, _, _ in items_parseados]
+    try:
+        catalogo = gestor_productos.obtener_productos_por_codigos(codigos)
+    except _DB_ERRORS as e:
+        logger.error("_validar_productos: DB error codigos=%s: %s", codigos, e)
+        return False, "Error de base de datos al validar el carrito"
+
+    productos = []
+    total = 0.0
+    for codigo, cantidad, p in items_parseados:
+        nombre_producto = p.get("nombre", "Producto desconocido")
+        producto_db = catalogo.get(codigo)
         if not producto_db:
             logger.error(
                 "confirmar_carrito: código %s no encontrado o error de BD", codigo
@@ -97,6 +110,10 @@ def confirmar_carrito(
 
     pedido_id_db = pedido_activo.PedidoID
 
+    if pedido_activo.Estado == EstadoPedido.ENLACE2:
+        logger.info("CARRITO_YA_CONFIRMADO pedido=%s usuario=%s", pedido_id_db, user_id)
+        return True, f"{public_url}/confirmacion_pago?pedido_id={pedido_activo.redisID}"
+
     if pedido_activo.Estado != EstadoPedido.ENLACE:
         logger.warning(
             "confirmar_carrito: cannot transition order %s from state '%s' to ENLACE2",
@@ -108,7 +125,9 @@ def confirmar_carrito(
     coords = geocodificar_direccion(direccion)
     lat, lng = (coords[0], coords[1]) if coords else (None, None)
     if not coords:
-        logger.warning("confirmar_carrito: no se pudieron geocodificar las coordenadas del pedido %s", pedido_id_db)
+        logger.warning(
+            "GEOCODIFICACION_FALLIDA pedido=%s dir='%.80s'", pedido_id_db, direccion
+        )
 
     # DB primero: la transición de estado es la operación crítica.
     try:
@@ -134,7 +153,10 @@ def confirmar_carrito(
             ex=3600,
         )
     except Exception as e:
-        logger.warning("confirmar_carrito: fallo al guardar carrito en Redis pedido=%s: %s", pedido_id_db, e)
+        logger.error(
+            "CARRITO_REDIS_FALLIDO pedido=%s — cliente bloqueado en /confirmacion_pago hasta intervención: %s",
+            pedido_id_db, e,
+        )
     logger.info("CARRITO_CONFIRMADO pedido_id=%s", pedido_id_db)
 
     confirmacion_url = f"{public_url}/confirmacion_pago?pedido_id={pedido_id_redis}"
