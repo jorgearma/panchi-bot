@@ -4,7 +4,7 @@ from datetime import datetime
 from threading import Thread
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, load_only, selectinload
 
 from services.whatsapp_service import notificar_async as _notificar
 
@@ -26,7 +26,13 @@ class GestorRepartoTrackingMixin:
 
     def mapa(self) -> dict:
         """Devuelve los puntos activos para el mapa operativo."""
-        pedidos = self.session.query(Pedido).filter(
+        pedidos = self.session.query(Pedido).options(
+            load_only(
+                Pedido.PedidoID, Pedido.Estado, Pedido.DireccionEntrega,
+                Pedido.lat_entrega, Pedido.lng_entrega,
+                Pedido.FechaCreacion, Pedido.Total,
+            )
+        ).filter(
             Pedido.Estado.in_(_ESTADOS_OPERATIVOS)
         ).all()
 

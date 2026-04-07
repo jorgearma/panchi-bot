@@ -23,6 +23,7 @@ class TestRepartosSinAsignar:
         mock_q.filter.return_value = mock_q
         mock_q.outerjoin.return_value = mock_q
         mock_q.order_by.return_value = mock_q
+        mock_q.options.return_value = mock_q
         mock_q.all.return_value = []
         return mock_q
 

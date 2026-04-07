@@ -1,6 +1,8 @@
 """Mixin: analítica histórica de ventas y operaciones."""
 from datetime import datetime, timedelta
 
+from sqlalchemy.orm import load_only
+
 from models import Pedido, HistorialEstadoPedido
 from states import EstadoPedido
 
@@ -38,6 +40,13 @@ class GestorEstadisticasMixin:
         s = self.session
         pedidos = (
             s.query(Pedido)
+            .options(load_only(
+                Pedido.PedidoID,
+                Pedido.Estado,
+                Pedido.Total,
+                Pedido.FechaCreacion,
+                Pedido.forma_pago,
+            ))
             .filter(Pedido.FechaCreacion >= dt_desde, Pedido.FechaCreacion <= dt_hasta)
             .all()
         )

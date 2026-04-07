@@ -1,9 +1,14 @@
 import logging
+from collections import defaultdict
 from datetime import datetime
 from threading import Thread
 
-from models import Empleado, HistorialEstadoPedido
-from states import EstadoPedido
+from sqlalchemy import and_, or_, text
+from sqlalchemy import func
+from sqlalchemy.orm import aliased, joinedload
+
+from models import Empleado, HistorialEstadoPedido, PickingPedido, Reparto, Pedido
+from states import EstadoPedido, EstadoPicking, EstadoReparto
 
 logger = logging.getLogger(__name__)
 
@@ -49,27 +54,123 @@ class GestorDashboardBase:
         Thread(target=_ejecutar, daemon=True).start()
 
     def _tiempo_medio(self, desde: datetime, estado_inicio: EstadoPedido, estado_fin: EstadoPedido):
-        """Calcula el tiempo medio en minutos entre dos estados."""
+        """Calcula el tiempo medio en minutos entre dos estados usando un self-join en SQL Server.
+
+        Una sola query en lugar de 1 query por pedido (N+1 anterior).
+
+        Note: uses a SQL Server DATEDIFF self-join. If a pedido has multiple estado_inicio
+        events (re-entry), all pairs are included in the average. Safe under the current
+        state machine which does not allow state re-entry.
+        """
         s = self.session
-        finales = s.query(HistorialEstadoPedido).filter(
-            HistorialEstadoPedido.estado_nuevo == estado_fin.value,
-            HistorialEstadoPedido.cambiado_en >= desde,
-        ).all()
+        h_fin = aliased(HistorialEstadoPedido)
+        h_ini = aliased(HistorialEstadoPedido)
 
-        tiempos = []
-        for final in finales:
-            inicio = (
-                s.query(HistorialEstadoPedido)
-                .filter(
-                    HistorialEstadoPedido.pedido_id == final.pedido_id,
-                    HistorialEstadoPedido.estado_nuevo == estado_inicio.value,
-                    HistorialEstadoPedido.cambiado_en <= final.cambiado_en,
+        result = (
+            s.query(
+                func.avg(
+                    func.datediff(text('minute'), h_ini.cambiado_en, h_fin.cambiado_en)
                 )
-                .order_by(HistorialEstadoPedido.cambiado_en.desc())
-                .first()
             )
-            if inicio:
-                delta = (final.cambiado_en - inicio.cambiado_en).total_seconds() / 60
-                tiempos.append(delta)
+            .select_from(h_fin)
+            .join(h_ini, and_(
+                h_ini.pedido_id == h_fin.pedido_id,
+                h_ini.estado_nuevo == estado_inicio.value,
+                h_ini.cambiado_en <= h_fin.cambiado_en,
+            ))
+            .filter(
+                h_fin.estado_nuevo == estado_fin.value,
+                h_fin.cambiado_en >= desde,
+            )
+            .scalar()
+        )
+        return round(float(result), 1) if result is not None else None
 
-        return round(sum(tiempos) / len(tiempos)) if tiempos else None
+    def _batch_pickings(
+        self,
+        ids: list,
+        estados_activos: list,
+        desde: datetime,
+    ) -> dict:
+        """Carga pickings activos + completados hoy para una lista de empleado_ids en una sola query.
+
+        Returns:
+            defaultdict con clave empleado_id → {'activos': [...], 'completados': [...]}
+            Los 'completados' son los finalizados desde `desde`.
+            Los objetos PickingPedido vienen con `items` eager-loaded.
+
+        Note: estados_activos must contain string values (e.g. EstadoPicking.X.value),
+        not enum members. If a pedido re-enters a state multiple times (not possible
+        under the current state machine), each re-entry is treated as a separate 'activo'.
+        """
+        if not ids:
+            return defaultdict(lambda: {'activos': [], 'completados': []})
+
+        rows = (
+            self.session.query(PickingPedido)
+            .options(joinedload(PickingPedido.items))
+            .filter(
+                PickingPedido.empleado_id.in_(ids),
+                or_(
+                    PickingPedido.estado.in_(estados_activos),
+                    and_(
+                        PickingPedido.estado == EstadoPicking.COMPLETADO.value,
+                        PickingPedido.completado_en >= desde,
+                    ),
+                ),
+            )
+            .all()
+        )
+
+        result: dict = defaultdict(lambda: {'activos': [], 'completados': []})
+        for pk in rows:
+            if pk.estado in estados_activos:
+                result[pk.empleado_id]['activos'].append(pk)
+            else:
+                result[pk.empleado_id]['completados'].append(pk)
+        return result
+
+    def _batch_repartos(
+        self,
+        ids: list,
+        estados_activos: list,
+        desde: datetime,
+    ) -> dict:
+        """Carga repartos activos + entregados hoy para una lista de repartidor_ids en una sola query.
+
+        Returns:
+            defaultdict con clave repartidor_id → {'activos': [...], 'entregados': [...]}
+            Los objetos Reparto vienen con pedido y pedido.cliente eager-loaded.
+
+        Note: estados_activos must contain string values (e.g. EstadoReparto.X.value),
+        not enum members. If a reparto re-enters a state multiple times (not possible
+        under the current state machine), each re-entry is treated as a separate 'activo'.
+        """
+        if not ids:
+            return defaultdict(lambda: {'activos': [], 'entregados': []})
+
+        rows = (
+            self.session.query(Reparto)
+            .options(
+                joinedload(Reparto.pedido).joinedload(Pedido.cliente)
+            )
+            .filter(
+                Reparto.repartidor_id.in_(ids),
+                or_(
+                    Reparto.estado.in_(estados_activos),
+                    and_(
+                        Reparto.estado == EstadoReparto.ENTREGADO.value,
+                        Reparto.hora_entrega_real >= desde,
+                    ),
+                ),
+            )
+            .all()
+        )
+
+        result: dict = defaultdict(lambda: {'activos': [], 'entregados': []})
+        for r in rows:
+            if r.estado in estados_activos:
+                result[r.repartidor_id]['activos'].append(r)
+            else:
+                result[r.repartidor_id]['entregados'].append(r)
+        return result
