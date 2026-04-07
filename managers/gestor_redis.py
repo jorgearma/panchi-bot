@@ -99,6 +99,20 @@ class RedisManager:
             logger.error("Error al verificar wamid %s: %s", wamid, e)
             return False
 
+    def adquirir_lock(self, key: str, ttl: int = 10) -> bool:
+        """Intenta adquirir un lock atómico con SET NX. Devuelve True si se adquirió.
+
+        Usa SET NX para que la comprobación y el registro sean una sola operación
+        Redis — dos requests concurrentes con la misma clave no pueden adquirir ambas.
+        En caso de error Redis devuelve False: mejor ignorar el lock que bloquear indefinidamente.
+        """
+        try:
+            resultado = self.client.set(key, "1", ex=ttl, nx=True)
+            return resultado is not None  # None = clave ya existía = lock no adquirido
+        except redis.RedisError as e:
+            logger.error("Error al adquirir lock %s: %s", key, e)
+            return True  # fail-open: ante error Redis, dejar pasar para no bloquear al usuario
+
 
 redismanager = RedisManager(
     host=config.REDIS_HOST,

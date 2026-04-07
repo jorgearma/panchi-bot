@@ -1,5 +1,5 @@
 import logging
-from container import gestor_pedidos, gestor_usuarios
+from container import gestor_pedidos, gestor_usuarios, redismanager
 from utils.menu_opciones import mostrar_menu
 from controllers.pedido import procesar_pedido
 from controllers.mensajes_registrados_notifier import (
@@ -26,6 +26,11 @@ class ManejadorMensajesRegistrados:
     def _iniciar_pedido_y_enviar_menu(numero_cliente, usuario_datos):
         """Abre un pedido nuevo para el usuario y le envía el menú inicial."""
 
+        lock_key = f"pedido_lock:{numero_cliente}"
+        if not redismanager.adquirir_lock(lock_key, ttl=10):
+            logger.info("LOCK_PEDIDO ya activo para %s — ignorando duplicado.", numero_cliente)
+            return "mensaje enviado", 200
+
         id_usuario = usuario_datos["id"]
         direccion_usuario = usuario_datos["direccion"]
         nombre_usuario = usuario_datos["nombre"]
@@ -47,7 +52,7 @@ class ManejadorMensajesRegistrados:
         try:
             usuario_datos = gestor_usuarios.obtener_usuario_completo(numero_cliente)
             if not usuario_datos:
-                logger.error("Error: No se encontraron datos para el usuario %s.", numero_cliente)
+                logger.warning("Usuario no encontrado en BD: %s.", numero_cliente)
                 _enviar_error_usuario_no_encontrado(numero_cliente)
                 return "Error: Usuario no encontrado.", 404
             id_usuario = usuario_datos["id"]
@@ -72,7 +77,15 @@ class ManejadorMensajesRegistrados:
         id_pedido_activo = pedido_activo.PedidoID
 
         if estado_del_pedido == EstadoPedido.PENDIENTE:
-            mensaje = procesar_pedido(mensaje_cliente, numero_cliente, id_pedido_activo, usuario_datos)
+            try:
+                mensaje = procesar_pedido(mensaje_cliente, numero_cliente, id_pedido_activo, usuario_datos)
+            except Exception as e:
+                logger.error(
+                    "ERROR_PROCESAR_PEDIDO usuario=%s error=%s",
+                    numero_cliente, e, exc_info=True,
+                )
+                _enviar_error_generico(numero_cliente)
+                return "error procesando pedido", 200
             logger.debug("Mensaje procesado para usuario: %s", numero_cliente)
             _enviar_respuesta_pedido(mensaje, numero_cliente)
             return " mensaje enviado", 200
@@ -80,6 +93,7 @@ class ManejadorMensajesRegistrados:
         if estado_del_pedido == EstadoPedido.ENLACE or estado_del_pedido == EstadoPedido.ENLACE2:
             enlace = pedido_activo.enlace
             if not enlace:
+                logger.info("ENLACE_CADUCADO pedido=%s usuario=%s", id_pedido_activo, numero_cliente)
                 _enviar_enlace_caducado(numero_cliente)
                 return " mensaje enviado", 200
             _enviar_enlace_pedido(enlace, numero_cliente)
@@ -101,7 +115,19 @@ class ManejadorMensajesRegistrados:
                 "Pedido %s en estado '%s' — bloqueando nuevo pedido para %s.",
                 id_pedido_activo, estado_del_pedido, numero_cliente,
             )
-            return _enviar_estado_en_curso(pedido_activo, numero_cliente)
+            resultado = _enviar_estado_en_curso(pedido_activo, numero_cliente)
+            if resultado is None:
+                logger.error(
+                    "ESTADO_NO_MANEJADO pedido=%s estado=%s usuario=%s",
+                    id_pedido_activo, estado_del_pedido, numero_cliente,
+                )
+                _enviar_error_generico(numero_cliente)
+                return "estado no contemplado", 200
+            return resultado
 
+        logger.warning(
+            "ESTADO_NO_CONTEMPLADO pedido=%s estado=%s usuario=%s mensaje=%r",
+            id_pedido_activo, estado_del_pedido, numero_cliente, mensaje_cliente,
+        )
         _enviar_error_generico(numero_cliente)
         return " mensaje enviado", 200

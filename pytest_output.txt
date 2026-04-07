@@ -1,0 +1,614 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/siemprearmando/test/panchi-bot
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.8.0
+collecting ... collected 412 items
+
+tests/test_api_pedido.py::TestConfirmarCarrito::test_happy_path_returns_true_and_url PASSED [  0%]
+tests/test_api_pedido.py::TestConfirmarCarrito::test_cart_stored_in_cache PASSED [  0%]
+tests/test_api_pedido.py::TestConfirmarCarrito::test_state_transition_to_enlace2_called PASSED [  0%]
+tests/test_api_pedido.py::TestConfirmarCarrito::test_wrong_state_does_not_call_fijar_carrito_confirmado PASSED [  0%]
+tests/test_api_pedido.py::TestConfirmarCarrito::test_no_active_order_returns_false PASSED [  1%]
+tests/test_api_pedido.py::TestConfirmarCarrito::test_confirmacion_ignora_precio_frontend PASSED [  1%]
+tests/test_api_pedido.py::TestConfirmarCarrito::test_confirmacion_codigo_ausente_devuelve_error PASSED [  1%]
+tests/test_api_pedido.py::TestConfirmarCarrito::test_confirmacion_cantidad_cero_devuelve_error PASSED [  1%]
+tests/test_api_pedido.py::TestConfirmarCarrito::test_confirmacion_producto_no_encontrado_devuelve_error PASSED [  2%]
+tests/test_api_pedido.py::TestConfirmarCarrito::test_confirmacion_precio_null_devuelve_error PASSED [  2%]
+tests/test_api_pedido.py::TestIniciarPago::test_happy_path_returns_redirect_url PASSED [  2%]
+tests/test_api_pedido.py::TestIniciarPago::test_state_transitioned_to_confirmando_pago PASSED [  2%]
+tests/test_api_pedido.py::TestIniciarPago::test_product_not_found_returns_false PASSED [  3%]
+tests/test_api_pedido.py::TestIniciarPago::test_no_active_order_returns_false PASSED [  3%]
+tests/test_api_pedido.py::TestIniciarPago::test_already_in_confirmando_pago_returns_true PASSED [  3%]
+tests/test_api_pedido.py::TestIniciarPago::test_monei_api_exception_returns_false PASSED [  3%]
+tests/test_api_pedido.py::TestIniciarPago::test_monei_missing_redirect_url_returns_false PASSED [  4%]
+tests/test_api_pedido.py::TestIniciarPago::test_notas_se_pasan_a_confirmar_pago_online PASSED [  4%]
+tests/test_api_pedido.py::TestIniciarPago::test_notas_vacio_por_defecto PASSED [  4%]
+tests/test_api_pedido.py::TestIniciarPagoEfectivo::test_notas_se_pasan_a_confirmar_pago_efectivo PASSED [  4%]
+tests/test_api_pedido.py::TestIniciarPagoEfectivo::test_notas_vacio_por_defecto PASSED [  5%]
+tests/test_api_pedido.py::TestCambiarEstadoAEnlace::test_sin_token_retorna_401 PASSED [  5%]
+tests/test_api_pedido.py::TestCambiarEstadoAEnlace::test_token_incorrecto_retorna_401 PASSED [  5%]
+tests/test_api_pedido.py::TestCambiarEstadoAEnlace::test_sin_pedido_id_retorna_400 PASSED [  5%]
+tests/test_api_pedido.py::TestCambiarEstadoAEnlace::test_pedido_no_encontrado_retorna_404 PASSED [  6%]
+tests/test_api_pedido.py::TestCambiarEstadoAEnlace::test_pedido_en_confirmando_pago_retorna_400 PASSED [  6%]
+tests/test_api_pedido.py::TestCambiarEstadoAEnlace::test_pedido_en_enlace2_actualiza_a_enlace PASSED [  6%]
+tests/test_api_pedido.py::test_agregar_pedido_carrito_vacio PASSED       [  6%]
+tests/test_auth.py::test_login_sin_credenciales_devuelve_400 PASSED      [  7%]
+tests/test_auth.py::test_login_credenciales_invalidas_devuelve_401 PASSED [  7%]
+tests/test_auth.py::test_dashboard_sin_sesion_redirige_a_login PASSED    [  7%]
+tests/test_auth.py::test_picker_sin_sesion_redirige_a_login PASSED       [  7%]
+tests/test_auth.py::test_repartidor_sin_sesion_redirige_a_login PASSED   [  8%]
+tests/test_auth.py::test_cocina_sin_sesion_redirige_a_login PASSED       [  8%]
+tests/test_checkin_empleado.py::TestIniciarTurno::test_crea_checkin_sin_rol_activo PASSED [  8%]
+tests/test_checkin_empleado.py::TestIniciarTurno::test_lanza_error_si_ya_hay_checkin_abierto PASSED [  8%]
+tests/test_checkin_empleado.py::TestIniciarTurno::test_crea_tramo_si_tiene_rol_activo PASSED [  8%]
+tests/test_checkin_empleado.py::TestCerrarTurno::test_lanza_error_si_no_hay_checkin PASSED [  9%]
+tests/test_checkin_empleado.py::TestCerrarTurno::test_cierra_checkin_y_devuelve_resumen PASSED [  9%]
+tests/test_checkin_empleado.py::TestCheckinHoy::test_devuelve_falso_si_no_hay_checkin PASSED [  9%]
+tests/test_checkin_empleado.py::TestCheckinHoy::test_devuelve_resumen_con_checkin_activo PASSED [  9%]
+tests/test_dashboard_sprint1.py::test_macros_ui_cargable_en_jinja2 PASSED [ 10%]
+tests/test_dashboard_sprint1.py::test_nav_partial_cargable_en_jinja2 PASSED [ 10%]
+tests/test_dashboard_sprint1.py::test_dashboard_index_contiene_links_de_navegacion PASSED [ 10%]
+tests/test_dashboard_sprint1.py::test_dashboard_monitor_contiene_links_de_navegacion PASSED [ 10%]
+tests/test_dashboard_sprint2.py::test_historial_pedidos_devuelve_claves_esperadas PASSED [ 11%]
+tests/test_dashboard_sprint2.py::test_historial_pedidos_paginacion_por_defecto PASSED [ 11%]
+tests/test_dashboard_sprint2.py::test_detalle_pedido_devuelve_none_si_no_existe PASSED [ 11%]
+tests/test_dashboard_sprint2.py::test_detalle_pedido_devuelve_claves_esperadas PASSED [ 11%]
+tests/test_dashboard_sprint2.py::test_historial_html_devuelve_200 PASSED [ 12%]
+tests/test_dashboard_sprint2.py::test_historial_html_requiere_auth PASSED [ 12%]
+tests/test_dashboard_sprint2.py::test_historial_pedidos_json_devuelve_estructura PASSED [ 12%]
+tests/test_dashboard_sprint2.py::test_historial_pedidos_json_pasa_filtros PASSED [ 12%]
+tests/test_dashboard_sprint2.py::test_detalle_pedido_json_devuelve_404_si_no_existe PASSED [ 13%]
+tests/test_dashboard_sprint2.py::test_detalle_pedido_json_devuelve_datos PASSED [ 13%]
+tests/test_dashboard_sprint2.py::test_historial_template_cargable_en_jinja2 PASSED [ 13%]
+tests/test_dashboard_sprint2.py::test_historial_html_contiene_nav_links PASSED [ 13%]
+tests/test_dashboard_sprint2.py::test_historial_html_contiene_alpine_app PASSED [ 14%]
+tests/test_dashboard_sprint3.py::test_turnos_hoy_devuelve_claves_esperadas PASSED [ 14%]
+tests/test_dashboard_sprint3.py::test_turnos_hoy_resumen_sin_empleados PASSED [ 14%]
+tests/test_dashboard_sprint3.py::test_turnos_historial_devuelve_claves_esperadas PASSED [ 14%]
+tests/test_dashboard_sprint3.py::test_turnos_historial_paginacion_por_defecto PASSED [ 15%]
+tests/test_dashboard_sprint3.py::test_turnos_html_devuelve_200 PASSED    [ 15%]
+tests/test_dashboard_sprint3.py::test_turnos_html_requiere_auth PASSED   [ 15%]
+tests/test_dashboard_sprint3.py::test_turnos_hoy_json_devuelve_estructura PASSED [ 15%]
+tests/test_dashboard_sprint3.py::test_turnos_historial_json_devuelve_estructura PASSED [ 16%]
+tests/test_dashboard_sprint3.py::test_turnos_historial_json_pasa_filtros PASSED [ 16%]
+tests/test_dashboard_sprint3.py::test_turnos_template_cargable_en_jinja2 PASSED [ 16%]
+tests/test_dashboard_sprint3.py::test_turnos_html_contiene_nav_links PASSED [ 16%]
+tests/test_dashboard_sprint3.py::test_turnos_html_contiene_alpine_app PASSED [ 16%]
+tests/test_dashboard_sprint4.py::test_rendimiento_resumen_devuelve_claves_esperadas PASSED [ 17%]
+tests/test_dashboard_sprint4.py::test_rendimiento_resumen_acepta_filtro_rol PASSED [ 17%]
+tests/test_dashboard_sprint4.py::test_rendimiento_empleado_devuelve_none_si_no_existe PASSED [ 17%]
+tests/test_dashboard_sprint4.py::test_rendimiento_empleado_devuelve_claves_esperadas PASSED [ 17%]
+tests/test_dashboard_sprint4.py::test_rendimiento_html_devuelve_200 PASSED [ 18%]
+tests/test_dashboard_sprint4.py::test_rendimiento_html_requiere_auth PASSED [ 18%]
+tests/test_dashboard_sprint4.py::test_rendimiento_resumen_json_devuelve_estructura PASSED [ 18%]
+tests/test_dashboard_sprint4.py::test_rendimiento_resumen_json_pasa_filtros PASSED [ 18%]
+tests/test_dashboard_sprint4.py::test_rendimiento_empleado_json_devuelve_404_si_no_existe PASSED [ 19%]
+tests/test_dashboard_sprint4.py::test_rendimiento_empleado_json_devuelve_datos PASSED [ 19%]
+tests/test_dashboard_sprint4.py::test_rendimiento_template_cargable_en_jinja2 PASSED [ 19%]
+tests/test_dashboard_sprint4.py::test_rendimiento_html_contiene_nav_links PASSED [ 19%]
+tests/test_dashboard_sprint4.py::test_rendimiento_html_contiene_alpine_app PASSED [ 20%]
+tests/test_dashboard_sprint5.py::test_estadisticas_devuelve_claves_esperadas PASSED [ 20%]
+tests/test_dashboard_sprint5.py::test_estadisticas_kpis_tienen_campos_requeridos PASSED [ 20%]
+tests/test_dashboard_sprint5.py::test_estadisticas_serie_vacia_si_no_hay_pedidos PASSED [ 20%]
+tests/test_dashboard_sprint5.py::test_estadisticas_acepta_granularidad_semana PASSED [ 21%]
+tests/test_dashboard_sprint5.py::test_estadisticas_html_devuelve_200 PASSED [ 21%]
+tests/test_dashboard_sprint5.py::test_estadisticas_html_requiere_auth PASSED [ 21%]
+tests/test_dashboard_sprint5.py::test_estadisticas_datos_json_devuelve_estructura PASSED [ 21%]
+tests/test_dashboard_sprint5.py::test_estadisticas_datos_pasa_parametros PASSED [ 22%]
+tests/test_dashboard_sprint5.py::test_estadisticas_template_cargable_en_jinja2 PASSED [ 22%]
+tests/test_dashboard_sprint5.py::test_estadisticas_html_contiene_nav_links PASSED [ 22%]
+tests/test_dashboard_sprint5.py::test_estadisticas_html_contiene_alpine_app PASSED [ 22%]
+tests/test_dashboard_sprint6.py::test_turnos_planificacion_devuelve_claves_esperadas PASSED [ 23%]
+tests/test_dashboard_sprint6.py::test_crear_turno_devuelve_ok_con_datos_validos PASSED [ 23%]
+tests/test_dashboard_sprint6.py::test_crear_turno_devuelve_error_si_empleado_no_existe PASSED [ 23%]
+tests/test_dashboard_sprint6.py::test_editar_turno_devuelve_ok_si_turno_existe PASSED [ 23%]
+tests/test_dashboard_sprint6.py::test_editar_turno_devuelve_error_si_no_existe PASSED [ 24%]
+tests/test_dashboard_sprint6.py::test_cancelar_turno_devuelve_ok_si_turno_existe PASSED [ 24%]
+tests/test_dashboard_sprint6.py::test_turnos_planificacion_json_devuelve_estructura PASSED [ 24%]
+tests/test_dashboard_sprint6.py::test_crear_turno_route_devuelve_ok PASSED [ 24%]
+tests/test_dashboard_sprint6.py::test_crear_turno_route_400_si_faltan_campos PASSED [ 25%]
+tests/test_dashboard_sprint6.py::test_editar_turno_route_devuelve_ok PASSED [ 25%]
+tests/test_dashboard_sprint6.py::test_cancelar_turno_route_devuelve_ok PASSED [ 25%]
+tests/test_dashboard_sprint6.py::test_turnos_template_cargable_jinja2 PASSED [ 25%]
+tests/test_dashboard_sprint6.py::test_turnos_html_contiene_tab_planificacion PASSED [ 25%]
+tests/test_dashboard_sprint6.py::test_turnos_html_contiene_estado_alpine_planificacion PASSED [ 26%]
+tests/test_database.py::test_conectar_bd1_incluye_audit_log PASSED       [ 26%]
+tests/test_database.py::test_conectar_bd1_fuente_incluye_audit_log PASSED [ 26%]
+tests/test_database.py::test_empleado_tiene_estado_operativo PASSED      [ 26%]
+tests/test_database.py::test_modelo_turno_existe PASSED                  [ 27%]
+tests/test_empleado.py::TestGestorEmpleadoCambiarEstado::test_cambiar_a_en_pausa_ok PASSED [ 27%]
+tests/test_empleado.py::TestGestorEmpleadoCambiarEstado::test_cambiar_a_desconectado_ok PASSED [ 27%]
+tests/test_empleado.py::TestGestorEmpleadoCambiarEstado::test_rechaza_disponible_manual PASSED [ 27%]
+tests/test_empleado.py::TestGestorEmpleadoCambiarEstado::test_rechaza_ocupado_manual PASSED [ 28%]
+tests/test_empleado.py::TestGestorEmpleadoCambiarEstado::test_empleado_no_encontrado PASSED [ 28%]
+tests/test_empleado.py::TestGestorEmpleadoPerfil::test_perfil_estructura PASSED [ 28%]
+tests/test_empleado.py::TestBlueprintEmpleadoAuth::test_sin_sesion_redirige PASSED [ 28%]
+tests/test_empleado.py::TestBlueprintEmpleadoAuth::test_con_sesion_picker_ok PASSED [ 29%]
+tests/test_empleado.py::TestBlueprintEmpleadoAuth::test_rol_manager_no_accede PASSED [ 29%]
+tests/test_empleado.py::TestBlueprintEmpleadoEstado::test_estado_invalido_rechazado PASSED [ 29%]
+tests/test_empleado.py::TestBlueprintEmpleadoEstado::test_estado_valido_llama_gestor PASSED [ 29%]
+tests/test_empleado.py::TestHooksEstadoOperativo::test_ocupado_sobreescribe_disponible PASSED [ 30%]
+tests/test_empleado.py::TestHooksEstadoOperativo::test_no_sobreescribe_en_pausa PASSED [ 30%]
+tests/test_empleado.py::TestHooksEstadoOperativo::test_no_sobreescribe_desconectado PASSED [ 30%]
+tests/test_empleado.py::TestHooksEstadoOperativo::test_empleado_none_no_lanza_excepcion PASSED [ 30%]
+tests/test_empleado.py::TestAuthRedireccionEmpleado::test_picker_redirige_a_empleado PASSED [ 31%]
+tests/test_empleado.py::TestAuthRedireccionEmpleado::test_repartidor_redirige_a_empleado PASSED [ 31%]
+tests/test_empleado.py::TestAuthRedireccionEmpleado::test_manager_sigue_a_dashboard PASSED [ 31%]
+tests/test_empleado.py::TestModelosNuevos::test_empleado_capacidad_modelo_existe PASSED [ 31%]
+tests/test_empleado.py::TestModelosNuevos::test_empleado_tiene_rol_activo PASSED [ 32%]
+tests/test_empleado.py::TestModelosNuevos::test_auditlog_pedido_id_nullable PASSED [ 32%]
+tests/test_empleado.py::TestGestorEmpleadoCapacidades::test_capacidades_devuelve_lista PASSED [ 32%]
+tests/test_empleado.py::TestGestorEmpleadoCapacidades::test_capacidades_un_rol PASSED [ 32%]
+tests/test_empleado.py::TestGestorEmpleadoCapacidades::test_es_polivalente_true PASSED [ 33%]
+tests/test_empleado.py::TestGestorEmpleadoCapacidades::test_es_polivalente_false PASSED [ 33%]
+tests/test_empleado.py::TestGestorEmpleadoCapacidades::test_tiene_rol_activo_true PASSED [ 33%]
+tests/test_empleado.py::TestGestorEmpleadoCapacidades::test_tiene_rol_activo_false_cuando_none PASSED [ 33%]
+tests/test_empleado.py::TestGestorEmpleadoCambiarRol::test_cambia_rol_exitoso PASSED [ 33%]
+tests/test_empleado.py::TestGestorEmpleadoCambiarRol::test_bloquea_si_hay_picking_activo PASSED [ 34%]
+tests/test_empleado.py::TestGestorEmpleadoCambiarRol::test_rechaza_rol_sin_capacidad PASSED [ 34%]
+tests/test_empleado.py::TestGestorEmpleadoCambiarRol::test_setea_disponible_si_venia_de_desconectado PASSED [ 34%]
+tests/test_empleado.py::TestAuthPolivalente::test_polivalente_sin_rol_activo_va_a_checkin PASSED [ 34%]
+tests/test_empleado.py::TestAuthPolivalente::test_polivalente_con_rol_activo_va_a_empleado PASSED [ 35%]
+tests/test_empleado.py::TestAuthPolivalente::test_monorol_sigue_funcionando PASSED [ 35%]
+tests/test_empleado.py::TestBlueprintEmpleadoNuevos::test_capacidades_sin_sesion_rechazado PASSED [ 35%]
+tests/test_empleado.py::TestBlueprintEmpleadoNuevos::test_capacidades_con_sesion_devuelve_json PASSED [ 35%]
+tests/test_empleado.py::TestBlueprintEmpleadoNuevos::test_carga_operativa_devuelve_estructura PASSED [ 36%]
+tests/test_empleado.py::TestBlueprintEmpleadoNuevos::test_cambiar_rol_sin_sesion_rechazado PASSED [ 36%]
+tests/test_empleado.py::TestBlueprintEmpleadoNuevos::test_cambiar_rol_exitoso PASSED [ 36%]
+tests/test_empleado.py::TestBlueprintEmpleadoNuevos::test_cambiar_rol_bloqueado_devuelve_409 PASSED [ 36%]
+tests/test_empleado.py::TestBlueprintEmpleadoNuevos::test_checkin_sin_sesion_redirige PASSED [ 37%]
+tests/test_empleado.py::TestBlueprintEmpleadoNuevos::test_checkin_con_sesion_ok PASSED [ 37%]
+tests/test_empleado.py::TestAppModeEnHub::test_hub_contiene_app_mode_warehouse PASSED [ 37%]
+tests/test_empleado.py::TestAppModeEnHub::test_hub_contiene_app_mode_restaurant PASSED [ 37%]
+tests/test_gestor_dashboard.py::test_metricas_keys_existentes_presentes PASSED [ 38%]
+tests/test_gestor_dashboard.py::test_metricas_incluye_cancelaciones_e_ingresos_por_metodo PASSED [ 38%]
+tests/test_gestor_dashboard.py::test_monitor_datos_devuelve_claves_principales PASSED [ 38%]
+tests/test_gestor_metricas.py::TestResumenOperacion::test_devuelve_claves_esperadas PASSED [ 38%]
+tests/test_gestor_metricas.py::TestResumenOperacion::test_valores_son_numericos PASSED [ 39%]
+tests/test_gestor_metricas.py::TestAsistenciaHoy::test_devuelve_lista PASSED [ 39%]
+tests/test_gestor_metricas.py::TestAsistenciaHoy::test_sin_checkin_es_ausente PASSED [ 39%]
+tests/test_gestor_metricas.py::TestColasDetalle::test_estructura_devuelta PASSED [ 39%]
+tests/test_gestor_metricas.py::TestPedidosPorEstado::test_devuelve_dict_de_conteos PASSED [ 40%]
+tests/test_gestor_metricas.py::TestAlertasTiempoReal::test_sin_condiciones_lista_vacia PASSED [ 40%]
+tests/test_gestor_metricas.py::TestAlertasTiempoReal::test_cola_picking_alta_genera_alerta PASSED [ 40%]
+tests/test_gestor_metricas.py::TestAlertasTiempoReal::test_resultado_tiene_tipo_severidad_mensaje PASSED [ 40%]
+tests/test_gestor_metricas.py::TestResumenPeriodo::test_claves_esperadas PASSED [ 41%]
+tests/test_gestor_metricas.py::TestResumenPeriodo::test_dias_analizados_correcto PASSED [ 41%]
+tests/test_gestor_metricas.py::TestResumenPeriodo::test_tasa_entrega_none_cuando_sin_datos PASSED [ 41%]
+tests/test_gestor_metricas.py::TestMetricasPedidos::test_claves_esperadas PASSED [ 41%]
+tests/test_gestor_metricas.py::TestMetricasPedidos::test_fases_presentes PASSED [ 41%]
+tests/test_gestor_metricas.py::TestMetricasPicking::test_claves_esperadas PASSED [ 42%]
+tests/test_gestor_metricas.py::TestMetricasPicking::test_porcentajes_suman_100_cuando_hay_items PASSED [ 42%]
+tests/test_gestor_metricas.py::TestMetricasReparto::test_claves_esperadas PASSED [ 42%]
+tests/test_gestor_metricas.py::TestMetricasReparto::test_excluye_repartos_sin_hora_salida PASSED [ 42%]
+tests/test_gestor_metricas.py::TestRendimientoEmpleados::test_devuelve_lista PASSED [ 43%]
+tests/test_gestor_metricas.py::TestRendimientoEmpleados::test_productividad_cero_cuando_sin_horas PASSED [ 43%]
+tests/test_gestor_metricas.py::TestComparativaEmpleados::test_requiere_rol PASSED [ 43%]
+tests/test_gestor_metricas.py::TestComparativaEmpleados::test_ranking_ordenado_por_productividad PASSED [ 43%]
+tests/test_gestor_metricas.py::TestFichaEmpleado::test_claves_esperadas PASSED [ 44%]
+tests/test_gestor_metricas.py::TestAsistenciaPeriodo::test_claves_esperadas PASSED [ 44%]
+tests/test_gestor_metricas.py::TestMetricasIncidencias::test_claves_esperadas PASSED [ 44%]
+tests/test_gestor_metricas.py::TestMetricasIncidencias::test_tipos_presentes PASSED [ 44%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoValido::test_pendiente_a_enlace PASSED [ 45%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoValido::test_enlace_a_enlace2 PASSED [ 45%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoValido::test_enlace2_a_confirmando_pago PASSED [ 45%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoValido::test_confirmando_pago_a_pagado PASSED [ 45%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoValido::test_confirmando_pago_a_pagado_crea_picking_pendiente PASSED [ 46%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoValido::test_enlace_a_pendiente_rollback_error PASSED [ 46%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoValido::test_enlace2_a_enlace_boton_atras PASSED [ 46%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoInvalido::test_saltar_a_pagado_desde_pendiente PASSED [ 46%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoInvalido::test_pagado_es_terminal PASSED [ 47%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoInvalido::test_confirmando_pago_no_retrocede PASSED [ 47%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoInvalido::test_estado_desconocido_en_db PASSED [ 47%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoInvalido::test_transicion_invalida_loguea_error PASSED [ 47%]
+tests/test_gestor_pedidos.py::TestActualizarEstadoPedidoNoEncontrado::test_devuelve_false_si_pedido_no_existe PASSED [ 48%]
+tests/test_gestor_usuarios.py::TestVerificarUsuario::test_usuario_existente_retorna_objeto PASSED [ 48%]
+tests/test_gestor_usuarios.py::TestVerificarUsuario::test_usuario_no_existente_retorna_none PASSED [ 48%]
+tests/test_gestor_usuarios.py::TestVerificarUsuario::test_error_bd_relanza_excepcion PASSED [ 48%]
+tests/test_gestor_usuarios.py::TestObtenerUsuarioCompleto::test_usuario_existente_retorna_dict PASSED [ 49%]
+tests/test_gestor_usuarios.py::TestObtenerUsuarioCompleto::test_usuario_no_existente_retorna_none PASSED [ 49%]
+tests/test_gestor_usuarios.py::TestGuardarUsuario::test_usuario_nuevo_llama_add_y_commit PASSED [ 49%]
+tests/test_gestor_usuarios.py::TestGuardarUsuario::test_error_bd_hace_rollback PASSED [ 49%]
+tests/test_health.py::test_health_devuelve_200 PASSED                    [ 50%]
+tests/test_health.py::test_health_incluye_componentes PASSED             [ 50%]
+tests/test_mensajes_registrados.py::TestPedidoEnPreparacion::test_retorna_200 PASSED [ 50%]
+tests/test_mensajes_registrados.py::TestPedidoEnPreparacion::test_envia_mensaje_whatsapp PASSED [ 50%]
+tests/test_mensajes_registrados.py::TestPedidoEnPreparacion::test_no_inicia_nuevo_pedido PASSED [ 50%]
+tests/test_mensajes_registrados.py::TestPedidoEnPreparacion::test_bloqueado_aunque_mensaje_sea_1 PASSED [ 51%]
+tests/test_mensajes_registrados.py::TestPedidoEnPreparacion::test_bloqueado_con_cualquier_texto PASSED [ 51%]
+tests/test_mensajes_registrados.py::TestPedidoPreparado::test_retorna_200 PASSED [ 51%]
+tests/test_mensajes_registrados.py::TestPedidoPreparado::test_envia_mensaje_con_telefono_soporte PASSED [ 51%]
+tests/test_mensajes_registrados.py::TestPedidoPreparado::test_no_inicia_nuevo_pedido PASSED [ 52%]
+tests/test_mensajes_registrados.py::TestPedidoEnReparto::test_retorna_200_sin_repartidor PASSED [ 52%]
+tests/test_mensajes_registrados.py::TestPedidoEnReparto::test_mensaje_degradado_sin_repartidor PASSED [ 52%]
+tests/test_mensajes_registrados.py::TestPedidoEnReparto::test_mensaje_con_repartidor_incluye_nombre_y_telefono PASSED [ 52%]
+tests/test_mensajes_registrados.py::TestPedidoEnReparto::test_mensaje_con_repartidor_sin_telefono_muestra_no_disponible PASSED [ 53%]
+tests/test_mensajes_registrados.py::TestPedidoEnReparto::test_no_inicia_nuevo_pedido PASSED [ 53%]
+tests/test_mensajes_registrados.py::TestPedidoEnReparto::test_bloqueado_aunque_mensaje_sea_1 PASSED [ 53%]
+tests/test_mensajes_registrados.py::TestSinTelefonoSoporte::test_preparacion_sin_soporte_configured PASSED [ 53%]
+tests/test_mensajes_registrados.py::TestPedidoPagado::test_retorna_200 PASSED [ 54%]
+tests/test_mensajes_registrados.py::TestPedidoPagado::test_envia_mensaje_con_confirmacion_pago PASSED [ 54%]
+tests/test_mensajes_registrados.py::TestPedidoPagado::test_no_inicia_nuevo_pedido PASSED [ 54%]
+tests/test_mensajes_registrados.py::TestPedidoPagado::test_bloqueado_con_cualquier_mensaje PASSED [ 54%]
+tests/test_mensajes_registrados.py::TestPedidoContraReembolso::test_retorna_200 PASSED [ 55%]
+tests/test_mensajes_registrados.py::TestPedidoContraReembolso::test_envia_mensaje_indicando_pago_a_la_entrega PASSED [ 55%]
+tests/test_mensajes_registrados.py::TestPedidoContraReembolso::test_no_inicia_nuevo_pedido PASSED [ 55%]
+tests/test_mensajes_registrados.py::TestPedidoContraReembolso::test_bloqueado_con_cualquier_mensaje PASSED [ 55%]
+tests/test_mensajes_registrados.py::TestFlujosNoBloqueados::test_sin_pedido_activo_inicia_nuevo_pedido PASSED [ 56%]
+tests/test_mensajes_registrados.py::TestFlujosNoBloqueados::test_lock_activo_ignora_duplicado PASSED [ 56%]
+tests/test_mensajes_registrados.py::TestFlujosNoBloqueados::test_pedido_en_preparacion_no_inicia_pedido PASSED [ 56%]
+tests/test_menu.py::TestMenuToken::test_token_expirado_retorna_403 PASSED [ 56%]
+tests/test_menu.py::TestMenuToken::test_datos_redis_invalidos_retorna_400 PASSED [ 57%]
+tests/test_menu.py::TestMenuToken::test_estado_enlace_renderiza_quiniela PASSED [ 57%]
+tests/test_menu.py::TestMenuToken::test_estado_enlace2_redirige_a_confirmacion PASSED [ 57%]
+tests/test_menu.py::TestMenuToken::test_sin_pedido_activo_retorna_404 PASSED [ 57%]
+tests/test_menu.py::TestMenuToken::test_estado_desconocido_retorna_400 PASSED [ 58%]
+tests/test_menu.py::TestConfirmacionPago::test_sin_pedido_id_retorna_404 PASSED [ 58%]
+tests/test_menu.py::TestConfirmacionPago::test_pedido_expirado_retorna_404 PASSED [ 58%]
+tests/test_menu.py::TestConfirmacionPago::test_pedido_valido_retorna_200 PASSED [ 58%]
+tests/test_metricas_analitica.py::TestAnaliticaAuth::test_sin_sesion_redirige PASSED [ 58%]
+tests/test_metricas_analitica.py::TestAnaliticaFechasDefault::test_sin_params_usa_7_dias PASSED [ 59%]
+tests/test_metricas_analitica.py::TestAnaliticaResumen::test_devuelve_200_y_ok PASSED [ 59%]
+tests/test_metricas_analitica.py::TestAnaliticaComparativaRolRequerido::test_sin_rol_devuelve_400 PASSED [ 59%]
+tests/test_metricas_analitica.py::TestAnaliticaComparativaRolRequerido::test_con_rol_devuelve_200 PASSED [ 59%]
+tests/test_metricas_analitica.py::TestAnaliticaEmpleadoFicha::test_devuelve_200_con_id PASSED [ 60%]
+tests/test_metricas_analitica.py::TestAnaliticaEmpleadosRolOpcional::test_sin_rol_llama_con_none PASSED [ 60%]
+tests/test_metricas_analitica.py::TestAnaliticaEmpleadosRolOpcional::test_con_rol_lo_pasa PASSED [ 60%]
+tests/test_metricas_operacion.py::TestMetricasOperacionAuth::test_sin_sesion_redirige PASSED [ 60%]
+tests/test_metricas_operacion.py::TestMetricasOperacionAuth::test_rol_picker_no_accede PASSED [ 61%]
+tests/test_metricas_operacion.py::TestMetricasOperacionResumen::test_devuelve_200_y_ok PASSED [ 61%]
+tests/test_metricas_operacion.py::TestMetricasOperacionResumen::test_estructura_respuesta PASSED [ 61%]
+tests/test_metricas_operacion.py::TestMetricasOperacionAsistencia::test_devuelve_lista PASSED [ 61%]
+tests/test_metricas_operacion.py::TestMetricasOperacionColas::test_devuelve_dict_con_colas PASSED [ 62%]
+tests/test_metricas_operacion.py::TestMetricasOperacionPedidosEstado::test_devuelve_dict PASSED [ 62%]
+tests/test_metricas_operacion.py::TestMetricasOperacionAlertas::test_devuelve_lista PASSED [ 62%]
+tests/test_migracion_bd_dashboard.py::TestTurnoModeloCampos::test_turno_tiene_campo_estado PASSED [ 62%]
+tests/test_migracion_bd_dashboard.py::TestTurnoModeloCampos::test_turno_estado_default_es_planificado PASSED [ 63%]
+tests/test_migracion_bd_dashboard.py::TestTurnoModeloCampos::test_turno_tiene_campo_tipo PASSED [ 63%]
+tests/test_migracion_bd_dashboard.py::TestTurnoModeloCampos::test_turno_tiene_campo_creado_por PASSED [ 63%]
+tests/test_migracion_bd_dashboard.py::TestTurnoModeloCampos::test_turno_estados_validos PASSED [ 63%]
+tests/test_migracion_bd_dashboard.py::TestTurnoModeloCampos::test_turno_tipos_validos PASSED [ 64%]
+tests/test_migracion_bd_dashboard.py::TestCheckInModeloCampos::test_checkin_tiene_turno_id PASSED [ 64%]
+tests/test_migracion_bd_dashboard.py::TestCheckInModeloCampos::test_checkin_tiene_estado_validacion PASSED [ 64%]
+tests/test_migracion_bd_dashboard.py::TestCheckInModeloCampos::test_checkin_tiene_minutos_tarde PASSED [ 64%]
+tests/test_migracion_bd_dashboard.py::TestCheckInModeloCampos::test_checkin_minutos_tarde_puede_ser_negativo PASSED [ 65%]
+tests/test_migracion_bd_dashboard.py::TestIniciarTurnoConTurnoId::test_iniciar_turno_acepta_turno_id PASSED [ 65%]
+tests/test_migracion_bd_dashboard.py::TestIniciarTurnoConTurnoId::test_iniciar_turno_calcula_minutos_tarde_con_turno PASSED [ 65%]
+tests/test_migracion_bd_dashboard.py::TestIniciarTurnoConTurnoId::test_iniciar_turno_sin_turno_id_no_calcula_minutos_tarde PASSED [ 65%]
+tests/test_migracion_bd_dashboard.py::TestAusenciaModelo::test_ausencia_tiene_campos_obligatorios PASSED [ 66%]
+tests/test_migracion_bd_dashboard.py::TestAusenciaModelo::test_ausencia_estado_default_pendiente PASSED [ 66%]
+tests/test_migracion_bd_dashboard.py::TestAusenciaModelo::test_ausencia_tipos_validos PASSED [ 66%]
+tests/test_migracion_bd_dashboard.py::TestAusenciaModelo::test_ausencia_estados_validos PASSED [ 66%]
+tests/test_migracion_bd_dashboard.py::TestGestorEmpleadoAusencias::test_registrar_ausencia_crea_registro PASSED [ 66%]
+tests/test_migracion_bd_dashboard.py::TestGestorEmpleadoAusencias::test_registrar_ausencia_tipo_invalido_lanza_error PASSED [ 67%]
+tests/test_migracion_bd_dashboard.py::TestGestorEmpleadoAusencias::test_ausencias_empleado_devuelve_lista PASSED [ 67%]
+tests/test_migracion_bd_dashboard.py::TestPuntualidadEmpleado::test_sin_checkins_devuelve_ceros PASSED [ 67%]
+tests/test_migracion_bd_dashboard.py::TestPuntualidadEmpleado::test_calcula_puntuales_y_tarde PASSED [ 67%]
+tests/test_migracion_bd_dashboard.py::TestPuntualidadEmpleado::test_ignora_checkins_sin_turno_id PASSED [ 68%]
+tests/test_migracion_bd_dashboard.py::TestPuntualidadEmpleado::test_media_minutos_tarde PASSED [ 68%]
+tests/test_migracion_bd_dashboard.py::TestHistorialEmpleadoId::test_historial_tiene_empleado_id PASSED [ 68%]
+tests/test_migracion_bd_dashboard.py::TestHistorialEmpleadoId::test_historial_empleado_id_es_nullable PASSED [ 68%]
+tests/test_migracion_bd_dashboard.py::TestSolicitudCambioTurno::test_modelo_tiene_campos_obligatorios PASSED [ 69%]
+tests/test_migracion_bd_dashboard.py::TestSolicitudCambioTurno::test_estados_validos PASSED [ 69%]
+tests/test_migracion_bd_dashboard.py::TestTurnoOrigenId::test_turno_tiene_campo_origen_id PASSED [ 69%]
+tests/test_migracion_bd_dashboard.py::TestTurnoOrigenId::test_turno_origen_id_nullable PASSED [ 69%]
+tests/test_migracion_bd_dashboard.py::TestMetricaDiariaEmpleado::test_modelo_tiene_campos_clave PASSED [ 70%]
+tests/test_migracion_bd_dashboard.py::TestMetricaDiariaEmpleado::test_calcular_y_guardar_metrica_diaria_persiste_registro PASSED [ 70%]
+tests/test_picker_cola.py::TestGestorDashboardCola::test_pickings_sin_asignar_devuelve_lista PASSED [ 70%]
+tests/test_picker_cola.py::TestGestorDashboardCola::test_pickings_sin_asignar_vacio PASSED [ 70%]
+tests/test_picker_cola.py::TestGestorDashboardCola::test_pickings_sin_asignar_llama_join_y_filter PASSED [ 71%]
+tests/test_picker_cola.py::TestGestorDashboardCola::test_reclamar_picking_ok PASSED [ 71%]
+tests/test_picker_cola.py::TestGestorDashboardCola::test_reclamar_picking_no_encontrado PASSED [ 71%]
+tests/test_picker_cola.py::TestGestorDashboardCola::test_reclamar_picking_ya_cogido PASSED [ 71%]
+tests/test_picker_cola.py::TestBlueprintPickerCola::test_cola_sin_sesion_rechazado PASSED [ 72%]
+tests/test_picker_cola.py::TestBlueprintPickerCola::test_cola_devuelve_json PASSED [ 72%]
+tests/test_picker_cola.py::TestBlueprintPickerCola::test_coger_ok PASSED [ 72%]
+tests/test_picker_cola.py::TestBlueprintPickerCola::test_coger_409_ya_cogido PASSED [ 72%]
+tests/test_picker_cola.py::TestBlueprintPickerCola::test_coger_404_no_encontrado PASSED [ 73%]
+tests/test_picker_cola.py::TestModoRestaurant::test_listo_para_finalizar_sin_items_en_restaurant PASSED [ 73%]
+tests/test_picker_cola.py::TestModoRestaurant::test_listo_para_finalizar_false_en_warehouse_con_items_pendientes PASSED [ 73%]
+tests/test_picker_cola.py::TestBlueprintCocina::test_cocina_sin_sesion_rechazado PASSED [ 73%]
+tests/test_picker_cola.py::TestBlueprintCocina::test_cocina_con_sesion_ok PASSED [ 74%]
+tests/test_picker_cola.py::TestBlueprintCocina::test_cocina_cola_devuelve_json PASSED [ 74%]
+tests/test_picker_cola.py::TestBlueprintCocina::test_cocina_coger_ok PASSED [ 74%]
+tests/test_picker_cola.py::TestBlueprintCocina::test_cocina_finalizar_ok PASSED [ 74%]
+tests/test_registro.py::TestSaludoInicial::test_cualquier_mensaje_envia_bienvenida PASSED [ 75%]
+tests/test_registro.py::TestSaludoInicial::test_transiciona_a_esperando_confirmacion PASSED [ 75%]
+tests/test_registro.py::TestEsperandoConfirmacion::test_respuesta_afirmativa_avanza[si] PASSED [ 75%]
+tests/test_registro.py::TestEsperandoConfirmacion::test_respuesta_afirmativa_avanza[s\xed] PASSED [ 75%]
+tests/test_registro.py::TestEsperandoConfirmacion::test_respuesta_afirmativa_avanza[quiero] PASSED [ 75%]
+tests/test_registro.py::TestEsperandoConfirmacion::test_respuesta_afirmativa_avanza[adelante] PASSED [ 76%]
+tests/test_registro.py::TestEsperandoConfirmacion::test_respuesta_negativa_cancela_sin_avanzar PASSED [ 76%]
+tests/test_registro.py::TestEsperandoNombre::test_nombre_valido_avanza_a_direccion PASSED [ 76%]
+tests/test_registro.py::TestEsperandoNombre::test_nombre_invalido_no_avanza PASSED [ 76%]
+tests/test_registro.py::TestEsperandoDireccion::test_direccion_valida_avanza_a_confirmando PASSED [ 77%]
+tests/test_registro.py::TestEsperandoDireccion::test_direccion_invalida_no_avanza PASSED [ 77%]
+tests/test_registro.py::TestConfirmandoDireccion::test_confirmar_avanza_al_handler_externo PASSED [ 77%]
+tests/test_registro.py::TestConfirmandoDireccion::test_rollback_si_usuario_dice_no PASSED [ 77%]
+tests/test_repartidor.py::test_marcar_entregado_rechaza_sin_cobro PASSED [ 78%]
+tests/test_repartidor_cola.py::TestRepartosSinAsignar::test_devuelve_lista PASSED [ 78%]
+tests/test_repartidor_cola.py::TestRepartosSinAsignar::test_vacio PASSED [ 78%]
+tests/test_repartidor_cola.py::TestRepartosSinAsignar::test_hace_join_y_filter PASSED [ 78%]
+tests/test_repartidor_cola.py::TestReclamarReparto::test_ok PASSED       [ 79%]
+tests/test_repartidor_cola.py::TestReclamarReparto::test_no_encontrado PASSED [ 79%]
+tests/test_repartidor_cola.py::TestReclamarReparto::test_ya_cogido PASSED [ 79%]
+tests/test_repartidor_cola.py::TestReclamarReparto::test_error_bd PASSED [ 79%]
+tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_crea_reparto_si_no_existe FAILED [ 80%]
+tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_integrity_error_no_falla_picking FAILED [ 80%]
+tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_no_duplica_reparto_existente FAILED [ 80%]
+tests/test_repartidor_cola.py::TestBlueprintRepartidorCola::test_cola_sin_sesion_rechazado PASSED [ 80%]
+tests/test_repartidor_cola.py::TestBlueprintRepartidorCola::test_cola_devuelve_json PASSED [ 81%]
+tests/test_repartidor_cola.py::TestBlueprintRepartidorCola::test_coger_ok PASSED [ 81%]
+tests/test_repartidor_cola.py::TestBlueprintRepartidorCola::test_coger_409_ya_cogido PASSED [ 81%]
+tests/test_repartidor_cola.py::TestBlueprintRepartidorCola::test_coger_404_no_encontrado PASSED [ 81%]
+tests/test_seguimiento.py::TestSeguimientoEndpoint::test_pedido_no_encontrado_devuelve_404 PASSED [ 82%]
+tests/test_seguimiento.py::TestSeguimientoEndpoint::test_pedido_sin_reparto PASSED [ 82%]
+tests/test_seguimiento.py::TestSeguimientoEndpoint::test_pedido_en_reparto_con_repartidor PASSED [ 82%]
+tests/test_seguimiento.py::TestSeguimientoEndpoint::test_pedido_con_reparto_sin_repartidor_asignado PASSED [ 82%]
+tests/test_seguimiento.py::TestSeguimientoEndpoint::test_pedido_entregado PASSED [ 83%]
+tests/test_seguimiento.py::TestSeguimientoEndpoint::test_respuesta_incluye_forma_pago PASSED [ 83%]
+tests/test_startup.py::test_create_app_falla_si_falta_secret_key PASSED  [ 83%]
+tests/test_startup.py::test_app_mode_invalido_lanza_error PASSED         [ 83%]
+tests/test_startup.py::test_app_mode_warehouse_es_valido PASSED          [ 83%]
+tests/test_startup.py::test_app_mode_restaurant_es_valido PASSED         [ 84%]
+tests/test_states.py::TestEstadoPedidoEnum::test_valores_string PASSED   [ 84%]
+tests/test_states.py::TestEstadoPedidoEnum::test_comparacion_con_string_plano PASSED [ 84%]
+tests/test_states.py::TestEstadoPedidoEnum::test_serializable_json PASSED [ 84%]
+tests/test_states.py::TestEstadoPedidoEnum::test_construccion_desde_string PASSED [ 85%]
+tests/test_states.py::TestEstadoPedidoEnum::test_construccion_desde_string_invalido PASSED [ 85%]
+tests/test_states.py::TestEstadoRegistroEnum::test_valores_string PASSED [ 85%]
+tests/test_states.py::TestEstadoRegistroEnum::test_serializable_json PASSED [ 85%]
+tests/test_states.py::TestEstadoRegistroEnum::test_comparacion_con_string_plano PASSED [ 86%]
+tests/test_states.py::TestTransicionValidaPedidoHappyPath::test_pendiente_a_enlace PASSED [ 86%]
+tests/test_states.py::TestTransicionValidaPedidoHappyPath::test_enlace_a_enlace2 PASSED [ 86%]
+tests/test_states.py::TestTransicionValidaPedidoHappyPath::test_enlace2_a_confirmando_pago PASSED [ 86%]
+tests/test_states.py::TestTransicionValidaPedidoHappyPath::test_confirmando_pago_a_pagado PASSED [ 87%]
+tests/test_states.py::TestTransicionValidaPedidoHappyPath::test_enlace_a_pendiente_rollback_error PASSED [ 87%]
+tests/test_states.py::TestTransicionValidaPedidoHappyPath::test_enlace2_a_enlace_boton_atras PASSED [ 87%]
+tests/test_states.py::TestTransicionValidaPedidoHappyPath::test_acepta_strings_planos_como_origen PASSED [ 87%]
+tests/test_states.py::TestTransicionValidaPedidoInvalidas::test_saltar_estados PASSED [ 88%]
+tests/test_states.py::TestTransicionValidaPedidoInvalidas::test_pagado_es_terminal PASSED [ 88%]
+tests/test_states.py::TestTransicionValidaPedidoInvalidas::test_confirmando_pago_no_retrocede PASSED [ 88%]
+tests/test_states.py::TestTransicionValidaPedidoInvalidas::test_estado_origen_desconocido PASSED [ 88%]
+tests/test_states.py::TestTransicionValidaPedidoInvalidas::test_nuevo_estado_desconocido PASSED [ 89%]
+tests/test_states.py::TestTransicionValidaRegistroHappyPath::test_flujo_completo_hacia_adelante PASSED [ 89%]
+tests/test_states.py::TestTransicionValidaRegistroHappyPath::test_rollback_direccion PASSED [ 89%]
+tests/test_states.py::TestTransicionValidaRegistroHappyPath::test_acepta_strings_planos_como_origen PASSED [ 89%]
+tests/test_states.py::TestTransicionValidaRegistroInvalidas::test_saltar_estados PASSED [ 90%]
+tests/test_states.py::TestTransicionValidaRegistroInvalidas::test_no_retroceder_desde_nombre PASSED [ 90%]
+tests/test_states.py::TestTransicionValidaRegistroInvalidas::test_estado_origen_desconocido PASSED [ 90%]
+tests/test_states.py::TestTransicionValidaRegistroInvalidas::test_nuevo_estado_desconocido PASSED [ 90%]
+tests/test_states.py::TestMapasTransicion::test_todos_los_estados_pedido_tienen_entrada PASSED [ 91%]
+tests/test_states.py::TestMapasTransicion::test_todos_los_estados_registro_tienen_entrada PASSED [ 91%]
+tests/test_states.py::TestMapasTransicion::test_destinos_pedido_son_estados_validos PASSED [ 91%]
+tests/test_states.py::TestMapasTransicion::test_destinos_registro_son_estados_validos PASSED [ 91%]
+tests/test_states.py::TestMapasTransicion::test_pagado_tiene_transicion_a_preparacion PASSED [ 91%]
+tests/test_token_service.py::TestGenerarTokenTemporal::test_datos_validos_retorna_string PASSED [ 92%]
+tests/test_token_service.py::TestGenerarTokenTemporal::test_token_se_almacena_en_redis PASSED [ 92%]
+tests/test_token_service.py::TestGenerarTokenTemporal::test_datos_invalidos_lanza_value_error PASSED [ 92%]
+tests/test_token_service.py::TestGenerarTokenTemporal::test_datos_invalidos_no_escribe_redis PASSED [ 92%]
+tests/test_token_service.py::TestGenerarEnlace::test_retorna_url_con_formato_correcto PASSED [ 93%]
+tests/test_token_service.py::TestGenerarEnlace::test_error_en_token_no_genera_enlace_roto PASSED [ 93%]
+tests/test_webhook.py::TestWebhookTwilio::test_payload_invalido_retorna_400 PASSED [ 93%]
+tests/test_webhook.py::TestWebhookTwilio::test_body_vacio_retorna_400 PASSED [ 93%]
+tests/test_webhook.py::TestWebhookTwilio::test_mensaje_valido_encola_y_retorna_200 PASSED [ 94%]
+tests/test_webhook.py::TestWebhookTwilio::test_firma_invalida_retorna_403 PASSED [ 94%]
+tests/test_webhook.py::TestWebhookTwilio::test_firma_valida_encola PASSED [ 94%]
+tests/test_webhook.py::TestWebhookTwilio::test_encola_numero_y_mensaje_normalizados PASSED [ 94%]
+tests/test_webhook.py::TestWebhookTwilio::test_encola_usuario_registrado PASSED [ 95%]
+tests/test_webhook.py::TestWebhookMonei::test_sin_secret_configurado_retorna_401 PASSED [ 95%]
+tests/test_webhook.py::TestWebhookMonei::test_sin_header_firma_retorna_401 PASSED [ 95%]
+tests/test_webhook.py::TestWebhookMonei::test_firma_incorrecta_retorna_401 PASSED [ 95%]
+tests/test_webhook.py::TestWebhookMonei::test_order_id_no_numerico_retorna_400 PASSED [ 96%]
+tests/test_webhook.py::TestWebhookMonei::test_pago_exitoso_actualiza_estado_y_retorna_200 FAILED [ 96%]
+tests/test_webhook.py::TestWebhookMonei::test_pago_no_succeeded_no_actualiza_estado PASSED [ 96%]
+tests/test_webhook.py::TestWebhookMeta::test_get_verify_token_correcto_retorna_challenge PASSED [ 96%]
+tests/test_webhook.py::TestWebhookMeta::test_get_verify_token_incorrecto_retorna_403 PASSED [ 97%]
+tests/test_webhook.py::TestWebhookMeta::test_post_sin_firma_retorna_401 PASSED [ 97%]
+tests/test_webhook.py::TestWebhookMeta::test_post_firma_incorrecta_retorna_401 PASSED [ 97%]
+tests/test_webhook.py::TestWebhookMeta::test_post_sin_messages_retorna_200_sin_procesar PASSED [ 97%]
+tests/test_webhook.py::TestWebhookMeta::test_post_mensaje_no_texto_retorna_200_sin_procesar PASSED [ 98%]
+tests/test_webhook.py::TestWebhookMeta::test_post_payload_malformado_retorna_200_sin_procesar PASSED [ 98%]
+tests/test_webhook.py::TestWebhookMeta::test_post_encola_mensaje_y_retorna_200 PASSED [ 98%]
+tests/test_webhook.py::TestWebhookMeta::test_post_encola_numero_normalizado PASSED [ 98%]
+tests/test_whatsapp_service.py::TestEnviarMensajeTwilio::test_twilio_es_proveedor_por_defecto PASSED [ 99%]
+tests/test_whatsapp_service.py::TestEnviarMensajeTwilio::test_twilio_pasa_numero_con_prefijo PASSED [ 99%]
+tests/test_whatsapp_service.py::TestEnviarMensajeMeta::test_meta_normaliza_numero PASSED [ 99%]
+tests/test_whatsapp_service.py::TestEnviarMensajeMeta::test_meta_envia_mensaje_correcto PASSED [ 99%]
+tests/test_whatsapp_service.py::TestEnviarMensajeMeta::test_meta_llama_raise_for_status PASSED [100%]
+
+=================================== FAILURES ===================================
+________ TestCompletarPickingCreaReparto.test_crea_reparto_si_no_existe ________
+tests/test_repartidor_cola.py:230: in test_crea_reparto_si_no_existe
+    ok, msg, _ = self.gd.completar_picking(1, picker_id=3)
+    ^^^^^^^^^^
+E   ValueError: not enough values to unpack (expected 3, got 2)
+----------------------------- Captured stderr call -----------------------------
+2026-04-06 08:02:12,517 managers.dashboard.picking_flujo INFO REPARTO_CREADO pedido=10
+------------------------------ Captured log call -------------------------------
+INFO     managers.dashboard.picking_flujo:picking_flujo.py:181 REPARTO_CREADO pedido=10
+____ TestCompletarPickingCreaReparto.test_integrity_error_no_falla_picking _____
+tests/test_repartidor_cola.py:284: in test_integrity_error_no_falla_picking
+    ok, msg, _ = self.gd.completar_picking(1, picker_id=3)
+    ^^^^^^^^^^
+E   ValueError: not enough values to unpack (expected 3, got 2)
+----------------------------- Captured stderr call -----------------------------
+2026-04-06 08:02:12,619 managers.dashboard.picking_flujo INFO Reparto ya creado concurrentemente para pedido 10
+------------------------------ Captured log call -------------------------------
+INFO     managers.dashboard.picking_flujo:picking_flujo.py:185 Reparto ya creado concurrentemente para pedido 10
+______ TestCompletarPickingCreaReparto.test_no_duplica_reparto_existente _______
+tests/test_repartidor_cola.py:327: in test_no_duplica_reparto_existente
+    ok, msg, _ = self.gd.completar_picking(1, picker_id=3)
+    ^^^^^^^^^^
+E   ValueError: not enough values to unpack (expected 3, got 2)
+______ TestWebhookMonei.test_pago_exitoso_actualiza_estado_y_retorna_200 _______
+tests/test_webhook.py:186: in test_pago_exitoso_actualiza_estado_y_retorna_200
+    mock_gp.actualizar_estado.assert_called_once_with(42, EstadoPedido.PAGADO)
+/usr/lib/python3.12/unittest/mock.py:955: in assert_called_once_with
+    raise AssertionError(msg)
+E   AssertionError: Expected 'actualizar_estado' to be called once. Called 0 times.
+----------------------------- Captured stderr call -----------------------------
+2026-04-06 08:02:12,757 services.inbound_whatsapp INFO Pedido 42 marcado como pagado
+------------------------------ Captured log call -------------------------------
+INFO     services.inbound_whatsapp:inbound_whatsapp.py:203 Pedido 42 marcado como pagado
+=============================== warnings summary ===============================
+tests/test_checkin_empleado.py::TestIniciarTurno::test_crea_checkin_sin_rol_activo
+tests/test_checkin_empleado.py::TestIniciarTurno::test_lanza_error_si_ya_hay_checkin_abierto
+tests/test_checkin_empleado.py::TestIniciarTurno::test_crea_tramo_si_tiene_rol_activo
+tests/test_migracion_bd_dashboard.py::TestIniciarTurnoConTurnoId::test_iniciar_turno_acepta_turno_id
+tests/test_migracion_bd_dashboard.py::TestIniciarTurnoConTurnoId::test_iniciar_turno_sin_turno_id_no_calcula_minutos_tarde
+  /home/siemprearmando/test/panchi-bot/managers/empleado/checkin_mixin.py:42: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = ahora or datetime.utcnow()
+
+tests/test_checkin_empleado.py: 7 warnings
+tests/test_empleado.py: 4 warnings
+tests/test_migracion_bd_dashboard.py: 3 warnings
+  /home/siemprearmando/test/panchi-bot/managers/empleado/checkin_mixin.py:13: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    hoy = datetime.utcnow().date()
+
+tests/test_checkin_empleado.py::TestCerrarTurno::test_lanza_error_si_no_hay_checkin
+tests/test_checkin_empleado.py::TestCerrarTurno::test_cierra_checkin_y_devuelve_resumen
+  /home/siemprearmando/test/panchi-bot/managers/empleado/checkin_mixin.py:100: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_checkin_empleado.py::TestCerrarTurno::test_cierra_checkin_y_devuelve_resumen
+  /home/siemprearmando/test/panchi-bot/tests/test_checkin_empleado.py:66: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_checkin_empleado.py::TestCheckinHoy::test_devuelve_falso_si_no_hay_checkin
+tests/test_checkin_empleado.py::TestCheckinHoy::test_devuelve_resumen_con_checkin_activo
+  /home/siemprearmando/test/panchi-bot/managers/empleado/checkin_mixin.py:130: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    hoy = datetime.utcnow().date()
+
+tests/test_checkin_empleado.py::TestCheckinHoy::test_devuelve_falso_si_no_hay_checkin
+tests/test_checkin_empleado.py::TestCheckinHoy::test_devuelve_resumen_con_checkin_activo
+  /home/siemprearmando/test/panchi-bot/managers/empleado/checkin_mixin.py:139: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_checkin_empleado.py::TestCheckinHoy::test_devuelve_resumen_con_checkin_activo
+  /home/siemprearmando/test/panchi-bot/tests/test_checkin_empleado.py:97: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_dashboard_sprint4.py::test_rendimiento_resumen_devuelve_claves_esperadas
+tests/test_dashboard_sprint4.py::test_rendimiento_resumen_acepta_filtro_rol
+tests/test_dashboard_sprint4.py::test_rendimiento_resumen_acepta_filtro_rol
+  /home/siemprearmando/test/panchi-bot/managers/dashboard/empleados_rendimiento.py:27: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    hoy = datetime.utcnow().date()
+
+tests/test_dashboard_sprint4.py::test_rendimiento_empleado_devuelve_claves_esperadas
+  /home/siemprearmando/test/panchi-bot/managers/dashboard/empleados_rendimiento.py:140: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    hoy = datetime.utcnow().date()
+
+tests/test_dashboard_sprint5.py::test_estadisticas_devuelve_claves_esperadas
+tests/test_dashboard_sprint5.py::test_estadisticas_kpis_tienen_campos_requeridos
+tests/test_dashboard_sprint5.py::test_estadisticas_serie_vacia_si_no_hay_pedidos
+tests/test_dashboard_sprint5.py::test_estadisticas_acepta_granularidad_semana
+  /home/siemprearmando/test/panchi-bot/managers/dashboard/gestor_estadisticas_mixin.py:28: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    hoy = datetime.utcnow().date()
+
+tests/test_empleado.py::TestGestorEmpleadoCambiarEstado::test_cambiar_a_en_pausa_ok
+  /home/siemprearmando/test/panchi-bot/managers/empleado/profile_roles_mixin.py:45: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self._cerrar_tramo_activo(check_in, datetime.utcnow())
+
+tests/test_empleado.py::TestGestorEmpleadoCambiarEstado::test_cambiar_a_desconectado_ok
+  /home/siemprearmando/test/panchi-bot/managers/empleado/profile_roles_mixin.py:49: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_empleado.py::TestHooksEstadoOperativo::test_no_sobreescribe_desconectado
+tests/test_empleado.py::TestAuthRedireccionEmpleado::test_picker_redirige_a_empleado
+tests/test_empleado.py::TestAuthRedireccionEmpleado::test_picker_redirige_a_empleado
+tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_crea_reparto_si_no_existe
+tests/test_repartidor_cola.py::TestBlueprintRepartidorCola::test_coger_409_ya_cogido
+  /home/siemprearmando/.local/lib/python3.12/site-packages/sqlalchemy/sql/schema.py:3616: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+tests/test_empleado.py::TestGestorEmpleadoCambiarRol::test_cambia_rol_exitoso
+tests/test_empleado.py::TestGestorEmpleadoCambiarRol::test_setea_disponible_si_venia_de_desconectado
+  /home/siemprearmando/test/panchi-bot/managers/empleado/profile_roles_mixin.py:176: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_gestor_dashboard.py::test_metricas_keys_existentes_presentes
+tests/test_gestor_dashboard.py::test_metricas_incluye_cancelaciones_e_ingresos_por_metodo
+  /home/siemprearmando/test/panchi-bot/managers/dashboard/gestor_pedidos_mixin.py:24: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    hoy = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+tests/test_gestor_metricas.py::TestColasDetalle::test_estructura_devuelta
+  /home/siemprearmando/test/panchi-bot/managers/metricas/tiempo_real_mixin.py:156: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    delta = datetime.utcnow() - ultimo_hist.cambiado_en
+
+tests/test_gestor_metricas.py::TestColasDetalle::test_estructura_devuelta
+  /home/siemprearmando/test/panchi-bot/managers/metricas/tiempo_real_mixin.py:183: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    delta = datetime.utcnow() - ultimo_hist.cambiado_en
+
+tests/test_gestor_metricas.py::TestAlertasTiempoReal::test_sin_condiciones_lista_vacia
+  /home/siemprearmando/test/panchi-bot/managers/metricas/tiempo_real_mixin.py:232: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_gestor_metricas.py::TestAlertasTiempoReal::test_sin_condiciones_lista_vacia
+  /home/siemprearmando/test/panchi-bot/managers/metricas/tiempo_real_mixin.py:386: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_migracion_bd_dashboard.py::TestCheckInModeloCampos::test_checkin_tiene_turno_id
+  /home/siemprearmando/test/panchi-bot/tests/test_migracion_bd_dashboard.py:66: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    c = CheckIn(empleado_id=1, fecha=date.today(), inicio=datetime.utcnow())
+
+tests/test_migracion_bd_dashboard.py::TestCheckInModeloCampos::test_checkin_tiene_estado_validacion
+  /home/siemprearmando/test/panchi-bot/tests/test_migracion_bd_dashboard.py:73: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    c = CheckIn(empleado_id=1, fecha=date.today(), inicio=datetime.utcnow())
+
+tests/test_migracion_bd_dashboard.py::TestCheckInModeloCampos::test_checkin_tiene_minutos_tarde
+  /home/siemprearmando/test/panchi-bot/tests/test_migracion_bd_dashboard.py:78: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    c = CheckIn(empleado_id=1, fecha=date.today(), inicio=datetime.utcnow())
+
+tests/test_migracion_bd_dashboard.py::TestCheckInModeloCampos::test_checkin_minutos_tarde_puede_ser_negativo
+  /home/siemprearmando/test/panchi-bot/tests/test_migracion_bd_dashboard.py:86: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    c = CheckIn(empleado_id=1, fecha=date.today(), inicio=datetime.utcnow())
+
+tests/test_migracion_bd_dashboard.py::TestMetricaDiariaEmpleado::test_calcular_y_guardar_metrica_diaria_persiste_registro
+  /home/siemprearmando/test/panchi-bot/tests/test_migracion_bd_dashboard.py:399: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_picker_cola.py::TestGestorDashboardCola::test_pickings_sin_asignar_devuelve_lista
+  /home/siemprearmando/test/panchi-bot/tests/test_picker_cola.py:38: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    mock_picking.created_at = datetime.utcnow() - timedelta(minutes=5)
+
+tests/test_picker_cola.py::TestGestorDashboardCola::test_pickings_sin_asignar_devuelve_lista
+tests/test_picker_cola.py::TestGestorDashboardCola::test_pickings_sin_asignar_vacio
+tests/test_picker_cola.py::TestGestorDashboardCola::test_pickings_sin_asignar_llama_join_y_filter
+  /home/siemprearmando/test/panchi-bot/managers/dashboard/picking_basico.py:285: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_picker_cola.py::TestGestorDashboardCola::test_reclamar_picking_ok
+tests/test_picker_cola.py::TestGestorDashboardCola::test_reclamar_picking_ya_cogido
+  /home/siemprearmando/test/panchi-bot/managers/dashboard/picking_flujo.py:419: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'iniciado_en': datetime.utcnow(),
+
+tests/test_repartidor_cola.py::TestRepartosSinAsignar::test_devuelve_lista
+  /home/siemprearmando/test/panchi-bot/tests/test_repartidor_cola.py:41: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    mock_rep.created_at = datetime.utcnow() - timedelta(minutes=3)
+
+tests/test_repartidor_cola.py::TestRepartosSinAsignar::test_devuelve_lista
+tests/test_repartidor_cola.py::TestRepartosSinAsignar::test_vacio
+tests/test_repartidor_cola.py::TestRepartosSinAsignar::test_hace_join_y_filter
+  /home/siemprearmando/test/panchi-bot/managers/dashboard/reparto_asignacion.py:147: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    ahora = datetime.utcnow()
+
+tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_crea_reparto_si_no_existe
+tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_integrity_error_no_falla_picking
+tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_no_duplica_reparto_existente
+  /home/siemprearmando/test/panchi-bot/managers/dashboard/picking_flujo.py:154: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    picking.completado_en = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_crea_reparto_si_no_existe
+FAILED tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_integrity_error_no_falla_picking
+FAILED tests/test_repartidor_cola.py::TestCompletarPickingCreaReparto::test_no_duplica_reparto_existente
+FAILED tests/test_webhook.py::TestWebhookMonei::test_pago_exitoso_actualiza_estado_y_retorna_200
+================== 4 failed, 408 passed, 68 warnings in 8.28s ==================
+Sentry is attempting to send 2 pending events
+Waiting up to 2 seconds
+Press Ctrl-C to quit

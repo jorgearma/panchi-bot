@@ -3,7 +3,7 @@ import logging
 import config
 from flask import jsonify, request
 
-from container import gestor_pedidos, gestor_productos, get_monei, cache
+from container import gestor_pedidos, gestor_productos, get_monei
 from controllers.pago import iniciar_pago, iniciar_pago_efectivo
 from blueprints.api.cart import _user_id_del_token
 
@@ -41,7 +41,6 @@ def register(bp):
             numero_cliente=data.get("numero"),
             direccion_cliente=data.get("direccion"),
             notas=notas,
-            cache=cache,
             gestor_pedidos=gestor_pedidos,
             gestor_productos=gestor_productos,
             monei=get_monei(),
@@ -50,9 +49,6 @@ def register(bp):
 
         if not success:
             return jsonify({"error": result}), 400
-
-        if result == "El pedido ya está en proceso de pago.":
-            return jsonify({"message": result}), 200
 
         return jsonify({"redirect_url": result, "message": "Pedido enviado correctamente."}), 200
 
@@ -81,7 +77,6 @@ def register(bp):
             numero_cliente=data.get("numero"),
             direccion_cliente=data.get("direccion"),
             notas=notas,
-            cache=cache,
             gestor_pedidos=gestor_pedidos,
             gestor_productos=gestor_productos,
             public_url=config.PUBLIC_URL or "",
