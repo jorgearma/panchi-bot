@@ -29,16 +29,18 @@ class GestorUsuarios:
             logger.error("Error al obtener el usuario: %s", e)
             return None
 
-    def guardar_usuario(self, numero_cliente, nombre, direccion):
-        """Guarda un nuevo usuario en la base de datos."""
+    def guardar_usuario(self, numero_cliente, nombre, direccion) -> int:
+        """Guarda un nuevo usuario en la base de datos y devuelve su ID."""
         try:
             nuevo_usuario = Usuario(numero_cliente=numero_cliente, nombre=nombre, direccion=direccion)
             self.session.add(nuevo_usuario)
             self.session.commit()
             logger.info("Usuario %s guardado en la base de datos.", nombre)
+            return nuevo_usuario.id
         except SQLAlchemyError as e:
             self.session.rollback()
             logger.error("Error al guardar el usuario en la base de datos: %s", e)
+            raise
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type(SQLAlchemyError))
     def obtener_usuario_completo(self, numero_cliente):

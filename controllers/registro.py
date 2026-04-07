@@ -78,22 +78,20 @@ class RegistroUsuario:
 
         # Caso normal: usuario nuevo — guardar primero, luego crear pedido
         try:
-            gestor_usuarios.guardar_usuario(self.numero_cliente, estado["nombre"], estado["direccion"])
+            usuario_id = gestor_usuarios.guardar_usuario(self.numero_cliente, estado["nombre"], estado["direccion"])
         except Exception as e:
             logger.error("REGISTRO_FALLIDO_GUARDAR usuario=%s error=%s", self.numero_cliente, e)
             return "Error en registro", 200  # Redis queda en CONFIRMANDO_DIRECCION → reintento posible
 
-        usuario_info = gestor_usuarios.obtener_usuario_completo(self.numero_cliente)
-        if usuario_info:
-            try:
-                gestor_pedidos.iniciar_pedido(usuario_info["id"], estado["direccion"], self.numero_cliente)
-            except Exception as e:
-                # Usuario guardado pero pedido no creado. El próximo "si" del usuario
-                # entrará por la rama de recuperación de la guardia de idempotencia.
-                logger.error(
-                    "REGISTRO_PARCIAL usuario=%s — usuario guardado, pedido no creado: %s",
-                    self.numero_cliente, e,
-                )
+        try:
+            gestor_pedidos.iniciar_pedido(usuario_id, estado["direccion"], self.numero_cliente)
+        except Exception as e:
+            # Usuario guardado pero pedido no creado. El próximo "si" del usuario
+            # entrará por la rama de recuperación de la guardia de idempotencia.
+            logger.error(
+                "REGISTRO_PARCIAL usuario=%s — usuario guardado, pedido no creado: %s",
+                self.numero_cliente, e,
+            )
 
         logger.info("REGISTRO_COMPLETADO usuario=%s", self.numero_cliente)
         menu_despues_registro = mostrar_menu()
