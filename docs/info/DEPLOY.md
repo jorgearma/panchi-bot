@@ -21,7 +21,7 @@ Stack completo en un solo VPS: App + Redis + SQL Server + Nginx con HTTPS.
 
 - **RAM mínima: 4 GB** (SQL Server Express necesita ~2 GB solo él)
 - Ubuntu 22.04+
-- Docker instalado
+- Docker + Docker Compose v2 instalados
 - Un dominio apuntando al VPS (registro A → IP pública del VPS)
 - Puertos 80 y 443 abiertos en el firewall
 
@@ -31,25 +31,6 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 newgrp docker
 ```
-
-### ⚠️ Docker Compose — versión v1 vs v2
-
-Algunos VPS tienen Docker antiguo sin el plugin `compose`. Comprueba cuál tienes:
-
-```bash
-docker compose version   # v2 (sin guion) — plugin integrado
-docker-compose version   # v1 (con guion) — binario separado
-```
-
-Si `docker compose` falla con `unknown command`, instala el binario v1:
-
-```bash
-curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
-```
-
-> A partir de aquí, **todos los comandos usan `docker-compose` (con guion)**,
-> que funciona tanto en v1 como en instalaciones donde v2 no está disponible.
 
 ---
 
@@ -176,47 +157,45 @@ sudo certbot certonly --standalone -d tudominio.com
 
 ## Paso 4 — Preparar nginx para producción
 
-El proyecto usa dos configuraciones separadas:
+El proyecto ahora usa dos configuraciones separadas:
 
 - `nginx.local.conf`: para pruebas locales por HTTP
 - `nginx.prod.conf`: para el VPS con dominio y HTTPS
 
-`nginx.prod.conf` ya está configurado con `panchibot.es` y `www.panchibot.es`.
-Si cambias de dominio, edita el archivo **en local** y luego súbelo al VPS:
+Para producción, edita `nginx.prod.conf` y deja este contenido:
 
-```bash
-# Desde tu máquina local
-scp nginx.prod.conf root@IP_DEL_VPS:/opt/panchi-bot/nginx.prod.conf
+```nginx
+server {
+    listen 80;
+    server_name tudominio.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name tudominio.com;
+
+    ssl_certificate     /etc/letsencrypt/live/tudominio.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tudominio.com/privkey.pem;
+
+    location /health {
+        proxy_pass http://app:5000/health;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://app:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+    }
+}
 ```
 
-> **Importante**: edita siempre en local y sube con `scp`. Si editas directamente
-> en el VPS con `nano`, los cambios no quedan en el repositorio.
-
-El contenido actual de `nginx.prod.conf` incluye:
-- Redirección HTTP → HTTPS
-- Redirección apex (`panchibot.es`) → `www.panchibot.es`
-- TLS 1.2 + 1.3 únicamente
-- HSTS activado (1 año)
-- Certificados de Let's Encrypt montados desde el host
-
-En `.env` del VPS debe estar:
-```
-NGINX_CONF=nginx.prod.conf
-```
-
-### ⚠️ Si el puerto 80 o 443 ya está ocupado
-
-En VPS con nginx instalado en el sistema (no Docker), el arranque del contenedor fallará:
-
-```
-failed to bind host port for 0.0.0.0:80: address already in use
-```
-
-Solución: para y deshabilita el nginx del sistema **antes** de levantar Docker:
-
-```bash
-systemctl stop nginx && systemctl disable nginx
-```
+> Sustituye `tudominio.com` por tu dominio real en los 4 sitios donde aparece.
+> En `.env`, deja `NGINX_CONF=nginx.prod.conf` cuando despliegues en el VPS.
 
 ---
 
@@ -242,7 +221,7 @@ mkdir -p backups
 # Levanta solo SQL Server
 docker-compose up -d sqlserver
 # Sigue los logs hasta que quede sano
-docker-compose logs -f sqlserver
+docker compose logs -f sqlserver
 ```
 
 SQL Server tarda en iniciar. Espera a que el healthcheck pase antes de seguir.
@@ -275,31 +254,62 @@ export SA_PASSWORD='TuPassword!'
 Comprueba que el backup existe dentro del contenedor:
 
 ```bash
-docker-compose exec sqlserver ls -lh /var/opt/mssql/backup
+docker compose exec sqlserver ls -lh /var/opt/mssql/backup
 ```
 
-> **⚠️ Importante**: los comandos `sqlcmd` deben ir en **una sola línea**.
-> Las contrabarra `\` para partir el comando no funcionan en todos los shells del VPS.
-> Usa siempre comillas simples `'` para la contraseña (evita que el shell expanda `$`).
-
-Consulta los nombres lógicos del backup (necesarios para el RESTORE):
+Valida que SQL Server puede leer el backup:
 
 ```bash
-docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TuPassword!' -C -Q "RESTORE FILELISTONLY FROM DISK = N'/var/opt/mssql/backup/mi_backup.bak'"
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$SA_PASSWORD" -C \
+  -Q "RESTORE VERIFYONLY FROM DISK = N'/var/opt/mssql/backup/${BACKUP_FILE}'"
 ```
 
-Anota los valores de la columna `LogicalName` (uno para datos `.mdf` y otro para el log `.ldf`).
-
-Luego restaura la BD (sustituye los nombres lógicos por los que obtuviste arriba):
+Consulta primero los nombres lógicos del backup:
 
 ```bash
-docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TuPassword!' -C -Q "RESTORE DATABASE panchibot FROM DISK = N'/var/opt/mssql/backup/mi_backup.bak' WITH MOVE 'NombreLogicoData' TO '/var/opt/mssql/data/panchibot.mdf', MOVE 'NombreLogicoLog' TO '/var/opt/mssql/data/panchibot_log.ldf', REPLACE"
+docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$Jorgejorge1!" -C \
+  -Q "RESTORE FILELISTONLY FROM DISK = N'/var/opt/mssql/backup/${BACKUP_FILE}'"
 ```
 
-Comprueba que la base quedó restaurada:
+Luego restaura la BD. Sustituye `LogicalDataName` y `LogicalLogName` por los nombres
+que te haya devuelto el comando anterior:
+
 
 ```bash
-docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TuPassword!' -C -Q "SELECT name, state_desc FROM sys.databases WHERE name = 'panchibot'"
+docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Jorgejorge1!' -C -Q "RESTORE 
+  DATABASE pruebabot FROM DISK = N'/var/opt/mssql/backup/panchibot.bak' WITH MOVE 'pruebabot' TO                  
+  '/var/opt/mssql/data/pruebabot.mdf', MOVE 'pruebabot_log' TO '/var/opt/mssql/data/pruebabot_log.ldf', REPLACE"
+  ```
+
+```bash
+export LOGICAL_DATA_NAME='LogicalDataName'
+export LOGICAL_LOG_NAME='LogicalLogName'
+
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$SA_PASSWORD" -C \
+  -Q "RESTORE DATABASE ${DB_NAME}
+      FROM DISK = N'/var/opt/mssql/backup/${BACKUP_FILE}'
+      WITH MOVE '${LOGICAL_DATA_NAME}' TO '/var/opt/mssql/data/${DB_NAME}.mdf',
+           MOVE '${LOGICAL_LOG_NAME}' TO '/var/opt/mssql/data/${DB_NAME}_log.ldf',
+           REPLACE, RECOVERY"
+```
+
+Comprueba que la base quedó restaurada y accesible:
+
+```bash
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$SA_PASSWORD" -C \
+  -Q "SELECT name, state_desc FROM sys.databases WHERE name = '${DB_NAME}'"
+```
+
+Prueba una consulta simple ya dentro de la base restaurada:
+
+```bash
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "$SA_PASSWORD" -d "$DB_NAME" -C \
+  -Q "SELECT TOP 1 name FROM sys.tables ORDER BY name"
 ```
 
 ### Opción B — No tienes backup
@@ -307,7 +317,9 @@ docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -
 SQL Server Express arranca vacío. Crea la BD manualmente:
 
 ```bash
-docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TuPassword!' -C -Q "CREATE DATABASE panchibot"
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "TuPassword!" -C \
+  -Q "CREATE DATABASE panchibot"
 ```
 
 > Recomendación: si tienes backup, restáuralo antes de arrancar la app.
@@ -317,24 +329,20 @@ docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -
 
 ## Paso 8 — Arrancar el resto del stack
 
-Cuando la base ya exista y esté restaurada, levanta el resto.
-El stack incluye el servicio `worker` (procesa tareas en background) — no lo omitas:
+Cuando la base ya exista y esté restaurada, levanta el resto:
 
 ```bash
-# Construye la imagen de la app y levanta todo lo demás (incluido el worker)
-docker-compose up --build -d redis app worker nginx
-
-# Comprueba que los 4 servicios están Up
-docker-compose ps
+# Construye la imagen de la app y levanta todo lo demás
+docker compose up --build -d redis app nginx
 
 # Sigue los logs de la app
-docker-compose logs -f app
+docker compose logs -f app
 ```
 
 El orden de arranque será:
 1. `redis` arranca y pasa el healthcheck (~5s)
 2. `sqlserver` ya está levantado y sano
-3. `app` y `worker` arrancan una vez Redis y SQL Server están sanos
+3. `app` arranca una vez Redis y SQL Server están sanos
 4. `nginx` arranca
 
 ---
@@ -347,7 +355,9 @@ Si arrancas con una base nueva o tu backup está desactualizado, aplica los SQL 
 
 ```bash
 # Ejemplo: ejecutar una migración concreta
-docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TuPassword!' -d panchibot -C -i /migrations/002_turno_campos_dashboard.sql
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "TuPassword!" -d panchibot -C \
+  -i /migrations/002_turno_campos_dashboard.sql
 ```
 
 ---
@@ -356,13 +366,13 @@ docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -
 
 ```bash
 # Health check — debe devolver {"status":"ok","redis":"ok","database":"ok"}
-curl https://www.panchibot.es/health
+curl https://tudominio.com/health
 
 # Dashboard accesible
-curl -I https://www.panchibot.es/dashboard/
+curl -I https://tudominio.com/dashboard/
 
 # Logs de la app sin errores
-docker-compose logs app --tail=50
+docker compose logs app --tail=50
 ```
 
 ---
@@ -373,13 +383,13 @@ docker-compose logs app --tail=50
 
 En [developers.facebook.com](https://developers.facebook.com):
 1. Tu app → WhatsApp → Configuration → Webhook
-2. **Callback URL**: `https://www.panchibot.es/webhook/meta`
+2. **Callback URL**: `https://tudominio.com/webhook/meta`
 3. **Verify Token**: el valor de `META_VERIFY_TOKEN` en tu `.env`
 4. Suscríbete al campo: `messages`
 
 Verificación manual:
 ```bash
-curl "https://www.panchibot.es/webhook/meta?hub.mode=subscribe&hub.verify_token=TU_TOKEN&hub.challenge=test"
+curl "https://tudominio.com/webhook/meta?hub.mode=subscribe&hub.verify_token=TU_TOKEN&hub.challenge=test"
 # Debe responder: test
 ```
 
@@ -387,14 +397,14 @@ curl "https://www.panchibot.es/webhook/meta?hub.mode=subscribe&hub.verify_token=
 
 En [console.twilio.com](https://console.twilio.com):
 1. Messaging → Sandbox Settings (o tu número)
-2. **Webhook URL**: `https://www.panchibot.es/webhook`
+2. **Webhook URL**: `https://tudominio.com/webhook`
 3. Método: POST
 
 ### Monei
 
 En [dashboard.monei.com](https://dashboard.monei.com):
 1. Settings → Webhooks → Add endpoint
-2. **URL**: `https://www.panchibot.es/webhook/monei`
+2. **URL**: `https://tudominio.com/webhook/monei`
 3. Eventos: `payment.succeeded`, `payment.failed`, `payment.canceled`
 
 ---
@@ -406,7 +416,7 @@ En [dashboard.monei.com](https://dashboard.monei.com):
 sudo crontab -e
 
 # Añade esta línea (ajusta la ruta al proyecto):
-0 3 1 * * certbot renew --quiet && docker-compose -f /opt/panchi-bot/docker-compose.yml restart nginx
+0 3 1 * * certbot renew --quiet && docker compose -f /home/ubuntu/panchi-bot/docker-compose.yml restart nginx
 ```
 
 ---
@@ -415,41 +425,41 @@ sudo crontab -e
 
 ```bash
 # Estado de los servicios
-docker-compose ps
+docker compose ps
 
 # Logs en tiempo real
-docker-compose logs -f app
+docker compose logs -f app
 
 # Redesplegar tras cambios de código (sin reconstruir imagen)
-git pull && docker-compose restart app worker
+git pull && docker compose restart app
 
 # Reconstruir imagen tras cambios en requirements.txt o Dockerfile
-git pull && docker-compose up --build -d app worker
+git pull && docker compose up --build -d app
 
 # Acceder a la shell de la app
-docker-compose exec app bash
+docker compose exec app bash
 
 # Acceder a SQL Server
-docker-compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TuPassword!' -No
+docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TuPassword!" -No
 
-# Reiniciar solo nginx (tras cambiar nginx.prod.conf y subirlo con scp)
-docker-compose up -d --force-recreate nginx
+# Reiniciar solo nginx (tras cambiar nginx.local.conf o nginx.prod.conf)
+docker compose restart nginx
 
 # Parar todo (Redis y SQL Server siguen con sus datos en volúmenes)
-docker-compose down
+docker compose down
 
 # ⚠️ Borrar TODO incluyendo datos de SQL Server y Redis
-docker-compose down -v
+docker compose down -v
 ```
 
 ---
 
 ## Checklist final antes de dar por desplegado
 
-- [ ] `curl https://www.panchibot.es/health` → `{"status":"ok","redis":"ok","database":"ok"}`
-- [ ] Dashboard accesible en `https://www.panchibot.es/dashboard/`
+- [ ] `curl https://tudominio.com/health` → `{"status":"ok","redis":"ok","database":"ok"}`
+- [ ] Dashboard accesible en `https://tudominio.com/dashboard/`
 - [ ] Webhook de WhatsApp verificado en el panel de Meta/Twilio
 - [ ] Webhook de Monei configurado
 - [ ] Enviar un WhatsApp de prueba y ver en los logs que llega
 - [ ] Crear un usuario administrador en la BD
-- [ ] `docker-compose logs app` sin errores en rojo
+- [ ] `docker compose logs app` sin errores en rojo

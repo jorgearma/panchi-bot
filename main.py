@@ -10,6 +10,7 @@ from sentry_sdk import capture_exception
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from database import conectar_bd1, close_db
 
@@ -62,6 +63,7 @@ def create_app(config: dict = None) -> Flask:
         )
 
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
     app.secret_key = app_config.SECRET_KEY
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'

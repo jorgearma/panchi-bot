@@ -24,8 +24,8 @@ def index():
     try:
         if gestor_empleado.es_polivalente(empleado_id) and not gestor_empleado.tiene_rol_activo(empleado_id):
             return redirect('/empleado/checkin')
-    except Exception:
-        pass  # Si falla la BD, mostrar el hub igualmente
+    except Exception as e:
+        logger.warning("No se pudo verificar rol activo para empleado_id=%s: %s", empleado_id, e)
     return render_template('empleado/index.html', empleado_id=empleado_id, rol=rol,
                            app_mode=app_config.APP_MODE)
 
@@ -111,7 +111,7 @@ def capacidades():
         return jsonify({'capacidades': caps, 'rol_activo': rol_activo})
     except Exception as e:
         logger.error("Error en /empleado/capacidades: %s", e)
-        return jsonify({'capacidades': [], 'rol_activo': None})
+        return jsonify({'capacidades': [], 'rol_activo': None}), 500
 
 
 @blueprint_empleado.route('/empleado/carga-operativa')
@@ -166,7 +166,7 @@ def checkin():
                                 turno=turno,
                                 empleado_id=empleado_id)
     except Exception as e:
-        logger.error("Error en /empleado/checkin: %s", e)
+        logger.error("Error en /empleado/checkin empleado_id=%s: %s", empleado_id, e)
         return redirect('/empleado')
 
 
@@ -179,7 +179,7 @@ def fichaje_iniciar():
         puede_result = gestor_empleado.puede_iniciar_turno(empleado_id)
         if not puede_result['puede']:
             return jsonify({'error': puede_result['razon']}), 403
-        check_in = gestor_empleado.iniciar_turno(empleado_id, turno_id=puede_result['turno_id'])
+        check_in = gestor_empleado.iniciar_turno(empleado_id, turno_id=puede_result.get('turno_id'))
         return jsonify({'ok': True, 'check_in_id': check_in.id,
                         'inicio': check_in.inicio.isoformat()})
     except ValueError as e:
