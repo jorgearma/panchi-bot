@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload, selectinload, load_only
 
 from managers.dashboard._helpers import (
     _iso, _COLORES_ESTADO, _UMBRALES_RETRASO, _ESTADOS_OPERATIVOS,
@@ -28,18 +29,18 @@ class GestorPedidosMixin:
             Pedido.FechaCreacion >= hoy
         ).scalar() or 0
 
-        pedidos_activos = s.query(func.count(Pedido.PedidoID)).filter(
-            Pedido.Estado.in_(_ESTADOS_OPERATIVOS)
-        ).scalar() or 0
+        # 1 GROUP BY replaces 3 separate estado COUNTs
+        _counts_estado = dict(
+            s.query(Pedido.Estado, func.count(Pedido.PedidoID))
+            .filter(Pedido.Estado.in_(_ESTADOS_OPERATIVOS))
+            .group_by(Pedido.Estado)
+            .all()
+        )
+        pedidos_activos = sum(_counts_estado.values())
+        en_preparacion = _counts_estado.get(EstadoPedido.EN_PREPARACION.value, 0)
+        en_reparto = _counts_estado.get(EstadoPedido.EN_REPARTO.value, 0)
 
-        en_preparacion = s.query(func.count(Pedido.PedidoID)).filter(
-            Pedido.Estado == EstadoPedido.EN_PREPARACION.value
-        ).scalar() or 0
-
-        en_reparto = s.query(func.count(Pedido.PedidoID)).filter(
-            Pedido.Estado == EstadoPedido.EN_REPARTO.value
-        ).scalar() or 0
-
+        # entregados_hoy filtrates by FechaActualizacion — needs separate query
         entregados_hoy = s.query(func.count(Pedido.PedidoID)).filter(
             Pedido.Estado == EstadoPedido.ENTREGADO.value,
             Pedido.FechaActualizacion >= hoy,
@@ -111,7 +112,17 @@ class GestorPedidosMixin:
         query = s.query(Pedido).filter(Pedido.Estado.in_(_ESTADOS_OPERATIVOS))
         if estado:
             query = query.filter(Pedido.Estado == estado)
-        pedidos = query.order_by(Pedido.FechaCreacion.asc()).all()
+        pedidos = (
+            query
+            .options(
+                joinedload(Pedido.cliente),
+                selectinload(Pedido.detalles),
+                joinedload(Pedido.picking).joinedload(PickingPedido.empleado),
+                joinedload(Pedido.reparto).joinedload(Reparto.repartidor),
+            )
+            .order_by(Pedido.FechaCreacion.asc())
+            .all()
+        )
 
         resultado = []
         for p in pedidos:
@@ -190,21 +201,29 @@ class GestorPedidosMixin:
         ahora = datetime.utcnow()
         resultado = []
 
-        for estado, (umbral, nivel, desc) in _UMBRALES_RETRASO.items():
-            pedidos = s.query(Pedido).filter(Pedido.Estado == estado).all()
-            for p in pedidos:
-                ref = p.FechaActualizacion or p.FechaCreacion
-                if ref:
-                    minutos = (ahora - ref).total_seconds() / 60
-                    if minutos > umbral:
-                        resultado.append({
-                            "tipo": "pedido_retrasado",
-                            "nivel": nivel,
-                            "pedido_id": p.PedidoID,
-                            "mensaje": f"Pedido #{p.PedidoID} lleva {int(minutos)}min {desc}",
-                            "minutos": int(minutos),
-                            "creada_en": _iso(ahora),
-                        })
+        pedidos_alerta = (
+            s.query(Pedido)
+            .options(load_only(
+                Pedido.PedidoID, Pedido.Estado,
+                Pedido.FechaCreacion, Pedido.FechaActualizacion,
+            ))
+            .filter(Pedido.Estado.in_(list(_UMBRALES_RETRASO.keys())))
+            .all()
+        )
+        for p in pedidos_alerta:
+            umbral, nivel, desc = _UMBRALES_RETRASO[p.Estado]
+            ref = p.FechaActualizacion or p.FechaCreacion
+            if ref:
+                minutos = (ahora - ref).total_seconds() / 60
+                if minutos > umbral:
+                    resultado.append({
+                        "tipo": "pedido_retrasado",
+                        "nivel": nivel,
+                        "pedido_id": p.PedidoID,
+                        "mensaje": f"Pedido #{p.PedidoID} lleva {int(minutos)}min {desc}",
+                        "minutos": int(minutos),
+                        "creada_en": _iso(ahora),
+                    })
 
         # Prepared orders with no delivery driver assigned (Reparto PENDIENTE sin repartidor_id)
         for r in s.query(Reparto).filter(
@@ -322,6 +341,7 @@ class GestorPedidosMixin:
 
         pedidos = (
             query
+            .options(joinedload(Pedido.cliente))
             .order_by(Pedido.FechaCreacion.desc())
             .offset((page - 1) * per_page)
             .limit(per_page)
