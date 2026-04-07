@@ -143,7 +143,8 @@ class GestorDashboardBase:
             Los objetos Reparto vienen con pedido y pedido.cliente eager-loaded.
 
         Note: estados_activos must contain string values (e.g. EstadoReparto.X.value),
-        not enum members.
+        not enum members. If a reparto re-enters a state multiple times (not possible
+        under the current state machine), each re-entry is treated as a separate 'activo'.
         """
         if not ids:
             return defaultdict(lambda: {'activos': [], 'entregados': []})
