@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, date
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import joinedload, selectinload
 
 from managers.dashboard._helpers import _iso
 from models import CheckIn, Empleado, Pedido, Reparto, Turno
@@ -151,6 +152,9 @@ class GestorRepartoAsignacionMixin:
         # Pedidos PREPARADO con Reparto PENDIENTE y sin repartidor
         repartos = (
             s.query(Reparto)
+            .options(
+                joinedload(Reparto.pedido).selectinload(Pedido.detalles)
+            )
             .join(Pedido, Pedido.PedidoID == Reparto.pedido_id)
             .filter(
                 Reparto.repartidor_id == None,

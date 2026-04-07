@@ -3,6 +3,7 @@ import logging
 from datetime import date, datetime
 
 from sqlalchemy import and_
+from sqlalchemy.orm import joinedload
 
 from models import CheckIn, Empleado, Rol, Turno
 
@@ -20,7 +21,7 @@ class GestorEmpleadosListaMixin:
                             Si False, muestra todos los empleados activos (para creación de turnos).
         """
         hoy = date.today()
-        query = self.session.query(Empleado).filter(Empleado.activo == True)
+        query = self.session.query(Empleado).options(joinedload(Empleado.rol)).filter(Empleado.activo == True)
 
         if solo_con_turno:
             query = query.join(Turno, and_(

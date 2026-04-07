@@ -41,6 +41,7 @@ class TestGestorDashboardCola:
                 mock_q.join.return_value = mock_q
                 mock_q.filter.return_value = mock_q
                 mock_q.order_by.return_value = mock_q
+                mock_q.options.return_value = mock_q
                 mock_q.all.return_value = [mock_picking]
                 mock_sess.query.return_value = mock_q
 
@@ -80,6 +81,7 @@ class TestGestorDashboardCola:
                 mock_q.join.return_value = mock_q
                 mock_q.filter.return_value = mock_q
                 mock_q.order_by.return_value = mock_q
+                mock_q.options.return_value = mock_q
                 mock_q.all.return_value = []
                 mock_sess.query.return_value = mock_q
 
@@ -276,6 +278,7 @@ class TestModoRestaurant:
                 mock_q = MagicMock()
                 mock_q.filter.return_value = mock_q
                 mock_q.order_by.return_value = mock_q
+                mock_q.options.return_value = mock_q
                 mock_q.all.return_value = [mock_picking]
                 mock_sess.query.return_value = mock_q
 
@@ -328,6 +331,7 @@ class TestModoRestaurant:
                 mock_q = MagicMock()
                 mock_q.filter.return_value = mock_q
                 mock_q.order_by.return_value = mock_q
+                mock_q.options.return_value = mock_q
                 mock_q.all.return_value = [mock_picking]
                 mock_sess.query.return_value = mock_q
 

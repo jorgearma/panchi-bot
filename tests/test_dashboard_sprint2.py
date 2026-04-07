@@ -57,7 +57,7 @@ def test_detalle_pedido_devuelve_none_si_no_existe(app):
         with patch.object(
             type(gestor_dashboard), 'session', new_callable=PropertyMock
         ) as mock_session:
-            mock_session.return_value.query.return_value.filter_by.return_value.first.return_value = None
+            mock_session.return_value.query.return_value.options.return_value.filter_by.return_value.first.return_value = None
 
             result = gestor_dashboard.detalle_pedido(999999)
 

@@ -226,7 +226,9 @@ class GestorPedidosMixin:
                     })
 
         # Prepared orders with no delivery driver assigned (Reparto PENDIENTE sin repartidor_id)
-        for r in s.query(Reparto).filter(
+        for r in s.query(Reparto).options(
+            joinedload(Reparto.pedido)
+        ).filter(
             Reparto.repartidor_id == None,
             Reparto.estado == EstadoReparto.PENDIENTE.value,
         ).join(Pedido, Pedido.PedidoID == Reparto.pedido_id).filter(
@@ -368,7 +370,18 @@ class GestorPedidosMixin:
     def detalle_pedido(self, pedido_id: int) -> dict | None:
         """Devuelve el detalle operativo completo de un pedido."""
         s = self.session
-        p = s.query(Pedido).filter_by(PedidoID=pedido_id).first()
+        p = (
+            s.query(Pedido)
+            .options(
+                joinedload(Pedido.cliente),
+                selectinload(Pedido.detalles).joinedload(PedidoDetalle.producto),
+                selectinload(Pedido.historial_estados),
+                joinedload(Pedido.picking).joinedload(PickingPedido.empleado),
+                joinedload(Pedido.reparto).joinedload(Reparto.repartidor),
+            )
+            .filter_by(PedidoID=pedido_id)
+            .first()
+        )
         if not p:
             return None
 
