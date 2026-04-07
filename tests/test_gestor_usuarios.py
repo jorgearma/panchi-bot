@@ -99,11 +99,23 @@ class TestGuardarUsuario:
         session.add.assert_called_once()
         session.commit.assert_called_once()
 
-    def test_error_bd_hace_rollback(self):
+    def test_error_bd_hace_rollback_y_relanza(self):
         session = MagicMock()
         session.commit.side_effect = SQLAlchemyError("fallo al guardar")
 
         gestor = make_gestor_with_session(session)
-        gestor.guardar_usuario(NUMERO, "Ana García", "Calle Mayor 1")
+        with pytest.raises(SQLAlchemyError):
+            gestor.guardar_usuario(NUMERO, "Ana García", "Calle Mayor 1")
 
         session.rollback.assert_called_once()
+
+    def test_devuelve_id_tras_commit(self):
+        session = MagicMock()
+        usuario_mock = MagicMock()
+        usuario_mock.id = 42
+
+        with patch("managers.gestor_usuarios.Usuario", return_value=usuario_mock):
+            gestor = make_gestor_with_session(session)
+            result = gestor.guardar_usuario(NUMERO, "Ana García", "Calle Mayor 1")
+
+        assert result == 42
