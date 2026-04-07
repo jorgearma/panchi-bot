@@ -408,7 +408,7 @@ class TestIniciarPago:
 
     def _make_gestor_productos(self, precio: float = 3.5) -> MagicMock:
         gp = MagicMock()
-        gp.obtener_producto_por_codigo.return_value = {"Precio": precio}
+        gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": precio}}
         return gp
 
     def test_happy_path_returns_redirect_url(self):
@@ -461,7 +461,7 @@ class TestIniciarPago:
         gestor = make_gestor_pedidos(pedido)
 
         gp = MagicMock()
-        gp.obtener_producto_por_codigo.return_value = None  # product missing
+        gp.obtener_productos_por_codigos.return_value = {}  # product missing
 
         success, msg = iniciar_pago(
             user_id=10,
@@ -643,7 +643,7 @@ class TestIniciarPago:
 class TestIniciarPagoEfectivo:
     def _make_gestor_productos(self, precio: float = 3.5) -> MagicMock:
         gp = MagicMock()
-        gp.obtener_producto_por_codigo.return_value = {"Precio": precio}
+        gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": precio}}
         return gp
 
     def test_notas_se_pasan_a_confirmar_pago_efectivo(self):
