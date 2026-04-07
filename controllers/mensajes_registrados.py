@@ -15,7 +15,7 @@ from controllers.mensajes_registrados_notifier import (
 )
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from tenacity import RetryError
-from states import EstadoPedido, ESTADOS_TERMINALES_PEDIDO
+from states import EstadoPedido
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,14 @@ class ManejadorMensajesRegistrados:
             logger.info("LOCK_PEDIDO ya activo para %s — ignorando duplicado.", numero_cliente)
             return "mensaje enviado", 200
 
+        if not all(k in usuario_datos for k in ("id", "direccion", "nombre")):
+            logger.error(
+                "usuario_datos incompleto para %s: claves presentes=%s",
+                numero_cliente, list(usuario_datos),
+            )
+            _enviar_error_sistema(numero_cliente)
+            return "error datos usuario", 500
+
         id_usuario = usuario_datos["id"]
         direccion_usuario = usuario_datos["direccion"]
         nombre_usuario = usuario_datos["nombre"]
@@ -42,6 +50,7 @@ class ManejadorMensajesRegistrados:
             _enviar_error_sistema(numero_cliente)
             return "Error al procesar el pedido. Inténtalo más tarde.", 500
 
+        logger.info("PEDIDO_INICIADO usuario=%s id_usuario=%s", numero_cliente, id_usuario)
         menu_texto = mostrar_menu()
         _enviar_bienvenida_menu(nombre_usuario, menu_texto, numero_cliente)
         return "mensaje enviado", 200
@@ -91,7 +100,7 @@ class ManejadorMensajesRegistrados:
             _enviar_respuesta_pedido(mensaje, numero_cliente)
             return "mensaje enviado", 200
 
-        if estado_del_pedido == EstadoPedido.ENLACE or estado_del_pedido == EstadoPedido.ENLACE2:
+        if estado_del_pedido in (EstadoPedido.ENLACE, EstadoPedido.ENLACE2):
             enlace = pedido_activo.enlace
             if not enlace:
                 logger.info("ENLACE_CADUCADO pedido=%s usuario=%s", id_pedido_activo, numero_cliente)
@@ -131,13 +140,10 @@ class ManejadorMensajesRegistrados:
                 return "estado no contemplado", 200
             return resultado
 
-        if estado_del_pedido in ESTADOS_TERMINALES_PEDIDO:
-            logger.info(
-                "Pedido %s en estado terminal '%s' — iniciando nuevo pedido para %s.",
-                id_pedido_activo, estado_del_pedido, numero_cliente,
-            )
-            return ManejadorMensajesRegistrados._iniciar_pedido_y_enviar_menu(numero_cliente, usuario_datos)
-
+        # ESTADOS_TERMINALES_PEDIDO (ENTREGADO, CANCELADO, REEMBOLSADO) nunca llegan aquí:
+        # obtener_pedido_mas_reciente los excluye en la query. Cuando el pedido más
+        # reciente es terminal, el manager devuelve None y el bloque de línea 72
+        # ya inicia un pedido nuevo.
         logger.warning(
             "ESTADO_NO_CONTEMPLADO pedido=%s estado=%s usuario=%s mensaje=%r",
             id_pedido_activo, estado_del_pedido, numero_cliente, mensaje_cliente,
