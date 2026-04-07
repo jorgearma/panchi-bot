@@ -22,19 +22,28 @@ def _validar_carrito(productos_recibidos, gestor_productos):
     if not productos_recibidos:
         return None, None, "El carrito no puede estar vacío"
 
-    productos_validos = []
-    total = 0.0
+    # Validar cantidades antes de tocar la DB
+    items_parseados = []
     for item in productos_recibidos:
         codigo   = item.get("codigo")
         cantidad = item.get("cantidad", 1)
         if isinstance(cantidad, bool) or not isinstance(cantidad, int) or cantidad <= 0:
             return None, None, f"Cantidad inválida para el producto {codigo}"
-        notas    = item.get("notas", "") or None
-        try:
-            producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
-        except _DB_ERRORS as e:
-            logger.error("_validar_carrito: DB error producto=%s: %s", codigo, e)
-            return None, None, "Error de base de datos al validar el carrito"
+        notas = item.get("notas", "") or None
+        items_parseados.append((codigo, cantidad, notas))
+
+    # Una sola query para todos los productos del carrito
+    codigos = [codigo for codigo, _, _ in items_parseados]
+    try:
+        catalogo = gestor_productos.obtener_productos_por_codigos(codigos)
+    except _DB_ERRORS as e:
+        logger.error("_validar_carrito: DB error codigos=%s: %s", codigos, e)
+        return None, None, "Error de base de datos al validar el carrito"
+
+    productos_validos = []
+    total = 0.0
+    for codigo, cantidad, notas in items_parseados:
+        producto_db = catalogo.get(codigo)
         if not producto_db:
             logger.error("_validar_carrito: producto %s no encontrado en BD", codigo)
             return None, None, f"Producto con código {codigo} no encontrado"
