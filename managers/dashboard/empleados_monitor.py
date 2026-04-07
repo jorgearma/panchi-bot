@@ -3,10 +3,13 @@ import logging
 from datetime import datetime
 
 from sqlalchemy import and_, func
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from managers.dashboard._helpers import _iso, _ESTADOS_LISTOS_PARA_PICKING
 from models import (
-    CheckIn, Empleado, Incidencia, PickingItem, PickingPedido, Reparto, Pedido, Turno,
+    CheckIn, Empleado, Incidencia, PickingPedido, Reparto, Pedido, Turno,
 )
 from states import EstadoPedido, EstadoPicking, EstadoReparto
 
@@ -15,8 +18,21 @@ logger = logging.getLogger(__name__)
 
 class GestorEmpleadosMonitorMixin:
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(2),
+        retry=retry_if_exception_type(SQLAlchemyError),
+        reraise=True,
+    )
     def monitor_empleados(self) -> dict:
         """Aggregated real-time data for the operations monitoring dashboard."""
+        try:
+            return self._monitor_empleados_impl()
+        except Exception:
+            logger.exception("monitor_empleados falló")
+            raise
+
+    def _monitor_empleados_impl(self) -> dict:
         s = self.session
         ahora = datetime.utcnow()
         hoy = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -53,6 +69,25 @@ class GestorEmpleadosMonitorMixin:
                 ).all()
             }
 
+        # Pre-compute role inference sets — avoids 2 queries per employee with ambiguous role
+        ids_con_picking = set()
+        ids_con_reparto = set()
+        if ids:
+            ids_con_picking = {
+                row[0] for row in s.query(PickingPedido.empleado_id)
+                .filter(PickingPedido.empleado_id.in_(ids))
+                .distinct().all()
+            }
+            ids_con_reparto = {
+                row[0] for row in s.query(Reparto.repartidor_id)
+                .filter(Reparto.repartidor_id.in_(ids))
+                .distinct().all()
+            }
+
+        # Batch pre-load — 2 queries replace N×3 queries inside the loop
+        pickings_batch = self._batch_pickings(ids, estados_activos_picking, hoy)
+        repartos_batch = self._batch_repartos(ids, estados_activos_reparto, hoy)
+
         pickers_data = []
         repartidores_data = []
 
@@ -61,29 +96,17 @@ class GestorEmpleadosMonitorMixin:
             es_picker = "picker" in nombre_rol
             es_repartidor = "repartidor" in nombre_rol or "reparto" in nombre_rol
 
-            # If rol doesn't say clearly, infer from activity
             if not es_picker and not es_repartidor:
-                tiene_picking = s.query(PickingPedido.id).filter(
-                    PickingPedido.empleado_id == e.EmpleadoID
-                ).first()
-                tiene_reparto = s.query(Reparto.id).filter(
-                    Reparto.repartidor_id == e.EmpleadoID
-                ).first()
-                es_picker = bool(tiene_picking)
-                es_repartidor = bool(tiene_reparto)
+                es_picker = e.EmpleadoID in ids_con_picking
+                es_repartidor = e.EmpleadoID in ids_con_reparto
 
             # ── PICKER ────────────────────────────────────────────────────────
             if es_picker:
-                pickings_activos = s.query(PickingPedido).filter(
-                    PickingPedido.empleado_id == e.EmpleadoID,
-                    PickingPedido.estado.in_(estados_activos_picking),
-                ).order_by(PickingPedido.created_at.asc()).all()
-
-                completados_hoy = s.query(PickingPedido).filter(
-                    PickingPedido.empleado_id == e.EmpleadoID,
-                    PickingPedido.estado == EstadoPicking.COMPLETADO.value,
-                    PickingPedido.completado_en >= hoy,
-                ).all()
+                emp_pickings = pickings_batch[e.EmpleadoID]
+                pickings_activos = sorted(
+                    emp_pickings['activos'], key=lambda pk: pk.created_at or ahora
+                )
+                completados_hoy = emp_pickings['completados']
 
                 # Avg picking time (min)
                 tiempos = [
@@ -93,25 +116,23 @@ class GestorEmpleadosMonitorMixin:
                 ]
                 tiempo_medio = round(sum(tiempos) / len(tiempos)) if tiempos else None
 
-                # Incidents today (sin_stock + sustituido items)
-                ids_picking_hoy = (
-                    [pk.id for pk in completados_hoy] + [pk.id for pk in pickings_activos]
+                # Incidents today — items already eager-loaded in _batch_pickings
+                incidencias_hoy = sum(
+                    1
+                    for pk in completados_hoy + pickings_activos
+                    for item in pk.items
+                    if item.estado in ("sin_stock", "sustituido")
                 )
-                incidencias_hoy = 0
-                if ids_picking_hoy:
-                    incidencias_hoy = s.query(func.count(PickingItem.id)).filter(
-                        PickingItem.picking_id.in_(ids_picking_hoy),
-                        PickingItem.estado.in_(["sin_stock", "sustituido"]),
-                    ).scalar() or 0
 
                 # Current picking detail
                 pickings_activos_data = []
                 for pk in pickings_activos:
-                    total_items = len(pk.items)
+                    items = pk.items  # already eager-loaded
+                    total_items = len(items)
                     completados_items = sum(
-                        1 for i in pk.items if i.estado in ("encontrado", "sustituido")
+                        1 for i in items if i.estado in ("encontrado", "sustituido")
                     )
-                    sin_stock_items = sum(1 for i in pk.items if i.estado == "sin_stock")
+                    sin_stock_items = sum(1 for i in items if i.estado == "sin_stock")
                     minutos_activo = (
                         int((ahora - pk.iniciado_en).total_seconds() / 60)
                         if pk.iniciado_en else None
@@ -130,7 +151,6 @@ class GestorEmpleadosMonitorMixin:
                         ),
                     })
 
-                # Status
                 n_activos = len(pickings_activos)
                 if n_activos >= 3:
                     estado = "sobrecargado"
@@ -141,7 +161,6 @@ class GestorEmpleadosMonitorMixin:
                 else:
                     estado = "sin_carga"
 
-                # Last activity
                 todos_pk = pickings_activos + completados_hoy
                 ultima_actividad = None
                 if todos_pk:
@@ -186,16 +205,9 @@ class GestorEmpleadosMonitorMixin:
 
             # ── REPARTIDOR ────────────────────────────────────────────────────
             if es_repartidor:
-                repartos_activos = s.query(Reparto).filter(
-                    Reparto.repartidor_id == e.EmpleadoID,
-                    Reparto.estado.in_(estados_activos_reparto),
-                ).all()
-
-                entregados_hoy = s.query(Reparto).filter(
-                    Reparto.repartidor_id == e.EmpleadoID,
-                    Reparto.estado == EstadoReparto.ENTREGADO.value,
-                    Reparto.hora_entrega_real >= hoy,
-                ).all()
+                emp_repartos = repartos_batch[e.EmpleadoID]
+                repartos_activos = emp_repartos['activos']
+                entregados_hoy = emp_repartos['entregados']
 
                 # Avg delivery time
                 tiempos = [
@@ -205,7 +217,6 @@ class GestorEmpleadosMonitorMixin:
                 ]
                 tiempo_medio = round(sum(tiempos) / len(tiempos)) if tiempos else None
 
-                # All active deliveries
                 entregas_activas = []
                 for r in sorted(repartos_activos, key=lambda x: x.hora_salida or x.created_at or ahora, reverse=True):
                     minutos_en_ruta = (
@@ -223,7 +234,6 @@ class GestorEmpleadosMonitorMixin:
                         "forma_pago": r.pedido.forma_pago if r.pedido else None,
                     })
 
-                # Idle time
                 tiempo_inactivo_min = None
                 if not repartos_activos and entregados_hoy:
                     ultimo = max(entregados_hoy, key=lambda r: r.hora_entrega_real or r.created_at)
@@ -231,7 +241,6 @@ class GestorEmpleadosMonitorMixin:
                     if ref:
                         tiempo_inactivo_min = int((ahora - ref).total_seconds() / 60)
 
-                # Status
                 n_activos = len(repartos_activos)
                 if n_activos >= 3:
                     estado = "sobrecargado"
@@ -242,7 +251,6 @@ class GestorEmpleadosMonitorMixin:
                 else:
                     estado = "sin_carga"
 
-                # Last activity
                 todos_r = repartos_activos + entregados_hoy
                 ultima_actividad = None
                 if todos_r:
@@ -290,8 +298,7 @@ class GestorEmpleadosMonitorMixin:
                     "carga": carga,
                 })
 
-        # Pipeline counts
-        pipeline = {}
+        # Pipeline counts — single GROUP BY query instead of one COUNT per state
         estados_pipeline = [
             EstadoPedido.PAGADO.value,
             EstadoPedido.CONTRA_REEMBOLSO.value,
@@ -299,10 +306,14 @@ class GestorEmpleadosMonitorMixin:
             EstadoPedido.PREPARADO.value,
             EstadoPedido.EN_REPARTO.value,
         ]
-        for estado_val in estados_pipeline:
-            pipeline[estado_val] = s.query(func.count(Pedido.PedidoID)).filter(
-                Pedido.Estado == estado_val
-            ).scalar() or 0
+        pipeline = {estado_val: 0 for estado_val in estados_pipeline}
+        for estado_val, count in (
+            s.query(Pedido.Estado, func.count(Pedido.PedidoID))
+            .filter(Pedido.Estado.in_(estados_pipeline))
+            .group_by(Pedido.Estado)
+            .all()
+        ):
+            pipeline[estado_val] = count
         pipeline[EstadoPedido.ENTREGADO.value] = s.query(func.count(Pedido.PedidoID)).filter(
             Pedido.Estado == EstadoPedido.ENTREGADO.value,
             Pedido.FechaActualizacion >= hoy,
@@ -313,7 +324,10 @@ class GestorEmpleadosMonitorMixin:
         ).scalar() or 0
 
         # Orders waiting for a picker — estado PAGADO/CONTRA_REEMBOLSO es fuente de verdad
-        sin_picker = s.query(Pedido).filter(
+        sin_picker = s.query(Pedido).options(
+            joinedload(Pedido.cliente),
+            joinedload(Pedido.detalles),
+        ).filter(
             Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
         ).order_by(Pedido.FechaCreacion.asc()).all()
 
@@ -332,7 +346,9 @@ class GestorEmpleadosMonitorMixin:
 
         # Orders ready (preparado) with no rider assigned yet (Reparto PENDIENTE sin repartidor_id)
         repartos_pendientes = (
-            s.query(Reparto)
+            s.query(Reparto).options(
+                joinedload(Reparto.pedido).joinedload(Pedido.cliente)
+            )
             .filter(
                 Reparto.repartidor_id == None,
                 Reparto.estado == EstadoReparto.PENDIENTE.value,

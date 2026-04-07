@@ -2,11 +2,12 @@
 import logging
 
 import config as app_config
+from sqlalchemy.orm import joinedload, selectinload
 from managers.dashboard._helpers import (
     _iso,
     _ESTADOS_LISTOS_PARA_PICKING,
 )
-from models import Pedido, PickingPedido, Producto
+from models import PedidoDetalle, Pedido, PickingItem, PickingPedido, Producto
 from states import EstadoPicking, EstadoPedido
 
 logger = logging.getLogger(__name__)
@@ -20,11 +21,18 @@ class GestorPickingBasicoMixin:
         resultado = []
 
         # Orders ready for picking (pagado online o contra reembolso) sin picker asignado aún
-        pickings_existentes_ids = [pk.pedido_id for pk in s.query(PickingPedido.pedido_id).all()]
-        pagados_sin_picking = s.query(Pedido).filter(
-            Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
-            ~Pedido.PedidoID.in_(pickings_existentes_ids) if pickings_existentes_ids else True,
-        ).all()
+        pagados_sin_picking = (
+            s.query(Pedido)
+            .outerjoin(PickingPedido, PickingPedido.pedido_id == Pedido.PedidoID)
+            .options(
+                selectinload(Pedido.detalles).joinedload(PedidoDetalle.producto),
+            )
+            .filter(
+                Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
+                PickingPedido.id == None,
+            )
+            .all()
+        )
 
         for p in pagados_sin_picking:
             items = [
@@ -52,7 +60,14 @@ class GestorPickingBasicoMixin:
             })
 
         # Active pickings — only those with a picker assigned
-        pickings = s.query(PickingPedido).filter(
+        _picking_options = [
+            selectinload(PickingPedido.items)
+                .joinedload(PickingItem.pedido_detalle)
+                .joinedload(PedidoDetalle.producto),
+            joinedload(PickingPedido.pedido).joinedload(Pedido.cliente),
+            joinedload(PickingPedido.empleado),
+        ]
+        pickings = s.query(PickingPedido).options(*_picking_options).filter(
             PickingPedido.estado.in_([
                 EstadoPicking.PENDIENTE.value,
                 EstadoPicking.EN_PROCESO.value,
@@ -115,6 +130,7 @@ class GestorPickingBasicoMixin:
         # Sin picker: PickingPedido exists (estado=PENDIENTE, empleado_id=NULL)
         sin_picker_qs = (
             s.query(PickingPedido)
+            .options(*_picking_options)
             .filter(
                 PickingPedido.estado == EstadoPicking.PENDIENTE.value,
                 PickingPedido.empleado_id == None,
@@ -186,7 +202,12 @@ class GestorPickingBasicoMixin:
     def pickings_del_picker(self, empleado_id: int) -> list:
         """Returns active pickings assigned to a specific picker."""
         s = self.session
-        pickings = s.query(PickingPedido).filter(
+        pickings = s.query(PickingPedido).options(
+            selectinload(PickingPedido.items)
+                .joinedload(PickingItem.pedido_detalle)
+                .joinedload(PedidoDetalle.producto),
+            joinedload(PickingPedido.pedido).joinedload(Pedido.cliente),
+        ).filter(
             PickingPedido.empleado_id == empleado_id,
             PickingPedido.estado.in_([
                 EstadoPicking.EN_PROCESO.value,
@@ -273,6 +294,7 @@ class GestorPickingBasicoMixin:
         ]
         pickings = (
             s.query(PickingPedido)
+            .options(selectinload(PickingPedido.items))
             .join(Pedido, Pedido.PedidoID == PickingPedido.pedido_id)
             .filter(
                 PickingPedido.empleado_id == None,

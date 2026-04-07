@@ -39,24 +39,40 @@ python -m spacy download es_core_news_sm
 ### Layer Structure (strict top-down dependencies)
 
 ```
-blueprints/     → HTTP routing only — no business logic
-controllers/    → Business logic & state machines
-managers/       → DB and Redis data access (estado_usuario.py = registration state machine over Redis)
-                   gestor_dashboard and gestor_empleado are thin assemblers — logic lives in domain mixins
-                   under managers/dashboard/ (10 mixins) and managers/empleado/ (4 mixins) respectively
-services/       → External API adapters (WhatsApp, Maps, tokens) — no business logic
-schemas/        → Pydantic input validation
-utils/          → Stateless helpers
-maps_module/    → Address validation package (polygon, street catalog, geocoding) — designed as extractable microservice
-models.py       → SQLAlchemy ORM (~21 tables)
-states.py       → Order/registration state enums and transition rules
-config.py       → All environment variable loading
-container.py    → Dependency injection: exports manager singletons
-database.py     → SQLAlchemy session management (SQL Server via pyodbc)
-message_queue.py → RQ queue setup for background WhatsApp processing
-worker.py       → RQ worker entry point
-main.py         → Flask app factory, 15 blueprint registrations
+blueprints/      → HTTP routing only — no business logic
+controllers/     → Business logic & state machines
+managers/        → DB and Redis data access
+  gestor_dashboard.py  → thin assembler; logic in managers/dashboard/ (10 mixins)
+  gestor_pedidos.py    → thin assembler; logic in managers/pedidos/ (4 mixins)
+  gestor_empleado.py   → thin assembler; logic in managers/empleado/ (5 mixins)
+  gestor_metricas.py   → thin assembler; logic in managers/metricas/ (4 mixins)
+  estado_usuario.py    → registration state machine over Redis
+services/        → External API adapters (WhatsApp, Maps, tokens) — no business logic
+schemas/         → Pydantic input validation
+utils/           → Stateless helpers
+maps_module/     → Address validation package (polygon, street catalog, geocoding) — designed as extractable microservice
+models.py        → SQLAlchemy ORM (21 tables)
+states.py        → Order/registration/picking/reparto state enums and transition rules
+config.py        → All environment variable loading
+container.py     → Dependency injection: exports manager singletons
+database.py      → SQLAlchemy session management (SQL Server via pyodbc)
+message_queue.py → RQ queue setup for background WhatsApp processing (queue: "whatsapp")
+worker.py        → RQ worker entry point
+main.py          → Flask app factory, 15 blueprint registrations
 ```
+
+### Composite Manager Pattern
+
+All large managers are thin assemblers — never add logic directly to them:
+
+```
+managers/gestor_dashboard.py   → assembles managers/dashboard/*.py
+managers/gestor_pedidos.py     → assembles managers/pedidos/*.py
+managers/gestor_empleado.py    → assembles managers/empleado/*.py
+managers/gestor_metricas.py    → assembles managers/metricas/*.py
+```
+
+New logic for any of these areas goes into the corresponding domain mixin file, not the assembler.
 
 ### Registered Blueprints
 
@@ -70,7 +86,7 @@ main.py         → Flask app factory, 15 blueprint registrations
 | `picker`             | `/picker/*`                                         | Preparation queue (warehouse mode)              |
 | `cocina`             | `/cocina/*`                                         | Kitchen PWA (restaurant mode)                   |
 | `repartidor`         | `/repartidor/*`                                     | Delivery queue and tracking                     |
-| `empleado`           | `/empleado/*`                                       | Employee check-in and metrics                   |
+| `empleado`           | `/empleado/*`                                       | Employee check-in, fichaje, metrics             |
 | `productos`          | `/productos-admin/*`                                | Stock and price management                      |
 | `metricas_operacion` | `/metricas/operacion/*`                             | Real-time metrics                               |
 | `metricas_analitica` | `/metricas/analitica/*`                             | Historical analytics                            |
@@ -83,7 +99,7 @@ main.py         → Flask app factory, 15 blueprint registrations
 
 `APP_MODE` env var (`"warehouse"` default or `"restaurant"`) switches operational mode at startup:
 
-- **Warehouse**: uses `/picker/*` with item-level picking records in the `picking` table.
+- **Warehouse**: uses `/picker/*` with item-level picking records (`PickingItem` table).
 - **Restaurant**: uses `/cocina/*` PWA with simplified queue via `managers/dashboard/picking_basico.py` (no item-level detail).
 
 `blueprints/dashboard/pages.py` selects templates based on `APP_MODE`. A context processor injects `app_mode` into all templates. Invalid values cause startup failure.
@@ -121,6 +137,8 @@ PENDIENTE → ENLACE ⇄ ENLACE2 → CONFIRMANDO_PAGO → PAGADO → EN_PREPARAC
                               ↘ CONTRA_REEMBOLSO ↗                    ↘ CANCELADO → REEMBOLSADO
 ```
 
+`states.py` also defines `EstadoPicking` (PENDIENTE, EN_PROCESO, COMPLETADO, CON_INCIDENCIAS, CANCELADO) and `EstadoReparto` (PENDIENTE, ASIGNADO, EN_CAMINO, ENTREGADO, NO_ENTREGADO, CANCELADO).
+
 ### Redis Usage
 
 | Use                 | Key pattern              | Responsible                   |
@@ -139,9 +157,11 @@ PENDIENTE → ENLACE ⇄ ENLACE2 → CONFIRMANDO_PAGO → PAGADO → EN_PREPARAC
 
 Standalone address validation package (`maps_module/`). Public API:
 ```python
-validar_direccion(address, territory) → (bool, str|None, str|None)
+validar_direccion(address, territory) → (bool, str|None)
 geocodificar_direccion(address, territory) → tuple[float, float] | None
 validar_coordenadas(coords, territory) → bool
+limpiar_direccion(address, territory) → str
+sugerir_calle(partial_street, territory) → list
 ```
 
 Rejection reasons: `"no_encontrada"`, `"fuera_de_zona"`, `"demasiado_generica"`, `"sin_numero"`, `"error_api"`. Territory config is in `maps_module/territories.json`; street catalog (311 streets) in `maps_module/calles_tarancon.json`. Designed to be extracted as an independent microservice without contract changes.
@@ -177,15 +197,18 @@ Copy `.env.example` to `.env`. Key variables:
 | `WHATSAPP_PROVIDER`      | Always (`twilio`/`meta`) |
 | `SQL_SERVER`, `SQL_DATABASE`, `SQL_UID`, `SQL_PWD` | Always |
 | `REDIS_HOST`             | Always                 |
+| `REDIS_PORT`, `REDIS_DB` | Optional (defaults apply) |
 | `PUBLIC_URL`             | Always (ngrok in dev)  |
 | `MONEI_API_KEY`, `MONEI_WEBHOOK_SECRET` | Always  |
 | `GOOGLE_MAPS_API_KEY`    | Always                 |
 | `INTERNAL_API_TOKEN`     | Always                 |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_NUMBER` | If `PROVIDER=twilio` |
 | `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` | If `PROVIDER=meta` |
+| `STORE_PHONE`, `STORE_ADDRESS` | Recommended        |
 | `ALLOWED_ORIGIN`         | Recommended (CORS for `/api/*`) |
 | `SENTRY_DSN`             | Recommended            |
 | `CUSTOMER_SUPPORT_PHONE` | Recommended            |
+| `OPENAI_API_KEY`         | If AI features enabled |
 
 ## Critical Notes
 

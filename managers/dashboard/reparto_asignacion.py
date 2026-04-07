@@ -2,8 +2,8 @@
 import logging
 from datetime import datetime, date
 
-from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import joinedload, selectinload
 
 from managers.dashboard._helpers import _iso
 from models import CheckIn, Empleado, Pedido, Reparto, Turno
@@ -48,7 +48,8 @@ class GestorRepartoAsignacionMixin:
         # (completar_picking crea Reparto(repartidor_id=None) automáticamente).
         repartos_con_repartidor_ids = {
             r.pedido_id for r in s.query(Reparto.pedido_id).filter(
-                Reparto.repartidor_id != None
+                Reparto.repartidor_id != None,
+                Reparto.estado.in_([EstadoReparto.ASIGNADO.value, EstadoReparto.EN_CAMINO.value]),
             ).all()
         }
         preparados_sin_reparto = s.query(Pedido).filter(
@@ -56,18 +57,16 @@ class GestorRepartoAsignacionMixin:
             ~Pedido.PedidoID.in_(repartos_con_repartidor_ids) if repartos_con_repartidor_ids else True,
         ).all()
 
+        # Batch pre-load — 1 query instead of N×2 queries inside the loop
+        ids_empleados = [e.EmpleadoID for e in empleados]
+        estados_activos_rep = [EstadoReparto.ASIGNADO.value, EstadoReparto.EN_CAMINO.value]
+        repartos_batch = self._batch_repartos(ids_empleados, estados_activos_rep, hoy_dt)
+
         lista_empleados = []
         for e in empleados:
-            repartos_activos = s.query(Reparto).filter(
-                Reparto.repartidor_id == e.EmpleadoID,
-                Reparto.estado.in_([EstadoReparto.ASIGNADO.value, EstadoReparto.EN_CAMINO.value]),
-            ).all()
-
-            entregados_hoy = s.query(func.count(Reparto.id)).filter(
-                Reparto.repartidor_id == e.EmpleadoID,
-                Reparto.estado == EstadoReparto.ENTREGADO.value,
-                Reparto.hora_entrega_real >= hoy_dt,
-            ).scalar() or 0
+            emp_repartos = repartos_batch[e.EmpleadoID]
+            repartos_activos = emp_repartos['activos']
+            entregados_hoy_count = len(emp_repartos['entregados'])
 
             pedidos_activos_data = [
                 {
@@ -89,7 +88,7 @@ class GestorRepartoAsignacionMixin:
                 "activo": e.activo,
                 "rol": e.rol.nombre if e.rol else e.Puesto,
                 "pedidos_activos": pedidos_activos_data,
-                "entregados_hoy": entregados_hoy,
+                "entregados_hoy": entregados_hoy_count,
                 "tiene_checkin": e.EmpleadoID in checkins_abiertos,
             })
 
@@ -122,6 +121,9 @@ class GestorRepartoAsignacionMixin:
 
             reparto = s.query(Reparto).filter_by(pedido_id=pedido_id).first()
             if reparto:
+                # Overwrites existing repartidor_id and estado — intentional for re-assignment
+                # after a failed delivery (NO_ENTREGADO). Pedido.unique on pedido_id means
+                # there is always at most one Reparto row per order.
                 reparto.repartidor_id = empleado_id
                 reparto.estado = EstadoReparto.ASIGNADO.value
             else:
@@ -150,6 +152,9 @@ class GestorRepartoAsignacionMixin:
         # Pedidos PREPARADO con Reparto PENDIENTE y sin repartidor
         repartos = (
             s.query(Reparto)
+            .options(
+                joinedload(Reparto.pedido).selectinload(Pedido.detalles)
+            )
             .join(Pedido, Pedido.PedidoID == Reparto.pedido_id)
             .filter(
                 Reparto.repartidor_id == None,
