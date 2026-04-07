@@ -15,7 +15,7 @@ from controllers.mensajes_registrados_notifier import (
 )
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from tenacity import RetryError
-from states import EstadoPedido
+from states import EstadoPedido, ESTADOS_TERMINALES_PEDIDO
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +39,12 @@ class ManejadorMensajesRegistrados:
             gestor_pedidos.iniciar_pedido(id_usuario, direccion_usuario, numero_cliente)
         except (SQLAlchemyError, OperationalError) as error:
             logger.error("Error al iniciar el pedido para el usuario %s: %s", id_usuario, error)
+            _enviar_error_sistema(numero_cliente)
             return "Error al procesar el pedido. Inténtalo más tarde.", 500
 
         menu_texto = mostrar_menu()
         _enviar_bienvenida_menu(nombre_usuario, menu_texto, numero_cliente)
-        return "Mensaje enviado", 200
+        return "mensaje enviado", 200
 
     @staticmethod
     def manejar_mensajes_registrados(numero_cliente, mensaje_cliente):
@@ -88,20 +89,25 @@ class ManejadorMensajesRegistrados:
                 return "error procesando pedido", 200
             logger.debug("Mensaje procesado para usuario: %s", numero_cliente)
             _enviar_respuesta_pedido(mensaje, numero_cliente)
-            return " mensaje enviado", 200
+            return "mensaje enviado", 200
 
         if estado_del_pedido == EstadoPedido.ENLACE or estado_del_pedido == EstadoPedido.ENLACE2:
             enlace = pedido_activo.enlace
             if not enlace:
                 logger.info("ENLACE_CADUCADO pedido=%s usuario=%s", id_pedido_activo, numero_cliente)
                 _enviar_enlace_caducado(numero_cliente)
-                return " mensaje enviado", 200
+                return "mensaje enviado", 200
             _enviar_enlace_pedido(enlace, numero_cliente)
-            return " mensaje enviado", 200
+            return "mensaje enviado", 200
 
         if estado_del_pedido == EstadoPedido.CONFIRMANDO_PAGO:
-            _enviar_enlace_pago(pedido_activo.enlace, numero_cliente)
-            return " mensaje enviado", 200
+            enlace_pago = pedido_activo.enlace
+            if not enlace_pago:
+                logger.warning("ENLACE_PAGO_NULO pedido=%s usuario=%s", id_pedido_activo, numero_cliente)
+                _enviar_enlace_caducado(numero_cliente)
+                return "mensaje enviado", 200
+            _enviar_enlace_pago(enlace_pago, numero_cliente)
+            return "mensaje enviado", 200
 
         # Pedido activo (pagado, confirmado o en proceso) — bloquear nuevo pedido e informar al cliente
         if estado_del_pedido in (
@@ -125,9 +131,16 @@ class ManejadorMensajesRegistrados:
                 return "estado no contemplado", 200
             return resultado
 
+        if estado_del_pedido in ESTADOS_TERMINALES_PEDIDO:
+            logger.info(
+                "Pedido %s en estado terminal '%s' — iniciando nuevo pedido para %s.",
+                id_pedido_activo, estado_del_pedido, numero_cliente,
+            )
+            return ManejadorMensajesRegistrados._iniciar_pedido_y_enviar_menu(numero_cliente, usuario_datos)
+
         logger.warning(
             "ESTADO_NO_CONTEMPLADO pedido=%s estado=%s usuario=%s mensaje=%r",
             id_pedido_activo, estado_del_pedido, numero_cliente, mensaje_cliente,
         )
         _enviar_error_generico(numero_cliente)
-        return " mensaje enviado", 200
+        return "mensaje enviado", 200
