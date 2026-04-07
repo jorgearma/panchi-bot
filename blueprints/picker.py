@@ -94,16 +94,21 @@ def actualizar_item(item_id: int):
             return jsonify({"error": "producto_sustituto_id inválido"}), 400
 
     picker_id = session.get('empleado_id')
-    ok, msg = gestor_dashboard.actualizar_item_picking(
-        item_id=item_id,
-        estado=estado,
-        cantidad_encontrada=data.get("cantidad_encontrada"),
-        notas=data.get("notas"),
-        producto_sustituto_id=producto_sustituto_id,
-        picker_id=picker_id,
-    )
+    try:
+        ok, msg = gestor_dashboard.actualizar_item_picking(
+            item_id=item_id,
+            estado=estado,
+            cantidad_encontrada=data.get("cantidad_encontrada"),
+            notas=data.get("notas"),
+            producto_sustituto_id=producto_sustituto_id,
+            picker_id=picker_id,
+        )
+    except Exception as e:
+        logger.error("Error en /picker/item/%s/estado picker_id=%s: %s", item_id, picker_id, e)
+        return jsonify({"error": "Error interno"}), 500
     if not ok:
         return jsonify({"error": msg}), 400
+    logger.info("[PICKING] Picker %s actualiza item %s → %s", picker_id, item_id, estado)
     return jsonify({"ok": True, "mensaje": msg})
 
 
@@ -132,7 +137,11 @@ def finalizar_picking(picking_id: int):
         DemoState.finalizar_picking(session.get('demo_session_id', 'default'), picking_id)
         return jsonify({"ok": True, "mensaje": "Demo: picking finalizado"})
     picker_id = session.get('empleado_id')
-    ok, msg = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
+    try:
+        ok, msg = gestor_dashboard.completar_picking(picking_id, picker_id=picker_id)
+    except Exception as e:
+        logger.error("Error en /picker/picking/%s/finalizar picker_id=%s: %s", picking_id, picker_id, e)
+        return jsonify({"error": "Error interno"}), 500
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[PICKING] Empleado %s finaliza picking %s", picker_id, picking_id)

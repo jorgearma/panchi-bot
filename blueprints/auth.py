@@ -35,14 +35,14 @@ def login():
             return jsonify({'error': 'Faltan email y/o contraseña'}), 400
         return render_template('auth/login.html', error='Rellena todos los campos'), 400
 
-    resultado = auth_service.login(email, password)
+    resultado = auth_service.login(email, password, request.remote_addr)
 
     if not resultado['ok']:
         if request.is_json:
             return jsonify({'error': resultado['error']}), 401
         return render_template('auth/login.html', error=resultado['error']), 401
 
-    session.clear()
+    session.clear()  # también elimina demo_mode si existía
     session['empleado_id'] = resultado['empleado_id']
     session['empleado_nombre'] = resultado['empleado_nombre']
     session['rol'] = resultado['rol']
@@ -73,8 +73,6 @@ def requiere_rol(*roles_permitidos, demo_ok=False):
                 if request.method == 'GET' and not request.is_json:
                     return redirect(url_for('auth.login'))
                 return jsonify({'error': 'No autenticado'}), 401
-            if session.get('demo_mode') and session.get('empleado_id') != 0:
-                session.pop('demo_mode', None)
             if session.get('demo_mode') and not demo_ok:
                 return jsonify({'error': 'No disponible en demo'}), 403
             if roles_permitidos and session.get('rol') not in roles_permitidos:

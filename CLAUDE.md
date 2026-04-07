@@ -42,6 +42,8 @@ python -m spacy download es_core_news_sm
 blueprints/     → HTTP routing only — no business logic
 controllers/    → Business logic & state machines
 managers/       → DB and Redis data access (estado_usuario.py = registration state machine over Redis)
+                   gestor_dashboard and gestor_empleado are thin assemblers — logic lives in domain mixins
+                   under managers/dashboard/ (10 mixins) and managers/empleado/ (4 mixins) respectively
 services/       → External API adapters (WhatsApp, Maps, tokens) — no business logic
 schemas/        → Pydantic input validation
 utils/          → Stateless helpers
@@ -195,7 +197,5 @@ Copy `.env.example` to `.env`. Key variables:
 
 ## Known Issues (don't introduce more of these)
 
-- `gestor_dashboard.py` is a 121 KB god object — don't add more logic to it, extract to `managers/dashboard/` submodules instead.
-- WhatsApp notifications in `blueprints/picker.py`, `repartidor.py`, `dashboard/` use bare `threading.Thread` with no error handling — failures are silent.
 - `/webhoo/monei` (typo route) exists alongside `/webhook/monei` pending Monei dashboard update — don't replicate this pattern.
 - `blueprints/api/` submodules contain business logic that belongs in controllers — don't add more.

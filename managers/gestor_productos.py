@@ -55,6 +55,31 @@ class ProductoManager:
             logger.error("Error al obtener el producto por código: %s", e)
             return None
 
+    def obtener_productos_por_codigos(self, codigos: list) -> dict:
+        """Recupera varios productos en una sola query. Devuelve dict[codigo → producto_dict]."""
+        if not codigos:
+            return {}
+        try:
+            productos = (
+                self.session.query(Producto)
+                .filter(Producto.ProductoID.in_(codigos))
+                .all()
+            )
+            return {
+                p.ProductoID: {
+                    "Nombre": p.Nombre,
+                    "Precio": p.Precio,
+                    "Categoria": p.Categoria,
+                    "Ingredientes": p.Ingredientes,
+                    "Imagen": p.ImagenURL,
+                    "Codigo": p.ProductoID,
+                }
+                for p in productos
+            }
+        except SQLAlchemyError as e:
+            logger.error("Error al obtener productos por codigos: %s", e)
+            raise
+
     def productos_admin(self) -> list:
         """Full product list for the admin panel, including stock and availability."""
         try:
