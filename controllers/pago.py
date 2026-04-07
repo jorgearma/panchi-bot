@@ -1,5 +1,8 @@
 import logging
 
+from sqlalchemy.exc import SQLAlchemyError
+from tenacity import RetryError
+
 from states import EstadoPedido
 from services.monei_service import crear_pago as monei_crear_pago
 from controllers.pago_notifier import _enviar_confirmacion_efectivo
@@ -14,11 +17,16 @@ def _validar_carrito(productos_recibidos, gestor_productos):
     de pedido. El mismo producto puede aparecer varias veces con notas distintas
     (e.g. pizza sin cebolla + pizza con todo = dos líneas separadas).
     """
+    if not productos_recibidos:
+        return None, None, "El carrito no puede estar vacío"
+
     productos_validos = []
     total = 0.0
     for item in productos_recibidos:
         codigo   = item.get("codigo")
         cantidad = item.get("cantidad", 1)
+        if isinstance(cantidad, bool) or not isinstance(cantidad, int) or cantidad <= 0:
+            return None, None, f"Cantidad inválida para el producto {codigo}"
         notas    = item.get("notas", "") or None
         producto_db = gestor_productos.obtener_producto_por_codigo(codigo)
         if not producto_db:
@@ -39,7 +47,6 @@ def iniciar_pago(
     nombre_cliente: str,
     numero_cliente: str,
     direccion_cliente: str,
-    cache,
     gestor_pedidos,
     gestor_productos,
     monei,
@@ -47,13 +54,18 @@ def iniciar_pago(
     notas: str = "",
 ) -> tuple:
     """Crea el pago online y mueve el pedido al estado de confirmación de pago."""
-    pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
+    try:
+        pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
+    except (SQLAlchemyError, RetryError) as e:
+        logger.error("iniciar_pago: DB error usuario=%s: %s", user_id, e)
+        return False, "Error de base de datos. Intente más tarde."
 
     if not pedido_activo:
         return False, "No se encontró un pedido activo para este usuario"
 
     if pedido_activo.Estado == EstadoPedido.CONFIRMANDO_PAGO:
-        return True, "El pedido ya está en proceso de pago."
+        logger.info("PAGO_YA_INICIADO pedido=%s usuario=%s", pedido_activo.PedidoID, user_id)
+        return True, pedido_activo.enlace or f"{public_url}/pago_en_curso"
 
     if pedido_activo.Estado != EstadoPedido.ENLACE2:
         logger.error(
@@ -89,10 +101,21 @@ def iniciar_pago(
 
     # Single atomic commit: replace order lines + state transition + URL.
     # Idempotent: re-running after a partial failure won't duplicate lines.
-    ok = gestor_pedidos.confirmar_pago_online(
-        pedido_activo_id, productos_validos, redirect_url, notas=notas or None
-    )
+    try:
+        ok = gestor_pedidos.confirmar_pago_online(
+            pedido_activo_id, productos_validos, redirect_url, notas=notas or None
+        )
+    except (SQLAlchemyError, RetryError) as e:
+        logger.error(
+            "iniciar_pago: DB error al confirmar pedido=%s monei_url=%s: %s",
+            pedido_activo_id, redirect_url, e
+        )
+        return False, "Error de base de datos tras crear el pago."
     if not ok:
+        logger.error(
+            "CONFIRMAR_PAGO_ONLINE_FALLIDO pedido=%s importe=%s monei_url=%s",
+            pedido_activo_id, amount_in_cents, redirect_url
+        )
         return False, "Error al registrar el pedido tras el pago"
 
     logger.info(
@@ -108,14 +131,17 @@ def iniciar_pago_efectivo(
     nombre_cliente: str,
     numero_cliente: str,
     direccion_cliente: str,
-    cache,
     gestor_pedidos,
     gestor_productos,
     public_url: str,
     notas: str = "",
 ) -> tuple:
     """Confirma un pedido contra reembolso sin pasar por Monei."""
-    pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
+    try:
+        pedido_activo = gestor_pedidos.obtener_pedido_mas_reciente(user_id)
+    except (SQLAlchemyError, RetryError) as e:
+        logger.error("iniciar_pago_efectivo: DB error usuario=%s: %s", user_id, e)
+        return False, "Error de base de datos. Intente más tarde."
 
     if not pedido_activo:
         return False, "No se encontró un pedido activo para este usuario"
@@ -135,14 +161,24 @@ def iniciar_pago_efectivo(
     redis_id = pedido_activo.redisID
 
     # Single atomic commit: replace order lines + forma_pago + state transition.
-    ok = gestor_pedidos.confirmar_pago_efectivo(
-        pedido_id, productos_validos, notas=notas or None
-    )
+    try:
+        ok = gestor_pedidos.confirmar_pago_efectivo(
+            pedido_id, productos_validos, notas=notas or None
+        )
+    except (SQLAlchemyError, RetryError) as e:
+        logger.error("iniciar_pago_efectivo: DB error al confirmar pedido=%s: %s", pedido_id, e)
+        return False, "Error de base de datos al confirmar el pedido."
     if not ok:
         return False, "Error al registrar el pedido contra reembolso"
 
     total_euros = round(total_calculado, 2)
-    _enviar_confirmacion_efectivo(numero_cliente, nombre_cliente, total_euros, pedido_id, direccion_cliente)
+    try:
+        _enviar_confirmacion_efectivo(numero_cliente, nombre_cliente, total_euros, pedido_id, direccion_cliente)
+    except Exception as e:
+        logger.error(
+            "CONFIRMACION_EFECTIVO_WA_FALLIDA pedido=%s error=%s",
+            pedido_id, e, exc_info=True
+        )
+    # Pedido confirmado en DB — devolver True aunque falle WhatsApp
     logger.info("iniciar_pago_efectivo: pedido %s confirmado contra reembolso", pedido_id)
-
     return True, f"{public_url}/pago_confirmado?pedido_id={redis_id}"
