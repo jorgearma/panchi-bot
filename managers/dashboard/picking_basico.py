@@ -20,11 +20,15 @@ class GestorPickingBasicoMixin:
         resultado = []
 
         # Orders ready for picking (pagado online o contra reembolso) sin picker asignado aún
-        pickings_existentes_ids = [pk.pedido_id for pk in s.query(PickingPedido.pedido_id).all()]
-        pagados_sin_picking = s.query(Pedido).filter(
-            Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
-            ~Pedido.PedidoID.in_(pickings_existentes_ids) if pickings_existentes_ids else True,
-        ).all()
+        pagados_sin_picking = (
+            s.query(Pedido)
+            .outerjoin(PickingPedido, PickingPedido.pedido_id == Pedido.PedidoID)
+            .filter(
+                Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
+                PickingPedido.id == None,
+            )
+            .all()
+        )
 
         for p in pagados_sin_picking:
             items = [
