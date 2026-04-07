@@ -38,6 +38,8 @@ class GestorDashboardBase:
             from database import SessionLocal
             s = SessionLocal()
             try:
+                # UPDATE atómico con WHERE para evitar race condition:
+                # si el empleado cambió a en_pausa/desconectado entre el read y el write, no se sobreescribe.
                 s.query(Empleado).filter(
                     Empleado.EmpleadoID == empleado_id,
                     Empleado.estado_operativo.notin_(estados_protegidos),
@@ -55,6 +57,10 @@ class GestorDashboardBase:
         """Calcula el tiempo medio en minutos entre dos estados usando un self-join en SQL Server.
 
         Una sola query en lugar de 1 query por pedido (N+1 anterior).
+
+        Note: uses a SQL Server DATEDIFF self-join. If a pedido has multiple estado_inicio
+        events (re-entry), all pairs are included in the average. Safe under the current
+        state machine which does not allow state re-entry.
         """
         s = self.session
         h_fin = aliased(HistorialEstadoPedido)
@@ -92,10 +98,13 @@ class GestorDashboardBase:
             defaultdict con clave empleado_id → {'activos': [...], 'completados': [...]}
             Los 'completados' son los finalizados desde `desde`.
             Los objetos PickingPedido vienen con `items` eager-loaded.
+
+        Note: estados_activos must contain string values (e.g. EstadoPicking.X.value),
+        not enum members. If a pedido re-enters a state multiple times (not possible
+        under the current state machine), each re-entry is treated as a separate 'activo'.
         """
-        empty: dict = defaultdict(lambda: {'activos': [], 'completados': []})
         if not ids:
-            return empty
+            return defaultdict(lambda: {'activos': [], 'completados': []})
 
         rows = (
             self.session.query(PickingPedido)
@@ -132,10 +141,12 @@ class GestorDashboardBase:
         Returns:
             defaultdict con clave repartidor_id → {'activos': [...], 'entregados': [...]}
             Los objetos Reparto vienen con pedido y pedido.cliente eager-loaded.
+
+        Note: estados_activos must contain string values (e.g. EstadoReparto.X.value),
+        not enum members.
         """
-        empty: dict = defaultdict(lambda: {'activos': [], 'entregados': []})
         if not ids:
-            return empty
+            return defaultdict(lambda: {'activos': [], 'entregados': []})
 
         rows = (
             self.session.query(Reparto)
