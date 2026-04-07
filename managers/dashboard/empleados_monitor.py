@@ -9,7 +9,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fi
 
 from managers.dashboard._helpers import _iso, _ESTADOS_LISTOS_PARA_PICKING
 from models import (
-    CheckIn, Empleado, Incidencia, PickingItem, PickingPedido, Reparto, Pedido, Turno,
+    CheckIn, Empleado, Incidencia, PickingPedido, Reparto, Pedido, Turno,
 )
 from states import EstadoPedido, EstadoPicking, EstadoReparto
 
