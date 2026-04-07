@@ -119,6 +119,8 @@ def enrutar_mensaje(numero_cliente: str, mensaje_cliente: str):
         return "Número bloqueado", 403
     redismanager.bloquear_usuario(numero_cliente, duracion=4)
 
+    logger.info("MSG_CLIENTE usuario=%s mensaje=%r", numero_cliente, mensaje_cliente)
+
     try:
         usuario = gestor_usuarios.verificar_usuario(numero_cliente)
     except (RetryError, SQLAlchemyError) as e:
