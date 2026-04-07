@@ -40,7 +40,7 @@ class GestorPedidosMixin:
         en_preparacion = _counts_estado.get(EstadoPedido.EN_PREPARACION.value, 0)
         en_reparto = _counts_estado.get(EstadoPedido.EN_REPARTO.value, 0)
 
-        # entregados_hoy filtrates by FechaActualizacion — needs separate query
+        # entregados_hoy filters by FechaActualizacion — needs separate query
         entregados_hoy = s.query(func.count(Pedido.PedidoID)).filter(
             Pedido.Estado == EstadoPedido.ENTREGADO.value,
             Pedido.FechaActualizacion >= hoy,

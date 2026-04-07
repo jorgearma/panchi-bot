@@ -120,6 +120,9 @@ class GestorRepartoAsignacionMixin:
 
             reparto = s.query(Reparto).filter_by(pedido_id=pedido_id).first()
             if reparto:
+                # Overwrites existing repartidor_id and estado — intentional for re-assignment
+                # after a failed delivery (NO_ENTREGADO). Pedido.unique on pedido_id means
+                # there is always at most one Reparto row per order.
                 reparto.repartidor_id = empleado_id
                 reparto.estado = EstadoReparto.ASIGNADO.value
             else:
