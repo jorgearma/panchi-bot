@@ -3,7 +3,7 @@ import logging
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from utils.es_pregunta import es_pregunta
-from container import gestor_pedidos
+from container import gestor_pedidos, redismanager
 from services.token_service import generar_enlace
 from utils.menu_opciones import menu, mostrar_menu
 from utils.text_utils import limpiar_texto
@@ -40,6 +40,13 @@ def procesar_pedido(pedido, numero_cliente, id_pedido_actual, usuario_datos):
 
                 if mensaje_respuesta == "Tienda online":
                     try:
+                        lock_key = f"pedido_lock:{datos.numero_cliente}"
+                        if not redismanager.adquirir_lock(lock_key, ttl=10):
+                            logger.info(
+                                "LOCK_ENLACE ya activo para %s — duplicado ignorado",
+                                datos.numero_cliente,
+                            )
+                            return "❌ Ocurrió un error al procesar la opción. Intente nuevamente."
                         pedido_actual = gestor_pedidos.obtener_pedido(datos.id_pedido_actual)
                         if not pedido_actual or pedido_actual.Estado != EstadoPedido.PENDIENTE:
                             logger.warning(
