@@ -144,23 +144,6 @@ class GestorRepartoAsignacionMixin:
 
             s.commit()
 
-            # Side effects post-commit (best effort — reparto ya confirmado en BD)
-            try:
-                from rq import Retry
-                from message_queue import queue_whatsapp
-                from managers.dashboard.jobs import notificar_repartidor_job
-                from utils.rq_callbacks import on_job_failure
-                queue_whatsapp.enqueue(
-                    notificar_repartidor_job,
-                    empleado.Telefono,
-                    pedido_id,
-                    on_failure=on_job_failure,
-                    retry=Retry(max=3),
-                    failure_ttl=86400,
-                )
-            except Exception as e:
-                logger.warning("No se pudo encolar notificación repartidor para pedido %s: %s", pedido_id, e)
-
             self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, "Repartidor asignado correctamente"
 
