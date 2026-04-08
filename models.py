@@ -314,6 +314,7 @@ class PickingPedido(Base):
     iniciado_en = Column(DateTime, nullable=True)
     completado_en = Column(DateTime, nullable=True)
     notas = Column(String(500), nullable=True)
+    stock_descontado = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     pedido = relationship("Pedido", back_populates="picking")
@@ -454,3 +455,23 @@ class TramoTurno(Base):
     fin         = Column(DateTime, nullable=True)
 
     check_in = relationship('CheckIn', back_populates='tramos')
+
+
+# ---------------------------------------------------------------------------
+# Dead Letter Queue
+# ---------------------------------------------------------------------------
+
+class FailedJob(Base):
+    """Jobs RQ que agotaron todos sus reintentos. Auditado 24h."""
+    __tablename__ = 'failed_jobs'
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    job_id      = Column(String(100), nullable=False)
+    job_type    = Column(String(100), nullable=False)
+    queue_name  = Column(String(50),  nullable=False)
+    payload     = Column(Text,        nullable=True)
+    error       = Column(Text,        nullable=False)
+    retries     = Column(Integer,     nullable=False, default=0)
+    created_at  = Column(DateTime,    default=datetime.utcnow, nullable=False)
+    resolved_at = Column(DateTime,    nullable=True)
+    resolved_by = Column(Integer, ForeignKey('empleados.EmpleadoID'), nullable=True)
