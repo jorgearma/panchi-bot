@@ -7,21 +7,34 @@
 
 ---
 
-## Corrección arquitectónica clave
+## Correcciones arquitectónicas (tras lectura completa del código)
 
-El spec original proponía `asignar_picker_job`, `asignar_repartidor_job` y `cambiar_estado_pedido_job` como jobs RQ. **Esto estaba mal.**
+### Corrección 1 — Jobs RQ para operaciones síncronas
+El spec original proponía `asignar_picker_job`, `asignar_repartidor_job` como jobs RQ. **Estaba mal.**
 
-La exploración del código revela que esos métodos **ya existen y son síncronos**:
-- `picking_flujo.py:asignar_picker()` — síncrono, ya valida + crea PickingPedido + cambia estado
-- `reparto_asignacion.py:asignar_repartidor()` — síncrono, ya valida + crea Reparto + cambia estado
+`picking_flujo.py:asignar_picker()` y `reparto_asignacion.py:asignar_repartidor()` ya existen y son síncronos. El operador necesita confirmación inmediata — 202-encolado no sirve aquí.
 
-RQ es para operaciones externas lentas o background. El operador necesita confirmación inmediata al asignar un picker. 202-encolado no sirve aquí.
+### Corrección 2 — Threads daemon ocultos en `completar_picking`
+`picking_flujo.py:completar_picking()` tiene **2 threads daemon adicionales** que el spec no cubría:
+
+```python
+# línea 226 — descuenta stock tras completar picking
+Thread(target=_descontar, daemon=True).start()
+
+# línea 250 — actualiza disponibilidad del picker
+Thread(target=_actualizar_disponibilidad_picker, daemon=True).start()
+```
+
+Ambos deben migrarse a RQ. El de stock es especialmente crítico: si falla silenciosamente, el producto sigue disponible para venta aunque esté agotado.
+
+### Corrección 3 — Idempotencia: guard, no skip
+`asignar_picker()` ya hace **upsert** (si existe, actualiza; si no, crea). Es semánticamente correcto para el caso de uso. No cambiamos ese comportamiento. Solo añadimos `IntegrityError` como guard ante race conditions.
 
 **Regla definitiva:**
 
 ```
 Síncrono + tenacity → operaciones de dashboard que el operador espera confirmar
-RQ async            → side effects (notificaciones WhatsApp, estado_operativo, métricas)
+RQ async            → side effects (notificaciones, stock, estado_operativo, métricas)
 ```
 
 ---
@@ -71,12 +84,12 @@ Completar el sistema con protección de datos (Fase 2) y visibilidad operacional
 ┌─────────────────────────────────────────────────────────┐
 │ RQ ASYNC (side effects y background)                    │
 │                                                         │
-│  queue_whatsapp → notificar_picker_job                  │
-│                   notificar_repartidor_job               │
-│                   notificar_cliente_*                   │
+│  queue_whatsapp  → notificar_picker_job                 │
+│                    notificar_repartidor_job              │
+│                    notificar_cliente_*                  │
 │                                                         │
 │  queue_dashboard → actualizar_estado_operativo_job      │
-│                    (ya implementado en Fase 1)          │
+│                    descontar_stock_picking_job  ← NUEVO │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -123,37 +136,36 @@ class GestorPickingFlujoMixin:
 
 ### 1.2 Idempotencia en managers síncronos
 
-`asignar_picker()` ya tiene idempotencia parcial (verifica si existe PickingPedido antes de crear). Pero si la BD cae después del `INSERT` y antes del `commit`, el reintento de tenacity volvería a intentar crear y fallaría con IntegrityError.
+`asignar_picker()` ya hace **upsert**: si existe PickingPedido lo actualiza, si no existe lo crea. Es el comportamiento correcto para el caso de uso (reasignación incluida). **No lo cambiamos.**
 
-**Patrón correcto:** manejar `IntegrityError` como idempotencia explícita:
+Lo que añadimos es un **guard de race condition**: si dos requests llegan al mismo tiempo y ambos intentan el INSERT simultáneamente, el segundo recibe `IntegrityError`. Hoy ese error se propaga como un 500. Con el guard, se trata como éxito idempotente.
 
 ```python
-from sqlalchemy.exc import IntegrityError
+# picking_flujo.py — solo añadir el except IntegrityError,
+# el resto del código no cambia
 
 def asignar_picker(self, pedido_id: int, empleado_id: int) -> tuple:
     s = self.session
     try:
-        # Check explícito antes de actuar
-        existente = s.query(PickingPedido).filter_by(pedido_id=pedido_id).first()
-        if existente:
-            logger.info(f"Picking {pedido_id} ya existe — idempotente")
-            return True, "Picking ya asignado"
-
-        # ... crear picking ...
+        # ... código existente sin cambios (upsert) ...
         s.commit()
+        self._actualizar_estado_operativo(empleado_id, 'ocupado')
         return True, "Picker asignado correctamente"
 
     except IntegrityError:
-        # Carrera entre dos requests: el otro ganó, no es error
+        # Race condition: dos requests simultáneos, el otro ganó el INSERT
+        # Tratar como éxito — el picking quedó creado
         s.rollback()
-        logger.info(f"IntegrityError en picking {pedido_id} — idempotente (race condition)")
-        return True, "Picking ya asignado"
+        logger.info("IntegrityError en picking %s — race condition resuelta", pedido_id)
+        return True, "Picker asignado correctamente"
 
     except SQLAlchemyError as e:
         s.rollback()
         logger.error("Error asignando picker %s: %s", pedido_id, e)
         return False, "Error de base de datos"
 ```
+
+El mismo guard aplica a `asignar_repartidor()` — `Reparto` también tiene restricción `unique(pedido_id)`.
 
 ---
 
@@ -312,9 +324,17 @@ Se aplica **solo a jobs RQ**, no a métodos síncronos de managers (Sentry SDK i
 
 ## Capa 3 — Jobs RQ de side effects
 
-Los jobs en RQ son **solo notificaciones y background**. La operación principal ya ocurrió de forma síncrona.
+Los jobs en RQ son **solo side effects y background**. La operación principal ya ocurrió síncronamente.
 
-### managers/dashboard/jobs.py
+### Inventario completo de threads daemon a migrar
+
+| Archivo | Thread actual | Job RQ nuevo | Cola |
+|---------|--------------|-------------|------|
+| `_base.py` | `_ejecutar()` — actualizar estado_operativo | `actualizar_estado_operativo_job` ✅ ya migrado (Fase 1) | `queue_dashboard` |
+| `picking_flujo.py:completar_picking` | `_descontar()` — descontar stock | `descontar_stock_picking_job` ← **NUEVO** | `queue_dashboard` |
+| `picking_flujo.py:completar_picking` | `_actualizar_disponibilidad_picker()` | Eliminar thread, llamar directo `_actualizar_estado_operativo()` | `queue_dashboard` |
+
+### managers/dashboard/jobs.py (archivo nuevo)
 
 **`notificar_picker_job(picker_telefono: str, pedido_id: int)`**
 ```
@@ -330,17 +350,71 @@ Los jobs en RQ son **solo notificaciones y background**. La operación principal
 3. Si falla → RQ reintenta → on_failure → DLQ + Sentry
 ```
 
-**`actualizar_estado_operativo_job`** — ya implementado en Fase 1 (`_base.py`). Mover a este archivo para centralizar todos los jobs de dashboard.
+**`descontar_stock_picking_job(items: list[dict])`**
+```
+Recibe lista de dicts: [{producto_id, cantidad_pedida, cantidad_encontrada, estado}]
+Por cada item:
+  - estado "encontrado" → stock -= cantidad_encontrada (mínimo 0)
+  - estado "sin_stock"  → stock = 0, disponible = False
+Usa with_for_update() para evitar race conditions de stock
+Si falla → RQ reintenta (retry=3) → on_failure → DLQ + Sentry
 
-### Dónde se disparan
+CRÍTICO: si este job falla permanentemente, el stock queda incorrecto.
+El DLQ + alerta Sentry permite detectarlo y corregirlo manualmente.
+```
 
-Dentro de los métodos síncronos, **después del commit exitoso**:
+**`actualizar_estado_operativo_job`** — ya existe en `_base.py`. Mover a este archivo para centralizar jobs de dashboard.
+
+### Cómo se eliminan los threads de `completar_picking`
+
+**Antes (thread daemon invisible):**
+```python
+# picking_flujo.py:200-226
+if items_para_stock:
+    def _descontar(items=items_para_stock):
+        # ... lógica de stock ...
+    Thread(target=_descontar, daemon=True).start()  # ← invisible si falla
+
+# picking_flujo.py:229-250
+if _picker_id:
+    def _actualizar_disponibilidad_picker(emp_id=_picker_id):
+        # ... comprueba pickings activos → llama _actualizar_estado_operativo ...
+    Thread(target=_actualizar_disponibilidad_picker, daemon=True).start()  # ← invisible
+```
+
+**Después (RQ):**
+```python
+# picking_flujo.py:completar_picking() — tras s.commit()
+
+# 1. Descontar stock → RQ (con reintentos y DLQ)
+if items_para_stock:
+    try:
+        queue_dashboard.enqueue(
+            descontar_stock_picking_job,
+            items_para_stock,
+            on_failure=on_job_failure,
+            retry=3,
+            failure_ttl=86400,
+        )
+    except Exception as e:
+        logger.warning("No se pudo encolar descontar_stock: %s", e)
+
+# 2. Disponibilidad picker → lógica inline antes de encolar estado_operativo
+# La query de "¿tiene pickings activos?" se hace aquí, no en un thread separado
+activos = s.query(PickingPedido).filter(
+    PickingPedido.empleado_id == _picker_id,
+    PickingPedido.estado.in_([PENDIENTE, EN_PROCESO, CON_INCIDENCIAS]),
+).count()
+if activos == 0:
+    self._actualizar_estado_operativo(_picker_id, 'disponible')  # RQ ya en Fase 1
+```
+
+La query de disponibilidad es barata (COUNT con índice). Hacerla en el request es preferible a un thread daemon sin visibilidad.
+
+### Side effects en `asignar_picker` y `asignar_repartidor`
 
 ```python
-# picking_flujo.py:asignar_picker()
-s.commit()  # ← operación principal confirmada
-
-# Ahora disparar side effects (best effort — no revertir si falla el enqueue)
+# picking_flujo.py:asignar_picker() — tras s.commit()
 try:
     queue_whatsapp.enqueue(
         notificar_picker_job,
@@ -351,10 +425,10 @@ try:
         failure_ttl=86400,
     )
 except Exception as e:
-    logger.warning(f"No se pudo encolar notificación picker: {e}")
-    # No fallar — picking ya está creado correctamente
+    logger.warning("No se pudo encolar notificación picker: %s", e)
+    # No fallar — picking ya está creado
 
-self._actualizar_estado_operativo(empleado_id, 'ocupado')  # ya usa RQ en Fase 1
+self._actualizar_estado_operativo(empleado_id, 'ocupado')
 return True, "Picker asignado correctamente"
 ```
 
@@ -395,6 +469,36 @@ return True, "Picker asignado correctamente"
 
 ---
 
+## Flujo completo corregido (`completar_picking`)
+
+```
+1. Picker completa el picking
+   POST /picker/completar
+
+2. Manager ejecuta síncronamente:
+   ├─ picking.estado = COMPLETADO
+   ├─ pedido.Estado = PREPARADO
+   ├─ Crear Reparto(repartidor_id=None, estado=PENDIENTE)
+   └─ COMMIT ← todo confirmado
+
+3. Post-commit side effects:
+   ├─ queue_dashboard.enqueue(descontar_stock_picking_job, items)
+   ├─ COUNT pickings activos del picker (inline, sin thread)
+   └─ si count == 0: _actualizar_estado_operativo(picker_id, 'disponible')
+
+4. Blueprint responde 200 OK inmediato
+
+5. Workers en background:
+   ├─ descontar_stock_picking_job actualiza Producto.Stock
+   └─ actualizar_estado_operativo_job actualiza Empleado.estado_operativo
+
+6. Si descontar_stock falla N veces → on_failure:
+   ├─ INSERT en failed_jobs
+   └─ Sentry alerta → equipo corrige stock manualmente
+```
+
+---
+
 ## Archivos afectados
 
 | Archivo | Cambio |
@@ -403,10 +507,10 @@ return True, "Picker asignado correctamente"
 | `migrations/add_failed_jobs.sql` | NUEVO: CREATE TABLE failed_jobs |
 | `database.py` | Añadir `FailedJob` a `create_all` |
 | `utils/rq_callbacks.py` | NUEVO: `on_job_failure` + `@sentry_job` |
-| `managers/dashboard/jobs.py` | NUEVO: `notificar_picker_job`, `notificar_repartidor_job`, mover `actualizar_estado_operativo_job` |
-| `managers/dashboard/picking_flujo.py` | Añadir `@_retry_db` + idempotencia IntegrityError + encolar notificación post-commit |
-| `managers/dashboard/reparto_asignacion.py` | Añadir `@_retry_db` + encolar notificación post-commit |
-| `managers/dashboard/_base.py` | Apuntar `_ejecutar_actualizar_estado` al job centralizado en `jobs.py` |
+| `managers/dashboard/jobs.py` | NUEVO: `notificar_picker_job`, `notificar_repartidor_job`, `descontar_stock_picking_job`, mover `actualizar_estado_operativo_job` |
+| `managers/dashboard/picking_flujo.py` | `@_retry_db` + IntegrityError guard + encolar notif/stock post-commit + eliminar 2 threads daemon |
+| `managers/dashboard/reparto_asignacion.py` | `@_retry_db` + IntegrityError guard + encolar notif post-commit |
+| `managers/dashboard/_base.py` | Apuntar `_ejecutar_actualizar_estado` al job en `jobs.py` + eliminar import `threading` |
 | `blueprints/rq_dashboard_bp.py` | NUEVO: montar rq-dashboard con login_required |
 | `main.py` | Registrar `rq_dashboard_bp` |
 | `requirements.txt` | Añadir `rq-dashboard` |
@@ -420,19 +524,19 @@ return True, "Picker asignado correctamente"
 2. `migrations/add_failed_jobs.sql`
 3. `database.py` → `create_all` para `FailedJob`
 4. `utils/rq_callbacks.py` → `on_job_failure` + `@sentry_job`
-5. `picking_flujo.py` → tenacity + idempotencia IntegrityError
-6. `reparto_asignacion.py` → tenacity
+5. `picking_flujo.py` → `@_retry_db` + IntegrityError guard + **eliminar 2 threads daemon**
+6. `reparto_asignacion.py` → `@_retry_db` + IntegrityError guard
 
 ### PR 2 — Capa 2 (visibilidad)
 1. `requirements.txt` → `rq-dashboard`
 2. `blueprints/rq_dashboard_bp.py`
 3. `main.py` → registrar blueprint
 
-### PR 3 — Capa 3 (side effects jobs + notificaciones)
-1. `managers/dashboard/jobs.py` → jobs de notificación
-2. `picking_flujo.py` → encolar notificaciones post-commit
-3. `reparto_asignacion.py` → encolar notificaciones post-commit
-4. `managers/dashboard/_base.py` → apuntar a jobs centralizado
+### PR 3 — Capa 3 (jobs RQ de side effects)
+1. `managers/dashboard/jobs.py` → 4 jobs nuevos
+2. `picking_flujo.py` → encolar notif + stock post-commit
+3. `reparto_asignacion.py` → encolar notif post-commit
+4. `managers/dashboard/_base.py` → apuntar a jobs centralizado + eliminar import `threading`
 
 ---
 
@@ -440,16 +544,19 @@ return True, "Picker asignado correctamente"
 
 | Test | Qué verifica |
 |------|-------------|
-| `test_asignar_picker_idempotente` | Segunda llamada con mismo pedido_id → `(True, "Picking ya asignado")` |
-| `test_asignar_picker_race_condition` | IntegrityError → tratado como idempotencia, no como error |
-| `test_asignar_picker_tenacity_reintenta` | OperationalError → tenacity reintenta 3 veces |
-| `test_asignar_picker_encola_notificacion` | Post-commit → `queue_whatsapp.enqueue()` llamado |
-| `test_asignar_picker_continua_si_enqueue_falla` | Si encolar falla → picking creado de todos modos |
-| `test_on_job_failure_persiste_en_bd` | Crea `FailedJob` en BD cuando callback se llama |
-| `test_on_job_failure_persiste_sentry_si_bd_cae` | Si BD falla en callback → Sentry recibe alerta igualmente |
+| `test_asignar_picker_race_condition` | IntegrityError → `(True, "Picker asignado")`, no 500 |
+| `test_asignar_picker_tenacity_reintenta` | OperationalError → tenacity reintenta, luego éxito |
+| `test_asignar_picker_encola_notificacion` | Post-commit → `queue_whatsapp.enqueue()` llamado con teléfono y pedido_id |
+| `test_asignar_picker_continua_si_enqueue_falla` | Si encolar notif falla → picking creado, devuelve True |
+| `test_completar_picking_encola_stock` | Post-commit → `queue_dashboard.enqueue(descontar_stock_picking_job)` llamado |
+| `test_completar_picking_sin_thread` | `threading.Thread` NO se llama en completar_picking (verificar import eliminado) |
+| `test_descontar_stock_job_encontrado` | estado "encontrado" → stock decrementado correctamente |
+| `test_descontar_stock_job_sin_stock` | estado "sin_stock" → stock=0, disponible=False |
+| `test_on_job_failure_persiste_en_bd` | Crea `FailedJob` en BD con job_type, queue_name, error |
+| `test_on_job_failure_sentry_si_bd_cae` | BD falla en callback → Sentry recibe alerta igualmente |
 | `test_sentry_job_decorator` | Wrappea correctamente, propaga excepciones |
 | `test_rq_dashboard_requiere_login` | GET /rq-dashboard sin sesión → redirect a login |
-| `test_notificar_picker_job_llama_whatsapp` | Job llama a `whatsapp_service.enviar_mensaje()` con args correctos |
+| `test_notificar_picker_job_llama_whatsapp` | Job llama a `whatsapp_service.enviar_mensaje()` |
 
 ---
 
