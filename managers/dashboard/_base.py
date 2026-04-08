@@ -39,6 +39,7 @@ class GestorDashboardBase:
             logger.warning("nuevo_estado inválido: %s", nuevo_estado)
             return
 
+        from rq import Retry
         from message_queue import queue_dashboard
         from managers.dashboard.jobs import actualizar_estado_operativo_job
         from utils.rq_callbacks import on_job_failure
@@ -48,7 +49,7 @@ class GestorDashboardBase:
             empleado_id,
             nuevo_estado,
             on_failure=on_job_failure,
-            retry=3,
+            retry=Retry(max=3),
             failure_ttl=86400,
         )
         logger.debug(
