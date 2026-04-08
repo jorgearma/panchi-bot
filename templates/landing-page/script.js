@@ -82,6 +82,15 @@ document.querySelectorAll('[data-reveal]').forEach((el, i) => {
   revealObserver.observe(el);
 });
 
+/* hero-stats revela al cargar, sin esperar scroll */
+document.addEventListener('DOMContentLoaded', () => {
+  const stats = document.querySelector('.hero-stats[data-reveal]');
+  if (stats) {
+    revealObserver.unobserve(stats);
+    setTimeout(() => stats.classList.add('revealed'), 600);
+  }
+});
+
 /* Phones use CSS entrance animation only — no JS float */
 
 /* ============================================================
