@@ -101,36 +101,86 @@ Completar el sistema con protección de datos (Fase 2) y visibilidad operacional
 
 Los managers actuales capturan `SQLAlchemyError` pero no tienen reintentos automáticos ante caídas transitorias de BD (conexión drop, timeout).
 
-**Añadir `@retry` de tenacity en métodos críticos:**
+**⚠️ Bug crítico a evitar:** Los métodos retornan `(False, "Error de base de datos")` ante cualquier excepción. Si se pone `@_retry_db` sin re-raise de `OperationalError`, tenacity ve `(False, "...")` como retorno exitoso y **nunca reintenta**. El decorator sería silenciosamente inútil.
+
+**Patrón correcto:** re-raise `OperationalError` antes del catch genérico para que tenacity lo vea:
 
 ```python
-# picking_flujo.py
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 _retry_db = retry(
-    retry=retry_if_exception_type(OperationalError),  # Solo errores de conexión, no de lógica
+    retry=retry_if_exception_type(OperationalError),  # Solo errores de conexión
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=1, max=4),
     reraise=True,
 )
 
-class GestorPickingFlujoMixin:
+@_retry_db
+def asignar_picker(self, pedido_id: int, empleado_id: int) -> tuple:
+    s = self.session
+    try:
+        # ... lógica sin cambios ...
+        s.commit()
+        self._actualizar_estado_operativo(empleado_id, 'ocupado')
+        return True, "Picker asignado correctamente"
 
-    @_retry_db
-    def asignar_picker(self, pedido_id: int, empleado_id: int) -> tuple:
-        # ... código existente sin cambios ...
+    except OperationalError:
+        s.rollback()
+        raise  # ← tenacity necesita que se propague para reintentar
+
+    except IntegrityError:
+        s.rollback()
+        logger.info("IntegrityError picking %s — race condition resuelta", pedido_id)
+        return True, "Picker asignado correctamente"
+
+    except SQLAlchemyError as e:
+        s.rollback()
+        logger.error("Error asignando picker %s: %s", pedido_id, e)
+        return False, "Error de base de datos"
 ```
 
 **Métodos que deben recibir `@_retry_db`:**
 
-| Archivo | Método |
-|---------|--------|
-| `picking_flujo.py` | `asignar_picker()`, `reasignar_picker()`, `completar_picking()` |
-| `reparto_asignacion.py` | `asignar_repartidor()` |
-| `gestor_pedidos_mixin.py` | `cambiar_estado_pedido()` |
+| Archivo | Método | Observación |
+|---------|--------|-------------|
+| `picking_flujo.py` | `asignar_picker()` | ✅ Seguro — sin lógica post-commit compleja |
+| `picking_flujo.py` | `reasignar_picker()` | ✅ Seguro |
+| `picking_flujo.py` | `completar_picking()` | ❌ NO aplicar — tiene lógica post-commit (crear Reparto, encolar RQ). Un retry reiniciaría todo incluyendo lo ya hecho. Ver nota abajo. |
+| `reparto_asignacion.py` | `asignar_repartidor()` | ✅ Seguro |
+| `gestor_pedidos_mixin.py` | `cambiar_estado_pedido()` | ✅ Seguro |
 
-**Importante:** `retry_if_exception_type(OperationalError)` — solo reintenta errores de conexión, NO errores de validación de negocio (`ValueError`, `IntegrityError`). Un picking duplicado no debe reintentarse; una conexión caída sí.
+**`completar_picking` — manejo manual de OperationalError:**
+
+En lugar del decorator, manejar `OperationalError` explícitamente solo en el bloque del commit principal:
+
+```python
+def completar_picking(self, picking_id: int, picker_id: int | None = None) -> tuple:
+    s = self.session
+    intentos = 0
+    while intentos < 3:
+        try:
+            # ... lógica pre-commit ...
+            s.commit()
+            break  # commit exitoso
+        except OperationalError:
+            s.rollback()
+            intentos += 1
+            if intentos >= 3:
+                logger.error("completar_picking %s falló 3 veces por OperationalError", picking_id)
+                return False, "Error de base de datos", None
+            time.sleep(2 ** intentos)  # backoff manual
+        except IntegrityError:
+            s.rollback()
+            return False, "Error de integridad", None
+        except SQLAlchemyError as e:
+            s.rollback()
+            logger.error("Error completando picking %s: %s", picking_id, e)
+            return False, "Error de base de datos", None
+
+    # post-commit: crear Reparto, encolar RQ — ya no puede reintentar desde aquí
+    ...
+```
 
 ---
 
@@ -350,18 +400,37 @@ Los jobs en RQ son **solo side effects y background**. La operación principal y
 3. Si falla → RQ reintenta → on_failure → DLQ + Sentry
 ```
 
-**`descontar_stock_picking_job(items: list[dict])`**
-```
-Recibe lista de dicts: [{producto_id, cantidad_pedida, cantidad_encontrada, estado}]
-Por cada item:
-  - estado "encontrado" → stock -= cantidad_encontrada (mínimo 0)
-  - estado "sin_stock"  → stock = 0, disponible = False
-Usa with_for_update() para evitar race conditions de stock
-Si falla → RQ reintenta (retry=3) → on_failure → DLQ + Sentry
+**`descontar_stock_picking_job(picking_id: int)`**
 
-CRÍTICO: si este job falla permanentemente, el stock queda incorrecto.
-El DLQ + alerta Sentry permite detectarlo y corregirlo manualmente.
 ```
+⚠️ Recibe picking_id (int), NO la lista de items precalculada.
+
+Razón: si recibiera la lista como argumento y RQ reintentara,
+el job descontaría stock dos veces sin saber que ya lo hizo.
+Con picking_id, lee el estado actual desde BD en cada ejecución.
+
+Idempotencia garantizada por campo PickingPedido.stock_descontado:
+1. Lee picking desde BD
+2. Si picking.stock_descontado == True → skip (ya ejecutado)
+3. Si picking.estado != COMPLETADO → skip (no debería descontar)
+4. Por cada item del picking:
+   - estado "encontrado" → stock -= cantidad_encontrada (mínimo 0)
+   - estado "sin_stock"  → stock = 0, disponible = False
+   Usa with_for_update() para evitar race conditions de stock
+5. picking.stock_descontado = True
+6. s.commit()
+Si falla → RQ reintenta (retry=3) → idempotencia garantiza no duplicar
+Si agota reintentos → on_failure → DLQ + Sentry
+
+CRÍTICO: si falla permanentemente, el stock queda incorrecto.
+DLQ + alerta Sentry permite detectarlo y corregirlo manualmente.
+```
+
+**Cambio en modelo:** añadir campo `stock_descontado` a `PickingPedido`:
+```python
+stock_descontado = Column(Boolean, nullable=False, default=False)
+```
+Y en la migración: `ALTER TABLE picking_pedido ADD stock_descontado BIT NOT NULL DEFAULT 0`
 
 **`actualizar_estado_operativo_job`** — ya existe en `_base.py`. Mover a este archivo para centralizar jobs de dashboard.
 
@@ -387,29 +456,36 @@ if _picker_id:
 # picking_flujo.py:completar_picking() — tras s.commit()
 
 # 1. Descontar stock → RQ (con reintentos y DLQ)
-if items_para_stock:
-    try:
-        queue_dashboard.enqueue(
-            descontar_stock_picking_job,
-            items_para_stock,
-            on_failure=on_job_failure,
-            retry=3,
-            failure_ttl=86400,
-        )
-    except Exception as e:
-        logger.warning("No se pudo encolar descontar_stock: %s", e)
+# Pasa picking_id, no la lista — el job lee items desde BD para garantizar idempotencia
+try:
+    queue_dashboard.enqueue(
+        descontar_stock_picking_job,
+        picking_id,   # ← int, no lista
+        on_failure=on_job_failure,
+        retry=3,
+        failure_ttl=86400,
+    )
+except Exception as e:
+    logger.warning("No se pudo encolar descontar_stock: %s", e)
 
-# 2. Disponibilidad picker → lógica inline antes de encolar estado_operativo
-# La query de "¿tiene pickings activos?" se hace aquí, no en un thread separado
-activos = s.query(PickingPedido).filter(
-    PickingPedido.empleado_id == _picker_id,
-    PickingPedido.estado.in_([PENDIENTE, EN_PROCESO, CON_INCIDENCIAS]),
-).count()
-if activos == 0:
-    self._actualizar_estado_operativo(_picker_id, 'disponible')  # RQ ya en Fase 1
+# 2. Disponibilidad picker → expire_all + COUNT inline
+# El thread original usaba SessionLocal() nueva para evitar caché de la sesión.
+# Con expire_all() forzamos recarga desde BD antes del COUNT.
+if _picker_id:
+    s.expire_all()  # ← forzar recarga para evitar caché post-commit
+    activos = s.query(PickingPedido).filter(
+        PickingPedido.empleado_id == _picker_id,
+        PickingPedido.estado.in_([
+            EstadoPicking.PENDIENTE.value,
+            EstadoPicking.EN_PROCESO.value,
+            EstadoPicking.CON_INCIDENCIAS.value,
+        ]),
+    ).count()
+    if activos == 0:
+        self._actualizar_estado_operativo(_picker_id, 'disponible')  # RQ (Fase 1)
 ```
 
-La query de disponibilidad es barata (COUNT con índice). Hacerla en el request es preferible a un thread daemon sin visibilidad.
+`s.expire_all()` invalida el identity map antes del COUNT para garantizar que la sesión no devuelve datos cacheados. El coste es mínimo (una query COUNT con índice).
 
 ### Side effects en `asignar_picker` y `asignar_repartidor`
 
@@ -503,15 +579,15 @@ return True, "Picker asignado correctamente"
 
 | Archivo | Cambio |
 |---------|--------|
-| `models.py` | Añadir clase `FailedJob` |
-| `migrations/add_failed_jobs.sql` | NUEVO: CREATE TABLE failed_jobs |
+| `models.py` | Añadir clase `FailedJob` + campo `PickingPedido.stock_descontado` |
+| `migrations/add_failed_jobs.sql` | NUEVO: CREATE TABLE failed_jobs + ALTER TABLE picking_pedido ADD stock_descontado |
 | `database.py` | Añadir `FailedJob` a `create_all` |
 | `utils/rq_callbacks.py` | NUEVO: `on_job_failure` + `@sentry_job` |
-| `managers/dashboard/jobs.py` | NUEVO: `notificar_picker_job`, `notificar_repartidor_job`, `descontar_stock_picking_job`, mover `actualizar_estado_operativo_job` |
-| `managers/dashboard/picking_flujo.py` | `@_retry_db` + IntegrityError guard + encolar notif/stock post-commit + eliminar 2 threads daemon |
-| `managers/dashboard/reparto_asignacion.py` | `@_retry_db` + IntegrityError guard + encolar notif post-commit |
+| `managers/dashboard/jobs.py` | NUEVO: `notificar_picker_job`, `notificar_repartidor_job`, `descontar_stock_picking_job` (recibe `picking_id`), mover `actualizar_estado_operativo_job` |
+| `managers/dashboard/picking_flujo.py` | `@_retry_db` en métodos sin post-commit + re-raise `OperationalError` + IntegrityError guard + encolar notif/stock post-commit + eliminar 2 threads daemon + `s.expire_all()` antes COUNT disponibilidad |
+| `managers/dashboard/reparto_asignacion.py` | `@_retry_db` + re-raise `OperationalError` + IntegrityError guard + encolar notif post-commit |
 | `managers/dashboard/_base.py` | Apuntar `_ejecutar_actualizar_estado` al job en `jobs.py` + eliminar import `threading` |
-| `blueprints/rq_dashboard_bp.py` | NUEVO: montar rq-dashboard con login_required |
+| `blueprints/rq_dashboard_bp.py` | NUEVO: montar rq-dashboard con `before_request` login guard |
 | `main.py` | Registrar `rq_dashboard_bp` |
 | `requirements.txt` | Añadir `rq-dashboard` |
 
@@ -520,12 +596,12 @@ return True, "Picker asignado correctamente"
 ## Orden de implementación (3 PRs)
 
 ### PR 1 — Capa 1 (protección)
-1. `models.py` → clase `FailedJob`
-2. `migrations/add_failed_jobs.sql`
+1. `models.py` → clase `FailedJob` + campo `PickingPedido.stock_descontado`
+2. `migrations/add_failed_jobs.sql` → CREATE TABLE + ALTER TABLE
 3. `database.py` → `create_all` para `FailedJob`
 4. `utils/rq_callbacks.py` → `on_job_failure` + `@sentry_job`
-5. `picking_flujo.py` → `@_retry_db` + IntegrityError guard + **eliminar 2 threads daemon**
-6. `reparto_asignacion.py` → `@_retry_db` + IntegrityError guard
+5. `picking_flujo.py` → `@_retry_db` con re-raise + IntegrityError guard + **eliminar 2 threads daemon** + `expire_all()` + manejo manual OperationalError en `completar_picking`
+6. `reparto_asignacion.py` → `@_retry_db` con re-raise + IntegrityError guard
 
 ### PR 2 — Capa 2 (visibilidad)
 1. `requirements.txt` → `rq-dashboard`
@@ -545,13 +621,17 @@ return True, "Picker asignado correctamente"
 | Test | Qué verifica |
 |------|-------------|
 | `test_asignar_picker_race_condition` | IntegrityError → `(True, "Picker asignado")`, no 500 |
-| `test_asignar_picker_tenacity_reintenta` | OperationalError → tenacity reintenta, luego éxito |
+| `test_asignar_picker_operational_error_reintenta` | OperationalError → se propaga para tenacity, reintenta hasta 3 veces |
+| `test_asignar_picker_operational_error_no_reintenta_integrity` | IntegrityError no llega a tenacity, se maneja como idempotencia |
 | `test_asignar_picker_encola_notificacion` | Post-commit → `queue_whatsapp.enqueue()` llamado con teléfono y pedido_id |
 | `test_asignar_picker_continua_si_enqueue_falla` | Si encolar notif falla → picking creado, devuelve True |
-| `test_completar_picking_encola_stock` | Post-commit → `queue_dashboard.enqueue(descontar_stock_picking_job)` llamado |
-| `test_completar_picking_sin_thread` | `threading.Thread` NO se llama en completar_picking (verificar import eliminado) |
-| `test_descontar_stock_job_encontrado` | estado "encontrado" → stock decrementado correctamente |
-| `test_descontar_stock_job_sin_stock` | estado "sin_stock" → stock=0, disponible=False |
+| `test_completar_picking_encola_picking_id` | Post-commit → `queue_dashboard.enqueue(descontar_stock_picking_job, picking_id)` — pasa int, no lista |
+| `test_completar_picking_sin_thread` | `threading.Thread` NO se llama en completar_picking |
+| `test_completar_picking_operational_error_reintenta` | OperationalError en commit → reintenta 3 veces con backoff manual |
+| `test_descontar_stock_job_idempotente` | Segunda llamada con mismo picking_id → skip si stock_descontado == True |
+| `test_descontar_stock_job_encontrado` | estado "encontrado" → stock decrementado, stock_descontado = True tras commit |
+| `test_descontar_stock_job_sin_stock` | estado "sin_stock" → stock=0, disponible=False, stock_descontado = True |
+| `test_descontar_stock_job_skip_si_no_completado` | picking.estado != COMPLETADO → skip sin error |
 | `test_on_job_failure_persiste_en_bd` | Crea `FailedJob` en BD con job_type, queue_name, error |
 | `test_on_job_failure_sentry_si_bd_cae` | BD falla en callback → Sentry recibe alerta igualmente |
 | `test_sentry_job_decorator` | Wrappea correctamente, propaga excepciones |
