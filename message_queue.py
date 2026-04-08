@@ -28,13 +28,13 @@ _redis_conn = Redis(
 )
 
 # CRÍTICA: Mensajes al cliente (respuesta tiempo real)
-queue_whatsapp = Queue("whatsapp", connection=_redis_conn, default_timeout='5m')
+queue_whatsapp = Queue("whatsapp", connection=_redis_conn, default_timeout=30)
 
 # IMPORTANTE: Cambios operacionales (pedidos, asignaciones, pickings, repartos)
-queue_pedidos = Queue("pedidos", connection=_redis_conn, default_timeout='5m')
+queue_pedidos = Queue("pedidos", connection=_redis_conn, default_timeout=60)
 
 # BACKGROUND: Observabilidad (métricas, estado operativo, reportes)
-queue_dashboard = Queue("dashboard", connection=_redis_conn, default_timeout='10m')
+queue_dashboard = Queue("dashboard", connection=_redis_conn, default_timeout=30)
 
 # Orden de prioridad para los workers (procesar en este orden)
 QUEUES_PRIORITY = [queue_whatsapp, queue_pedidos, queue_dashboard]

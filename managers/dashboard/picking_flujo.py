@@ -76,23 +76,6 @@ class GestorPickingFlujoMixin:
 
             s.commit()
 
-            # Side effects post-commit (best effort — picking ya confirmado en BD)
-            try:
-                from rq import Retry
-                from message_queue import queue_whatsapp
-                from managers.dashboard.jobs import notificar_picker_job
-                from utils.rq_callbacks import on_job_failure
-                queue_whatsapp.enqueue(
-                    notificar_picker_job,
-                    empleado.Telefono,
-                    pedido_id,
-                    on_failure=on_job_failure,
-                    retry=Retry(max=3),
-                    failure_ttl=86400,
-                )
-            except Exception as e:
-                logger.warning("No se pudo encolar notificación picker para pedido %s: %s", pedido_id, e)
-
             self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, "Picker asignado correctamente"
 
@@ -180,7 +163,7 @@ class GestorPickingFlujoMixin:
             return False, "Error interno"
 
     def completar_picking(self, picking_id: int, picker_id: int | None = None) -> tuple:
-        """Returns (ok, msg, telefono_cliente). telefono_cliente is None on error.
+        """Returns (ok, msg).
 
         No usa @_retry_db porque tiene lógica post-commit (crear Reparto, encolar RQ).
         Un retry reiniciaría todo incluyendo lo ya hecho. El backoff es manual solo
@@ -190,10 +173,10 @@ class GestorPickingFlujoMixin:
         try:
             picking = s.query(PickingPedido).filter_by(id=picking_id).first()
             if not picking:
-                return False, "Picking no encontrado", None
+                return False, "Picking no encontrado"
 
             if picker_id is not None and picking.empleado_id != picker_id:
-                return False, "Este picking fue reasignado a otro picker", None
+                return False, "Este picking fue reasignado a otro picker"
 
             picking.estado = EstadoPicking.COMPLETADO.value
             picking.completado_en = datetime.utcnow()
@@ -214,7 +197,7 @@ class GestorPickingFlujoMixin:
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error completando picking %s: %s", picking_id, e)
-            return False, "Error de base de datos", None
+            return False, "Error de base de datos"
 
         # Backoff manual: OperationalError solo en el commit principal
         _picker_id = picking.empleado_id
@@ -228,15 +211,15 @@ class GestorPickingFlujoMixin:
                 intentos += 1
                 if intentos >= 3:
                     logger.error("completar_picking %s falló 3 veces por OperationalError", picking_id)
-                    return False, "Error de base de datos", None
+                    return False, "Error de base de datos"
                 time.sleep(2 ** intentos)
             except IntegrityError:
                 s.rollback()
-                return False, "Error de integridad", None
+                return False, "Error de integridad"
             except SQLAlchemyError as e:
                 s.rollback()
                 logger.error("Error completando picking %s: %s", picking_id, e)
-                return False, "Error de base de datos", None
+                return False, "Error de base de datos"
 
         # Post-commit: crear Reparto + encolar side effects
         if pedido_id_para_reparto:
@@ -287,7 +270,7 @@ class GestorPickingFlujoMixin:
             if activos == 0:
                 self._actualizar_estado_operativo(_picker_id, 'disponible')
 
-        return True, "Picking completado", None
+        return True, "Picking completado"
 
     def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None, producto_sustituto_id: int = None, picker_id: int | None = None) -> tuple:
         """Updates a single picking item state."""
