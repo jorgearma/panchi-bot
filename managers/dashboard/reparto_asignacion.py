@@ -2,14 +2,22 @@
 import logging
 from datetime import datetime, date
 
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import joinedload, selectinload
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from managers.dashboard._helpers import _iso
 from models import CheckIn, Empleado, Pedido, Reparto, Turno
 from states import EstadoPedido, EstadoReparto
 
 logger = logging.getLogger(__name__)
+
+_retry_db = retry(
+    retry=retry_if_exception_type(OperationalError),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=4),
+    reraise=True,
+)
 
 
 class GestorRepartoAsignacionMixin:
@@ -105,6 +113,7 @@ class GestorRepartoAsignacionMixin:
             ],
         }
 
+    @_retry_db
     def asignar_repartidor(self, pedido_id: int, empleado_id: int) -> tuple:
         """Asigna un repartidor a un pedido preparado."""
         s = self.session
@@ -134,8 +143,35 @@ class GestorRepartoAsignacionMixin:
                 ))
 
             s.commit()
+
+            # Side effects post-commit (best effort — reparto ya confirmado en BD)
+            try:
+                from message_queue import queue_whatsapp
+                from managers.dashboard.jobs import notificar_repartidor_job
+                from utils.rq_callbacks import on_job_failure
+                queue_whatsapp.enqueue(
+                    notificar_repartidor_job,
+                    empleado.Telefono,
+                    pedido_id,
+                    on_failure=on_job_failure,
+                    retry=3,
+                    failure_ttl=86400,
+                )
+            except Exception as e:
+                logger.warning("No se pudo encolar notificación repartidor para pedido %s: %s", pedido_id, e)
+
             self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, "Repartidor asignado correctamente"
+
+        except OperationalError:
+            s.rollback()
+            raise  # tenacity necesita que se propague para reintentar
+
+        except IntegrityError:
+            s.rollback()
+            logger.info("IntegrityError reparto pedido %s — race condition resuelta", pedido_id)
+            return True, "Repartidor asignado correctamente"
+
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error asignando repartidor para pedido %s: %s", pedido_id, e)

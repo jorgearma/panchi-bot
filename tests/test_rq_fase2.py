@@ -246,6 +246,71 @@ def test_completar_picking_encola_picking_id_no_lista(app):
             assert len(stock_calls) >= 1, f"No se encoló con picking_id=77. Calls: {enqueue_calls}"
 
 
+# ── Task 4: reparto_asignacion ────────────────────────────────────────────────
+
+def test_asignar_repartidor_race_condition_devuelve_ok(app):
+    """IntegrityError en asignar_repartidor → (True, msg), no 500."""
+    from container import gestor_dashboard
+    from sqlalchemy.exc import IntegrityError
+    from unittest.mock import PropertyMock
+    from states import EstadoPedido
+
+    with app.app_context():
+        with patch.object(
+            type(gestor_dashboard), 'session', new_callable=PropertyMock
+        ) as mock_session:
+            s = mock_session.return_value
+            pedido_mock = MagicMock()
+            pedido_mock.Estado = EstadoPedido.PREPARADO.value
+            empleado_mock = MagicMock()
+            empleado_mock.EmpleadoID = 3
+            empleado_mock.Telefono = "+34600000002"
+
+            s.query.return_value.filter_by.return_value.first.side_effect = [
+                pedido_mock, empleado_mock, None,
+            ]
+            s.add = MagicMock()
+            s.commit.side_effect = IntegrityError("UNIQUE constraint", None, None)
+
+            ok, msg = gestor_dashboard.asignar_repartidor(10, 3)
+
+            assert ok is True
+
+
+def test_asignar_repartidor_encola_notificacion_post_commit(app):
+    """asignar_repartidor encola notificar_repartidor_job tras commit exitoso."""
+    from container import gestor_dashboard
+    from unittest.mock import PropertyMock
+    from states import EstadoPedido
+    import message_queue
+
+    with app.app_context():
+        with patch.object(
+            type(gestor_dashboard), 'session', new_callable=PropertyMock
+        ) as mock_session, \
+        patch.object(message_queue.queue_whatsapp, 'enqueue') as mock_enqueue, \
+        patch('managers.dashboard.jobs.notificar_repartidor_job', create=True):
+            s = mock_session.return_value
+            pedido_mock = MagicMock()
+            pedido_mock.Estado = EstadoPedido.PREPARADO.value
+            empleado_mock = MagicMock()
+            empleado_mock.EmpleadoID = 3
+            empleado_mock.Telefono = "+34600000002"
+            reparto_mock = MagicMock()
+
+            s.query.return_value.filter_by.return_value.first.side_effect = [
+                pedido_mock, empleado_mock, reparto_mock,
+            ]
+            s.commit = MagicMock()
+
+            with patch.object(gestor_dashboard, '_actualizar_estado_operativo'):
+                gestor_dashboard.asignar_repartidor(10, 3)
+
+            mock_enqueue.assert_called_once()
+            call_kwargs = mock_enqueue.call_args[1]
+            assert call_kwargs.get('retry') == 3
+
+
 def test_completar_picking_operational_error_reintenta(app):
     """OperationalError en completar_picking.commit → reintenta hasta 3 veces."""
     from container import gestor_dashboard
