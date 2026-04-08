@@ -352,3 +352,132 @@ def test_completar_picking_operational_error_reintenta(app):
 
             assert ok is False
             assert s.commit.call_count == 3
+
+
+# ── Task 6: jobs.py ───────────────────────────────────────────────────────────
+
+def test_notificar_picker_job_llama_whatsapp(app):
+    """notificar_picker_job llama enviar_mensaje_whatsapp con teléfono y pedido_id."""
+    from managers.dashboard.jobs import notificar_picker_job
+
+    with app.app_context():
+        with patch('services.whatsapp_service.enviar_mensaje_whatsapp') as mock_send:
+            notificar_picker_job("+34600000001", 42)
+            mock_send.assert_called_once()
+            args = mock_send.call_args[0]
+            assert "+34600000001" in args
+            assert "42" in str(args)
+
+
+def test_notificar_repartidor_job_llama_whatsapp(app):
+    """notificar_repartidor_job llama enviar_mensaje_whatsapp con teléfono."""
+    from managers.dashboard.jobs import notificar_repartidor_job
+
+    with app.app_context():
+        with patch('services.whatsapp_service.enviar_mensaje_whatsapp') as mock_send:
+            notificar_repartidor_job("+34600000002", 99)
+            mock_send.assert_called_once()
+            args = mock_send.call_args[0]
+            assert "+34600000002" in args
+
+
+def test_descontar_stock_job_idempotente(app):
+    """Segunda llamada con mismo picking_id → skip si stock_descontado == True."""
+    from managers.dashboard.jobs import descontar_stock_picking_job
+
+    with app.app_context():
+        with patch('database.SessionLocal') as mock_sl:
+            s = MagicMock()
+            picking_mock = MagicMock()
+            picking_mock.stock_descontado = True
+            picking_mock.estado = 'completado'
+            s.query.return_value.filter_by.return_value.first.return_value = picking_mock
+            mock_sl.return_value = s
+
+            descontar_stock_picking_job(77)
+
+            s.commit.assert_not_called()
+
+
+def test_descontar_stock_job_encontrado(app):
+    """estado 'encontrado' → stock decrementado, stock_descontado = True."""
+    from managers.dashboard.jobs import descontar_stock_picking_job
+    from states import EstadoPicking
+
+    with app.app_context():
+        with patch('database.SessionLocal') as mock_sl:
+            s = MagicMock()
+            picking_mock = MagicMock()
+            picking_mock.stock_descontado = False
+            picking_mock.estado = EstadoPicking.COMPLETADO.value
+
+            item_mock = MagicMock()
+            item_mock.pedido_detalle = MagicMock(ProductoID=10, Cantidad=2)
+            item_mock.estado = "encontrado"
+            item_mock.cantidad_encontrada = 2
+            picking_mock.items = [item_mock]
+
+            producto_mock = MagicMock()
+            producto_mock.Stock = 10
+            producto_mock.Disponible = True
+
+            s.query.return_value.filter_by.return_value.first.return_value = picking_mock
+            s.query.return_value.filter_by.return_value.with_for_update.return_value.first.return_value = producto_mock
+            mock_sl.return_value = s
+
+            descontar_stock_picking_job(77)
+
+            assert producto_mock.Stock == 8
+            assert picking_mock.stock_descontado is True
+            s.commit.assert_called_once()
+
+
+def test_descontar_stock_job_sin_stock(app):
+    """estado 'sin_stock' → stock=0, disponible=False, stock_descontado=True."""
+    from managers.dashboard.jobs import descontar_stock_picking_job
+    from states import EstadoPicking
+
+    with app.app_context():
+        with patch('database.SessionLocal') as mock_sl:
+            s = MagicMock()
+            picking_mock = MagicMock()
+            picking_mock.stock_descontado = False
+            picking_mock.estado = EstadoPicking.COMPLETADO.value
+
+            item_mock = MagicMock()
+            item_mock.pedido_detalle = MagicMock(ProductoID=5, Cantidad=1)
+            item_mock.estado = "sin_stock"
+            item_mock.cantidad_encontrada = None
+            picking_mock.items = [item_mock]
+
+            producto_mock = MagicMock()
+            producto_mock.Stock = 3
+            producto_mock.Disponible = True
+
+            s.query.return_value.filter_by.return_value.first.return_value = picking_mock
+            s.query.return_value.filter_by.return_value.with_for_update.return_value.first.return_value = producto_mock
+            mock_sl.return_value = s
+
+            descontar_stock_picking_job(77)
+
+            assert producto_mock.Stock == 0
+            assert producto_mock.Disponible is False
+            assert picking_mock.stock_descontado is True
+
+
+def test_descontar_stock_job_skip_si_no_completado(app):
+    """picking.estado != COMPLETADO → skip sin commit."""
+    from managers.dashboard.jobs import descontar_stock_picking_job
+
+    with app.app_context():
+        with patch('database.SessionLocal') as mock_sl:
+            s = MagicMock()
+            picking_mock = MagicMock()
+            picking_mock.stock_descontado = False
+            picking_mock.estado = 'en_proceso'
+            mock_sl.return_value = s
+            s.query.return_value.filter_by.return_value.first.return_value = picking_mock
+
+            descontar_stock_picking_job(77)
+
+            s.commit.assert_not_called()
