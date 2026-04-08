@@ -146,6 +146,7 @@ class GestorRepartoAsignacionMixin:
 
             # Side effects post-commit (best effort — reparto ya confirmado en BD)
             try:
+                from rq import Retry
                 from message_queue import queue_whatsapp
                 from managers.dashboard.jobs import notificar_repartidor_job
                 from utils.rq_callbacks import on_job_failure
@@ -154,7 +155,7 @@ class GestorRepartoAsignacionMixin:
                     empleado.Telefono,
                     pedido_id,
                     on_failure=on_job_failure,
-                    retry=3,
+                    retry=Retry(max=3),
                     failure_ttl=86400,
                 )
             except Exception as e:

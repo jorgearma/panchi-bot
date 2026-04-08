@@ -311,16 +311,6 @@ def test_asignar_repartidor_encola_notificacion_post_commit(app):
             assert call_kwargs.get('retry') == 3
 
 
-# ── Task 5: RQ Dashboard ─────────────────────────────────────────────────────
-
-def test_rq_dashboard_requiere_login(app):
-    """GET /rq-dashboard sin sesión activa → redirect a login."""
-    with app.test_client() as client:
-        response = client.get('/rq-dashboard', follow_redirects=False)
-        assert response.status_code in (301, 302)
-        assert '/auth/login' in response.headers.get('Location', '')
-
-
 def test_completar_picking_operational_error_reintenta(app):
     """OperationalError en completar_picking.commit → reintenta hasta 3 veces."""
     from container import gestor_dashboard

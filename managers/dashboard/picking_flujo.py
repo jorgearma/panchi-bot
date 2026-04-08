@@ -78,6 +78,7 @@ class GestorPickingFlujoMixin:
 
             # Side effects post-commit (best effort — picking ya confirmado en BD)
             try:
+                from rq import Retry
                 from message_queue import queue_whatsapp
                 from managers.dashboard.jobs import notificar_picker_job
                 from utils.rq_callbacks import on_job_failure
@@ -86,7 +87,7 @@ class GestorPickingFlujoMixin:
                     empleado.Telefono,
                     pedido_id,
                     on_failure=on_job_failure,
-                    retry=3,
+                    retry=Retry(max=3),
                     failure_ttl=86400,
                 )
             except Exception as e:
@@ -258,6 +259,7 @@ class GestorPickingFlujoMixin:
 
         # Descontar stock → RQ (pasa picking_id int, no lista — idempotencia garantizada)
         try:
+            from rq import Retry
             from message_queue import queue_dashboard
             from managers.dashboard.jobs import descontar_stock_picking_job
             from utils.rq_callbacks import on_job_failure
@@ -265,7 +267,7 @@ class GestorPickingFlujoMixin:
                 descontar_stock_picking_job,
                 picking_id,
                 on_failure=on_job_failure,
-                retry=3,
+                retry=Retry(max=3),
                 failure_ttl=86400,
             )
         except Exception as e:
