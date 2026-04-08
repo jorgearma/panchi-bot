@@ -1,7 +1,6 @@
 import logging
 from collections import defaultdict
 from datetime import datetime
-from threading import Thread
 
 from sqlalchemy import and_, or_, text
 from sqlalchemy import func
@@ -24,34 +23,68 @@ class GestorDashboardBase:
     _ESTADOS_PROTEGIDOS = frozenset({'en_pausa', 'desconectado'})
 
     def _actualizar_estado_operativo(self, empleado_id: int, nuevo_estado: str) -> None:
-        """Actualiza estado_operativo en background con su propia sesión de BD.
+        """Encola actualización de estado_operativo en RQ.
 
         Los estados en_pausa y desconectado son manuales — el sistema no los sobreescribe.
-        Corre en un thread daemon para no bloquear la respuesta HTTP.
+        Usa RQ para reintentos automáticos si la BD falla (en lugar de threading daemon invisible).
+
+        Args:
+            empleado_id: ID del empleado (validado)
+            nuevo_estado: Nuevo estado operativo (ej: "recibiendo_pedidos")
         """
-        if not empleado_id:
+        # VALIDAR inputs
+        if not isinstance(empleado_id, int) or empleado_id <= 0:
+            logger.warning("empleado_id inválido: %s", empleado_id)
             return
-        estados_protegidos = self._ESTADOS_PROTEGIDOS
+        if not nuevo_estado or not isinstance(nuevo_estado, str):
+            logger.warning("nuevo_estado inválido: %s", nuevo_estado)
+            return
 
-        def _ejecutar():
-            """Aplica el cambio de estado sin bloquear la petición."""
-            from database import SessionLocal
-            s = SessionLocal()
-            try:
-                # UPDATE atómico con WHERE para evitar race condition:
-                # si el empleado cambió a en_pausa/desconectado entre el read y el write, no se sobreescribe.
-                s.query(Empleado).filter(
-                    Empleado.EmpleadoID == empleado_id,
-                    Empleado.estado_operativo.notin_(estados_protegidos),
-                ).update({'estado_operativo': nuevo_estado}, synchronize_session=False)
-                s.commit()
-            except Exception as e:
-                logger.warning("No se pudo actualizar estado_operativo de empleado %s: %s", empleado_id, e)
-                s.rollback()
-            finally:
-                s.close()
+        # ENCOLAR en RQ (no bloquea respuesta HTTP)
+        from message_queue import queue_dashboard
 
-        Thread(target=_ejecutar, daemon=True).start()
+        job = queue_dashboard.enqueue(
+            self._ejecutar_actualizar_estado,
+            empleado_id,
+            nuevo_estado,
+            retry=3,           # 3 reintentos automáticos si BD falla
+            failure_ttl=86400  # Guardar errores 24h para auditoría
+        )
+        logger.debug(f"Encolado update estado_operativo: empleado {empleado_id} → {nuevo_estado} (job_id={job.id})")
+
+    @staticmethod
+    def _ejecutar_actualizar_estado(empleado_id: int, nuevo_estado: str) -> None:
+        """Job que corre en el worker (background).
+
+        Esta función corre en el WORKER, no en el request.
+        Por eso es @staticmethod y toma parámetros simples (no self).
+        RQ reintentar automáticamente si levanta excepción.
+        """
+        from database import SessionLocal
+
+        s = SessionLocal()
+        try:
+            logger.debug(f"Worker: actualizando estado_operativo empleado {empleado_id} → {nuevo_estado}")
+
+            # UPDATE atómico con WHERE para evitar race condition:
+            # Si el empleado cambió a en_pausa/desconectado entre reintentos, no se sobreescribe.
+            updated = s.query(Empleado).filter(
+                Empleado.EmpleadoID == empleado_id,
+                Empleado.estado_operativo.notin_(GestorDashboardBase._ESTADOS_PROTEGIDOS),
+            ).update({'estado_operativo': nuevo_estado}, synchronize_session=False)
+            s.commit()
+
+            if updated > 0:
+                logger.info(f"✅ Estado actualizado: empleado {empleado_id} → {nuevo_estado}")
+            else:
+                logger.warning(f"Estado protegido: empleado {empleado_id} está en pausa/desconectado, no se actualizó")
+
+        except Exception as e:
+            logger.error(f"❌ Error al actualizar estado empleado {empleado_id}: {e}", exc_info=True)
+            s.rollback()
+            raise  # RQ ve que falló y reintenta automáticamente
+        finally:
+            s.close()
 
     def _tiempo_medio(self, desde: datetime, estado_inicio: EstadoPedido, estado_fin: EstadoPedido):
         """Calcula el tiempo medio en minutos entre dos estados usando un self-join en SQL Server.
