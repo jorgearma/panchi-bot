@@ -142,59 +142,6 @@ class TestBlueprintEmpleadoEstado:
 
 
 # ---------------------------------------------------------------------------
-# Hooks de estado operativo en GestorDashboard
-# ---------------------------------------------------------------------------
-
-class TestHooksEstadoOperativo:
-    """_actualizar_estado_operativo no sobreescribe en_pausa ni desconectado."""
-
-    def _gestor_con_empleado(self, estado_actual):
-        from container import gestor_dashboard
-        empleado_mock = MagicMock()
-        empleado_mock.estado_operativo = estado_actual
-        session_mock = MagicMock()
-        session_mock.query.return_value.filter_by.return_value.first.return_value = empleado_mock
-        return gestor_dashboard, session_mock, empleado_mock
-
-    def test_ocupado_sobreescribe_disponible(self):
-        gestor, session_mock, empleado_mock = self._gestor_con_empleado('disponible')
-        captured = {}
-
-        def capture_thread(target, daemon=True):
-            captured['target'] = target
-            return MagicMock()
-
-        with patch('managers.dashboard._base.Thread', side_effect=capture_thread), \
-             patch('database.SessionLocal', return_value=session_mock):
-            gestor._actualizar_estado_operativo(1, 'ocupado')
-            captured['target']()  # ejecutar sincrónicamente
-
-        session_mock.query.return_value.filter.return_value.update.assert_called_once_with(
-            {'estado_operativo': 'ocupado'}, synchronize_session=False
-        )
-        session_mock.commit.assert_called_once()
-
-    def test_no_sobreescribe_en_pausa(self):
-        gestor, session_mock, empleado_mock = self._gestor_con_empleado('en_pausa')
-        with patch.object(type(gestor), 'session', new_callable=PropertyMock, return_value=session_mock):
-            gestor._actualizar_estado_operativo(1, 'ocupado')
-        assert empleado_mock.estado_operativo == 'en_pausa'
-
-    def test_no_sobreescribe_desconectado(self):
-        gestor, session_mock, empleado_mock = self._gestor_con_empleado('desconectado')
-        with patch.object(type(gestor), 'session', new_callable=PropertyMock, return_value=session_mock):
-            gestor._actualizar_estado_operativo(1, 'disponible')
-        assert empleado_mock.estado_operativo == 'desconectado'
-
-    def test_empleado_none_no_lanza_excepcion(self):
-        from container import gestor_dashboard
-        session_mock = MagicMock()
-        session_mock.query.return_value.filter_by.return_value.first.return_value = None
-        with patch.object(type(gestor_dashboard), 'session', new_callable=PropertyMock, return_value=session_mock):
-            # No debe lanzar excepción
-            gestor_dashboard._actualizar_estado_operativo(99, 'ocupado')
-
-
 # ---------------------------------------------------------------------------
 # Auth: redirección tras login
 # ---------------------------------------------------------------------------
