@@ -122,3 +122,158 @@ def test_sentry_job_decorator_devuelve_resultado():
 
         result = job_exitoso(5)
         assert result == 10
+
+
+# ── Task 3: picking_flujo ─────────────────────────────────────────────────────
+
+def test_completar_picking_sin_thread():
+    """completar_picking NO usa threading.Thread."""
+    import managers.dashboard.picking_flujo as modulo
+    import inspect
+
+    source = inspect.getsource(modulo)
+    assert 'Thread(' not in source, "picking_flujo.py todavía tiene Thread() — eliminar daemon threads"
+
+
+def test_asignar_picker_race_condition_devuelve_ok(app):
+    """IntegrityError en asignar_picker → (True, msg), no 500."""
+    from container import gestor_dashboard
+    from sqlalchemy.exc import IntegrityError
+    from unittest.mock import PropertyMock
+
+    with app.app_context():
+        with patch.object(
+            type(gestor_dashboard), 'session', new_callable=PropertyMock
+        ) as mock_session:
+            s = mock_session.return_value
+            pedido_mock = MagicMock()
+            pedido_mock.Estado = 'pagado'
+            pedido_mock.detalles = []
+            empleado_mock = MagicMock()
+            empleado_mock.EmpleadoID = 5
+            empleado_mock.Telefono = "+34600000001"
+
+            # pedido, empleado, picking (no existe → INSERT → IntegrityError)
+            s.query.return_value.filter_by.return_value.first.side_effect = [
+                pedido_mock, empleado_mock, None,
+            ]
+            s.flush = MagicMock()
+            s.add = MagicMock()
+            s.commit.side_effect = IntegrityError("UNIQUE constraint", None, None)
+
+            ok, msg = gestor_dashboard.asignar_picker(1, 5)
+
+            assert ok is True
+            assert "asignado" in msg.lower()
+
+
+def test_asignar_picker_encola_notificacion_post_commit(app):
+    """asignar_picker encola notificar_picker_job tras commit exitoso."""
+    from container import gestor_dashboard
+    from unittest.mock import PropertyMock
+    import message_queue
+
+    with app.app_context():
+        with patch.object(
+            type(gestor_dashboard), 'session', new_callable=PropertyMock
+        ) as mock_session, \
+        patch.object(message_queue.queue_whatsapp, 'enqueue') as mock_enqueue, \
+        patch('managers.dashboard.jobs.notificar_picker_job', create=True):
+            s = mock_session.return_value
+            pedido_mock = MagicMock()
+            pedido_mock.Estado = 'pagado'
+            pedido_mock.detalles = []
+            empleado_mock = MagicMock()
+            empleado_mock.EmpleadoID = 5
+            empleado_mock.Telefono = "+34600000001"
+            picking_mock = MagicMock()
+
+            s.query.return_value.filter_by.return_value.first.side_effect = [
+                pedido_mock, empleado_mock, picking_mock,
+            ]
+            s.commit = MagicMock()
+
+            with patch.object(gestor_dashboard, '_actualizar_estado_operativo'):
+                gestor_dashboard.asignar_picker(1, 5)
+
+            mock_enqueue.assert_called_once()
+            call_kwargs = mock_enqueue.call_args[1]
+            assert call_kwargs.get('retry') == 3
+
+
+def test_completar_picking_encola_picking_id_no_lista(app):
+    """completar_picking encola descontar_stock_picking_job con picking_id int."""
+    from container import gestor_dashboard
+    from unittest.mock import PropertyMock
+    from states import EstadoPicking, EstadoPedido
+    import message_queue
+
+    with app.app_context():
+        with patch.object(
+            type(gestor_dashboard), 'session', new_callable=PropertyMock
+        ) as mock_session, \
+        patch.object(message_queue.queue_dashboard, 'enqueue') as mock_enqueue, \
+        patch('managers.dashboard.jobs.descontar_stock_picking_job', create=True):
+            s = mock_session.return_value
+            picking_mock = MagicMock()
+            picking_mock.id = 77
+            picking_mock.empleado_id = 5
+            picking_mock.estado = EstadoPicking.EN_PROCESO.value
+            picking_mock.items = []
+            pedido_mock = MagicMock()
+            pedido_mock.Estado = EstadoPedido.EN_PREPARACION.value
+            pedido_mock.PedidoID = 10
+            picking_mock.pedido = pedido_mock
+
+            s.query.return_value.filter_by.return_value.first.side_effect = [
+                picking_mock,
+                None,  # reparto_existente check → None → crea Reparto
+            ]
+            s.commit = MagicMock()
+            s.add = MagicMock()
+            s.expire_all = MagicMock()
+            s.query.return_value.filter.return_value.count.return_value = 1
+
+            with patch.object(gestor_dashboard, '_actualizar_estado_operativo'):
+                ok, msg, _ = gestor_dashboard.completar_picking(77)
+
+            assert ok is True
+            # Verificar que se encoló con picking_id=77 (int), no lista
+            enqueue_calls = mock_enqueue.call_args_list
+            # queue_dashboard.enqueue puede ser llamado desde _actualizar_estado_operativo también
+            # Verificar que alguna llamada pasó picking_id=77 como arg posicional
+            stock_calls = [c for c in enqueue_calls if 77 in c[0]]
+            assert len(stock_calls) >= 1, f"No se encoló con picking_id=77. Calls: {enqueue_calls}"
+
+
+def test_completar_picking_operational_error_reintenta(app):
+    """OperationalError en completar_picking.commit → reintenta hasta 3 veces."""
+    from container import gestor_dashboard
+    from sqlalchemy.exc import OperationalError
+    from unittest.mock import PropertyMock
+    from states import EstadoPicking, EstadoPedido
+
+    with app.app_context():
+        with patch.object(
+            type(gestor_dashboard), 'session', new_callable=PropertyMock
+        ) as mock_session, \
+        patch('managers.dashboard.picking_flujo.time') as mock_time:
+            s = mock_session.return_value
+            mock_time.sleep = MagicMock()
+            picking_mock = MagicMock()
+            picking_mock.id = 1
+            picking_mock.empleado_id = 5
+            picking_mock.estado = EstadoPicking.EN_PROCESO.value
+            picking_mock.items = []
+            pedido_mock = MagicMock()
+            pedido_mock.Estado = EstadoPedido.EN_PREPARACION.value
+            pedido_mock.PedidoID = 1
+            picking_mock.pedido = pedido_mock
+
+            s.query.return_value.filter_by.return_value.first.return_value = picking_mock
+            s.commit.side_effect = OperationalError("Connection reset", None, None)
+
+            ok, msg, _ = gestor_dashboard.completar_picking(1)
+
+            assert ok is False
+            assert s.commit.call_count == 3
