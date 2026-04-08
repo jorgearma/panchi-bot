@@ -106,6 +106,9 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(blueprint_landing)
     app.register_blueprint(blueprint_maps)
 
+    from blueprints.rq_dashboard_bp import register_rq_dashboard
+    register_rq_dashboard(app)
+
     @app.context_processor
     def inject_app_mode():
         return {'app_mode': app_config.APP_MODE}
