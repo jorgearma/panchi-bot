@@ -76,7 +76,6 @@ class GestorPickingFlujoMixin:
 
             s.commit()
 
-            self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, "Picker asignado correctamente"
 
         except OperationalError:
@@ -149,7 +148,6 @@ class GestorPickingFlujoMixin:
 
             s.commit()
             if nuevo_empleado_id:
-                self._actualizar_estado_operativo(nuevo_empleado_id, 'ocupado')
                 return True, "Picker asignado correctamente"
             return True, "Picker eliminado del picking"
 
@@ -255,20 +253,6 @@ class GestorPickingFlujoMixin:
             )
         except Exception as e:
             logger.warning("No se pudo encolar descontar_stock para picking %s: %s", picking_id, e)
-
-        # Disponibilidad picker — expire_all fuerza recarga desde BD (evita caché post-commit)
-        if _picker_id:
-            s.expire_all()
-            activos = s.query(PickingPedido).filter(
-                PickingPedido.empleado_id == _picker_id,
-                PickingPedido.estado.in_([
-                    EstadoPicking.PENDIENTE.value,
-                    EstadoPicking.EN_PROCESO.value,
-                    EstadoPicking.CON_INCIDENCIAS.value,
-                ]),
-            ).count()
-            if activos == 0:
-                self._actualizar_estado_operativo(_picker_id, 'disponible')
 
         return True, "Picking completado"
 
@@ -388,9 +372,6 @@ class GestorPickingFlujoMixin:
                 ))
 
             s.commit()
-            for c in cocineros:
-                self._actualizar_estado_operativo(c.EmpleadoID, 'ocupado')
-
             n = len(cocineros)
             msg = f"Pedido aceptado por cocina ({n} cocinero{'s' if n > 1 else ''})"
             return True, msg, nombres
@@ -454,8 +435,6 @@ class GestorPickingFlujoMixin:
             # Un solo commit: picking + pedido juntos, o nada
             s.commit()
 
-            # 4. Actualizar estado operativo del picker
-            self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, 'ok'
 
         except SQLAlchemyError as e:

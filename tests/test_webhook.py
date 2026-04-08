@@ -183,7 +183,9 @@ class TestWebhookMonei:
                 with patch("services.inbound_whatsapp.enviar_mensaje_whatsapp"):
                     resp = self._post(client, body, signature=sig)
         assert resp.status_code == 200
-        mock_gp.actualizar_estado.assert_called_once_with(42, EstadoPedido.PAGADO)
+        mock_gp.procesar_pago_confirmado.assert_called_once()
+        call_kwargs = mock_gp.procesar_pago_confirmado.call_args
+        assert call_kwargs.kwargs.get("pedido_id") == 42 or call_kwargs.args[0] == 42
 
     def test_pago_no_succeeded_no_actualiza_estado(self, client):
         """HMAC correcto pero status PENDING y tipo desconocido → no actualiza estado."""

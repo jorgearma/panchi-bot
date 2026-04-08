@@ -20,43 +20,6 @@ class GestorDashboardBase:
         from database import get_db
         return get_db()
 
-    _ESTADOS_PROTEGIDOS = frozenset({'en_pausa', 'desconectado'})
-
-    def _actualizar_estado_operativo(self, empleado_id: int, nuevo_estado: str) -> None:
-        """Encola actualización de estado_operativo en RQ.
-
-        Los estados en_pausa y desconectado son manuales — el sistema no los sobreescribe.
-        Usa RQ para reintentos automáticos si la BD falla.
-
-        Args:
-            empleado_id: ID del empleado (validado)
-            nuevo_estado: Nuevo estado operativo (ej: "recibiendo_pedidos")
-        """
-        if not isinstance(empleado_id, int) or empleado_id <= 0:
-            logger.warning("empleado_id inválido: %s", empleado_id)
-            return
-        if not nuevo_estado or not isinstance(nuevo_estado, str):
-            logger.warning("nuevo_estado inválido: %s", nuevo_estado)
-            return
-
-        from rq import Retry
-        from message_queue import queue_dashboard
-        from managers.dashboard.jobs import actualizar_estado_operativo_job
-        from utils.rq_callbacks import on_job_failure
-
-        job = queue_dashboard.enqueue(
-            actualizar_estado_operativo_job,
-            empleado_id,
-            nuevo_estado,
-            on_failure=on_job_failure,
-            retry=Retry(max=3),
-            failure_ttl=86400,
-        )
-        logger.debug(
-            "Encolado update estado_operativo: empleado %s → %s (job_id=%s)",
-            empleado_id, nuevo_estado, job.id,
-        )
-
     def _tiempo_medio(self, desde: datetime, estado_inicio: EstadoPedido, estado_fin: EstadoPedido):
         """Calcula el tiempo medio en minutos entre dos estados usando un self-join en SQL Server.
 

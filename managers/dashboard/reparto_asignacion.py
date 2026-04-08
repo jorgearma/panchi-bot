@@ -143,8 +143,6 @@ class GestorRepartoAsignacionMixin:
                 ))
 
             s.commit()
-
-            self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, "Repartidor asignado correctamente"
 
         except OperationalError:
@@ -274,7 +272,6 @@ class GestorRepartoAsignacionMixin:
                     s.rollback()
                     return False, 'ya_cogido'
 
-            self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, 'ok'
 
         except SQLAlchemyError as e:

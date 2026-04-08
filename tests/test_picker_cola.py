@@ -120,11 +120,9 @@ class TestGestorDashboardCola:
 
                 mock_sess.query.side_effect = [mock_q_exist, mock_q_update, mock_q_pedido]
 
-                with patch.object(self.gd, '_actualizar_estado_operativo') as mock_aso:
-                    ok, msg = self.gd.reclamar_picking(7, empleado_id=3)
-                    assert ok is True
-                    assert msg == 'ok'
-                    mock_aso.assert_called_once_with(3, 'ocupado')
+                ok, msg = self.gd.reclamar_picking(7, empleado_id=3)
+                assert ok is True
+                assert msg == 'ok'
             finally:
                 patcher.stop()
 
