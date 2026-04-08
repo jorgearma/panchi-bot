@@ -481,3 +481,29 @@ def test_descontar_stock_job_skip_si_no_completado(app):
             descontar_stock_picking_job(77)
 
             s.commit.assert_not_called()
+
+
+# ── Task 7: _base.py ──────────────────────────────────────────────────────────
+
+def test_actualizar_estado_operativo_usa_job_centralizado(app):
+    """_actualizar_estado_operativo encola actualizar_estado_operativo_job de jobs.py."""
+    from container import gestor_dashboard
+    from managers.dashboard.jobs import actualizar_estado_operativo_job
+    import message_queue
+
+    with app.app_context():
+        with patch.object(message_queue.queue_dashboard, 'enqueue') as mock_enqueue:
+            gestor_dashboard._actualizar_estado_operativo(5, 'disponible')
+
+            mock_enqueue.assert_called_once()
+            call_args = mock_enqueue.call_args[0]
+            assert call_args[0] is actualizar_estado_operativo_job
+            assert call_args[1] == 5
+            assert call_args[2] == 'disponible'
+
+
+def test_base_no_tiene_ejecutar_actualizar_estado():
+    """_base.py ya no tiene _ejecutar_actualizar_estado (movido a jobs.py)."""
+    from managers.dashboard._base import GestorDashboardBase
+    assert not hasattr(GestorDashboardBase, '_ejecutar_actualizar_estado'), \
+        "_ejecutar_actualizar_estado debería estar en jobs.py, no en _base.py"

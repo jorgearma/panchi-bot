@@ -26,13 +26,12 @@ class GestorDashboardBase:
         """Encola actualización de estado_operativo en RQ.
 
         Los estados en_pausa y desconectado son manuales — el sistema no los sobreescribe.
-        Usa RQ para reintentos automáticos si la BD falla (en lugar de threading daemon invisible).
+        Usa RQ para reintentos automáticos si la BD falla.
 
         Args:
             empleado_id: ID del empleado (validado)
             nuevo_estado: Nuevo estado operativo (ej: "recibiendo_pedidos")
         """
-        # VALIDAR inputs
         if not isinstance(empleado_id, int) or empleado_id <= 0:
             logger.warning("empleado_id inválido: %s", empleado_id)
             return
@@ -40,51 +39,22 @@ class GestorDashboardBase:
             logger.warning("nuevo_estado inválido: %s", nuevo_estado)
             return
 
-        # ENCOLAR en RQ (no bloquea respuesta HTTP)
         from message_queue import queue_dashboard
+        from managers.dashboard.jobs import actualizar_estado_operativo_job
+        from utils.rq_callbacks import on_job_failure
 
         job = queue_dashboard.enqueue(
-            self._ejecutar_actualizar_estado,
+            actualizar_estado_operativo_job,
             empleado_id,
             nuevo_estado,
-            retry=3,           # 3 reintentos automáticos si BD falla
-            failure_ttl=86400  # Guardar errores 24h para auditoría
+            on_failure=on_job_failure,
+            retry=3,
+            failure_ttl=86400,
         )
-        logger.debug(f"Encolado update estado_operativo: empleado {empleado_id} → {nuevo_estado} (job_id={job.id})")
-
-    @staticmethod
-    def _ejecutar_actualizar_estado(empleado_id: int, nuevo_estado: str) -> None:
-        """Job que corre en el worker (background).
-
-        Esta función corre en el WORKER, no en el request.
-        Por eso es @staticmethod y toma parámetros simples (no self).
-        RQ reintentar automáticamente si levanta excepción.
-        """
-        from database import SessionLocal
-
-        s = SessionLocal()
-        try:
-            logger.debug(f"Worker: actualizando estado_operativo empleado {empleado_id} → {nuevo_estado}")
-
-            # UPDATE atómico con WHERE para evitar race condition:
-            # Si el empleado cambió a en_pausa/desconectado entre reintentos, no se sobreescribe.
-            updated = s.query(Empleado).filter(
-                Empleado.EmpleadoID == empleado_id,
-                Empleado.estado_operativo.notin_(GestorDashboardBase._ESTADOS_PROTEGIDOS),
-            ).update({'estado_operativo': nuevo_estado}, synchronize_session=False)
-            s.commit()
-
-            if updated > 0:
-                logger.info(f"✅ Estado actualizado: empleado {empleado_id} → {nuevo_estado}")
-            else:
-                logger.warning(f"Estado protegido: empleado {empleado_id} está en pausa/desconectado, no se actualizó")
-
-        except Exception as e:
-            logger.error(f"❌ Error al actualizar estado empleado {empleado_id}: {e}", exc_info=True)
-            s.rollback()
-            raise  # RQ ve que falló y reintenta automáticamente
-        finally:
-            s.close()
+        logger.debug(
+            "Encolado update estado_operativo: empleado %s → %s (job_id=%s)",
+            empleado_id, nuevo_estado, job.id,
+        )
 
     def _tiempo_medio(self, desde: datetime, estado_inicio: EstadoPedido, estado_fin: EstadoPedido):
         """Calcula el tiempo medio en minutos entre dos estados usando un self-join en SQL Server.
