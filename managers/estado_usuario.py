@@ -33,7 +33,6 @@ class EstadoUsuario:
         # Si no hay estado, se retorna un estado por defecto.
         return {"estado": EstadoRegistro.SALUDO_INICIAL}
 
-    @retry(wait=wait_fixed(2), stop=stop_after_attempt(3))
     def actualizar_estado(self, nuevo_estado, datos_adicionales=None):
         """Valida y persiste la siguiente transición del usuario."""
         try:
@@ -54,8 +53,13 @@ class EstadoUsuario:
         estado_actual["estado"] = nuevo_estado
         if datos_adicionales:
             estado_actual.update(datos_adicionales)
+        self._persistir_estado(estado_actual)
+
+    @retry(wait=wait_fixed(2), stop=stop_after_attempt(3))
+    def _persistir_estado(self, estado):
+        """Persiste el estado en Redis con retry ante fallos transitorios."""
         try:
-            self.redismanager.set(self.numero_cliente, json.dumps(estado_actual), ex=3600)
+            self.redismanager.set(self.numero_cliente, json.dumps(estado), ex=3600)
         except Exception as e:
             raise Exception("Error al actualizar el estado del usuario en Redis") from e
 
