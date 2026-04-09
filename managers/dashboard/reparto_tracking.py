@@ -1,7 +1,6 @@
 """Reparto — tracking: mapa, estado de rutas, entrega."""
 import logging
 from datetime import datetime
-from threading import Thread
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload, load_only, selectinload
@@ -240,29 +239,6 @@ class GestorRepartoTrackingMixin:
                 ))
 
             s.commit()
-
-            # Auto-actualizar estado en background: no bloquea la respuesta HTTP
-            _repartidor_id = reparto.repartidor_id
-            if _repartidor_id:
-                def _actualizar_disponibilidad(emp_id=_repartidor_id):
-                    """Marca disponible al repartidor si ya no tiene rutas activas."""
-                    from database import SessionLocal
-                    _s = SessionLocal()
-                    try:
-                        _activos = _s.query(Reparto).filter(
-                            Reparto.repartidor_id == emp_id,
-                            Reparto.estado.in_([
-                                EstadoReparto.ASIGNADO.value,
-                                EstadoReparto.EN_CAMINO.value,
-                            ]),
-                        ).count()
-                        if _activos == 0:
-                            self._actualizar_estado_operativo(emp_id, 'disponible')
-                    except Exception as e:
-                        logger.warning("Error comprobando disponibilidad repartidor %s: %s", emp_id, e)
-                    finally:
-                        _s.close()
-                Thread(target=_actualizar_disponibilidad, daemon=True).start()
 
             # TODO: reactivar cuando se decida notificar al cliente en este estado
             # telefono = pedido.TelefonoEntrega if pedido else None

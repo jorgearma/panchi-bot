@@ -131,14 +131,26 @@ class GestorPedidosLifecycleMixin:
         total = self._to_decimal("0.0")
         detalles = []
 
+        ids = [item["producto_id"] for item in productos]
+        productos_db = {
+            p.ProductoID: p
+            for p in self.session.query(Producto).filter(Producto.ProductoID.in_(ids)).all()
+        }
+
         for item in productos:
             producto_id = item["producto_id"]
             cantidad    = item["cantidad"]
             notas       = item.get("notas") or None
 
-            producto = self.session.query(Producto).filter_by(
-                ProductoID=producto_id,
-            ).first()
+            if not isinstance(cantidad, int) or cantidad <= 0:
+                logger.warning(
+                    "_reemplazar_detalles: cantidad inválida %s para producto %s — ignorado",
+                    cantidad,
+                    producto_id,
+                )
+                continue
+
+            producto = productos_db.get(producto_id)
             if producto:
                 precio_unitario = self._to_decimal(producto.Precio)
                 subtotal = precio_unitario * cantidad
@@ -160,6 +172,11 @@ class GestorPedidosLifecycleMixin:
         pedido.Total = total
         return True
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type((SQLAlchemyError, OperationalError)),
+    )
     def agregar_productos_a_pedido(self, pedido_id, productos):
         """
         Idempotent: replaces order lines and commits. Existing lines are deleted
@@ -265,32 +282,36 @@ class GestorPedidosLifecycleMixin:
 
     def obtener_seguimiento(self, redis_id: str) -> dict | None:
         """Proyección pública del estado del pedido para la página de tracking."""
-        pedido = self.session.query(Pedido).filter_by(redisID=redis_id).first()
-        if not pedido:
-            return None
+        try:
+            pedido = self.session.query(Pedido).filter_by(redisID=redis_id).first()
+            if not pedido:
+                return None
 
-        reparto_data = None
-        if pedido.reparto:
-            r = pedido.reparto
-            repartidor_nombre = None
-            repartidor_telefono = None
-            if r.repartidor:
-                repartidor_nombre = f"{r.repartidor.Nombre} {r.repartidor.Apellido}"
-                repartidor_telefono = r.repartidor.Telefono
-            reparto_data = {
-                "estado": r.estado,
-                "hora_salida": r.hora_salida.strftime("%H:%M") if r.hora_salida else None,
-                "hora_estimada_entrega": r.hora_estimada_entrega.strftime("%H:%M") if r.hora_estimada_entrega else None,
-                "repartidor_nombre": repartidor_nombre,
-                "repartidor_telefono": repartidor_telefono,
-                "calle_destino": pedido.DireccionEntrega,
+            reparto_data = None
+            if pedido.reparto:
+                r = pedido.reparto
+                repartidor_nombre = None
+                repartidor_telefono = None
+                if r.repartidor:
+                    repartidor_nombre = f"{r.repartidor.Nombre} {r.repartidor.Apellido}"
+                    repartidor_telefono = r.repartidor.Telefono
+                reparto_data = {
+                    "estado": r.estado,
+                    "hora_salida": r.hora_salida.strftime("%H:%M") if r.hora_salida else None,
+                    "hora_estimada_entrega": r.hora_estimada_entrega.strftime("%H:%M") if r.hora_estimada_entrega else None,
+                    "repartidor_nombre": repartidor_nombre,
+                    "repartidor_telefono": repartidor_telefono,
+                    "calle_destino": pedido.DireccionEntrega,
+                }
+
+            return {
+                "estado": pedido.Estado,
+                "forma_pago": pedido.forma_pago,
+                "reparto": reparto_data,
             }
-
-        return {
-            "estado": pedido.Estado,
-            "forma_pago": pedido.forma_pago,
-            "reparto": reparto_data,
-        }
+        except SQLAlchemyError as error:
+            logger.error("Error al obtener seguimiento redis_id=%s: %s", redis_id, error)
+            return None
 
     def obtener_pedido(self, pedido_id):
         """Recupera un pedido por id."""

@@ -126,11 +126,9 @@ class TestReclamarReparto:
 
                 mock_sess.query.side_effect = [mock_q_combined, mock_q_update]
 
-                with patch.object(self.gd, '_actualizar_estado_operativo') as mock_aso:
-                    ok, msg = self.gd.reclamar_reparto(42, empleado_id=7)
-                    assert ok is True
-                    assert msg == 'ok'
-                    mock_aso.assert_called_once_with(7, 'ocupado')
+                ok, msg = self.gd.reclamar_reparto(42, empleado_id=7)
+                assert ok is True
+                assert msg == 'ok'
             finally:
                 patcher.stop()
 
@@ -227,8 +225,7 @@ class TestCompletarPickingCreaReparto:
 
                 mock_sess.query.side_effect = [mock_q_picking, mock_q_reparto, mock_q_activos]
 
-                with patch.object(self.gd, '_actualizar_estado_operativo'):
-                    ok, msg, _ = self.gd.completar_picking(1, picker_id=3)
+                ok, msg = self.gd.completar_picking(1, picker_id=3)
 
                 assert ok is True
                 # Verificar que se llamó s.add() con un Reparto (instancia real, no mock)
@@ -281,8 +278,7 @@ class TestCompletarPickingCreaReparto:
                         raise IntegrityError("INSERT", {}, Exception("UNIQUE constraint"))
                 mock_sess.commit.side_effect = commit_side_effect
 
-                with patch.object(self.gd, '_actualizar_estado_operativo'):
-                    ok, msg, _ = self.gd.completar_picking(1, picker_id=3)
+                ok, msg = self.gd.completar_picking(1, picker_id=3)
 
                 # El picking debe reportar éxito a pesar del error en el Reparto
                 assert ok is True
@@ -324,8 +320,7 @@ class TestCompletarPickingCreaReparto:
 
                 mock_sess.query.side_effect = [mock_q_picking, mock_q_reparto, mock_q_activos]
 
-                with patch.object(self.gd, '_actualizar_estado_operativo'):
-                    ok, msg, _ = self.gd.completar_picking(1, picker_id=3)
+                ok, msg = self.gd.completar_picking(1, picker_id=3)
 
                 assert ok is True
                 from models import Reparto

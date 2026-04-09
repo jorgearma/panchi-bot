@@ -49,11 +49,11 @@ def make_gestor_pedidos(pedido: MagicMock) -> MagicMock:
 
 
 PRODUCTOS_RECIBIDOS = [
-    {"nombre": "Bocadillo", "cantidad": 2, "precio_unitario": 3.5, "Codigo": "BOC001"},
+    {"nombre": "Bocadillo", "cantidad": 2, "precio_unitario": 3.5, "Codigo": 1},
 ]
 
 PRODUCTOS_VALIDOS_PAGO = [
-    {"codigo": "BOC001", "cantidad": 2},
+    {"codigo": 1, "cantidad": 2},
 ]
 
 PUBLIC_URL = "https://example.com"
@@ -72,7 +72,7 @@ class TestConfirmarCarrito:
         gestor = make_gestor_pedidos(pedido)
 
         mock_gp = MagicMock()
-        mock_gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": 3.5}}
+        mock_gp.obtener_productos_por_codigos.return_value = {1: {"Precio": 3.5}}
 
         success, result = confirmar_carrito(
             pedido_id_redis="uuid-001",
@@ -101,7 +101,7 @@ class TestConfirmarCarrito:
         gestor = make_gestor_pedidos(pedido)
 
         mock_gp = MagicMock()
-        mock_gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": 3.5}}
+        mock_gp.obtener_productos_por_codigos.return_value = {1: {"Precio": 3.5}}
 
         confirmar_carrito(
             pedido_id_redis="uuid-002",
@@ -128,7 +128,7 @@ class TestConfirmarCarrito:
         pedido = make_pedido(EstadoPedido.ENLACE)
         gestor = make_gestor_pedidos(pedido)
         mock_gp = MagicMock()
-        mock_gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": 3.5}}
+        mock_gp.obtener_productos_por_codigos.return_value = {1: {"Precio": 3.5}}
 
         confirmar_carrito(
             pedido_id_redis="uuid-003",
@@ -156,7 +156,7 @@ class TestConfirmarCarrito:
         pedido = make_pedido(EstadoPedido.ENLACE2)  # already confirmed — idempotent
         gestor = make_gestor_pedidos(pedido)
         mock_gp = MagicMock()
-        mock_gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": 3.5}}
+        mock_gp.obtener_productos_por_codigos.return_value = {1: {"Precio": 3.5}}
 
         success, msg = confirmar_carrito(
             pedido_id_redis="uuid-004",
@@ -181,7 +181,7 @@ class TestConfirmarCarrito:
         gestor = MagicMock()
         gestor.obtener_pedido_mas_reciente.return_value = None
         mock_gp = MagicMock()
-        mock_gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": 3.5}}
+        mock_gp.obtener_productos_por_codigos.return_value = {1: {"Precio": 3.5}}
 
         success, msg = confirmar_carrito(
             pedido_id_redis="uuid-005",
@@ -374,7 +374,7 @@ class TestConfirmarCarrito:
         gestor = MagicMock()
         gestor.obtener_pedido_mas_reciente.side_effect = SQLAlchemyError("timeout")
         mock_gp = MagicMock()
-        mock_gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": 3.5}}
+        mock_gp.obtener_productos_por_codigos.return_value = {1: {"Precio": 3.5}}
 
         success, msg = confirmar_carrito(
             pedido_id_redis="uuid-db-error",
@@ -408,7 +408,7 @@ class TestIniciarPago:
 
     def _make_gestor_productos(self, precio: float = 3.5) -> MagicMock:
         gp = MagicMock()
-        gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": precio}}
+        gp.obtener_productos_por_codigos.return_value = {1: {"Precio": precio}}
         return gp
 
     def test_happy_path_returns_redirect_url(self):
@@ -476,7 +476,7 @@ class TestIniciarPago:
         )
 
         assert success is False
-        assert "BOC001" in msg
+        assert "1" in msg
 
     def test_no_active_order_returns_false(self):
         from controllers.pago import iniciar_pago
@@ -643,7 +643,7 @@ class TestIniciarPago:
 class TestIniciarPagoEfectivo:
     def _make_gestor_productos(self, precio: float = 3.5) -> MagicMock:
         gp = MagicMock()
-        gp.obtener_productos_por_codigos.return_value = {"BOC001": {"Precio": precio}}
+        gp.obtener_productos_por_codigos.return_value = {1: {"Precio": precio}}
         return gp
 
     def test_notas_se_pasan_a_confirmar_pago_efectivo(self):

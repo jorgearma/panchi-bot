@@ -43,7 +43,23 @@ services:
       retries: 10
       start_period: 30s
 
-  worker:
+  # Worker 1: Load balancing (escucha todas las colas)
+  worker-1:
+    build: .
+    command: python worker.py
+    env_file: .env
+    environment:
+      - TZ=Europe/Madrid
+    depends_on:
+      redis:
+        condition: service_healthy
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Worker 2: Load balancing (escucha todas las colas)
+  # Se balancean automáticamente: si worker-1 está ocupado, worker-2 ayuda
+  worker-2:
     build: .
     command: python worker.py
     env_file: .env

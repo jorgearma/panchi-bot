@@ -1,7 +1,6 @@
 import logging
 from collections import defaultdict
 from datetime import datetime
-from threading import Thread
 
 from sqlalchemy import and_, or_, text
 from sqlalchemy import func
@@ -20,38 +19,6 @@ class GestorDashboardBase:
         """Devuelve la sesión activa de base de datos."""
         from database import get_db
         return get_db()
-
-    _ESTADOS_PROTEGIDOS = frozenset({'en_pausa', 'desconectado'})
-
-    def _actualizar_estado_operativo(self, empleado_id: int, nuevo_estado: str) -> None:
-        """Actualiza estado_operativo en background con su propia sesión de BD.
-
-        Los estados en_pausa y desconectado son manuales — el sistema no los sobreescribe.
-        Corre en un thread daemon para no bloquear la respuesta HTTP.
-        """
-        if not empleado_id:
-            return
-        estados_protegidos = self._ESTADOS_PROTEGIDOS
-
-        def _ejecutar():
-            """Aplica el cambio de estado sin bloquear la petición."""
-            from database import SessionLocal
-            s = SessionLocal()
-            try:
-                # UPDATE atómico con WHERE para evitar race condition:
-                # si el empleado cambió a en_pausa/desconectado entre el read y el write, no se sobreescribe.
-                s.query(Empleado).filter(
-                    Empleado.EmpleadoID == empleado_id,
-                    Empleado.estado_operativo.notin_(estados_protegidos),
-                ).update({'estado_operativo': nuevo_estado}, synchronize_session=False)
-                s.commit()
-            except Exception as e:
-                logger.warning("No se pudo actualizar estado_operativo de empleado %s: %s", empleado_id, e)
-                s.rollback()
-            finally:
-                s.close()
-
-        Thread(target=_ejecutar, daemon=True).start()
 
     def _tiempo_medio(self, desde: datetime, estado_inicio: EstadoPedido, estado_fin: EstadoPedido):
         """Calcula el tiempo medio en minutos entre dos estados usando un self-join en SQL Server.
