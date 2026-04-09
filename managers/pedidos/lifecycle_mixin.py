@@ -131,14 +131,26 @@ class GestorPedidosLifecycleMixin:
         total = self._to_decimal("0.0")
         detalles = []
 
+        ids = [item["producto_id"] for item in productos]
+        productos_db = {
+            p.ProductoID: p
+            for p in self.session.query(Producto).filter(Producto.ProductoID.in_(ids)).all()
+        }
+
         for item in productos:
             producto_id = item["producto_id"]
             cantidad    = item["cantidad"]
             notas       = item.get("notas") or None
 
-            producto = self.session.query(Producto).filter_by(
-                ProductoID=producto_id,
-            ).first()
+            if not isinstance(cantidad, int) or cantidad <= 0:
+                logger.warning(
+                    "_reemplazar_detalles: cantidad inválida %s para producto %s — ignorado",
+                    cantidad,
+                    producto_id,
+                )
+                continue
+
+            producto = productos_db.get(producto_id)
             if producto:
                 precio_unitario = self._to_decimal(producto.Precio)
                 subtotal = precio_unitario * cantidad
@@ -160,6 +172,11 @@ class GestorPedidosLifecycleMixin:
         pedido.Total = total
         return True
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type((SQLAlchemyError, OperationalError)),
+    )
     def agregar_productos_a_pedido(self, pedido_id, productos):
         """
         Idempotent: replaces order lines and commits. Existing lines are deleted
