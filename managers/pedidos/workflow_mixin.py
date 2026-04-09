@@ -49,6 +49,7 @@ class GestorPedidosWorkflowMixin:
             if not self._set_estado(pedido, nuevo_estado, notas, empleado_id):
                 return False
             self.session.commit()
+            logger.info("ESTADO_ACTUALIZADO pedido_id=%s nuevo_estado=%s", pedido_id, nuevo_estado)
             return True
         except SQLAlchemyError as error:
             self.session.rollback()
@@ -132,31 +133,46 @@ class GestorPedidosWorkflowMixin:
 
     def guardar_forma_pago(self, pedido_id, forma_pago: str):
         """Guarda la forma de pago elegida en el pedido."""
-        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-        if pedido:
+        try:
+            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido:
+                return False
             pedido.forma_pago = forma_pago
             self.session.commit()
             return True
-        return False
+        except SQLAlchemyError as error:
+            self.session.rollback()
+            logger.error("Error al guardar forma_pago pedido %s: %s", pedido_id, error)
+            raise
 
     def guardar_coordenadas(self, pedido_id, lat: float, lng: float) -> bool:
         """Guarda las coordenadas de entrega del pedido."""
-        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-        if pedido:
+        try:
+            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido:
+                return False
             pedido.lat_entrega = lat
             pedido.lng_entrega = lng
             self.session.commit()
             return True
-        return False
+        except SQLAlchemyError as error:
+            self.session.rollback()
+            logger.error("Error al guardar coordenadas pedido %s: %s", pedido_id, error)
+            raise
 
     def guardar_redis_id(self, pedido_id, id_redis):
         """Asocia el identificador de Redis al pedido."""
-        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-        if pedido:
+        try:
+            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+            if not pedido:
+                return False
             pedido.redisID = id_redis
             self.session.commit()
             return True
-        return False
+        except SQLAlchemyError as error:
+            self.session.rollback()
+            logger.error("Error al guardar redis_id pedido %s: %s", pedido_id, error)
+            raise
 
     def procesar_pago_confirmado(
         self,
@@ -194,7 +210,7 @@ class GestorPedidosWorkflowMixin:
             logger.error(
                 "Error al procesar pago confirmado del pedido %s: %s", pedido_id, error
             )
-            return False
+            raise
 
     def registrar_pago(
         self,
@@ -205,6 +221,16 @@ class GestorPedidosWorkflowMixin:
     ):
         """Inserta un registro de pago completado. Llamar tras confirmar el webhook de Monei."""
         try:
+            if referencia_externa is not None:
+                existe = self.session.query(Pago).filter_by(
+                    referencia_externa=referencia_externa
+                ).first()
+                if existe:
+                    logger.warning(
+                        "registrar_pago: pago duplicado ignorado pedido_id=%s ref=%s",
+                        pedido_id, referencia_externa,
+                    )
+                    return True
             pago = Pago(
                 pedido_id=pedido_id,
                 proveedor='monei',
