@@ -8,7 +8,6 @@ import json
 import logging
 from urllib.parse import unquote
 
-import redis
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
@@ -29,18 +28,16 @@ def resolver_sesion_menu(token: str) -> dict:
     - {'tipo': 'quiniela', 'usuario': UsuarioDatos}
     - {'tipo': 'enlace2', 'pedido_id': str}
     """
-    try:
-        raw = redismanager.get(token)
-        if not raw:
-            return {
-                'tipo': 'error',
-                'titulo': 'Enlace caducado',
-                'mensaje': 'Tu enlace ha caducado. Vuelve a WhatsApp y escribe 1 para obtener uno nuevo.',
-                'status': 403,
-            }
-    except redis.exceptions.ResponseError as e:
-        logger.error("Error Redis al obtener token %s: %s", token, e)
-        return {'tipo': 'error', 'titulo': 'Error interno', 'mensaje': 'Error al obtener los datos.', 'status': 400}
+    # get() devuelve None tanto si la clave no existe como si Redis falla (fail-safe).
+    # En ambos casos el usuario ve "caducado" — comportamiento aceptado para esta ruta.
+    raw = redismanager.get(token)
+    if not raw:
+        return {
+            'tipo': 'error',
+            'titulo': 'Enlace caducado',
+            'mensaje': 'Tu enlace ha caducado. Vuelve a WhatsApp y escribe 1 para obtener uno nuevo.',
+            'status': 403,
+        }
 
     try:
         datos = json.loads(unquote(raw))
