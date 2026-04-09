@@ -55,6 +55,10 @@ class EstadoUsuario:
         if datos_adicionales:
             estado_actual.update(datos_adicionales)
         try:
-            self.redismanager.set(self.numero_cliente, json.dumps(estado_actual))
+            self.redismanager.set(self.numero_cliente, json.dumps(estado_actual), ex=3600)
         except Exception as e:
             raise Exception("Error al actualizar el estado del usuario en Redis") from e
+
+    def eliminar_estado(self):
+        """Elimina el estado conversacional del usuario de Redis."""
+        return self.redismanager.delete(self.numero_cliente)

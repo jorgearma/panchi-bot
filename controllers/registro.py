@@ -57,7 +57,7 @@ class RegistroUsuario:
                 "ESTADO_REDIS_CORRUPTO usuario=%s — faltan campos en CONFIRMANDO_DIRECCION: %s",
                 self.numero_cliente, list(estado.keys()),
             )
-            self.redismanager.delete(self.numero_cliente)
+            self.estado_usuario.eliminar_estado()
             enviar_mensaje_whatsapp(
                 "Ha ocurrido un problema con tu registro. Por favor, escríbenos de nuevo para empezar.",
                 self.numero_cliente,
@@ -90,7 +90,7 @@ class RegistroUsuario:
 
             menu_despues_registro = mostrar_menu()
             _enviar_mensaje_registro(self.numero_cliente, usuario_existente["nombre"], menu_despues_registro)
-            self.redismanager.delete(self.numero_cliente)
+            self.estado_usuario.eliminar_estado()
             return "Usuario ya registrado", 200
 
         # Caso normal: usuario nuevo — guardar primero, luego crear pedido
@@ -114,7 +114,7 @@ class RegistroUsuario:
         menu_despues_registro = mostrar_menu()
         _enviar_mensaje_registro(self.numero_cliente, estado["nombre"], menu_despues_registro)
         # H2: Limpiar estado Redis tras registro exitoso — evita estado fantasma
-        self.redismanager.delete(self.numero_cliente)
+        self.estado_usuario.eliminar_estado()
         return "Usuario registrado", 200
 
     def manejar_registro(self, mensaje_cliente):
@@ -135,7 +135,7 @@ class RegistroUsuario:
                 return "Solicitud de nombre enviada", 200
             else:
                 # H4: Reset de Redis — el usuario puede empezar de nuevo en el futuro
-                self.redismanager.delete(self.numero_cliente)
+                self.estado_usuario.eliminar_estado()
                 _enviar_registro_pendiente(self.numero_cliente)
                 return "Registro cancelado", 200
 
