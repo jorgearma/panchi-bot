@@ -68,7 +68,15 @@ class RegistroUsuario:
         # Puede ser un duplicado real (reintento de Meta) o una recuperación de
         # fallo parcial (guardar_usuario OK pero iniciar_pedido falló antes).
         # Distinguimos comprobando si ya tiene pedido activo.
-        usuario_existente = gestor_usuarios.obtener_usuario_completo(self.numero_cliente)
+        try:
+            usuario_existente = gestor_usuarios.obtener_usuario_completo(self.numero_cliente)
+        except Exception as e:
+            logger.error("ERROR_BD_CONFIRMACION usuario=%s error=%s", self.numero_cliente, e)
+            enviar_mensaje_whatsapp(
+                "Ha ocurrido un problema al verificar tu registro. Por favor, escríbenos de nuevo.",
+                self.numero_cliente,
+            )
+            return "Error en BD al confirmar registro", 200
         if usuario_existente:
             if not gestor_pedidos.hay_pedido_pendiente(usuario_existente["id"]):
                 # Recuperación: usuario en DB sin pedido — crear pedido y avisar
