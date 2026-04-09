@@ -25,7 +25,11 @@ def _validar_carrito(productos_recibidos, gestor_productos):
     # Validar cantidades antes de tocar la DB
     items_parseados = []
     for item in productos_recibidos:
-        codigo   = item.get("codigo")
+        codigo_raw = item.get("codigo")
+        try:
+            codigo = int(codigo_raw)
+        except (TypeError, ValueError):
+            return None, None, f"Código de producto inválido: {codigo_raw}"
         cantidad = item.get("cantidad", 1)
         if isinstance(cantidad, bool) or not isinstance(cantidad, int) or cantidad <= 0:
             return None, None, f"Cantidad inválida para el producto {codigo}"

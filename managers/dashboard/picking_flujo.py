@@ -1,9 +1,10 @@
 """Picking — operaciones de flujo: asignación, reclamación, completado."""
 import logging
+import time
 from datetime import datetime
-from threading import Thread
 
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from managers.dashboard._helpers import _ESTADOS_LISTOS_PARA_PICKING
 from models import (
@@ -17,9 +18,17 @@ from states import (
 
 logger = logging.getLogger(__name__)
 
+_retry_db = retry(
+    retry=retry_if_exception_type(OperationalError),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=4),
+    reraise=True,
+)
+
 
 class GestorPickingFlujoMixin:
 
+    @_retry_db
     def asignar_picker(self, pedido_id: int, empleado_id: int) -> tuple:
         """Asigna un picker al pedido e inicia el picking."""
         s = self.session
@@ -66,13 +75,24 @@ class GestorPickingFlujoMixin:
                 ))
 
             s.commit()
-            self._actualizar_estado_operativo(empleado_id, 'ocupado')
+
             return True, "Picker asignado correctamente"
+
+        except OperationalError:
+            s.rollback()
+            raise  # tenacity necesita que se propague para reintentar
+
+        except IntegrityError:
+            s.rollback()
+            logger.info("IntegrityError picking pedido %s — race condition resuelta", pedido_id)
+            return True, "Picker asignado correctamente"
+
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error asignando picker para pedido %s: %s", pedido_id, e)
             return False, "Error de base de datos"
 
+    @_retry_db
     def reasignar_picker(self, picking_id: int, nuevo_empleado_id: int | None) -> tuple:
         """Cambia el picker asignado o deja el picking libre."""
         s = self.session
@@ -114,9 +134,6 @@ class GestorPickingFlujoMixin:
             picking.empleado_id = nuevo_empleado_id
             picking.estado = EstadoPicking.EN_PROCESO.value if nuevo_empleado_id else EstadoPicking.PENDIENTE.value
 
-            # Si se está asignando un picker y el pedido aún está en PAGADO/CONTRA_REEMBOLSO
-            # (porque _asegurar_picking_si_procede creó el PickingPedido antes de que hubiera picker),
-            # transicionar el pedido a EN_PREPARACION para que completar_picking pueda avanzar a PREPARADO.
             if nuevo_empleado_id:
                 pedido = s.query(Pedido).filter_by(PedidoID=picking.pedido_id).first()
                 if pedido and transicion_valida_pedido(pedido.Estado, EstadoPedido.EN_PREPARACION.value):
@@ -131,30 +148,39 @@ class GestorPickingFlujoMixin:
 
             s.commit()
             if nuevo_empleado_id:
-                self._actualizar_estado_operativo(nuevo_empleado_id, 'ocupado')
                 return True, "Picker asignado correctamente"
             return True, "Picker eliminado del picking"
+
+        except OperationalError:
+            s.rollback()
+            raise  # tenacity reintenta
+
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error reasignando picker para picking %s: %s", picking_id, e)
             return False, "Error interno"
 
     def completar_picking(self, picking_id: int, picker_id: int | None = None) -> tuple:
-        """Returns (ok, msg, telefono_cliente). telefono_cliente is None on error."""
+        """Returns (ok, msg).
+
+        No usa @_retry_db porque tiene lógica post-commit (crear Reparto, encolar RQ).
+        Un retry reiniciaría todo incluyendo lo ya hecho. El backoff es manual solo
+        en el bloque del commit principal.
+        """
         s = self.session
         try:
             picking = s.query(PickingPedido).filter_by(id=picking_id).first()
             if not picking:
-                return False, "Picking no encontrado", None
+                return False, "Picking no encontrado"
 
             if picker_id is not None and picking.empleado_id != picker_id:
-                return False, "Este picking fue reasignado a otro picker", None
+                return False, "Este picking fue reasignado a otro picker"
 
             picking.estado = EstadoPicking.COMPLETADO.value
             picking.completado_en = datetime.utcnow()
 
             pedido = picking.pedido
-            pedido_id_para_reparto = None  # capturar antes del commit para evitar lazy-load post-expire
+            pedido_id_para_reparto = None
             if pedido and transicion_valida_pedido(pedido.Estado, EstadoPedido.PREPARADO.value):
                 estado_anterior = pedido.Estado
                 pedido.Estado = EstadoPedido.PREPARADO.value
@@ -166,97 +192,69 @@ class GestorPickingFlujoMixin:
                     notas="Picking completado",
                 ))
 
-            s.commit()
-
-            if pedido_id_para_reparto:
-                try:
-                    reparto_existente = s.query(Reparto).filter_by(pedido_id=pedido_id_para_reparto).first()
-                    if not reparto_existente:
-                        s.add(Reparto(
-                            pedido_id=pedido_id_para_reparto,
-                            repartidor_id=None,
-                            estado=EstadoReparto.PENDIENTE.value,
-                        ))
-                        s.commit()
-                        logger.info("REPARTO_CREADO pedido=%s", pedido_id_para_reparto)
-                except Exception as _exc:
-                    s.rollback()
-                    if isinstance(_exc, IntegrityError):
-                        logger.info("Reparto ya creado concurrentemente para pedido %s", pedido_id_para_reparto)
-                    else:
-                        logger.warning("No se pudo crear Reparto para pedido %s: %s", pedido_id_para_reparto, _exc)
-
-            # Descontar stock en background — no bloquea la respuesta HTTP
-            items_para_stock = [
-                {
-                    "producto_id": item.pedido_detalle.ProductoID if item.pedido_detalle else None,
-                    "cantidad_pedida": item.pedido_detalle.Cantidad if item.pedido_detalle else 0,
-                    "cantidad_encontrada": item.cantidad_encontrada,
-                    "estado": item.estado,
-                }
-                for item in picking.items
-                if item.pedido_detalle and item.pedido_detalle.ProductoID
-            ]
-            if items_para_stock:
-                def _descontar(items=items_para_stock):
-                    """Descuenta stock de los items confirmados en background."""
-                    from database import SessionLocal
-                    from models import Producto
-                    from sqlalchemy.exc import SQLAlchemyError
-                    _s = SessionLocal()
-                    try:
-                        for item in items:
-                            p = _s.query(Producto).filter_by(ProductoID=item["producto_id"]).with_for_update().first()
-                            if not p:
-                                continue
-                            if item["estado"] == "encontrado":
-                                cantidad = item["cantidad_encontrada"] or item["cantidad_pedida"]
-                                p.Stock = max(0, p.Stock - cantidad)
-                                if p.Stock == 0:
-                                    p.Disponible = False
-                            elif item["estado"] == "sin_stock":
-                                p.Stock = 0
-                                p.Disponible = False
-                        _s.commit()
-                    except SQLAlchemyError as e:
-                        _s.rollback()
-                        logger.error("Error descontando stock picking: %s", e)
-                    finally:
-                        _s.close()
-                Thread(target=_descontar, daemon=True).start()
-
-            # Auto-actualizar estado en background: no bloquea la respuesta HTTP
-            _picker_id = picking.empleado_id
-            if _picker_id:
-                def _actualizar_disponibilidad_picker(emp_id=_picker_id):
-                    """Marca disponible al picker si ya no tiene pickings activos."""
-                    from database import SessionLocal
-                    _s = SessionLocal()
-                    try:
-                        _activos = _s.query(PickingPedido).filter(
-                            PickingPedido.empleado_id == emp_id,
-                            PickingPedido.estado.in_([
-                                EstadoPicking.PENDIENTE.value,
-                                EstadoPicking.EN_PROCESO.value,
-                                EstadoPicking.CON_INCIDENCIAS.value,
-                            ]),
-                        ).count()
-                        if _activos == 0:
-                            self._actualizar_estado_operativo(emp_id, 'disponible')
-                    except Exception as e:
-                        logger.warning("Error comprobando disponibilidad picker %s: %s", emp_id, e)
-                    finally:
-                        _s.close()
-                Thread(target=_actualizar_disponibilidad_picker, daemon=True).start()
-
-            # TODO: reactivar cuando se decida notificar al cliente en este estado
-            # telefono = pedido.TelefonoEntrega if pedido else None
-            # _notificar(telefono, "✅ Tu pedido está listo y en camino hacia ti. ¡Ya casi está! 📦")
-            return True, "Picking completado"
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error completando picking %s: %s", picking_id, e)
             return False, "Error de base de datos"
+
+        # Backoff manual: OperationalError solo en el commit principal
+        _picker_id = picking.empleado_id
+        intentos = 0
+        while intentos < 3:
+            try:
+                s.commit()
+                break
+            except OperationalError:
+                s.rollback()
+                intentos += 1
+                if intentos >= 3:
+                    logger.error("completar_picking %s falló 3 veces por OperationalError", picking_id)
+                    return False, "Error de base de datos"
+                time.sleep(2 ** intentos)
+            except IntegrityError:
+                s.rollback()
+                return False, "Error de integridad"
+            except SQLAlchemyError as e:
+                s.rollback()
+                logger.error("Error completando picking %s: %s", picking_id, e)
+                return False, "Error de base de datos"
+
+        # Post-commit: crear Reparto + encolar side effects
+        if pedido_id_para_reparto:
+            try:
+                reparto_existente = s.query(Reparto).filter_by(pedido_id=pedido_id_para_reparto).first()
+                if not reparto_existente:
+                    s.add(Reparto(
+                        pedido_id=pedido_id_para_reparto,
+                        repartidor_id=None,
+                        estado=EstadoReparto.PENDIENTE.value,
+                    ))
+                    s.commit()
+                    logger.info("REPARTO_CREADO pedido=%s", pedido_id_para_reparto)
+            except Exception as _exc:
+                s.rollback()
+                if isinstance(_exc, IntegrityError):
+                    logger.info("Reparto ya creado concurrentemente para pedido %s", pedido_id_para_reparto)
+                else:
+                    logger.warning("No se pudo crear Reparto para pedido %s: %s", pedido_id_para_reparto, _exc)
+
+        # Descontar stock → RQ (pasa picking_id int, no lista — idempotencia garantizada)
+        try:
+            from rq import Retry
+            from message_queue import queue_dashboard
+            from managers.dashboard.jobs import descontar_stock_picking_job
+            from utils.rq_callbacks import on_job_failure
+            queue_dashboard.enqueue(
+                descontar_stock_picking_job,
+                picking_id,
+                on_failure=on_job_failure,
+                retry=Retry(max=3),
+                failure_ttl=86400,
+            )
+        except Exception as e:
+            logger.warning("No se pudo encolar descontar_stock para picking %s: %s", picking_id, e)
+
+        return True, "Picking completado"
 
     def actualizar_item_picking(self, item_id: int, estado: str, cantidad_encontrada: int = None, notas: str = None, producto_sustituto_id: int = None, picker_id: int | None = None) -> tuple:
         """Updates a single picking item state."""
@@ -374,9 +372,6 @@ class GestorPickingFlujoMixin:
                 ))
 
             s.commit()
-            for c in cocineros:
-                self._actualizar_estado_operativo(c.EmpleadoID, 'ocupado')
-
             n = len(cocineros)
             msg = f"Pedido aceptado por cocina ({n} cocinero{'s' if n > 1 else ''})"
             return True, msg, nombres
@@ -440,8 +435,6 @@ class GestorPickingFlujoMixin:
             # Un solo commit: picking + pedido juntos, o nada
             s.commit()
 
-            # 4. Actualizar estado operativo del picker
-            self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, 'ok'
 
         except SQLAlchemyError as e:

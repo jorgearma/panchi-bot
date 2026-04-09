@@ -2,14 +2,22 @@
 import logging
 from datetime import datetime, date
 
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import joinedload, selectinload
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from managers.dashboard._helpers import _iso
 from models import CheckIn, Empleado, Pedido, Reparto, Turno
 from states import EstadoPedido, EstadoReparto
 
 logger = logging.getLogger(__name__)
+
+_retry_db = retry(
+    retry=retry_if_exception_type(OperationalError),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=4),
+    reraise=True,
+)
 
 
 class GestorRepartoAsignacionMixin:
@@ -105,6 +113,7 @@ class GestorRepartoAsignacionMixin:
             ],
         }
 
+    @_retry_db
     def asignar_repartidor(self, pedido_id: int, empleado_id: int) -> tuple:
         """Asigna un repartidor a un pedido preparado."""
         s = self.session
@@ -134,8 +143,17 @@ class GestorRepartoAsignacionMixin:
                 ))
 
             s.commit()
-            self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, "Repartidor asignado correctamente"
+
+        except OperationalError:
+            s.rollback()
+            raise  # tenacity necesita que se propague para reintentar
+
+        except IntegrityError:
+            s.rollback()
+            logger.info("IntegrityError reparto pedido %s — race condition resuelta", pedido_id)
+            return True, "Repartidor asignado correctamente"
+
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error asignando repartidor para pedido %s: %s", pedido_id, e)
@@ -254,7 +272,6 @@ class GestorRepartoAsignacionMixin:
                     s.rollback()
                     return False, 'ya_cogido'
 
-            self._actualizar_estado_operativo(empleado_id, 'ocupado')
             return True, 'ok'
 
         except SQLAlchemyError as e:

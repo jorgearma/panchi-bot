@@ -33,7 +33,7 @@ def make_gestor_with_session(session_mock):
 
 class TestVerificarUsuario:
 
-    def test_usuario_existente_retorna_objeto(self):
+    def test_usuario_existente_retorna_true(self):
         session = MagicMock()
         usuario = make_usuario()
         session.query.return_value.filter_by.return_value.scalar.return_value = usuario
@@ -41,16 +41,16 @@ class TestVerificarUsuario:
         gestor = make_gestor_with_session(session)
         result = gestor.verificar_usuario(NUMERO)
 
-        assert result is usuario
+        assert result is True
 
-    def test_usuario_no_existente_retorna_none(self):
+    def test_usuario_no_existente_retorna_false(self):
         session = MagicMock()
         session.query.return_value.filter_by.return_value.scalar.return_value = None
 
         gestor = make_gestor_with_session(session)
         result = gestor.verificar_usuario(NUMERO)
 
-        assert result is None
+        assert result is False
 
     def test_error_bd_relanza_excepcion(self):
         """Tras 3 reintentos fallidos, tenacity lanza RetryError."""

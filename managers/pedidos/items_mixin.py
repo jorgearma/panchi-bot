@@ -6,7 +6,6 @@ from decimal import Decimal
 from models import AuditLog, HistorialEstadoPedido, Pedido, PedidoDetalle, PickingItem, Producto
 from sqlalchemy.exc import SQLAlchemyError
 from states import EstadoPedido, transicion_valida_pedido
-from services.whatsapp_service import notificar_async as _notificar
 
 logger = logging.getLogger(__name__)
 
@@ -83,18 +82,23 @@ class GestorPedidosItemsMixin:
                 )
             )
             s.commit()
+            logger.info(
+                "PEDIDO_CANCELADO pedido_id=%s motivo=%s estado=%s",
+                pedido_id, motivo, nuevo_estado.value,
+            )
             # TODO: reactivar cuando se decida notificar al cliente en este estado
+            # from services.whatsapp_service import notificar_async as _notificar
             # motivo_label = _MOTIVOS_LABEL.get(motivo, motivo)
             # _notificar(
             #     pedido.TelefonoEntrega,
             #     f"❌ Tu pedido #{pedido_id} ha sido cancelado ({motivo_label}). "
             #     "Si tienes alguna duda llámanos. Disculpa las molestias.",
             # )
-            return True, f"Pedido #{pedido_id} cancelado ({nuevo_estado.value})"
+            return True, f"Pedido #{pedido_id} cancelado ({nuevo_estado.value})", pedido.TelefonoEntrega
         except SQLAlchemyError as e:
             s.rollback()
             logger.error("Error al cancelar pedido %s: %s", pedido_id, e)
-            return False, "Error de base de datos"
+            return False, "Error de base de datos", None
 
     def eliminar_item(self, pedido_id: int, detalle_id: int, empleado_id: int = None) -> tuple:
         """Remove a line item from an order and recalculate total. Returns (ok, msg)."""
@@ -145,6 +149,10 @@ class GestorPedidosItemsMixin:
                 )
             )
             s.commit()
+            logger.info(
+                "ITEM_ELIMINADO pedido_id=%s detalle_id=%s nombre=%s nuevo_total=%.2f",
+                pedido_id, detalle_id, valor_anterior['nombre'], float(pedido.Total),
+            )
             return (
                 True,
                 f"Item '{valor_anterior['nombre']}' eliminado. Total recalculado: {float(pedido.Total):.2f}€",
@@ -278,6 +286,10 @@ class GestorPedidosItemsMixin:
                 )
             )
             s.commit()
+            logger.info(
+                "ITEM_SUSTITUIDO pedido_id=%s detalle_id=%s producto_sustituto_id=%s qty=%s nuevo_total=%.2f",
+                pedido_id, detalle_id, producto_sustituto_id, qty, float(pedido.Total),
+            )
             parcial = qty < valor_anterior['cantidad']
             msg = (
                 f"{qty}× '{valor_anterior['nombre']}' → '{sustituto.Nombre}'"
