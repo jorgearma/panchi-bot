@@ -106,24 +106,6 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(blueprint_landing)
     app.register_blueprint(blueprint_maps)
 
-    @app.after_request
-    def set_security_headers(response):
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Content-Security-Policy'] = (
-            "default-src 'self'; "
-            "style-src 'self' https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "script-src 'self'; "
-            "img-src 'self' data:; "
-            "frame-src 'self'; "
-            "connect-src 'self';"
-        )
-        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
-        return response
-
     @app.context_processor
     def inject_app_mode():
         return {'app_mode': app_config.APP_MODE}
