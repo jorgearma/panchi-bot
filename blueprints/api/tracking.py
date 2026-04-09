@@ -1,6 +1,7 @@
 import logging
 
 from flask import jsonify
+from sqlalchemy.exc import SQLAlchemyError
 
 from container import gestor_pedidos
 
@@ -12,7 +13,11 @@ def register(bp):
     @bp.route('/api/seguimiento/<redis_id>', methods=['GET'])
     def seguimiento_pedido(redis_id):
         """Devuelve el estado del pedido y, si existe, su reparto asociado."""
-        datos = gestor_pedidos.obtener_seguimiento(redis_id)
+        try:
+            datos = gestor_pedidos.obtener_seguimiento(redis_id)
+        except SQLAlchemyError as e:
+            logger.error("seguimiento_pedido: DB error redis_id=%s: %s", redis_id, e)
+            return jsonify({"error": "Error interno"}), 500
         if not datos:
             return jsonify({"error": "Pedido no encontrado"}), 404
         logger.debug("Seguimiento pedido redis_id=%s: estado=%s", redis_id, datos["estado"])

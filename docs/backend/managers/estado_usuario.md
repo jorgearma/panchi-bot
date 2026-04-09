@@ -20,13 +20,22 @@ Lo que **no hace**: capturar errores propios, notificar al usuario, ni coordinar
 
 ## Métodos
 
+### `_leer_redis() → bytes | None` *(privado)*
+
+Lee el valor raw de Redis usando `client.get` directamente (no `redismanager.get`) para que los fallos de Redis lleguen al retry en vez de ser tragados silenciosamente.
+
+- **`@retry`:** 3 intentos, 2s entre ellos.
+- Si agota los reintentos lanza excepción que burbujea desde `obtener_estado`.
+
+---
+
 ### `obtener_estado() → dict`
 
-Lee la clave `<numero_cliente>` de Redis y deserializa el JSON.
+Llama a `_leer_redis()` y deserializa el JSON resultante.
 
 - Si la clave no existe devuelve `{"estado": EstadoRegistro.SALUDO_INICIAL}` — estado por defecto para usuarios nuevos.
-- Si Redis falla o el JSON está corrupto lanza excepción (el controller no la captura — burbujea al blueprint).
-- **`@retry`:** 3 intentos, 2s entre ellos.
+- Si el JSON está corrupto lanza excepción inmediatamente (sin reintentos — JSON corrupto no se cura con retries).
+- Si Redis falla, la excepción viene de `_leer_redis` tras agotar sus reintentos.
 - **Usado por:** `controllers/registro.py:131` — una sola lectura al inicio de `manejar_registro`; el dict se reutiliza en todo el flujo sin releer Redis.
 
 ---
