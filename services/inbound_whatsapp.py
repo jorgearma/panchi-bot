@@ -189,12 +189,27 @@ def procesar_pago_monei(data: dict):
     importe_euros = data.get('object', {}).get('amount', 0) / 100
 
     if data.get('object', {}).get('status') == 'SUCCEEDED' or data.get('type') == 'charge.succeeded':
-        gestor_pedidos.procesar_pago_confirmado(
-            pedido_id=order_id,
-            importe_euros=importe_euros,
-            referencia_externa=data.get('object', {}).get('id'),
-            datos_raw=json.dumps(data),
-        )
+        try:
+            ok = gestor_pedidos.procesar_pago_confirmado(
+                pedido_id=order_id,
+                importe_euros=importe_euros,
+                referencia_externa=data.get('object', {}).get('id'),
+                datos_raw=json.dumps(data),
+            )
+        except (SQLAlchemyError, RetryError) as e:
+            logger.error(
+                "procesar_pago_monei: error de BD tras reintentos para pedido %s: %s",
+                order_id, e,
+            )
+            return jsonify({'error': 'Error interno al registrar el pago'}), 500
+
+        if not ok:
+            logger.error(
+                "procesar_pago_monei: pago rechazado para pedido %s (importe=%.2f, ref=%s)",
+                order_id, importe_euros, data.get('object', {}).get('id'),
+            )
+            return jsonify({'message': 'Webhook recibido correctamente'}), 200
+
         mensaje = (
             f"❕*Pedido registrado*❕\n      ------------------  \n"
             f"▪️Nombre: *{nombre_usuario}*\n▪️importe: *{importe_euros}*€\n"

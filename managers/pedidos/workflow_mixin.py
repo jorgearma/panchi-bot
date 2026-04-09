@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 
+import config as app_config
 from models import HistorialEstadoPedido, Pago, Pedido, PickingItem, PickingPedido
 from sqlalchemy.exc import SQLAlchemyError
 from states import EstadoPedido, EstadoPicking, transicion_valida_pedido
@@ -111,7 +112,6 @@ class GestorPedidosWorkflowMixin:
         if picking_existente:
             return
 
-        import config as app_config
         modo = app_config.APP_MODE
 
         picking = PickingPedido(
@@ -159,6 +159,11 @@ class GestorPedidosWorkflowMixin:
             return True
         return False
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type(SQLAlchemyError),
+    )
     def procesar_pago_confirmado(
         self,
         pedido_id,
@@ -171,59 +176,63 @@ class GestorPedidosWorkflowMixin:
         Idempotent: if referencia_externa was already processed, returns True
         without mutating anything (safe for Monei webhook retries).
         Rejects the payment if importe_euros does not match Pedido.Total.
+        Business-logic failures (no pedido, importe incorrecto) return False without
+        retrying. DB failures at commit raise SQLAlchemyError so @retry can reintentarlo.
         """
+        if referencia_externa:
+            pago_existente = self.session.query(Pago).filter_by(
+                referencia_externa=referencia_externa
+            ).first()
+            if pago_existente:
+                logger.info(
+                    "procesar_pago_confirmado: referencia %s ya procesada (pedido %s), ignorando reintento",
+                    referencia_externa, pedido_id,
+                )
+                return True
+
+        pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
+        if not pedido:
+            logger.warning("procesar_pago_confirmado: pedido %s no encontrado", pedido_id)
+            return False
+
+        importe_recibido = Decimal(str(importe_euros)).quantize(Decimal('0.01'))
+        total_pedido = (pedido.Total or Decimal('0.00')).quantize(Decimal('0.01'))
+        if importe_recibido != total_pedido:
+            logger.error(
+                "procesar_pago_confirmado: importe recibido %.2f != total pedido %.2f "
+                "(pedido %s, ref %s) — pago rechazado",
+                float(importe_recibido), float(total_pedido), pedido_id, referencia_externa,
+            )
+            return False
+
+        if not self._set_estado(pedido, EstadoPedido.PAGADO):
+            return False
+
+        self.session.add(
+            Pago(
+                pedido_id=pedido_id,
+                proveedor="monei",
+                referencia_externa=referencia_externa,
+                estado="completado",
+                importe=importe_recibido,
+                moneda="EUR",
+                datos_raw=datos_raw,
+            )
+        )
         try:
-            if referencia_externa:
-                pago_existente = self.session.query(Pago).filter_by(
-                    referencia_externa=referencia_externa
-                ).first()
-                if pago_existente:
-                    logger.info(
-                        "procesar_pago_confirmado: referencia %s ya procesada (pedido %s), ignorando reintento",
-                        referencia_externa, pedido_id,
-                    )
-                    return True
-
-            pedido = self.session.query(Pedido).filter_by(PedidoID=pedido_id).first()
-            if not pedido:
-                logger.warning("procesar_pago_confirmado: pedido %s no encontrado", pedido_id)
-                return False
-
-            importe_recibido = Decimal(str(importe_euros)).quantize(Decimal('0.01'))
-            total_pedido = (pedido.Total or Decimal('0.00')).quantize(Decimal('0.01'))
-            if importe_recibido != total_pedido:
-                logger.error(
-                    "procesar_pago_confirmado: importe recibido %.2f != total pedido %.2f "
-                    "(pedido %s, ref %s) — pago rechazado",
-                    float(importe_recibido), float(total_pedido), pedido_id, referencia_externa,
-                )
-                return False
-
-            if not self._set_estado(pedido, EstadoPedido.PAGADO):
-                return False
-            self.session.add(
-                Pago(
-                    pedido_id=pedido_id,
-                    proveedor="monei",
-                    referencia_externa=referencia_externa,
-                    estado="completado",
-                    importe=importe_recibido,
-                    moneda="EUR",
-                    datos_raw=datos_raw,
-                )
-            )
             self.session.commit()
-            logger.info(
-                "Pago confirmado para pedido %s (ref: %s, importe: %.2f€)",
-                pedido_id, referencia_externa, float(importe_recibido),
-            )
-            return True
         except SQLAlchemyError as error:
             self.session.rollback()
             logger.error(
                 "Error al procesar pago confirmado del pedido %s: %s", pedido_id, error
             )
-            return False
+            raise
+
+        logger.info(
+            "Pago confirmado para pedido %s (ref: %s, importe: %.2f€)",
+            pedido_id, referencia_externa, float(importe_recibido),
+        )
+        return True
 
     def registrar_pago(
         self,
