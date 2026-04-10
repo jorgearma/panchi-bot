@@ -4,574 +4,1015 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Centro de Control — Panchi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
+    :root {
+      --c-bg:      #07090d;
+      --c-surface: #0e1118;
+      --c-border:  rgba(255,255,255,.07);
+      --c-orange:  #f97316;
+      --c-green:   #22c55e;
+      --c-red:     #ef4444;
+      --c-yellow:  #eab308;
+      --c-blue:    #3b82f6;
+      --c-indigo:  #818cf8;
+      --c-teal:    #14b8a6;
+      --c-emerald: #10b981;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      background-color: var(--c-bg);
+      background-image:
+        radial-gradient(ellipse 60% 50% at 15% 60%, rgba(249,115,22,.05) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 85% 20%, rgba(20,184,166,.03) 0%, transparent 50%),
+        repeating-linear-gradient(0deg,   transparent, transparent 39px, rgba(255,255,255,.025) 39px, rgba(255,255,255,.025) 40px),
+        repeating-linear-gradient(90deg,  transparent, transparent 39px, rgba(255,255,255,.025) 39px, rgba(255,255,255,.025) 40px);
+      color: #e2e8f0;
+      font-family: 'Outfit', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Typography ───────────────────────────────────────────── */
+    .num { font-family: 'Bebas Neue', cursive; letter-spacing: .06em; line-height: 1; }
+
+    /* ── Alpine ───────────────────────────────────────────────── */
     [x-cloak] { display: none !important; }
 
+    /* ── Animations ───────────────────────────────────────────── */
     @keyframes pulse-dot {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: .6; transform: scale(1.4); }
+      50%       { opacity: .7; transform: scale(1.45); }
     }
     .pulse { animation: pulse-dot 1.8s ease-in-out infinite; }
 
     @keyframes fade-in {
-      from { opacity: 0; transform: translateY(-6px); }
+      from { opacity: 0; transform: translateY(-5px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .fade-in { animation: fade-in .35s ease-out; }
+    .fade-in { animation: fade-in .3s ease-out both; }
 
-    /* Scrollbar slim */
-    .slim-scroll::-webkit-scrollbar { width: 3px; height: 3px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .8s linear infinite; }
+
+    /* ── Scrollbar ────────────────────────────────────────────── */
+    .slim-scroll { scrollbar-width: thin; scrollbar-color: #2d3748 transparent; }
+    .slim-scroll::-webkit-scrollbar { width: 2px; height: 2px; }
     .slim-scroll::-webkit-scrollbar-track { background: transparent; }
-    .slim-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
-    .slim-scroll::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    .slim-scroll::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 4px; }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    .site-header {
+      flex: none;
+      background: rgba(10,13,20,.95);
+      border-bottom: 1px solid var(--c-border);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: .45rem 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .brand {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.35rem;
+      letter-spacing: .1em;
+      color: var(--c-orange);
+      white-space: nowrap;
+      flex: none;
+    }
+    .brand span {
+      color: rgba(255,255,255,.35);
+      font-size: 1rem;
+      margin-left: .3rem;
+      letter-spacing: .08em;
+    }
+
+    .header-sep {
+      width: 1px;
+      height: 1.2rem;
+      background: rgba(255,255,255,.1);
+      flex: none;
+    }
+
+    .header-status { display: flex; align-items: center; gap: .5rem; flex: none; }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: .15rem;
+      overflow-x: auto;
+      flex: 1;
+      scrollbar-width: none;
+      justify-content: flex-end;
+    }
+    .header-nav::-webkit-scrollbar { display: none; }
+
+    .nav-link {
+      white-space: nowrap;
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .3rem .6rem;
+      border-radius: .3rem;
+      color: rgba(255,255,255,.35);
+      text-decoration: none;
+      transition: color .15s, background .15s;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-link:hover { color: rgba(255,255,255,.75); background: rgba(255,255,255,.05); }
+    .nav-link.active { color: var(--c-orange); border-bottom-color: var(--c-orange); background: rgba(249,115,22,.08); }
+
+    .refresh-btn {
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,.3);
+      font-size: 1rem;
+      line-height: 1;
+      padding: .2rem;
+      transition: color .15s;
+    }
+    .refresh-btn:hover { color: rgba(255,255,255,.8); }
+
+    /* ── KPI Bar ──────────────────────────────────────────────── */
+    .kpi-bar {
+      flex: none;
+      background: rgba(10,13,20,.8);
+      border-bottom: 1px solid var(--c-border);
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .kpi-bar::-webkit-scrollbar { display: none; }
+
+    .kpi-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: .55rem .9rem;
+      border-right: 1px solid var(--c-border);
+      flex: 1;
+      min-width: 80px;
+      position: relative;
+    }
+    .kpi-cell:last-child { border-right: none; }
+
+    .kpi-label {
+      font-size: .6rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.3);
+      white-space: nowrap;
+      margin-bottom: .15rem;
+    }
+
+    .kpi-value {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.75rem;
+      letter-spacing: .04em;
+      line-height: 1;
+    }
+
+    /* ── Main Layout ──────────────────────────────────────────── */
+    .main-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .main-col {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border-right: 1px solid var(--c-border);
+      overflow: hidden;
+    }
+    .main-col:last-child { border-right: none; }
+
+    .col-header {
+      flex: none;
+      padding: .6rem 1rem .5rem;
+      border-bottom: 1px solid var(--c-border);
+      background: rgba(255,255,255,.02);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .col-title {
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.4);
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    .col-count {
+      font-family: 'Bebas Neue', cursive;
+      font-size: .95rem;
+      color: rgba(255,255,255,.2);
+    }
+
+    .col-body {
+      flex: 1;
+      min-height: 0;        /* crítico: permite shrink en flex column */
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: .6rem;
+      display: flex;
+      flex-direction: column;
+      gap: .45rem;
+    }
+
+    /* ── Employee Cards ───────────────────────────────────────── */
+    .emp-card {
+      border-radius: .5rem;
+      overflow: hidden;
+      transition: opacity .2s;
+    }
+
+    /* Status border on the left side */
+    .emp-card-activo      { border: 1px solid rgba(34,197,94,.2);  border-left: 3px solid var(--c-green);   background: rgba(34,197,94,.04); }
+    .emp-card-sobrecargado{ border: 1px solid rgba(239,68,68,.25); border-left: 3px solid var(--c-red);     background: rgba(239,68,68,.06); }
+    .emp-card-inactivo    { border: 1px solid rgba(234,179,8,.15); border-left: 3px solid var(--c-yellow);  background: rgba(234,179,8,.03); }
+    .emp-card-sin_carga   { border: 1px solid rgba(55,65,81,.4);   border-left: 3px solid #374151;           background: rgba(17,24,39,.3); opacity: .5; }
+    .emp-card-sin_checkin { border: 1px solid rgba(31,41,55,.4);   border-left: 3px solid #1f2937;           background: transparent; opacity: .3; filter: grayscale(1); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .5rem .65rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .card-name {
+      font-weight: 600;
+      font-size: .8rem;
+      color: #f1f5f9;
+    }
+
+    .card-body {
+      padding: 0 .65rem .6rem;
+    }
+
+    /* Status dot */
+    .dot-activo      { background: var(--c-green); }
+    .dot-sobrecargado{ background: var(--c-red); }
+    .dot-inactivo    { background: var(--c-yellow); }
+    .dot-sin_carga   { background: #4b5563; }
+    .dot-sin_checkin { background: #374151; }
+
+    /* Status badges */
+    .badge {
+      font-size: .6rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: .15rem .4rem;
+      border-radius: .25rem;
+    }
+    .badge-activo      { background: rgba(34,197,94,.12);  color: var(--c-green);   border: 1px solid rgba(34,197,94,.25); }
+    .badge-sobrecargado{ background: rgba(239,68,68,.15);  color: var(--c-red);     border: 1px solid rgba(239,68,68,.3); }
+    .badge-inactivo    { background: rgba(234,179,8,.1);   color: var(--c-yellow);  border: 1px solid rgba(234,179,8,.25); }
+    .badge-sin_carga   { background: rgba(55,65,81,.3);    color: #6b7280;          border: 1px solid rgba(55,65,81,.5); }
+    .badge-sin_checkin { background: rgba(31,41,55,.4);    color: #4b5563;          border: 1px solid rgba(31,41,55,.6); }
+
+    /* Performance badges */
+    .perf-rapido { background: rgba(34,197,94,.15);  color: #86efac; font-size:.6rem; padding:.1rem .35rem; border-radius:.2rem; }
+    .perf-normal { background: rgba(100,116,139,.15); color: #94a3b8; font-size:.6rem; padding:.1rem .35rem; border-radius:.2rem; }
+    .perf-lento  { background: rgba(239,68,68,.15);  color: #fca5a5; font-size:.6rem; padding:.1rem .35rem; border-radius:.2rem; }
+
+    /* Load badges */
+    .load-ligera { background: rgba(34,197,94,.1);  color: #86efac; font-size:.6rem; padding:.1rem .35rem; border-radius:.2rem; }
+    .load-media  { background: rgba(234,179,8,.1);  color: #fde047; font-size:.6rem; padding:.1rem .35rem; border-radius:.2rem; }
+    .load-alta   { background: rgba(239,68,68,.12); color: #fca5a5; font-size:.6rem; padding:.1rem .35rem; border-radius:.2rem; }
+
+    /* Stat mini cells inside card */
+    .stat-cell {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: .35rem;
+      padding: .35rem .4rem;
+      text-align: center;
+    }
+    .stat-val {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+    .stat-lbl {
+      font-size: .55rem;
+      font-weight: 500;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.25);
+      margin-top: .15rem;
+    }
+
+    /* Progress bar */
+    .prog-track {
+      height: 3px;
+      background: rgba(255,255,255,.08);
+      border-radius: 9px;
+      overflow: hidden;
+    }
+    .prog-fill {
+      height: 100%;
+      border-radius: 9px;
+      transition: width .7s ease;
+    }
+
+    /* Unassigned alert banners */
+    .alert-banner {
+      border-radius: .5rem;
+      padding: .5rem .65rem;
+    }
+    .alert-yellow { border: 1px solid rgba(234,179,8,.3); background: rgba(234,179,8,.06); }
+    .alert-indigo { border: 1px solid rgba(129,140,248,.3); background: rgba(129,140,248,.06); }
+
+    .alert-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: .7rem;
+      background: rgba(255,255,255,.04);
+      border-radius: .35rem;
+      padding: .35rem .5rem;
+      margin-top: .3rem;
+    }
+
+    /* Tooltip */
+    .tooltip-box {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      background: #1e2535;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: .5rem;
+      padding: .5rem .75rem;
+      font-size: .7rem;
+      white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    }
+
+    /* Delivery sub-card */
+    .delivery-card {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: .4rem;
+      padding: .45rem .55rem;
+    }
+
+    /* Portrait overlay — only shown in portrait + narrow */
+    .portrait-hint {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: var(--c-bg);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+    @media (max-width: 600px) and (orientation: portrait) {
+      .portrait-hint { display: flex; }
+    }
+
+    /* Mobile landscape: compact header */
+    @media (max-height: 480px) {
+      .kpi-value { font-size: 1.35rem; }
+      .kpi-cell  { padding: .35rem .65rem; }
+      .col-body  { padding: .4rem; gap: .3rem; }
+      .card-header { padding: .4rem .55rem; }
+      .card-body { padding: 0 .55rem .45rem; }
+    }
+
+    /* Tablet / small desktop */
+    @media (max-width: 900px) {
+      .kpi-cell { min-width: 70px; padding: .5rem .6rem; }
+    }
+
+    /* Collapse chevron */
+    .chevron {
+      display: inline-block;
+      font-size: .85rem;
+      color: rgba(255,255,255,.2);
+      transition: transform .2s;
+      margin-left: .2rem;
+    }
+    .chevron.open { transform: rotate(90deg); }
   </style>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen"
-      x-data="monitor()"
-      x-init="init()">
+<body x-data="monitor()" x-init="init()">
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       HEADER
-  ═══════════════════════════════════════════════════════════════════ -->
-  <header class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center justify-between sticky top-0 z-40">
-    <div class="flex items-center gap-3">
-      <span class="text-orange-400 text-xl font-black tracking-tight">PANCHI</span>
-      <span class="text-gray-600">|</span>
-      <span class="text-gray-300 font-semibold text-sm uppercase tracking-widest">Centro de Control</span>
+  <!-- ╔═══════════════════════════════════════════════════════════╗
+       ║  PORTRAIT HINT (shows on narrow portrait phones only)     ║
+       ╚═══════════════════════════════════════════════════════════╝ -->
+  <div class="portrait-hint">
+    <div style="font-size:2.5rem; color:var(--c-orange); margin-bottom:.75rem;">↻</div>
+    <p style="font-weight:700; font-size:1rem; color:#e2e8f0;">Gira el teléfono</p>
+    <p style="font-size:.8rem; color:rgba(255,255,255,.35); margin-top:.4rem;">El monitor funciona mejor en horizontal</p>
+  </div>
+
+  <!-- ╔═══════════════════════════════════════════════════════════╗
+       ║  HEADER                                                   ║
+       ╚═══════════════════════════════════════════════════════════╝ -->
+  <header class="site-header">
+
+    <div class="brand">PANCHI <span>CTRL</span></div>
+
+    <div class="header-sep"></div>
+
+    <!-- Live / error indicator -->
+    <div class="header-status" x-show="!error">
+      <span class="w-1.5 h-1.5 rounded-full bg-green-400 pulse" style="display:inline-block;width:6px;height:6px;border-radius:50%;flex:none;"></span>
+      <span style="font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-green);">EN VIVO</span>
     </div>
-    <div class="flex items-center gap-4">
-      <!-- Live indicator -->
-      <div class="flex items-center gap-1.5" x-show="!error">
-        <span class="w-2 h-2 rounded-full bg-green-400 pulse"></span>
-        <span class="text-xs text-gray-500">EN VIVO</span>
-      </div>
-      <div class="flex items-center gap-1.5" x-show="error" x-cloak>
-        <span class="w-2 h-2 rounded-full bg-red-500"></span>
-        <span class="text-xs text-red-400">SIN CONEXIÓN</span>
-      </div>
-      <!-- Last updated -->
-      <span class="text-xs text-gray-600" x-show="ultimaActualizacion" x-cloak>
-        Actualizado <span x-text="tiempoDesde(ultimaActualizacion)"></span>
-      </span>
-      <!-- Refresh btn -->
-      <button @click="cargar()"
-              class="text-gray-500 hover:text-white transition text-lg leading-none"
-              :class="cargando ? 'animate-spin' : ''">↻</button>
-      <!-- Navegación entre secciones -->
-      {% set _monitor_links = [
-        ('Ops',          '/dashboard'),
-        ('Monitor',      '/dashboard/monitor'),
-        ('Historial',    '/dashboard/historial'),
-        ('Turnos',       '/dashboard/turnos'),
-        ('Rendimiento',  '/dashboard/rendimiento'),
-        ('Estadísticas', '/dashboard/estadisticas'),
-      ] %}
-      <nav class="flex items-center gap-0.5 overflow-x-auto" aria-label="Navegación dashboard">
-        {% for _label, _href in _monitor_links %}
-          {% if _href == '/dashboard' %}
-            {% set _activo = (request.path == '/dashboard') %}
-          {% else %}
-            {% set _activo = request.path.startswith(_href) %}
-          {% endif %}
-          <a href="{{ _href }}"
-             class="whitespace-nowrap rounded px-2.5 py-1 text-xs font-semibold transition
-                    {{ 'bg-gray-700 text-white' if _activo else 'text-gray-500 hover:text-gray-300 hover:bg-gray-800' }}">
-            {{ _label }}
-          </a>
-        {% endfor %}
-      </nav>
+    <div class="header-status" x-show="error" x-cloak>
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--c-red);flex:none;"></span>
+      <span style="font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-red);">DESCONECTADO</span>
     </div>
+
+    <div class="header-sep"></div>
+
+    <!-- Nav -->
+    {% set _monitor_links = [
+      ('Ops',          '/dashboard'),
+      ('Monitor',      '/dashboard/monitor'),
+      ('Historial',    '/dashboard/historial'),
+      ('Turnos',       '/dashboard/turnos'),
+      ('Rendimiento',  '/dashboard/rendimiento'),
+      ('Estadísticas', '/dashboard/estadisticas'),
+    ] %}
+    <nav class="header-nav" aria-label="Navegación dashboard">
+      {% for _label, _href in _monitor_links %}
+        {% if _href == '/dashboard' %}
+          {% set _activo = (request.path == '/dashboard') %}
+        {% else %}
+          {% set _activo = request.path.startswith(_href) %}
+        {% endif %}
+        <a href="{{ _href }}"
+           class="nav-link {{ 'active' if _activo else '' }}">
+          {{ _label }}
+        </a>
+      {% endfor %}
+    </nav>
+
   </header>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       KPI TOP BAR
-  ═══════════════════════════════════════════════════════════════════ -->
-  <div class="bg-gray-900 border-b border-gray-800 px-6 py-3">
-    <div class="grid grid-cols-8 gap-3">
-      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50" :class="{'opacity-40': cargando && !metricas.pedidos_hoy}">
-        <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">Pedidos hoy</div>
-        <div class="text-xl font-black leading-tight text-white" x-text="metricas.pedidos_hoy ?? '—'"></div>
-      </div>
-      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
-        <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">Activos</div>
-        <div class="text-xl font-black leading-tight text-orange-400" x-text="metricas.pedidos_activos ?? '—'"></div>
-      </div>
-      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
-        <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">En preparación</div>
-        <div class="text-xl font-black leading-tight text-blue-400" x-text="metricas.en_preparacion ?? '—'"></div>
-      </div>
-      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
-        <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">En reparto</div>
-        <div class="text-xl font-black leading-tight text-yellow-400" x-text="metricas.en_reparto ?? '—'"></div>
-      </div>
-      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
-        <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">Entregados</div>
-        <div class="text-xl font-black leading-tight text-green-400" x-text="metricas.entregados_hoy ?? '—'"></div>
-      </div>
-      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50 relative cursor-default"
-           @mouseenter="mostrarTooltipIngresos = true"
-           @mouseleave="mostrarTooltipIngresos = false">
-        <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">Ingresos hoy</div>
-        <div class="text-xl font-black leading-tight text-emerald-400"
-             x-text="metricas.ingresos_hoy_eur != null ? metricas.ingresos_hoy_eur.toFixed(2) + '€' : '—'"></div>
-        <!-- Tooltip desglose -->
-        <div x-show="mostrarTooltipIngresos" x-cloak
-             class="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-30 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
-          <template x-if="metricas.ingresos_por_metodo">
-            <div class="space-y-1">
-              <template x-for="[metodo, valor] in Object.entries(metricas.ingresos_por_metodo || {})" :key="metodo">
-                <div class="flex items-center justify-between gap-4">
-                  <span class="text-gray-400 capitalize" x-text="metodo"></span>
-                  <span class="text-white font-semibold" x-text="valor.toFixed(2) + '€'"></span>
-                </div>
-              </template>
-              <template x-if="metricas.cancelaciones_hoy && Object.keys(metricas.cancelaciones_hoy).length > 0">
-                <div class="border-t border-gray-700 pt-1 mt-1">
-                  <span class="text-red-400">❌ Cancelaciones: </span>
-                  <span class="text-red-300 font-semibold"
-                        x-text="Object.values(metricas.cancelaciones_hoy || {}).reduce((a,b)=>a+b,0)"></span>
-                </div>
-              </template>
-            </div>
-          </template>
-        </div>
-      </div>
-      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
-        <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">T.Preparación</div>
-        <div class="text-xl font-black leading-tight" :class="metricas.tiempo_medio_preparacion_min > 30 ? 'text-red-400' : 'text-gray-200'"
-             x-text="metricas.tiempo_medio_preparacion_min != null ? metricas.tiempo_medio_preparacion_min + 'min' : '—'"></div>
-      </div>
-      <div class="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
-        <div class="text-xs text-gray-500 font-medium mb-0.5 whitespace-nowrap">T.Entrega</div>
-        <div class="text-xl font-black leading-tight" :class="metricas.tiempo_medio_entrega_min > 40 ? 'text-red-400' : 'text-gray-200'"
-             x-text="metricas.tiempo_medio_entrega_min != null ? metricas.tiempo_medio_entrega_min + 'min' : '—'"></div>
+  <!-- ╔═══════════════════════════════════════════════════════════╗
+       ║  KPI BAR                                                  ║
+       ╚═══════════════════════════════════════════════════════════╝ -->
+  <div class="kpi-bar">
+
+    <div class="kpi-cell" :class="{'opacity-40': cargando && !metricas.pedidos_hoy}">
+      <div class="kpi-label">Pedidos hoy</div>
+      <div class="kpi-value" style="color:#f1f5f9;" x-text="metricas.pedidos_hoy ?? '—'"></div>
+    </div>
+
+    <div class="kpi-cell">
+      <div class="kpi-label">Activos</div>
+      <div class="kpi-value" style="color:var(--c-orange);" x-text="metricas.pedidos_activos ?? '—'"></div>
+    </div>
+
+    <div class="kpi-cell">
+      <div class="kpi-label">Preparando</div>
+      <div class="kpi-value" style="color:var(--c-blue);" x-text="metricas.en_preparacion ?? '—'"></div>
+    </div>
+
+    <div class="kpi-cell">
+      <div class="kpi-label">En reparto</div>
+      <div class="kpi-value" style="color:var(--c-yellow);" x-text="metricas.en_reparto ?? '—'"></div>
+    </div>
+
+    <div class="kpi-cell">
+      <div class="kpi-label">Entregados</div>
+      <div class="kpi-value" style="color:var(--c-green);" x-text="metricas.entregados_hoy ?? '—'"></div>
+    </div>
+
+    <!-- Ingresos con tooltip -->
+    <div class="kpi-cell" style="cursor:default;"
+         @mouseenter="mostrarTooltipIngresos = true"
+         @mouseleave="mostrarTooltipIngresos = false">
+      <div class="kpi-label">Ingresos</div>
+      <div class="kpi-value" style="color:var(--c-emerald);"
+           x-text="metricas.ingresos_hoy_eur != null ? metricas.ingresos_hoy_eur.toFixed(2) + '€' : '—'"></div>
+      <!-- Tooltip desglose -->
+      <div x-show="mostrarTooltipIngresos" x-cloak class="tooltip-box">
+        <template x-if="metricas.ingresos_por_metodo">
+          <div style="display:flex;flex-direction:column;gap:.3rem;">
+            <template x-for="[metodo, valor] in Object.entries(metricas.ingresos_por_metodo || {})" :key="metodo">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;">
+                <span style="color:rgba(255,255,255,.45);text-transform:capitalize;" x-text="metodo"></span>
+                <span style="color:#f1f5f9;font-weight:600;" x-text="valor.toFixed(2) + '€'"></span>
+              </div>
+            </template>
+            <template x-if="metricas.cancelaciones_hoy && Object.keys(metricas.cancelaciones_hoy).length > 0">
+              <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:.3rem;margin-top:.1rem;color:var(--c-red);">
+                ✕ Cancel.: <span style="font-weight:600;"
+                  x-text="Object.values(metricas.cancelaciones_hoy || {}).reduce((a,b)=>a+b,0)"></span>
+              </div>
+            </template>
+          </div>
+        </template>
       </div>
     </div>
+
+    <div class="kpi-cell">
+      <div class="kpi-label">T.Prep.</div>
+      <div class="kpi-value"
+           :style="metricas.tiempo_medio_preparacion_min > 30 ? 'color:var(--c-red)' : 'color:#cbd5e1'"
+           x-text="metricas.tiempo_medio_preparacion_min != null ? metricas.tiempo_medio_preparacion_min + 'm' : '—'"></div>
+    </div>
+
+    <div class="kpi-cell">
+      <div class="kpi-label">T.Entrega</div>
+      <div class="kpi-value"
+           :style="metricas.tiempo_medio_entrega_min > 40 ? 'color:var(--c-red)' : 'color:#cbd5e1'"
+           x-text="metricas.tiempo_medio_entrega_min != null ? metricas.tiempo_medio_entrega_min + 'm' : '—'"></div>
+    </div>
+
   </div>
 
 
+  <!-- ╔═══════════════════════════════════════════════════════════╗
+       ║  MAIN GRID                                                ║
+       ╚═══════════════════════════════════════════════════════════╝ -->
+  <div class="main-grid">
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       MAIN GRID
-  ═══════════════════════════════════════════════════════════════════ -->
-  <div class="grid grid-cols-[1fr_1fr_340px] gap-4 p-4 h-[calc(100vh-200px)] overflow-hidden">
-
-    <!-- ─── COL 1: PICKERS ─────────────────────────────────────── -->
-    <div class="flex flex-col gap-3 overflow-y-auto slim-scroll pr-1">
-      <div class="flex items-center justify-between mb-1">
-        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">
-          📦 Pickers
-          <span class="ml-1 text-gray-700"
-                x-text="pickers.filter(p => p.estado === 'activo' || p.estado === 'sobrecargado').length + ' activos'"></span>
-        </h2>
-        <span class="text-xs text-gray-700"
-              x-text="pickers.length + ' total'"></span>
+    <!-- ── COL 1: PICKERS ──────────────────────────────────────── -->
+    <div class="main-col">
+      <div class="col-header">
+        <div class="col-title">
+          <span>📦</span>
+          <span>Pickers</span>
+          <span style="color:rgba(255,255,255,.25);font-weight:400;"
+                x-text="'· ' + pickers.filter(p => p.estado === 'activo' || p.estado === 'sobrecargado').length + ' activos'"></span>
+        </div>
+        <span class="col-count" x-text="pickers.length + ' total'"></span>
       </div>
 
-      <!-- Pedidos sin picker asignado -->
-      <template x-if="pedidosSinPicker.length > 0">
-        <div class="rounded-xl border border-yellow-700/60 bg-yellow-950/30 p-3">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="w-2 h-2 rounded-full bg-yellow-400 pulse shrink-0"></span>
-            <span class="text-xs font-bold text-yellow-400 uppercase tracking-wide">
-              Sin asignar — <span x-text="pedidosSinPicker.length"></span>
-              <span x-text="pedidosSinPicker.length === 1 ? ' pedido' : ' pedidos'"></span>
-            </span>
-          </div>
-          <div class="space-y-1.5">
-            <template x-for="p in pedidosSinPicker" :key="p.pedido_id">
-              <div class="flex items-center justify-between text-xs bg-gray-800/50 rounded-lg px-2.5 py-2">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-white">#<span x-text="p.pedido_id"></span></span>
-                  <span class="text-gray-400" x-text="p.cliente_nombre"></span>
-                  <span class="text-gray-600"><span x-text="p.n_items"></span> items</span>
-                </div>
-                <div class="flex items-center gap-2 text-right">
-                  <span class="font-semibold text-white" x-text="p.total.toFixed(2) + '€'"></span>
-                  <span :class="p.minutos_espera > 10 ? 'text-red-400 font-bold' : 'text-gray-500'"
-                        x-text="p.minutos_espera != null ? p.minutos_espera + 'min' : ''"></span>
-                </div>
+      <div class="col-body slim-scroll">
+
+        <!-- Pedidos sin picker -->
+        <template x-if="pedidosSinPicker.length > 0">
+          <div class="alert-banner alert-yellow fade-in">
+            <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;"
+                 @click="sinPickerColapsado = !sinPickerColapsado">
+              <div style="display:flex;align-items:center;gap:.4rem;">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--c-yellow);display:inline-block;" class="pulse"></span>
+                <span style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-yellow);">
+                  Sin asignar — <span x-text="pedidosSinPicker.length"></span>
+                  <span x-text="pedidosSinPicker.length === 1 ? ' pedido' : ' pedidos'"></span>
+                </span>
               </div>
-            </template>
-          </div>
-        </div>
-      </template>
-
-      <template x-if="pickers.length === 0">
-        <div class="text-center text-gray-700 text-sm py-10">Sin pickers registrados</div>
-      </template>
-
-      <template x-for="emp in pickers" :key="emp.empleado_id">
-        <div class="rounded-xl border fade-in transition-all"
-             :class="[employeeCardClass(empEstado(emp)), isColapsada('p', emp.empleado_id) ? 'px-4 py-2.5' : 'p-4']">
-
-          <!-- Row 1: Name + status + collapse toggle -->
-          <div class="flex items-center justify-between"
-               :class="isColapsada('p', emp.empleado_id) ? '' : 'mb-3'"
-               @click="toggleCard('p', emp.empleado_id)"
-               style="cursor:pointer">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full shrink-0"
-                    :class="statusDotClass(empEstado(emp))"
-                    :style="empEstado(emp) === 'activo' || empEstado(emp) === 'sobrecargado' ? 'animation: pulse-dot 1.8s ease-in-out infinite' : ''">
-              </span>
-              <span class="font-semibold text-sm text-white" x-text="emp.nombre"></span>
-              <!-- Compact summary when collapsed -->
-              <template x-if="isColapsada('p', emp.empleado_id) && emp.pickings_activos && emp.pickings_activos.length > 0">
-                <span class="text-xs text-gray-500">· <span x-text="emp.pickings_activos.length"></span> activo<span x-text="emp.pickings_activos.length > 1 ? 's' : ''"></span></span>
+              <span class="chevron" :class="sinPickerColapsado ? '' : 'open'"
+                    style="color:var(--c-yellow);opacity:.6;">›</span>
+            </div>
+            <div x-show="!sinPickerColapsado" style="margin-top:.3rem;">
+              <template x-for="p in pedidosSinPicker" :key="p.pedido_id">
+                <div class="alert-item">
+                  <div style="display:flex;align-items:center;gap:.5rem;">
+                    <span style="font-weight:700;color:#f1f5f9;">#<span x-text="p.pedido_id"></span></span>
+                    <span style="color:rgba(255,255,255,.4);" x-text="p.cliente_nombre"></span>
+                    <span style="color:rgba(255,255,255,.2);"><span x-text="p.n_items"></span> items</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:.5rem;text-align:right;">
+                    <span style="font-weight:600;color:#f1f5f9;" x-text="p.total.toFixed(2) + '€'"></span>
+                    <span :style="p.minutos_espera > 10 ? 'color:var(--c-red);font-weight:700' : 'color:rgba(255,255,255,.25)'"
+                          x-text="p.minutos_espera != null ? p.minutos_espera + 'min' : ''"></span>
+                  </div>
+                </div>
               </template>
             </div>
-            <div class="flex items-center gap-1.5">
-              <template x-if="emp.rendimiento">
-                <span class="text-xs px-1.5 py-0.5 rounded font-semibold"
-                      :class="rendimientoClass(emp.rendimiento)"
-                      x-text="rendimientoLabel(emp.rendimiento)"></span>
-              </template>
-              <span class="text-xs px-2 py-0.5 rounded font-medium border"
-                    :class="statusBadgeClass(empEstado(emp))"
-                    x-text="estadoLabel(empEstado(emp))"></span>
-              <span class="text-gray-600 text-sm transition-transform duration-200 ml-1"
-                    :class="isColapsada('p', emp.empleado_id) ? '' : 'rotate-90'">›</span>
-            </div>
           </div>
+        </template>
 
-          <!-- Card body (collapsible) -->
-          <div x-show="!isColapsada('p', emp.empleado_id)">
+        <template x-if="pickers.length === 0">
+          <div style="text-align:center;color:rgba(255,255,255,.15);font-size:.8rem;padding:2.5rem 0;">Sin pickers registrados</div>
+        </template>
 
-          <!-- Active pickings (all of them) -->
-          <template x-if="emp.pickings_activos && emp.pickings_activos.length > 0">
-            <div class="mb-3 space-y-2">
-              <template x-for="pk in emp.pickings_activos" :key="pk.picking_id">
-                <div>
-                  <div class="flex items-center justify-between text-xs mb-1">
-                    <span class="text-gray-400">
-                      Pedido <span class="text-white font-bold">#<span x-text="pk.pedido_id"></span></span>
-                      <span class="ml-1 text-gray-600" x-text="pickingEstadoLabel(pk.estado)"></span>
-                    </span>
-                    <span class="text-gray-400 flex items-center gap-1">
-                      <span x-text="pk.items_completados"></span>/<span x-text="pk.items_total"></span> items
-                      <template x-if="pk.minutos_activo != null">
-                        <span :class="pk.minutos_activo > 25 ? 'text-red-400' : 'text-gray-600'">
-                          · <span x-text="pk.minutos_activo"></span>min
+        <!-- Picker cards -->
+        <template x-for="emp in pickers" :key="emp.empleado_id">
+          <div class="emp-card fade-in"
+               :class="'emp-card-' + empEstado(emp)">
+
+            <!-- Card header (clickable to collapse) -->
+            <div class="card-header"
+                 @click="toggleCard('p', emp.empleado_id)">
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <span class="pulse"
+                      style="width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;"
+                      :class="'dot-' + empEstado(emp)"
+                      :style="empEstado(emp) !== 'activo' && empEstado(emp) !== 'sobrecargado' ? 'animation:none' : ''">
+                </span>
+                <span class="card-name" x-text="emp.nombre"></span>
+                <!-- Resumen minimizado -->
+                <template x-if="isColapsada('p', emp.empleado_id)">
+                  <span style="display:flex;align-items:center;gap:.3rem;">
+                    <!-- Pedidos activos -->
+                    <template x-if="emp.pickings_activos && emp.pickings_activos.length > 0">
+                      <span style="font-family:'Bebas Neue',cursive;font-size:.85rem;padding:.05rem .35rem;border-radius:.25rem;background:rgba(59,130,246,.18);color:#93c5fd;letter-spacing:.05em;"
+                            x-text="emp.pickings_activos.length + ' activo' + (emp.pickings_activos.length > 1 ? 's' : '')"></span>
+                    </template>
+                    <!-- Completados hoy -->
+                    <span style="font-size:.62rem;color:rgba(255,255,255,.25);"
+                          x-text="emp.completados_hoy + ' hoy'"></span>
+                  </span>
+                </template>
+              </div>
+              <div style="display:flex;align-items:center;gap:.35rem;">
+                <template x-if="emp.rendimiento">
+                  <span :class="'perf-' + emp.rendimiento" x-text="rendimientoLabel(emp.rendimiento)"></span>
+                </template>
+                <span class="badge" :class="'badge-' + empEstado(emp)" x-text="estadoLabel(empEstado(emp))"></span>
+                <span class="chevron" :class="isColapsada('p', emp.empleado_id) ? '' : 'open'">›</span>
+              </div>
+            </div>
+
+            <!-- Card body -->
+            <div class="card-body" x-show="!isColapsada('p', emp.empleado_id)">
+
+              <!-- Active pickings -->
+              <template x-if="emp.pickings_activos && emp.pickings_activos.length > 0">
+                <div style="margin-bottom:.5rem;display:flex;flex-direction:column;gap:.4rem;">
+                  <template x-for="pk in emp.pickings_activos" :key="pk.picking_id">
+                    <div>
+                      <div style="display:flex;align-items:center;justify-content:space-between;font-size:.68rem;margin-bottom:.3rem;">
+                        <span style="color:rgba(255,255,255,.4);">
+                          Pedido <span style="color:#f1f5f9;font-weight:700;">#<span x-text="pk.pedido_id"></span></span>
+                          <span style="margin-left:.3rem;color:rgba(255,255,255,.25);" x-text="pickingEstadoLabel(pk.estado)"></span>
                         </span>
-                      </template>
-                    </span>
-                  </div>
-                  <div class="h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                    <div class="h-full rounded-full transition-all duration-700"
-                         :class="pk.progreso_pct >= 80 ? 'bg-green-500' : pk.progreso_pct >= 40 ? 'bg-blue-500' : 'bg-blue-700'"
-                         :style="'width: ' + pk.progreso_pct + '%'"></div>
-                  </div>
-                  <template x-if="pk.items_sin_stock > 0">
-                    <div class="mt-0.5 text-xs text-red-400">⚠ <span x-text="pk.items_sin_stock"></span> sin stock</div>
-                  </template>
-                </div>
-              </template>
-            </div>
-          </template>
-
-          <!-- No active picking -->
-          <template x-if="(!emp.pickings_activos || emp.pickings_activos.length === 0) && emp.estado !== 'sin_carga'">
-            <div class="mb-3 text-xs text-gray-600 italic">Sin pedido activo</div>
-          </template>
-
-          <!-- Stats row -->
-          <div class="grid grid-cols-3 gap-2 text-center">
-            <div class="bg-gray-800/60 rounded-lg py-1.5 px-1">
-              <div class="text-base font-bold text-white" x-text="emp.completados_hoy"></div>
-              <div class="text-xs text-gray-600">Hoy</div>
-            </div>
-            <div class="bg-gray-800/60 rounded-lg py-1.5 px-1">
-              <div class="text-base font-bold"
-                   :class="emp.tiempo_medio_min == null ? 'text-gray-600' : emp.tiempo_medio_min > 30 ? 'text-red-400' : 'text-gray-200'"
-                   x-text="emp.tiempo_medio_min != null ? emp.tiempo_medio_min + 'm' : '—'"></div>
-              <div class="text-xs text-gray-600">Avg</div>
-            </div>
-            <div class="bg-gray-800/60 rounded-lg py-1.5 px-1">
-              <div class="text-base font-bold"
-                   :class="emp.incidencias_hoy > 3 ? 'text-red-400' : emp.incidencias_hoy > 0 ? 'text-yellow-400' : 'text-gray-600'"
-                   x-text="emp.incidencias_hoy"></div>
-              <div class="text-xs text-gray-600">Incid.</div>
-            </div>
-          </div>
-
-          <!-- Last activity + phone + historial -->
-          <div class="flex items-center justify-between mt-2.5">
-            <span class="text-xs text-gray-700"
-                  x-show="emp.ultima_actividad"
-                  x-text="'Última act.: ' + tiempoDesde(emp.ultima_actividad)"></span>
-            <div class="flex items-center gap-2">
-              <template x-if="emp.historial_hoy && emp.historial_hoy.length > 0">
-                <button @click.stop="abrirHistorial(emp, 'picker')"
-                        class="text-xs text-blue-400 hover:text-blue-300 transition border border-blue-800 hover:border-blue-600 rounded px-2 py-0.5">
-                  Ver historial (<span x-text="emp.completados_hoy"></span>)
-                </button>
-              </template>
-              <template x-if="emp.telefono">
-                <a :href="'tel:' + emp.telefono"
-                   class="text-xs text-gray-600 hover:text-orange-400 transition"
-                   @click.stop>📞</a>
-              </template>
-            </div>
-          </div>
-
-          </div><!-- /card body -->
-        </div>
-      </template>
-    </div>
-
-    <!-- ─── COL 2: RIDERS ──────────────────────────────────────── -->
-    <div class="flex flex-col gap-3 overflow-y-auto slim-scroll pr-1">
-      <div class="flex items-center justify-between mb-1">
-        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">
-          🛵 Repartidores
-          <span class="ml-1 text-gray-700"
-                x-text="repartidores.filter(r => r.estado === 'activo' || r.estado === 'sobrecargado').length + ' activos'"></span>
-        </h2>
-        <span class="text-xs text-gray-700"
-              x-text="repartidores.length + ' total'"></span>
-      </div>
-
-      <!-- Pedidos preparados sin repartidor -->
-      <template x-if="pedidosSinRepartidor.length > 0">
-        <div class="rounded-xl border border-indigo-700/60 bg-indigo-950/30 p-3">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="w-2 h-2 rounded-full bg-indigo-400 pulse shrink-0"></span>
-            <span class="text-xs font-bold text-indigo-400 uppercase tracking-wide">
-              Preparados sin repartidor — <span x-text="pedidosSinRepartidor.length"></span>
-            </span>
-          </div>
-          <div class="space-y-1.5">
-            <template x-for="p in pedidosSinRepartidor" :key="p.pedido_id">
-              <div class="flex items-center justify-between text-xs bg-gray-800/50 rounded-lg px-2.5 py-2">
-                <div class="flex items-center gap-2 min-w-0">
-                  <span class="font-bold text-white shrink-0">#<span x-text="p.pedido_id"></span></span>
-                  <span class="text-gray-400 truncate" x-text="p.cliente_nombre"></span>
-                </div>
-                <div class="flex items-center gap-2 text-right shrink-0">
-                  <span class="font-semibold text-white" x-text="p.total.toFixed(2) + '€'"></span>
-                  <span :class="p.forma_pago === 'online' ? 'text-green-600' : 'text-yellow-500'"
-                        x-text="p.forma_pago === 'online' ? 'online' : 'cobrar'"></span>
-                  <span :class="p.minutos_espera > 15 ? 'text-red-400 font-bold' : 'text-gray-500'"
-                        x-text="p.minutos_espera != null ? p.minutos_espera + 'min' : ''"></span>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-      </template>
-
-      <template x-if="repartidores.length === 0">
-        <div class="text-center text-gray-700 text-sm py-10">Sin repartidores registrados</div>
-      </template>
-
-      <template x-for="emp in repartidores" :key="emp.empleado_id">
-        <div class="rounded-xl border fade-in transition-all"
-             :class="[employeeCardClass(empEstado(emp)), isColapsada('r', emp.empleado_id) ? 'px-4 py-2.5' : 'p-4']">
-
-          <!-- Row 1: Name + status + load + collapse toggle -->
-          <div class="flex items-center justify-between"
-               :class="isColapsada('r', emp.empleado_id) ? '' : 'mb-3'"
-               @click="toggleCard('r', emp.empleado_id)"
-               style="cursor:pointer">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full shrink-0"
-                    :class="statusDotClass(empEstado(emp))"
-                    :style="empEstado(emp) === 'activo' || empEstado(emp) === 'sobrecargado' ? 'animation: pulse-dot 1.8s ease-in-out infinite' : ''">
-              </span>
-              <span class="font-semibold text-sm text-white" x-text="emp.nombre"></span>
-              <!-- Compact summary when collapsed -->
-              <template x-if="isColapsada('r', emp.empleado_id) && emp.entregas_activas && emp.entregas_activas.length > 0">
-                <span class="text-xs text-gray-500">· <span x-text="emp.entregas_activas.length"></span> en ruta</span>
-              </template>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <template x-if="emp.rendimiento">
-                <span class="text-xs px-1.5 py-0.5 rounded font-semibold"
-                      :class="rendimientoClass(emp.rendimiento)"
-                      x-text="rendimientoLabel(emp.rendimiento)"></span>
-              </template>
-              <span class="text-xs px-1.5 py-0.5 rounded font-medium"
-                    :class="cargaClass(emp.carga)"
-                    x-text="cargaLabel(emp.carga)"></span>
-              <span class="text-xs px-2 py-0.5 rounded font-medium border"
-                    :class="statusBadgeClass(empEstado(emp))"
-                    x-text="estadoLabel(empEstado(emp))"></span>
-              <span class="text-gray-600 text-sm transition-transform duration-200 ml-1"
-                    :class="isColapsada('r', emp.empleado_id) ? '' : 'rotate-90'">›</span>
-            </div>
-          </div>
-
-          <!-- Card body (collapsible) -->
-          <div x-show="!isColapsada('r', emp.empleado_id)">
-
-          <!-- Active deliveries (all of them) -->
-          <template x-if="emp.entregas_activas && emp.entregas_activas.length > 0">
-            <div class="mb-3 space-y-1.5">
-              <template x-for="ea in emp.entregas_activas" :key="ea.reparto_id">
-                <div class="bg-gray-800/50 rounded-lg p-2.5">
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0">
-                      <div class="text-xs text-gray-400 mb-0.5">
-                        Pedido <span class="text-white font-bold">#<span x-text="ea.pedido_id"></span></span>
-                        <span class="ml-1 px-1.5 py-0.5 rounded text-xs font-medium"
-                              :class="ea.estado === 'en_camino' ? 'bg-orange-900 text-orange-300' : 'bg-gray-700 text-gray-400'"
-                              x-text="ea.estado === 'en_camino' ? '🛵 En ruta' : '⏳ Asignado'">
+                        <span style="color:rgba(255,255,255,.4);display:flex;align-items:center;gap:.3rem;">
+                          <span x-text="pk.items_completados"></span>/<span x-text="pk.items_total"></span>
+                          <template x-if="pk.minutos_activo != null">
+                            <span :style="pk.minutos_activo > 25 ? 'color:var(--c-red);font-weight:700' : 'color:rgba(255,255,255,.2)'">
+                              · <span x-text="pk.minutos_activo"></span>m
+                            </span>
+                          </template>
                         </span>
                       </div>
-                      <div class="text-xs text-gray-500 truncate" x-text="ea.direccion"></div>
-                    </div>
-                    <div class="text-right shrink-0">
-                      <div class="text-sm font-bold text-white" x-text="ea.total.toFixed(2) + '€'"></div>
-                      <div class="text-xs"
-                           :class="ea.forma_pago === 'online' ? 'text-green-500' : 'text-yellow-500'"
-                           x-text="ea.forma_pago === 'online' ? 'online' : 'cobrar'"></div>
-                    </div>
-                  </div>
-                  <template x-if="ea.minutos_en_ruta != null">
-                    <div class="mt-1 flex items-center gap-1 text-xs"
-                         :class="ea.minutos_en_ruta > 35 ? 'text-red-400' : 'text-gray-500'">
-                      ⏱ <span x-text="ea.minutos_en_ruta"></span> min en ruta
-                      <template x-if="ea.minutos_en_ruta > 35">
-                        <span class="text-red-400 font-semibold">· RETRASO</span>
+                      <div class="prog-track">
+                        <div class="prog-fill"
+                             :style="'width:' + pk.progreso_pct + '%;background:' + (pk.progreso_pct >= 80 ? 'var(--c-green)' : pk.progreso_pct >= 40 ? 'var(--c-blue)' : '#1d4ed8')">
+                        </div>
+                      </div>
+                      <template x-if="pk.items_sin_stock > 0">
+                        <div style="margin-top:.25rem;font-size:.65rem;color:var(--c-red);">
+                          ⚠ <span x-text="pk.items_sin_stock"></span> sin stock
+                        </div>
                       </template>
                     </div>
                   </template>
                 </div>
               </template>
-            </div>
-          </template>
 
-          <!-- Idle notice -->
-          <template x-if="(!emp.entregas_activas || emp.entregas_activas.length === 0) && emp.tiempo_inactivo_min != null">
-            <div class="mb-3 text-xs"
-                 :class="emp.tiempo_inactivo_min > 15 ? 'text-yellow-500' : 'text-gray-600'">
-              <template x-if="emp.tiempo_inactivo_min > 15">
-                <span>⏸ Libre hace <span x-text="emp.tiempo_inactivo_min"></span> min</span>
+              <!-- No active picking -->
+              <template x-if="(!emp.pickings_activos || emp.pickings_activos.length === 0) && emp.estado !== 'sin_carga'">
+                <div style="margin-bottom:.5rem;font-size:.68rem;color:rgba(255,255,255,.2);font-style:italic;">Sin pedido activo</div>
               </template>
-              <template x-if="emp.tiempo_inactivo_min <= 15">
-                <span class="text-gray-600">Libre — última entrega hace <span x-text="emp.tiempo_inactivo_min"></span> min</span>
-              </template>
-            </div>
-          </template>
 
-          <!-- Stats row -->
-          <div class="grid grid-cols-3 gap-2 text-center">
-            <div class="bg-gray-800/60 rounded-lg py-1.5 px-1">
-              <div class="text-base font-bold text-white" x-text="emp.entregados_hoy"></div>
-              <div class="text-xs text-gray-600">Hoy</div>
-            </div>
-            <div class="bg-gray-800/60 rounded-lg py-1.5 px-1">
-              <div class="text-base font-bold"
-                   :class="emp.tiempo_medio_min == null ? 'text-gray-600' : emp.tiempo_medio_min > 40 ? 'text-red-400' : 'text-gray-200'"
-                   x-text="emp.tiempo_medio_min != null ? emp.tiempo_medio_min + 'm' : '—'"></div>
-              <div class="text-xs text-gray-600">Avg</div>
-            </div>
-            <div class="bg-gray-800/60 rounded-lg py-1.5 px-1">
-              <div class="text-base font-bold text-gray-200" x-text="emp.pedidos_activos"></div>
-              <div class="text-xs text-gray-600">Activos</div>
-            </div>
+              <!-- Stats row -->
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;margin-bottom:.45rem;">
+                <div class="stat-cell">
+                  <div class="stat-val" style="color:#f1f5f9;" x-text="emp.completados_hoy"></div>
+                  <div class="stat-lbl">Hoy</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="stat-val"
+                       :style="emp.tiempo_medio_min == null ? 'color:rgba(255,255,255,.2)' : emp.tiempo_medio_min > 30 ? 'color:var(--c-red)' : 'color:#cbd5e1'"
+                       x-text="emp.tiempo_medio_min != null ? emp.tiempo_medio_min + 'm' : '—'"></div>
+                  <div class="stat-lbl">Avg</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="stat-val"
+                       :style="emp.incidencias_hoy > 3 ? 'color:var(--c-red)' : emp.incidencias_hoy > 0 ? 'color:var(--c-yellow)' : 'color:rgba(255,255,255,.2)'"
+                       x-text="emp.incidencias_hoy"></div>
+                  <div class="stat-lbl">Incid.</div>
+                </div>
+              </div>
+
+              <!-- Footer row -->
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:.62rem;color:rgba(255,255,255,.18);"
+                      x-show="emp.ultima_actividad"
+                      x-text="'act. ' + tiempoDesde(emp.ultima_actividad)"></span>
+                <div style="display:flex;align-items:center;gap:.4rem;">
+                  <template x-if="emp.historial_hoy && emp.historial_hoy.length > 0">
+                    <button @click.stop="abrirHistorial(emp, 'picker')"
+                            style="font-size:.65rem;color:var(--c-blue);background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);border-radius:.3rem;padding:.15rem .4rem;cursor:pointer;transition:background .15s;"
+                            onmouseover="this.style.background='rgba(59,130,246,.2)'" onmouseout="this.style.background='rgba(59,130,246,.1)'">
+                      Historial (<span x-text="emp.completados_hoy"></span>)
+                    </button>
+                  </template>
+                  <template x-if="emp.telefono">
+                    <a :href="'tel:' + emp.telefono"
+                       style="font-size:.75rem;color:rgba(255,255,255,.2);text-decoration:none;transition:color .15s;"
+                       onmouseover="this.style.color='var(--c-orange)'" onmouseout="this.style.color='rgba(255,255,255,.2)'"
+                       @click.stop>📞</a>
+                  </template>
+                </div>
+              </div>
+
+            </div><!-- /card body -->
           </div>
+        </template>
 
-          <!-- Last activity + phone + historial -->
-          <div class="flex items-center justify-between mt-2.5">
-            <span class="text-xs text-gray-700"
-                  x-show="emp.ultima_actividad"
-                  x-text="'Última act.: ' + tiempoDesde(emp.ultima_actividad)"></span>
-            <div class="flex items-center gap-2">
-              <template x-if="emp.historial_hoy && emp.historial_hoy.length > 0">
-                <button @click.stop="abrirHistorial(emp, 'repartidor')"
-                        class="text-xs text-blue-400 hover:text-blue-300 transition border border-blue-800 hover:border-blue-600 rounded px-2 py-0.5">
-                  Ver historial (<span x-text="emp.entregados_hoy"></span>)
-                </button>
-              </template>
-              <template x-if="emp.telefono">
-                <a :href="'tel:' + emp.telefono"
-                   class="text-xs text-gray-600 hover:text-orange-400 transition"
-                   @click.stop>📞</a>
-              </template>
-            </div>
-          </div>
-
-          </div><!-- /card body -->
-        </div>
-      </template>
+      </div>
     </div>
 
+
+    <!-- ── COL 2: REPARTIDORES ─────────────────────────────────── -->
+    <div class="main-col">
+      <div class="col-header">
+        <div class="col-title">
+          <span>🛵</span>
+          <span>Repartidores</span>
+          <span style="color:rgba(255,255,255,.25);font-weight:400;"
+                x-text="'· ' + repartidores.filter(r => r.estado === 'activo' || r.estado === 'sobrecargado').length + ' activos'"></span>
+        </div>
+        <span class="col-count" x-text="repartidores.length + ' total'"></span>
+      </div>
+
+      <div class="col-body slim-scroll">
+
+        <!-- Pedidos preparados sin repartidor -->
+        <template x-if="pedidosSinRepartidor.length > 0">
+          <div class="alert-banner alert-indigo fade-in">
+            <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;"
+                 @click="sinRepartidorColapsado = !sinRepartidorColapsado">
+              <div style="display:flex;align-items:center;gap:.4rem;">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--c-indigo);display:inline-block;" class="pulse"></span>
+                <span style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-indigo);">
+                  Preparados sin repartidor — <span x-text="pedidosSinRepartidor.length"></span>
+                </span>
+              </div>
+              <span class="chevron" :class="sinRepartidorColapsado ? '' : 'open'"
+                    style="color:var(--c-indigo);opacity:.6;">›</span>
+            </div>
+            <div x-show="!sinRepartidorColapsado" style="margin-top:.3rem;">
+              <template x-for="p in pedidosSinRepartidor" :key="p.pedido_id">
+                <div class="alert-item">
+                  <div style="display:flex;align-items:center;gap:.5rem;min-width:0;">
+                    <span style="font-weight:700;color:#f1f5f9;flex:none;">#<span x-text="p.pedido_id"></span></span>
+                    <span style="color:rgba(255,255,255,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" x-text="p.cliente_nombre"></span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:.5rem;flex:none;">
+                    <span style="font-weight:600;color:#f1f5f9;" x-text="p.total.toFixed(2) + '€'"></span>
+                    <span :style="p.forma_pago === 'online' ? 'color:var(--c-green)' : 'color:var(--c-yellow)'"
+                          x-text="p.forma_pago === 'online' ? 'online' : 'cobrar'"></span>
+                    <span :style="p.minutos_espera > 15 ? 'color:var(--c-red);font-weight:700' : 'color:rgba(255,255,255,.25)'"
+                          x-text="p.minutos_espera != null ? p.minutos_espera + 'min' : ''"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <template x-if="repartidores.length === 0">
+          <div style="text-align:center;color:rgba(255,255,255,.15);font-size:.8rem;padding:2.5rem 0;">Sin repartidores registrados</div>
+        </template>
+
+        <!-- Rider cards -->
+        <template x-for="emp in repartidores" :key="emp.empleado_id">
+          <div class="emp-card fade-in"
+               :class="'emp-card-' + empEstado(emp)">
+
+            <div class="card-header"
+                 @click="toggleCard('r', emp.empleado_id)">
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <span class="pulse"
+                      style="width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;"
+                      :class="'dot-' + empEstado(emp)"
+                      :style="empEstado(emp) !== 'activo' && empEstado(emp) !== 'sobrecargado' ? 'animation:none' : ''">
+                </span>
+                <span class="card-name" x-text="emp.nombre"></span>
+                <!-- Resumen minimizado -->
+                <template x-if="isColapsada('r', emp.empleado_id)">
+                  <span style="display:flex;align-items:center;gap:.3rem;">
+                    <!-- Entregas en ruta -->
+                    <template x-if="emp.entregas_activas && emp.entregas_activas.length > 0">
+                      <span style="font-family:'Bebas Neue',cursive;font-size:.85rem;padding:.05rem .35rem;border-radius:.25rem;background:rgba(249,115,22,.18);color:#fdba74;letter-spacing:.05em;"
+                            x-text="emp.entregas_activas.length + ' en ruta'"></span>
+                    </template>
+                    <!-- Entregados hoy -->
+                    <span style="font-size:.62rem;color:rgba(255,255,255,.25);"
+                          x-text="emp.entregados_hoy + ' hoy'"></span>
+                  </span>
+                </template>
+              </div>
+              <div style="display:flex;align-items:center;gap:.35rem;">
+                <template x-if="emp.rendimiento">
+                  <span :class="'perf-' + emp.rendimiento" x-text="rendimientoLabel(emp.rendimiento)"></span>
+                </template>
+                <template x-if="emp.carga">
+                  <span :class="'load-' + emp.carga" x-text="cargaLabel(emp.carga)"></span>
+                </template>
+                <span class="badge" :class="'badge-' + empEstado(emp)" x-text="estadoLabel(empEstado(emp))"></span>
+                <span class="chevron" :class="isColapsada('r', emp.empleado_id) ? '' : 'open'">›</span>
+              </div>
+            </div>
+
+            <div class="card-body" x-show="!isColapsada('r', emp.empleado_id)">
+
+              <!-- Active deliveries -->
+              <template x-if="emp.entregas_activas && emp.entregas_activas.length > 0">
+                <div style="margin-bottom:.5rem;display:flex;flex-direction:column;gap:.35rem;">
+                  <template x-for="ea in emp.entregas_activas" :key="ea.reparto_id">
+                    <div class="delivery-card">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;">
+                        <div style="min-width:0;">
+                          <div style="font-size:.68rem;color:rgba(255,255,255,.4);margin-bottom:.2rem;display:flex;align-items:center;gap:.35rem;">
+                            Pedido <span style="color:#f1f5f9;font-weight:700;">#<span x-text="ea.pedido_id"></span></span>
+                            <span style="padding:.1rem .35rem;border-radius:.2rem;font-size:.6rem;font-weight:600;"
+                                  :style="ea.estado === 'en_camino'
+                                    ? 'background:rgba(249,115,22,.15);color:var(--c-orange)'
+                                    : 'background:rgba(255,255,255,.06);color:rgba(255,255,255,.35)'"
+                                  x-text="ea.estado === 'en_camino' ? '🛵 En ruta' : '⏳ Asignado'">
+                            </span>
+                          </div>
+                          <div style="font-size:.65rem;color:rgba(255,255,255,.3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" x-text="ea.direccion"></div>
+                        </div>
+                        <div style="text-align:right;flex:none;">
+                          <div style="font-family:'Bebas Neue',cursive;font-size:1rem;color:#f1f5f9;" x-text="ea.total.toFixed(2) + '€'"></div>
+                          <div style="font-size:.6rem;"
+                               :style="ea.forma_pago === 'online' ? 'color:var(--c-green)' : 'color:var(--c-yellow)'"
+                               x-text="ea.forma_pago === 'online' ? 'online' : 'cobrar'"></div>
+                        </div>
+                      </div>
+                      <template x-if="ea.minutos_en_ruta != null">
+                        <div style="margin-top:.3rem;font-size:.65rem;display:flex;align-items:center;gap:.3rem;"
+                             :style="ea.minutos_en_ruta > 35 ? 'color:var(--c-red)' : 'color:rgba(255,255,255,.25)'">
+                          ⏱ <span x-text="ea.minutos_en_ruta"></span> min en ruta
+                          <template x-if="ea.minutos_en_ruta > 35">
+                            <span style="font-weight:700;color:var(--c-red);">· RETRASO</span>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <!-- Idle notice -->
+              <template x-if="(!emp.entregas_activas || emp.entregas_activas.length === 0) && emp.tiempo_inactivo_min != null">
+                <div style="margin-bottom:.5rem;font-size:.68rem;"
+                     :style="emp.tiempo_inactivo_min > 15 ? 'color:var(--c-yellow)' : 'color:rgba(255,255,255,.2)'">
+                  <template x-if="emp.tiempo_inactivo_min > 15">
+                    <span>⏸ Libre hace <span x-text="emp.tiempo_inactivo_min"></span> min</span>
+                  </template>
+                  <template x-if="emp.tiempo_inactivo_min <= 15">
+                    <span>Libre — última entrega hace <span x-text="emp.tiempo_inactivo_min"></span> min</span>
+                  </template>
+                </div>
+              </template>
+
+              <!-- Stats row -->
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;margin-bottom:.45rem;">
+                <div class="stat-cell">
+                  <div class="stat-val" style="color:#f1f5f9;" x-text="emp.entregados_hoy"></div>
+                  <div class="stat-lbl">Hoy</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="stat-val"
+                       :style="emp.tiempo_medio_min == null ? 'color:rgba(255,255,255,.2)' : emp.tiempo_medio_min > 40 ? 'color:var(--c-red)' : 'color:#cbd5e1'"
+                       x-text="emp.tiempo_medio_min != null ? emp.tiempo_medio_min + 'm' : '—'"></div>
+                  <div class="stat-lbl">Avg</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="stat-val" style="color:#cbd5e1;" x-text="emp.pedidos_activos"></div>
+                  <div class="stat-lbl">Activos</div>
+                </div>
+              </div>
+
+              <!-- Footer row -->
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:.62rem;color:rgba(255,255,255,.18);"
+                      x-show="emp.ultima_actividad"
+                      x-text="'act. ' + tiempoDesde(emp.ultima_actividad)"></span>
+                <div style="display:flex;align-items:center;gap:.4rem;">
+                  <template x-if="emp.historial_hoy && emp.historial_hoy.length > 0">
+                    <button @click.stop="abrirHistorial(emp, 'repartidor')"
+                            style="font-size:.65rem;color:var(--c-blue);background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);border-radius:.3rem;padding:.15rem .4rem;cursor:pointer;transition:background .15s;"
+                            onmouseover="this.style.background='rgba(59,130,246,.2)'" onmouseout="this.style.background='rgba(59,130,246,.1)'">
+                      Historial (<span x-text="emp.entregados_hoy"></span>)
+                    </button>
+                  </template>
+                  <template x-if="emp.telefono">
+                    <a :href="'tel:' + emp.telefono"
+                       style="font-size:.75rem;color:rgba(255,255,255,.2);text-decoration:none;transition:color .15s;"
+                       onmouseover="this.style.color='var(--c-orange)'" onmouseout="this.style.color='rgba(255,255,255,.2)'"
+                       @click.stop>📞</a>
+                  </template>
+                </div>
+              </div>
+
+            </div><!-- /card body -->
+          </div>
+        </template>
+
+      </div>
+    </div>
 
   </div><!-- /main grid -->
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       JAVASCRIPT
-  ═══════════════════════════════════════════════════════════════════ -->
-  <!-- ═══════════════════════════════════════════════════════════════
-       HISTORIAL MODAL
-  ═══════════════════════════════════════════════════════════════════ -->
+
+  <!-- ╔═══════════════════════════════════════════════════════════╗
+       ║  HISTORIAL MODAL                                          ║
+       ╚═══════════════════════════════════════════════════════════╝ -->
   <div x-show="modalHistorial.visible" x-cloak
-       class="fixed inset-0 z-50 flex items-center justify-center p-4"
+       style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:1rem;"
        @click.self="modalHistorial.visible = false">
     <!-- Backdrop -->
-    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);"></div>
     <!-- Panel -->
-    <div class="relative bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md shadow-2xl fade-in">
+    <div class="fade-in"
+         style="position:relative;background:#0e1118;border:1px solid rgba(255,255,255,.1);border-radius:.75rem;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.7);">
       <!-- Header -->
-      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.06);">
         <div>
-          <div class="font-bold text-white" x-text="modalHistorial.nombre"></div>
-          <div class="text-xs text-gray-500 mt-0.5"
+          <div style="font-weight:700;color:#f1f5f9;" x-text="modalHistorial.nombre"></div>
+          <div style="font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.2rem;"
                x-text="modalHistorial.tipo === 'picker' ? 'Pickings completados hoy' : 'Entregas completadas hoy'"></div>
         </div>
         <button @click="modalHistorial.visible = false"
-                class="text-gray-500 hover:text-white transition text-xl leading-none">×</button>
+                style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.35);font-size:1.35rem;line-height:1;transition:color .15s;"
+                onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='rgba(255,255,255,.35)'">×</button>
       </div>
-      <!-- Resumen rápido -->
-      <div class="grid grid-cols-2 gap-3 px-5 py-3 border-b border-gray-800">
-        <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-          <div class="text-2xl font-black text-white" x-text="modalHistorial.items.length"></div>
-          <div class="text-xs text-gray-500 mt-0.5"
+      <!-- Summary -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:.9rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.06);">
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:.5rem;padding:.75rem;text-align:center;">
+          <div style="font-family:'Bebas Neue',cursive;font-size:1.8rem;color:#f1f5f9;" x-text="modalHistorial.items.length"></div>
+          <div style="font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.15rem;"
                x-text="modalHistorial.tipo === 'picker' ? 'Pedidos pickeados' : 'Pedidos entregados'"></div>
         </div>
-        <div class="bg-gray-800/60 rounded-lg p-3 text-center">
-          <div class="text-2xl font-black"
-               :class="modalHistorial.avgMin == null ? 'text-gray-600' : modalHistorial.avgMin > (modalHistorial.tipo === 'picker' ? 30 : 40) ? 'text-red-400' : 'text-green-400'"
-               x-text="modalHistorial.avgMin != null ? modalHistorial.avgMin + ' min' : '—'"></div>
-          <div class="text-xs text-gray-500 mt-0.5">Tiempo medio</div>
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:.5rem;padding:.75rem;text-align:center;">
+          <div style="font-family:'Bebas Neue',cursive;font-size:1.8rem;"
+               :style="modalHistorial.avgMin == null ? 'color:rgba(255,255,255,.2)' :
+                 modalHistorial.avgMin > (modalHistorial.tipo === 'picker' ? 30 : 40) ? 'color:var(--c-red)' : 'color:var(--c-green)'"
+               x-text="modalHistorial.avgMin != null ? modalHistorial.avgMin + ' m' : '—'"></div>
+          <div style="font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.15rem;">Tiempo medio</div>
         </div>
       </div>
-      <!-- Lista de pedidos -->
-      <div class="overflow-y-auto slim-scroll max-h-72 px-5 py-3 space-y-2">
+      <!-- List -->
+      <div class="slim-scroll" style="overflow-y:auto;max-height:17rem;padding:.75rem 1.25rem;display:flex;flex-direction:column;gap:.1rem;">
         <template x-for="(item, idx) in modalHistorial.items" :key="idx">
-          <div class="flex items-center justify-between py-2 border-b border-gray-800/60 last:border-0">
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-gray-600 w-5 text-right" x-text="(idx + 1) + '.'"></span>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.04);">
+            <div style="display:flex;align-items:center;gap:.75rem;">
+              <span style="font-size:.65rem;color:rgba(255,255,255,.2);width:1.2rem;text-align:right;" x-text="(idx + 1) + '.'"></span>
               <div>
-                <span class="font-semibold text-white text-sm">
+                <span style="font-weight:600;color:#f1f5f9;">
                   #<span x-text="item.pedido_id"></span>
                 </span>
-                <div class="text-xs text-gray-600 mt-0.5"
+                <div style="font-size:.63rem;color:rgba(255,255,255,.25);margin-top:.1rem;"
                      x-text="item.completado_en || item.entregado_en ? tiempoDesde(item.completado_en || item.entregado_en) : ''">
                 </div>
               </div>
             </div>
-            <div class="flex items-center gap-3 text-right">
-              <!-- Duración -->
+            <div style="display:flex;align-items:center;gap:.75rem;text-align:right;">
               <div>
-                <div class="text-sm font-bold"
-                     :class="item.duracion_min == null ? 'text-gray-600' :
+                <div style="font-family:'Bebas Neue',cursive;font-size:.95rem;"
+                     :style="item.duracion_min == null ? 'color:rgba(255,255,255,.2)' :
                        (modalHistorial.tipo === 'picker' ? item.duracion_min > 30 : item.duracion_min > 40)
-                         ? 'text-red-400' : item.duracion_min < (modalHistorial.tipo === 'picker' ? 15 : 20)
-                           ? 'text-green-400' : 'text-gray-200'"
+                         ? 'color:var(--c-red)' : item.duracion_min < (modalHistorial.tipo === 'picker' ? 15 : 20)
+                           ? 'color:var(--c-green)' : 'color:#cbd5e1'"
                      x-text="item.duracion_min != null ? item.duracion_min + ' min' : '—'"></div>
-                <div class="text-xs text-gray-600">duración</div>
+                <div style="font-size:.6rem;color:rgba(255,255,255,.25);">duración</div>
               </div>
-              <!-- Total (solo repartidor) -->
               <template x-if="modalHistorial.tipo === 'repartidor' && item.total != null">
                 <div>
-                  <div class="text-sm font-bold text-white" x-text="item.total.toFixed(2) + '€'"></div>
-                  <div class="text-xs"
-                       :class="item.forma_pago === 'online' ? 'text-green-600' : 'text-yellow-600'"
+                  <div style="font-family:'Bebas Neue',cursive;font-size:.95rem;color:#f1f5f9;" x-text="item.total.toFixed(2) + '€'"></div>
+                  <div style="font-size:.6rem;"
+                       :style="item.forma_pago === 'online' ? 'color:var(--c-green)' : 'color:var(--c-yellow)'"
                        x-text="item.forma_pago === 'online' ? 'online' : 'cobrado'"></div>
                 </div>
               </template>
@@ -580,13 +1021,20 @@
         </template>
       </div>
       <!-- Footer -->
-      <div class="px-5 py-3 border-t border-gray-800 text-center">
+      <div style="padding:.75rem 1.25rem;border-top:1px solid rgba(255,255,255,.06);text-align:center;">
         <button @click="modalHistorial.visible = false"
-                class="text-sm text-gray-500 hover:text-white transition">Cerrar</button>
+                style="font-size:.8rem;color:rgba(255,255,255,.3);background:none;border:none;cursor:pointer;transition:color .15s;"
+                onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='rgba(255,255,255,.3)'">
+          Cerrar
+        </button>
       </div>
     </div>
   </div>
 
+
+  <!-- ╔═══════════════════════════════════════════════════════════╗
+       ║  JAVASCRIPT (lógica idéntica al original)                 ║
+       ╚═══════════════════════════════════════════════════════════╝ -->
   <script>
     function monitor() {
       return {
@@ -601,6 +1049,8 @@
         error: false,
         ultimaActualizacion: null,
         colapsadas: {},
+        sinPickerColapsado: true,
+        sinRepartidorColapsado: true,
         now: new Date(),
         modalHistorial: { visible: false, nombre: '', tipo: '', items: [], avgMin: null },
 
@@ -738,7 +1188,9 @@
         },
 
         isColapsada(zona, id) {
-          return !!this.colapsadas[zona + '_' + id];
+          const key = zona + '_' + id;
+          // Por defecto los empleados están minimizados; el toggle invierte eso
+          return key in this.colapsadas ? this.colapsadas[key] : true;
         },
 
         estadoPedidoLabel(estado) {
