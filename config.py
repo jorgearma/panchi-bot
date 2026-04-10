@@ -58,6 +58,13 @@ WHATSAPP_PROVIDER: str = os.environ.get("WHATSAPP_PROVIDER", "twilio")
 # Modo operativo de la aplicación: "warehouse" (picking con items) o "restaurant" (cocina sin items)
 APP_MODE: str = os.environ.get("APP_MODE", "warehouse")
 
+# SMS Verification — Android SMS Gateway (capcom6/android-sms-gateway)
+# Dejar vacío para modo mock (solo loguea, no envía SMS reales)
+SMS_GATEWAY_URL: str | None = os.environ.get("SMS_GATEWAY_URL")
+SMS_GATEWAY_USER: str | None = os.environ.get("SMS_GATEWAY_USER")
+SMS_GATEWAY_PASSWORD: str | None = os.environ.get("SMS_GATEWAY_PASSWORD")
+SMS_VERIFICATION_THRESHOLD: float = float(os.environ.get("SMS_VERIFICATION_THRESHOLD", "40.0"))
+
 # Meta WhatsApp Cloud API (solo necesario si WHATSAPP_PROVIDER=meta)
 META_ACCESS_TOKEN: str | None = os.environ.get("META_ACCESS_TOKEN")
 META_PHONE_NUMBER_ID: str | None = os.environ.get("META_PHONE_NUMBER_ID")
