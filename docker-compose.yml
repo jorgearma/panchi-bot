@@ -15,10 +15,10 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --appendfsync everysec
+    command: redis-server --appendonly yes --appendfsync everysec --requirepass ${REDIS_PASSWORD}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
