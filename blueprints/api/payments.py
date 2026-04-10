@@ -18,6 +18,7 @@ def register(bp):
         data = request.json
         logger.debug("Datos recibidos en agregar pedido: %s", data)
 
+        ip = request.remote_addr
         token = data.get("token", "")
         token_user_id = _user_id_del_token(token)
         if not token or not token_user_id:
@@ -25,7 +26,7 @@ def register(bp):
 
         post_user_id = data.get("userID")
         if str(post_user_id) != str(token_user_id):
-            logger.warning("Token-userId mismatch en /api/agregar_pedido: token=%s post=%s", token_user_id, post_user_id)
+            logger.warning("TOKEN_MISMATCH  endpoint=/api/agregar_pedido  token_user=%s  post_user=%s  ip=%s", token_user_id, post_user_id, ip)
             return jsonify({"error": "No autorizado"}), 403
 
         carrito = data.get("productos", data.get("carrito", []))
@@ -50,6 +51,7 @@ def register(bp):
         if not success:
             return jsonify({"error": result}), 400
 
+        logger.info("API_PEDIDO_ONLINE  user_id=%s  productos=%d  ip=%s", token_user_id, len(carrito), ip)
         return jsonify({"redirect_url": result, "message": "Pedido enviado correctamente."}), 200
 
     @bp.route('/api/agregar_pedido_efectivo', methods=['POST'])
@@ -58,6 +60,7 @@ def register(bp):
         data = request.json
         logger.debug("Datos recibidos en agregar_pedido_efectivo: %s", data)
 
+        ip = request.remote_addr
         token = data.get("token", "")
         token_user_id = _user_id_del_token(token)
         if not token or not token_user_id:
@@ -65,7 +68,7 @@ def register(bp):
 
         post_user_id = data.get("userID")
         if str(post_user_id) != str(token_user_id):
-            logger.warning("Token-userId mismatch en /api/agregar_pedido_efectivo: token=%s post=%s", token_user_id, post_user_id)
+            logger.warning("TOKEN_MISMATCH  endpoint=/api/agregar_pedido_efectivo  token_user=%s  post_user=%s  ip=%s", token_user_id, post_user_id, ip)
             return jsonify({"error": "No autorizado"}), 403
 
         notas = data.get("notas", "")
@@ -85,4 +88,5 @@ def register(bp):
         if not success:
             return jsonify({"error": result}), 400
 
+        logger.info("API_PEDIDO_EFECTIVO  user_id=%s  productos=%d  ip=%s", token_user_id, len(data.get("productos", [])), ip)
         return jsonify({"redirect_url": result, "message": "Pedido confirmado. Pago a la entrega."}), 200
