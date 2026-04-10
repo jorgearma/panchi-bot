@@ -36,11 +36,9 @@ def register(bp):
         try:
             monitor_data = gestor_dashboard.monitor_empleados()
             metricas_data = gestor_dashboard.metricas()
-            alertas_data = gestor_dashboard.alertas()
             return _ok({
                 **monitor_data,
                 "metricas": metricas_data,
-                "alertas":  alertas_data,
             })
         except Exception as e:
             logger.error("Error en /dashboard/monitor/datos: %s", e)
