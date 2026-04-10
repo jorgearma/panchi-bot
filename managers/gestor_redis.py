@@ -56,7 +56,7 @@ class RedisManager:
         try:
             result = self.client.delete(key)
             if result == 0:
-                logger.warning("No se encontró la clave %s para eliminar", key)
+                logger.debug("Clave %s no existía al eliminar (operación idempotente)", key)
             return result
         except redis.RedisError as e:
             logger.error("Error al eliminar la clave %s: %s", key, e)

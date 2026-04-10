@@ -1039,16 +1039,6 @@ function dashboard() {
           doneClass: 'bg-sky-600',
         },
         {
-          key: 'picking_inicio',
-          label: 'Picking iniciado',
-          done: Boolean(p.picking?.iniciado_en),
-          time: this.horaCorta(p.picking?.iniciado_en),
-          detail: p.picking?.iniciado_en
-            ? `Lleva ${this.minutosDesde(p.picking?.iniciado_en)}`
-            : 'Todavía no se ha iniciado la preparación.',
-          doneClass: 'bg-sky-600',
-        },
-        {
           key: 'picking_fin',
           label: 'Picking completado',
           done: Boolean(p.picking?.completado_en),

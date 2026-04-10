@@ -18,13 +18,16 @@ class EstadoUsuario:
         self.redismanager = redismanager
 
     @retry(wait=wait_fixed(2), stop=stop_after_attempt(3))
-    def obtener_estado(self):
-        """Recupera el estado conversacional del usuario desde Redis."""
+    def _leer_redis(self):
+        """Lee el valor raw de Redis. Usa client directo para que los fallos lleguen al retry."""
         try:
-            estado = self.redismanager.get(self.numero_cliente)
+            return self.redismanager.client.get(self.numero_cliente)
         except Exception as e:
             raise Exception("Error al obtener el estado del usuario desde Redis") from e
 
+    def obtener_estado(self):
+        """Recupera el estado conversacional del usuario desde Redis."""
+        estado = self._leer_redis()
         if estado:
             try:
                 return json.loads(estado)

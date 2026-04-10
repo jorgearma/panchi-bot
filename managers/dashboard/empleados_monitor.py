@@ -4,12 +4,12 @@ from datetime import datetime
 
 from sqlalchemy import and_, func
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import joinedload
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from managers.dashboard._helpers import _iso, _ESTADOS_LISTOS_PARA_PICKING
 from models import (
-    CheckIn, Empleado, Incidencia, PickingPedido, Reparto, Pedido, Turno,
+    CheckIn, Empleado, Incidencia, PedidoDetalle, PickingPedido,
+    Reparto, Pedido, Turno, Usuario,
 )
 from states import EstadoPedido, EstadoPicking, EstadoReparto
 
@@ -324,53 +324,74 @@ class GestorEmpleadosMonitorMixin:
         ).scalar() or 0
 
         # Orders waiting for a picker — estado PAGADO/CONTRA_REEMBOLSO es fuente de verdad
-        sin_picker = s.query(Pedido).options(
-            joinedload(Pedido.cliente),
-            joinedload(Pedido.detalles),
-        ).filter(
-            Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING),
-        ).order_by(Pedido.FechaCreacion.asc()).all()
+        n_items_sub = (
+            s.query(func.count(PedidoDetalle.DetalleID))
+            .filter(PedidoDetalle.PedidoID == Pedido.PedidoID)
+            .correlate(Pedido)
+            .scalar_subquery()
+        )
+        sin_picker_rows = (
+            s.query(
+                Pedido.PedidoID,
+                Pedido.Total,
+                Pedido.forma_pago,
+                Pedido.FechaCreacion,
+                Usuario.nombre.label('cliente_nombre'),
+                n_items_sub.label('n_items'),
+            )
+            .outerjoin(Usuario, Usuario.id == Pedido.ClienteID)
+            .filter(Pedido.Estado.in_(_ESTADOS_LISTOS_PARA_PICKING))
+            .order_by(Pedido.FechaCreacion.asc())
+            .all()
+        )
 
         pedidos_sin_picker = [
             {
-                "pedido_id": p.PedidoID,
-                "cliente_nombre": p.cliente.nombre if p.cliente else "—",
-                "total": float(p.Total) if p.Total else 0.0,
-                "forma_pago": p.forma_pago or "online",
-                "fecha_creacion": _iso(p.FechaCreacion),
-                "minutos_espera": int((ahora - p.FechaCreacion).total_seconds() / 60) if p.FechaCreacion else None,
-                "n_items": len(p.detalles),
+                "pedido_id": row.PedidoID,
+                "cliente_nombre": row.cliente_nombre or "—",
+                "total": float(row.Total) if row.Total else 0.0,
+                "forma_pago": row.forma_pago or "online",
+                "fecha_creacion": _iso(row.FechaCreacion),
+                "minutos_espera": int((ahora - row.FechaCreacion).total_seconds() / 60) if row.FechaCreacion else None,
+                "n_items": row.n_items or 0,
             }
-            for p in sin_picker
+            for row in sin_picker_rows
         ]
 
         # Orders ready (preparado) with no rider assigned yet (Reparto PENDIENTE sin repartidor_id)
-        repartos_pendientes = (
-            s.query(Reparto).options(
-                joinedload(Reparto.pedido).joinedload(Pedido.cliente)
+        repartos_pendientes_rows = (
+            s.query(
+                Reparto.id.label('reparto_id'),
+                Pedido.PedidoID,
+                Pedido.DireccionEntrega,
+                Pedido.Total,
+                Pedido.forma_pago,
+                Pedido.FechaCreacion,
+                Usuario.nombre.label('cliente_nombre'),
             )
+            .join(Pedido, Pedido.PedidoID == Reparto.pedido_id)
+            .outerjoin(Usuario, Usuario.id == Pedido.ClienteID)
             .filter(
                 Reparto.repartidor_id == None,
                 Reparto.estado == EstadoReparto.PENDIENTE.value,
+                Pedido.Estado == EstadoPedido.PREPARADO.value,
             )
-            .join(Pedido, Pedido.PedidoID == Reparto.pedido_id)
-            .filter(Pedido.Estado == EstadoPedido.PREPARADO.value)
             .order_by(Reparto.created_at.asc())
             .all()
         )
 
         pedidos_sin_repartidor = [
             {
-                "pedido_id": r.pedido.PedidoID,
-                "reparto_id": r.id,
-                "cliente_nombre": r.pedido.cliente.nombre if r.pedido.cliente else "—",
-                "direccion": r.pedido.DireccionEntrega,
-                "total": float(r.pedido.Total) if r.pedido.Total else 0.0,
-                "forma_pago": r.pedido.forma_pago or "online",
-                "fecha_creacion": _iso(r.pedido.FechaCreacion),
-                "minutos_espera": int((ahora - r.pedido.FechaCreacion).total_seconds() / 60) if r.pedido.FechaCreacion else None,
+                "pedido_id": row.PedidoID,
+                "reparto_id": row.reparto_id,
+                "cliente_nombre": row.cliente_nombre or "—",
+                "direccion": row.DireccionEntrega,
+                "total": float(row.Total) if row.Total else 0.0,
+                "forma_pago": row.forma_pago or "online",
+                "fecha_creacion": _iso(row.FechaCreacion),
+                "minutos_espera": int((ahora - row.FechaCreacion).total_seconds() / 60) if row.FechaCreacion else None,
             }
-            for r in repartos_pendientes
+            for row in repartos_pendientes_rows
         ]
 
         return {
