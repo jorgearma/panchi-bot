@@ -14,6 +14,7 @@ class RedisManager:
                 host=host,
                 port=port,
                 db=db,
+                password=config.REDIS_PASSWORD or None,
                 socket_timeout=3,            # ⏱ Tiempo máx esperando respuesta
                 socket_connect_timeout=3,    # ⏱ Tiempo máx conectando
                 retry_on_timeout=True        # 🔁 Intenta de nuevo si hay timeout

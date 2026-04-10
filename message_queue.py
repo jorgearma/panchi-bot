@@ -23,6 +23,7 @@ _redis_conn = Redis(
     host=config.REDIS_HOST,
     port=config.REDIS_PORT,
     db=config.REDIS_DB,
+    password=config.REDIS_PASSWORD or None,
     socket_timeout=3,
     socket_connect_timeout=3,
 )

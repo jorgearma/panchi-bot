@@ -43,6 +43,7 @@ SQL_PWD: str = os.environ.get("SQL_PWD", "")
 REDIS_HOST: str = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT: int = int(os.environ.get("REDIS_PORT", 6379))
 REDIS_DB: int = int(os.environ.get("REDIS_DB", 0))
+REDIS_PASSWORD: str | None = os.environ.get("REDIS_PASSWORD")
 
 # Atención al cliente (se muestra al usuario cuando su pedido está activo)
 CUSTOMER_SUPPORT_PHONE: str | None = os.environ.get("CUSTOMER_SUPPORT_PHONE")
