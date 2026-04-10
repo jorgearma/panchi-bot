@@ -562,35 +562,6 @@
         </div>
       </div>
 
-      <!-- Feed -->
-      <div class="flex-1 min-h-0 flex flex-col">
-        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 shrink-0">
-          📡 Actividad reciente
-        </h3>
-        <div class="flex-1 overflow-y-auto slim-scroll space-y-1">
-          <template x-if="eventos.length === 0">
-            <div class="text-center text-gray-700 text-xs py-8">Sin actividad reciente</div>
-          </template>
-          <template x-for="e in eventos" :key="e.id">
-            <div class="flex items-start gap-2 py-1.5 px-2 rounded-lg transition fade-in"
-                 :class="e.estado_nuevo === 'cancelado' ? 'bg-red-950/40 hover:bg-red-950/60' : 'hover:bg-gray-800/40'">
-              <span class="text-base shrink-0 mt-0.5" x-text="eventoIcon(e.estado_nuevo)"></span>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5 text-xs">
-                  <span class="font-semibold text-gray-300">
-                    #<span x-text="e.pedido_id"></span>
-                  </span>
-                  <span class="text-gray-700">→</span>
-                  <span class="font-medium"
-                        :class="eventoColorClass(e.estado_nuevo)"
-                        x-text="estadoPedidoLabel(e.estado_nuevo)"></span>
-                </div>
-                <div class="text-xs text-gray-700 mt-0.5" x-text="tiempoDesde(e.timestamp)"></div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
     </div>
 
   </div><!-- /main grid -->
@@ -687,7 +658,6 @@
         pickers: [],
         repartidores: [],
         alertas: [],
-        eventos: [],
         incidenciasAbiertas: 0,
         pedidosSinPicker: [],
         pedidosSinRepartidor: [],
@@ -716,7 +686,6 @@
             this.pickers            = data.pickers || [];
             this.repartidores       = data.repartidores || [];
             this.alertas            = data.alertas || [];
-            this.eventos            = data.eventos || [];
             this.incidenciasAbiertas  = data.incidencias_abiertas || 0;
             this.pedidosSinPicker     = data.pedidos_sin_picker || [];
             this.pedidosSinRepartidor = data.pedidos_sin_repartidor || [];
