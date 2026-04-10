@@ -36,13 +36,14 @@ def register(bp):
         logger.debug("Datos recibidos en confirmacion: %s", data)
 
         token = data.get("token", "")
+        ip = request.remote_addr
         token_user_id = _user_id_del_token(token)
         if not token or not token_user_id:
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
         post_user_id = data.get("userId")
         if str(post_user_id) != str(token_user_id):
-            logger.warning("Token-userId mismatch en /api/confirmacion: token=%s post=%s", token_user_id, post_user_id)
+            logger.warning("TOKEN_MISMATCH  endpoint=/api/confirmacion  token_user=%s  post_user=%s  ip=%s", token_user_id, post_user_id, ip)
             return jsonify({"error": "No autorizado"}), 403
 
         pedido_id_redis = str(uuid.uuid4())
@@ -63,6 +64,7 @@ def register(bp):
         if not success:
             return jsonify({"error": result}), 404
 
+        logger.info("API_CONFIRMACION  user_id=%s  ip=%s", token_user_id, ip)
         return jsonify({"redirect_url": result})
 
     @bp.route('/api/volver_al_menu', methods=['POST'])
@@ -70,13 +72,14 @@ def register(bp):
         """Revierte un pedido en confirmación para que el usuario vuelva al menú."""
         data = request.json
         token = data.get("token", "")
+        ip = request.remote_addr
         token_user_id = _user_id_del_token(token)
         if not token or not token_user_id:
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
         post_user_id = data.get("userID")
         if str(post_user_id) != str(token_user_id):
-            logger.warning("Token-userId mismatch en /api/volver_al_menu: token=%s post=%s", token_user_id, post_user_id)
+            logger.warning("TOKEN_MISMATCH  endpoint=/api/volver_al_menu  token_user=%s  post_user=%s  ip=%s", token_user_id, post_user_id, ip)
             return jsonify({"error": "No autorizado"}), 403
 
         try:
@@ -134,6 +137,7 @@ def register(bp):
     def obtener_productos():
         """Devuelve el catálogo agrupado por categoría para el menú web."""
         try:
+            logger.info("CATALOGO_ACCESO  ip=%s  ua=%.60s", request.remote_addr, request.user_agent.string)
             productos = gestor_productos.obtener_productos()
             logger.debug("Productos obtenidos: %s", productos)
 

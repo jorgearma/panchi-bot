@@ -20,7 +20,7 @@ from states import EstadoPedido
 logger = logging.getLogger(__name__)
 
 
-def resolver_sesion_menu(token: str) -> dict:
+def resolver_sesion_menu(token: str, ip: str = "-") -> dict:
     """Obtiene y valida los datos de sesión asociados al token del menú.
 
     Retorna un dict con clave 'tipo':
@@ -32,6 +32,7 @@ def resolver_sesion_menu(token: str) -> dict:
     # En ambos casos el usuario ve "caducado" — comportamiento aceptado para esta ruta.
     raw = redismanager.get(token)
     if not raw:
+        logger.warning("MENU_TOKEN_INVALIDO  token=%.6s  ip=%s", token, ip)
         return {
             'tipo': 'error',
             'titulo': 'Enlace caducado',
@@ -70,10 +71,13 @@ def resolver_sesion_menu(token: str) -> dict:
     logger.debug("Estado del pedido: %s, user_id=%s", pedido.Estado, usuario.id)
 
     if pedido.Estado == EstadoPedido.ENLACE:
+        logger.info("MENU_ACCESO  token=%.6s  user_id=%s  ip=%s  resultado=ok", token, usuario.id, ip)
         return {'tipo': 'quiniela', 'usuario': usuario}
     if pedido.Estado == EstadoPedido.ENLACE2:
+        logger.info("MENU_ACCESO  token=%.6s  user_id=%s  ip=%s  resultado=enlace2", token, usuario.id, ip)
         return {'tipo': 'enlace2', 'pedido_id': pedido.redisID}
 
+    logger.warning("MENU_ACCESO  token=%.6s  user_id=%s  ip=%s  resultado=estado_invalido  estado=%s", token, usuario.id, ip, pedido.Estado)
     return {'tipo': 'error', 'titulo': 'Estado no reconocido', 'mensaje': 'Estado del pedido no reconocido.', 'status': 400}
 
 

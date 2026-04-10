@@ -1,7 +1,7 @@
 import logging
 
 import config
-from flask import render_template, redirect
+from flask import render_template, redirect, request
 
 from blueprints.menu._helpers import _extraer_calle
 from services import menu_session
@@ -15,7 +15,8 @@ def register(bp):
     def quiniela(token=None):
         """Valida el token, recupera el pedido activo y decide qué pantalla mostrar."""
         logger.debug("token recibido: %s", token)
-        resultado = menu_session.resolver_sesion_menu(token)
+        ip = request.remote_addr
+        resultado = menu_session.resolver_sesion_menu(token, ip=ip)
 
         if resultado['tipo'] == 'error':
             return render_template(
