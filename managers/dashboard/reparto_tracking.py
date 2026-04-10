@@ -154,13 +154,15 @@ class GestorRepartoTrackingMixin:
 
         return resultado
 
-    def marcar_salida_reparto(self, reparto_id: int) -> tuple:
+    def marcar_salida_reparto(self, reparto_id: int, repartidor_id: int | None = None) -> tuple:
         """Returns (ok, msg, telefono_cliente). telefono_cliente is None on error."""
         s = self.session
         try:
             reparto = s.query(Reparto).filter_by(id=reparto_id).first()
             if not reparto:
-                return False, "Reparto no encontrado", None
+                return False, "Reparto no encontrado"
+            if repartidor_id is not None and reparto.repartidor_id != repartidor_id:
+                return False, "Este reparto no está asignado a ti", None
 
             reparto.estado = EstadoReparto.EN_CAMINO.value
             reparto.hora_salida = datetime.utcnow()
@@ -186,7 +188,7 @@ class GestorRepartoTrackingMixin:
             logger.error("Error marcando salida reparto %s: %s", reparto_id, e)
             return False, "Error de base de datos"
 
-    def marcar_no_entregado(self, reparto_id: int, motivo: str) -> tuple:
+    def marcar_no_entregado(self, reparto_id: int, motivo: str, repartidor_id: int | None = None) -> tuple:
         """Marks a delivery as not delivered. Updates reparto only — pedido state stays as-is
         so the ops team can handle it from the dashboard."""
         s = self.session
@@ -194,6 +196,8 @@ class GestorRepartoTrackingMixin:
             reparto = s.query(Reparto).filter_by(id=reparto_id).first()
             if not reparto:
                 return False, "Reparto no encontrado"
+            if repartidor_id is not None and reparto.repartidor_id != repartidor_id:
+                return False, "Este reparto no está asignado a ti"
             if reparto.estado not in (EstadoReparto.EN_CAMINO.value, EstadoReparto.ENTREGADO.value):
                 return False, f"Estado actual '{reparto.estado}' no permite marcar como no entregado"
 
@@ -211,13 +215,15 @@ class GestorRepartoTrackingMixin:
             logger.error("Error marcando no entregado reparto %s: %s", reparto_id, e)
             return False, "Error de base de datos"
 
-    def marcar_entregado(self, reparto_id: int) -> tuple:
+    def marcar_entregado(self, reparto_id: int, repartidor_id: int | None = None) -> tuple:
         """Returns (ok, msg, telefono_cliente). telefono_cliente is None on error."""
         s = self.session
         try:
             reparto = s.query(Reparto).filter_by(id=reparto_id).first()
             if not reparto:
                 return False, "Reparto no encontrado", None
+            if repartidor_id is not None and reparto.repartidor_id != repartidor_id:
+                return False, "Este reparto no está asignado a ti", None
 
             # Guard: para contra reembolso (efectivo/tarjeta), el cobro debe estar registrado
             forma_pago = reparto.pedido.forma_pago if reparto.pedido else None

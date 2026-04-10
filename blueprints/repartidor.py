@@ -74,7 +74,7 @@ def marcar_salida(reparto_id: int):
         DemoState.marcar_salida_reparto(session.get('demo_session_id', 'default'), reparto_id)
         return jsonify({"ok": True, "mensaje": "Demo: salida marcada"})
     empleado_id = session.get('empleado_id')
-    ok, msg = gestor_dashboard.marcar_salida_reparto(reparto_id)
+    ok, msg = gestor_dashboard.marcar_salida_reparto(reparto_id, repartidor_id=empleado_id)
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[REPARTO] Empleado %s sale a entregar reparto %s", empleado_id, reparto_id)
@@ -90,7 +90,7 @@ def marcar_entregado(reparto_id: int):
         DemoState.marcar_entregado(session.get('demo_session_id', 'default'), reparto_id)
         return jsonify({"ok": True, "mensaje": "Demo: entregado"})
     empleado_id = session.get('empleado_id')
-    ok, msg = gestor_dashboard.marcar_entregado(reparto_id)
+    ok, msg = gestor_dashboard.marcar_entregado(reparto_id, repartidor_id=empleado_id)
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[REPARTO] Empleado %s entrega reparto %s", empleado_id, reparto_id)
@@ -111,7 +111,7 @@ def marcar_no_entregado(reparto_id: int):
     if not motivo:
         return jsonify({"error": "Indica el motivo de no entrega"}), 400
     empleado_id = session.get('empleado_id')
-    ok, msg = gestor_dashboard.marcar_no_entregado(reparto_id, motivo)
+    ok, msg = gestor_dashboard.marcar_no_entregado(reparto_id, motivo, repartidor_id=empleado_id)
     if not ok:
         return jsonify({"error": msg}), 400
     logger.info("[REPARTO] Empleado %s marca no entregado reparto %s — motivo: %s", empleado_id, reparto_id, motivo)
@@ -138,6 +138,7 @@ def registrar_cobro(reparto_id: int):
     ok, msg = gestor_dashboard.registrar_cobro(
         reparto_id, metodo, importe_cobrado,
         cambio_devuelto, importe_efectivo, importe_tarjeta,
+        repartidor_id=empleado_id,
     )
     if not ok:
         return jsonify({"error": msg}), 400
