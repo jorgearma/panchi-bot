@@ -63,3 +63,29 @@ select option:disabled {
   color: #9CA3AF;
   background-color: #F3F4F6;
 }
+
+/* ── iOS safe area ─────────────────────────────────── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1.25rem);
+}
+
+/* ── Mobile layout ─────────────────────────────────── */
+@media (max-width: 1023px) {
+  /* Colapsar el grid de 3 columnas a columna única */
+  .ops-section {
+    grid-template-columns: 1fr !important;
+  }
+  /* Las filas de la tabla son más compactas */
+  .data-table td,
+  .data-table th {
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+  /* Tap highlight en filas */
+  .data-table tbody tr:active {
+    background-color: rgb(240 249 255);
+    box-shadow: inset 3px 0 0 0 rgb(56 189 248);
+  }
+}
