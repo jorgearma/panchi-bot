@@ -119,7 +119,7 @@ class GestorDashboardBase:
         rows = (
             self.session.query(Reparto)
             .options(
-                joinedload(Reparto.pedido).joinedload(Pedido.cliente)
+                joinedload(Reparto.pedido)
             )
             .filter(
                 Reparto.repartidor_id.in_(ids),
