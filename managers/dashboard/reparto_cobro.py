@@ -22,6 +22,7 @@ class GestorRepartoCobroMixin:
         cambio_devuelto: float | None = None,
         importe_efectivo: float | None = None,
         importe_tarjeta: float | None = None,
+        repartidor_id: int | None = None,
     ) -> tuple:
         """Persists the payment collection made by the delivery driver."""
         METODOS_VALIDOS = {'efectivo', 'tarjeta', 'mixto'}
@@ -33,6 +34,8 @@ class GestorRepartoCobroMixin:
             reparto = s.query(Reparto).filter_by(id=reparto_id).first()
             if not reparto:
                 return False, "Reparto no encontrado"
+            if repartidor_id is not None and reparto.repartidor_id != repartidor_id:
+                return False, "Este reparto no está asignado a ti"
 
             reparto.metodo_cobro     = metodo_cobro
             reparto.importe_cobrado  = importe_cobrado

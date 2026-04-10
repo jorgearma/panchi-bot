@@ -5,6 +5,8 @@ from urllib.parse import unquote
 
 import config
 from flask import jsonify, request
+from sqlalchemy.exc import SQLAlchemyError
+from tenacity import RetryError
 
 from container import gestor_pedidos, gestor_productos, cache
 from states import EstadoPedido
@@ -34,13 +36,14 @@ def register(bp):
         logger.debug("Datos recibidos en confirmacion: %s", data)
 
         token = data.get("token", "")
+        ip = request.remote_addr
         token_user_id = _user_id_del_token(token)
         if not token or not token_user_id:
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
         post_user_id = data.get("userId")
         if str(post_user_id) != str(token_user_id):
-            logger.warning("Token-userId mismatch en /api/confirmacion: token=%s post=%s", token_user_id, post_user_id)
+            logger.warning("TOKEN_MISMATCH  endpoint=/api/confirmacion  token_user=%s  post_user=%s  ip=%s", token_user_id, post_user_id, ip)
             return jsonify({"error": "No autorizado"}), 403
 
         pedido_id_redis = str(uuid.uuid4())
@@ -61,6 +64,7 @@ def register(bp):
         if not success:
             return jsonify({"error": result}), 404
 
+        logger.info("API_CONFIRMACION  user_id=%s  ip=%s", token_user_id, ip)
         return jsonify({"redirect_url": result})
 
     @bp.route('/api/volver_al_menu', methods=['POST'])
@@ -68,21 +72,31 @@ def register(bp):
         """Revierte un pedido en confirmación para que el usuario vuelva al menú."""
         data = request.json
         token = data.get("token", "")
+        ip = request.remote_addr
         token_user_id = _user_id_del_token(token)
         if not token or not token_user_id:
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
         post_user_id = data.get("userID")
         if str(post_user_id) != str(token_user_id):
-            logger.warning("Token-userId mismatch en /api/volver_al_menu: token=%s post=%s", token_user_id, post_user_id)
+            logger.warning("TOKEN_MISMATCH  endpoint=/api/volver_al_menu  token_user=%s  post_user=%s  ip=%s", token_user_id, post_user_id, ip)
             return jsonify({"error": "No autorizado"}), 403
 
-        pedido = gestor_pedidos.obtener_pedido_mas_reciente(token_user_id)
+        try:
+            pedido = gestor_pedidos.obtener_pedido_mas_reciente(token_user_id)
+        except (SQLAlchemyError, RetryError) as e:
+            logger.error("volver_al_menu: DB error usuario=%s: %s", token_user_id, e)
+            return jsonify({"error": "Error interno"}), 500
+
         if not pedido:
             return jsonify({"error": "Pedido no encontrado"}), 404
 
         if pedido.Estado == EstadoPedido.ENLACE2:
-            gestor_pedidos.actualizar_estado(pedido.PedidoID, EstadoPedido.ENLACE)
+            try:
+                gestor_pedidos.actualizar_estado(pedido.PedidoID, EstadoPedido.ENLACE)
+            except (SQLAlchemyError, RetryError) as e:
+                logger.error("volver_al_menu: error al actualizar estado pedido=%s: %s", pedido.PedidoID, e)
+                return jsonify({"error": "Error interno"}), 500
 
         return jsonify({"ok": True})
 
@@ -99,20 +113,31 @@ def register(bp):
         if not pedido_id:
             return jsonify({"error": "Pedido ID no proporcionado"}), 400
 
-        pedido = gestor_pedidos.obtener_pedido(pedido_id)
+        try:
+            pedido = gestor_pedidos.obtener_pedido(pedido_id)
+        except (SQLAlchemyError, RetryError) as e:
+            logger.error("cambiar_estado_a_enlace: DB error pedido=%s: %s", pedido_id, e)
+            return jsonify({"error": "Error interno"}), 500
+
         if not pedido:
             return jsonify({"error": "Pedido no encontrado"}), 404
 
         if pedido.Estado == EstadoPedido.CONFIRMANDO_PAGO:
             return jsonify({"error": "error'"}), 400
 
-        gestor_pedidos.actualizar_estado(pedido.PedidoID, EstadoPedido.ENLACE)
+        try:
+            gestor_pedidos.actualizar_estado(pedido.PedidoID, EstadoPedido.ENLACE)
+        except (SQLAlchemyError, RetryError) as e:
+            logger.error("cambiar_estado_a_enlace: error al actualizar estado pedido=%s: %s", pedido.PedidoID, e)
+            return jsonify({"error": "Error interno"}), 500
+
         return jsonify({"message": "Estado actualizado a 'enlace'"}), 200
 
     @bp.route('/api/productos', methods=['GET'])
     def obtener_productos():
         """Devuelve el catálogo agrupado por categoría para el menú web."""
         try:
+            logger.info("CATALOGO_ACCESO  ip=%s  ua=%.60s", request.remote_addr, request.user_agent.string)
             productos = gestor_productos.obtener_productos()
             logger.debug("Productos obtenidos: %s", productos)
 
