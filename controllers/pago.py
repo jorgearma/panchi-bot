@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 from sqlalchemy.exc import SQLAlchemyError
 from tenacity import RetryError
@@ -45,13 +46,13 @@ def _validar_carrito(productos_recibidos, gestor_productos):
         return None, None, "Error de base de datos al validar el carrito"
 
     productos_validos = []
-    total = 0.0
+    total = Decimal('0')
     for codigo, cantidad, notas in items_parseados:
         producto_db = catalogo.get(codigo)
         if not producto_db:
             logger.error("_validar_carrito: producto %s no encontrado en BD", codigo)
             return None, None, f"Producto con código {codigo} no encontrado"
-        total += float(producto_db["Precio"]) * cantidad
+        total += Decimal(str(producto_db["Precio"])) * cantidad
         productos_validos.append({
             "producto_id": codigo,  # codigo == ProductoID en este sistema
             "cantidad":    cantidad,
@@ -100,7 +101,7 @@ def iniciar_pago(
     pedido_activo_id = pedido_activo.PedidoID
     redis_id = pedido_activo.redisID
 
-    amount_in_cents = int(round(total_calculado * 100))
+    amount_in_cents = int(total_calculado * 100)
 
     # Call Monei BEFORE writing to DB: if payment creation fails, the order
     # stays in ENLACE2 with no committed products, so retries are clean.
@@ -122,7 +123,7 @@ def iniciar_pago(
     # Idempotent: re-running after a partial failure won't duplicate lines.
     try:
         ok = gestor_pedidos.confirmar_pago_online(
-            pedido_activo_id, productos_validos, redirect_url, notas=notas or None
+            pedido_activo_id, productos_validos, redirect_url, total_calculado, notas=notas or None
         )
     except (SQLAlchemyError, RetryError) as e:
         logger.error(
@@ -189,7 +190,7 @@ def iniciar_pago_efectivo(
     # Single atomic commit: replace order lines + forma_pago + state transition.
     try:
         ok = gestor_pedidos.confirmar_pago_efectivo(
-            pedido_id, productos_validos, notas=notas or None
+            pedido_id, productos_validos, total_calculado, notas=notas or None
         )
     except (SQLAlchemyError, RetryError) as e:
         logger.error("iniciar_pago_efectivo: DB error al confirmar pedido=%s: %s", pedido_id, e)
