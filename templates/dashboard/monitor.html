@@ -47,11 +47,6 @@
         <span class="w-2 h-2 rounded-full bg-green-400 pulse"></span>
         <span class="text-xs text-gray-500">EN VIVO</span>
       </div>
-      <!-- Badge de alertas -->
-      <template x-if="alertas.length > 0">
-        <span class="bg-orange-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 leading-none min-w-[1.25rem] text-center"
-              x-text="alertas.length"></span>
-      </template>
       <div class="flex items-center gap-1.5" x-show="error" x-cloak>
         <span class="w-2 h-2 rounded-full bg-red-500"></span>
         <span class="text-xs text-red-400">SIN CONEXIÓN</span>
@@ -157,32 +152,6 @@
   </div>
 
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       ALERTS BANNER — errores y warnings en una sola franja
-  ═══════════════════════════════════════════════════════════════════ -->
-  <div x-show="alertas.length > 0" x-cloak
-       class="border-b border-gray-800/60 bg-gray-900 px-4 py-1">
-    <div class="flex items-center gap-2 overflow-x-auto slim-scroll">
-      <!-- Errores -->
-      <template x-for="a in alertas.filter(a => a.nivel === 'error').slice(0, 4)" :key="'e' + a.pedido_id + a.tipo">
-        <span class="text-xs text-red-400 bg-red-950/50 border border-red-900/40 rounded px-1.5 py-0.5 shrink-0 whitespace-nowrap flex items-center gap-1">
-          <span class="w-1 h-1 rounded-full bg-red-500 shrink-0"></span>
-          <span x-text="a.mensaje"></span>
-        </span>
-      </template>
-      <!-- Divisor si hay ambos -->
-      <template x-if="alertas.some(a => a.nivel === 'error') && alertas.some(a => a.nivel === 'warning')">
-        <span class="h-3 w-px bg-gray-700 shrink-0"></span>
-      </template>
-      <!-- Warnings -->
-      <template x-for="a in alertas.filter(a => a.nivel === 'warning').slice(0, 3)" :key="'w' + a.pedido_id + a.tipo">
-        <span class="text-xs text-yellow-500 bg-yellow-950/30 border border-yellow-900/30 rounded px-1.5 py-0.5 shrink-0 whitespace-nowrap flex items-center gap-1">
-          <span class="text-yellow-600">⚠</span>
-          <span x-text="a.mensaje"></span>
-        </span>
-      </template>
-    </div>
-  </div>
 
   <!-- ═══════════════════════════════════════════════════════════════
        MAIN GRID
@@ -531,38 +500,6 @@
       </template>
     </div>
 
-    <!-- ─── COL 3: ACTIVITY FEED + ALERTS ─────────────────────── -->
-    <div class="flex flex-col gap-3 min-h-0">
-
-      <!-- Alerts (collapsible) -->
-      <div x-show="alertas.length > 0" x-cloak class="shrink-0">
-        <button @click="alertasExpandidas = !alertasExpandidas"
-                class="w-full flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-widest hover:text-gray-300 transition mb-2">
-          <span>
-            🚨 Alertas
-            <span class="ml-1 font-bold"
-                  :class="alertas.filter(a=>a.nivel==='error').length > 0 ? 'text-red-500' : 'text-yellow-500'"
-                  x-text="alertas.length"></span>
-          </span>
-          <span :class="alertasExpandidas ? 'rotate-90' : ''" class="transition-transform">›</span>
-        </button>
-        <div x-show="alertasExpandidas" class="space-y-1.5 max-h-40 overflow-y-auto slim-scroll">
-          <template x-for="(a, i) in alertas.slice(0, 10)" :key="i">
-            <div class="flex items-start gap-2 rounded-lg px-2.5 py-2 text-xs"
-                 :class="a.nivel === 'error' ? 'bg-red-950/60 border border-red-900/50' : a.nivel === 'warning' ? 'bg-yellow-950/50 border border-yellow-900/40' : 'bg-gray-800/40 border border-gray-700/50'">
-              <span :class="a.nivel === 'error' ? 'text-red-400' : a.nivel === 'warning' ? 'text-yellow-400' : 'text-gray-500'">
-                <template x-if="a.nivel === 'error'">🔴</template>
-                <template x-if="a.nivel === 'warning'">🟡</template>
-                <template x-if="a.nivel === 'info'">🔵</template>
-              </span>
-              <span :class="a.nivel === 'error' ? 'text-red-200' : a.nivel === 'warning' ? 'text-yellow-200' : 'text-gray-400'"
-                    x-text="a.mensaje"></span>
-            </div>
-          </template>
-        </div>
-      </div>
-
-    </div>
 
   </div><!-- /main grid -->
 
@@ -657,14 +594,12 @@
         mostrarTooltipIngresos: false,
         pickers: [],
         repartidores: [],
-        alertas: [],
         incidenciasAbiertas: 0,
         pedidosSinPicker: [],
         pedidosSinRepartidor: [],
         cargando: false,
         error: false,
         ultimaActualizacion: null,
-        alertasExpandidas: true,
         colapsadas: {},
         now: new Date(),
         modalHistorial: { visible: false, nombre: '', tipo: '', items: [], avgMin: null },
@@ -685,7 +620,6 @@
             this.metricas           = data.metricas || {};
             this.pickers            = data.pickers || [];
             this.repartidores       = data.repartidores || [];
-            this.alertas            = data.alertas || [];
             this.incidenciasAbiertas  = data.incidencias_abiertas || 0;
             this.pedidosSinPicker     = data.pedidos_sin_picker || [];
             this.pedidosSinRepartidor = data.pedidos_sin_repartidor || [];
