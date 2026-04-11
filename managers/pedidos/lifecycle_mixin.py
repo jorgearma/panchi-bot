@@ -312,14 +312,20 @@ class GestorPedidosLifecycleMixin:
         }
 
     def cancelar_pedidos_caducados(self, umbral_minutos: int = 60) -> int:
-        """Cancela en bulk pedidos en ENLACE/ENLACE2 con más de umbral_minutos de antigüedad.
+        """Cancela en bulk pedidos en ENLACE/ENLACE2/CONFIRMANDO_PAGO con más de umbral_minutos de antigüedad.
 
         Llamado por el endpoint interno /internal/limpiar-pedidos-caducados desde cron.
         Devuelve el número de pedidos cancelados.
         """
+        # CONFIRMANDO_PAGO se incluye para rescatar pedidos atascados cuando el enlace
+        # de Monei caducó y la cancelación interactiva del bot falló (ver bug A).
         from datetime import datetime, timedelta
         corte = datetime.utcnow() - timedelta(minutes=umbral_minutos)
-        estados = [EstadoPedido.ENLACE.value, EstadoPedido.ENLACE2.value]
+        estados = [
+            EstadoPedido.ENLACE.value,
+            EstadoPedido.ENLACE2.value,
+            EstadoPedido.CONFIRMANDO_PAGO.value,
+        ]
         try:
             pedidos = (
                 self.session.query(Pedido)
