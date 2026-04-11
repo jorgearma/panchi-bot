@@ -21,6 +21,11 @@ from controllers.registro_notifier import (
 
 logger = logging.getLogger(__name__)
 
+RESPUESTAS_POSITIVAS = {
+    "si", "sí", "vale", "ok", "okey", "esta bien", "está bien",
+    "claro", "perfecto", "de acuerdo", "correcto", "exacto", "bueno", "sip",
+}
+
 
 def _es_nombre_valido(nombre):
     """Valida nombres simples permitiendo letras, espacios y apellidos compuestos."""
@@ -41,7 +46,7 @@ class RegistroUsuario:
 
     def _confirmar_direccion(self, mensaje_cliente, data_redis):
         """Confirma la dirección validada y completa el alta del usuario."""
-        if mensaje_cliente.lower() != 'si':
+        if mensaje_cliente.lower() not in RESPUESTAS_POSITIVAS:
             return False
 
         from container import gestor_usuarios, gestor_pedidos
@@ -91,6 +96,11 @@ class RegistroUsuario:
                 except Exception as e:
                     logger.error(
                         "RECUPERACION_FALLIDA usuario=%s error=%s", self.numero_cliente, e
+                    )
+                    self.estado_usuario.eliminar_estado()
+                    enviar_mensaje_whatsapp(
+                        "Ha habido un problema técnico con tu registro. Escríbenos de nuevo y lo resolvemos.",
+                        self.numero_cliente,
                     )
                     return "Error en registro", 200
             else:
@@ -180,7 +190,7 @@ class RegistroUsuario:
 
         elif estado_actual == EstadoRegistro.CONFIRMANDO_DIRECCION:
             logger.debug("data redis: %s", estado_data)  # H8: reutiliza estado ya leído
-            if mensaje_cliente.lower() not in {"si", "sí", "no"}:
+            if mensaje_cliente.lower() not in RESPUESTAS_POSITIVAS | {"no"}:
                 _enviar_pedir_confirmacion(self.numero_cliente)
                 return "Respuesta inválida en confirmación", 200
             respuesta = self._confirmar_direccion(mensaje_cliente, estado_data)
