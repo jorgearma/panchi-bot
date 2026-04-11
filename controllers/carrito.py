@@ -3,6 +3,7 @@ import logging
 
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from tenacity import RetryError
+from container import redismanager
 from maps_module import geocodificar_direccion
 from states import EstadoPedido
 
@@ -93,6 +94,14 @@ def confirmar_carrito(
     if not productos_recibidos:
         logger.warning("confirmar_carrito: carrito vacío para usuario %s", user_id)
         return False, "El carrito no puede estar vacío"
+
+    # Lock por usuario: dos peticiones simultáneas pueden leer ENLACE y ambas sobreescribir
+    # redisID en BD, dejando una entrada Redis huérfana. TTL corto: si la función crashea,
+    # el lock se libera solo y el usuario puede reintentar.
+    lock_key = f"carrito_lock:{user_id}"
+    if not redismanager.adquirir_lock(lock_key, ttl=10):
+        logger.warning("CARRITO_LOCK_OCUPADO usuario=%s", user_id)
+        return False, "Procesando otra petición, espera unos segundos"
 
     ok, resultado = _validar_productos(productos_recibidos, gestor_productos)
     if not ok:
