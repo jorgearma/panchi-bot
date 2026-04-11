@@ -311,6 +311,35 @@ class GestorPedidosLifecycleMixin:
             "reparto": reparto_data,
         }
 
+    def cancelar_pedidos_caducados(self, umbral_minutos: int = 60) -> int:
+        """Cancela en bulk pedidos en ENLACE/ENLACE2 con más de umbral_minutos de antigüedad.
+
+        Llamado por el endpoint interno /internal/limpiar-pedidos-caducados desde cron.
+        Devuelve el número de pedidos cancelados.
+        """
+        from datetime import datetime, timedelta
+        corte = datetime.utcnow() - timedelta(minutes=umbral_minutos)
+        estados = [EstadoPedido.ENLACE.value, EstadoPedido.ENLACE2.value]
+        try:
+            pedidos = (
+                self.session.query(Pedido)
+                .filter(Pedido.Estado.in_(estados))
+                .filter(Pedido.FechaCreacion < corte)
+                .all()
+            )
+            cancelados = 0
+            for pedido in pedidos:
+                if self._set_estado(pedido, EstadoPedido.CANCELADO, notas="caducado_automatico"):
+                    cancelados += 1
+            if cancelados:
+                self.session.commit()
+            logger.info("cancelar_pedidos_caducados: cancelados=%s", cancelados)
+            return cancelados
+        except SQLAlchemyError as error:
+            self.session.rollback()
+            logger.error("cancelar_pedidos_caducados: error=%s", error)
+            raise
+
     def obtener_pedido(self, pedido_id):
         """Recupera un pedido por id."""
         try:
