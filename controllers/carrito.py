@@ -99,9 +99,9 @@ def confirmar_carrito(
     # redisID en BD, dejando una entrada Redis huérfana. TTL corto: si la función crashea,
     # el lock se libera solo y el usuario puede reintentar.
     lock_key = f"carrito_lock:{user_id}"
-    if not redismanager.adquirir_lock(lock_key, ttl=10):
+    if not redismanager.adquirir_lock(lock_key, ttl=3):
         logger.warning("CARRITO_LOCK_OCUPADO usuario=%s", user_id)
-        return False, "Procesando otra petición, espera unos segundos"
+        return False, "Inténtalo de nuevo"
 
     ok, resultado = _validar_productos(productos_recibidos, gestor_productos)
     if not ok:
