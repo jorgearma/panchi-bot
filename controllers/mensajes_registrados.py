@@ -29,7 +29,7 @@ class ManejadorMensajesRegistrados:
         """Abre un pedido nuevo para el usuario y le envía el menú inicial."""
 
         lock_key = f"pedido_lock:{numero_cliente}"
-        if not redismanager.adquirir_lock(lock_key, ttl=10):
+        if not redismanager.adquirir_lock(lock_key, ttl=3):
             logger.info("LOCK_PEDIDO ya activo para %s — ignorando duplicado.", numero_cliente)
             return "mensaje enviado", 200
 
