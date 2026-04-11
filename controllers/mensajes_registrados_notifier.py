@@ -64,6 +64,34 @@ def _enviar_enlace_pago(enlace_pago, numero_cliente):
     )
 
 
+
+def _enviar_enlace_pago_con_opcion_cancelar(enlace_pago, numero_cliente):
+    """Reenvía el enlace de pago e informa al cliente que puede cancelar."""
+    enviar_mensaje_whatsapp(
+        f"🔗 {enlace_pago}\n✅ Pago seguro con *MONEI*\n\n"
+        "Si quieres cancelar este pedido y empezar uno nuevo, escribe *cancelar*.",
+        numero_cliente,
+    )
+
+
+def _enviar_pedido_cancelado(numero_cliente):
+    """Confirma la cancelación del pedido e invita a iniciar uno nuevo."""
+    enviar_mensaje_whatsapp(
+        "Tu pedido ha sido cancelado. ✅\n"
+        "Escríbenos cuando quieras para hacer un nuevo pedido.",
+        numero_cliente,
+    )
+
+
+def _enviar_enlace_pago_caducado(numero_cliente):
+    """Informa que el enlace de pago no está disponible e invita a reintentar."""
+    enviar_mensaje_whatsapp(
+        "Ha habido un problema con tu enlace de pago. ⚠️\n"
+        "Escríbenos de nuevo para empezar un nuevo pedido.",
+        numero_cliente,
+    )
+
+
 def _enviar_error_generico(numero_cliente):
     """Devuelve un mensaje neutro cuando no se pudo procesar la solicitud."""
     enviar_mensaje_whatsapp(

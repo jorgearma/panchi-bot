@@ -9,6 +9,7 @@ from controllers.mensajes_registrados_notifier import (
     _enviar_enlace_caducado,
     _enviar_enlace_pedido,
     _enviar_enlace_pago,
+    _enviar_enlace_pago_caducado,
     _enviar_error_generico,
     _enviar_estado_en_curso,
     _enviar_respuesta_pedido,
@@ -113,7 +114,11 @@ class ManejadorMensajesRegistrados:
             enlace_pago = pedido_activo.enlace
             if not enlace_pago:
                 logger.warning("ENLACE_PAGO_NULO pedido=%s usuario=%s", id_pedido_activo, numero_cliente)
-                _enviar_enlace_caducado(numero_cliente)
+                try:
+                    gestor_pedidos.actualizar_estado(id_pedido_activo, EstadoPedido.CANCELADO)
+                except Exception as e:
+                    logger.error("ERROR_CANCELAR_ENLACE_NULO pedido=%s error=%s", id_pedido_activo, e)
+                _enviar_enlace_pago_caducado(numero_cliente)
                 return "mensaje enviado", 200
             _enviar_enlace_pago(enlace_pago, numero_cliente)
             return "mensaje enviado", 200
