@@ -119,6 +119,10 @@ def enrutar_mensaje(numero_cliente: str, mensaje_cliente: str):
         return "Número bloqueado", 403
     redismanager.bloquear_usuario(numero_cliente, duracion=4)
 
+    if not redismanager.incrementar_contador_hora(numero_cliente):
+        logger.warning("RATE_LIMIT_HORA usuario=%s", numero_cliente)
+        return "Límite de mensajes por hora superado", 429
+
     logger.info("MSG_CLIENTE usuario=%s mensaje=%r", numero_cliente, mensaje_cliente)
 
     try:
