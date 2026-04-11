@@ -8,7 +8,8 @@ from controllers.mensajes_registrados_notifier import (
     _enviar_bienvenida_menu,
     _enviar_enlace_caducado,
     _enviar_enlace_pedido,
-    _enviar_enlace_pago,
+    _enviar_enlace_pago_con_opcion_cancelar,
+    _enviar_pedido_cancelado,
     _enviar_enlace_pago_caducado,
     _enviar_error_generico,
     _enviar_estado_en_curso,
@@ -120,7 +121,16 @@ class ManejadorMensajesRegistrados:
                     logger.error("ERROR_CANCELAR_ENLACE_NULO pedido=%s error=%s", id_pedido_activo, e)
                 _enviar_enlace_pago_caducado(numero_cliente)
                 return "mensaje enviado", 200
-            _enviar_enlace_pago(enlace_pago, numero_cliente)
+            if mensaje_cliente.strip().lower() == "cancelar":
+                try:
+                    gestor_pedidos.actualizar_estado(id_pedido_activo, EstadoPedido.CANCELADO)
+                except Exception as e:
+                    logger.error("ERROR_CANCELAR_PAGO pedido=%s error=%s", id_pedido_activo, e)
+                    _enviar_error_sistema(numero_cliente)
+                    return "error cancelando pedido", 200
+                _enviar_pedido_cancelado(numero_cliente)
+                return "mensaje enviado", 200
+            _enviar_enlace_pago_con_opcion_cancelar(enlace_pago, numero_cliente)
             return "mensaje enviado", 200
 
         # Pedido activo (pagado, confirmado o en proceso) — bloquear nuevo pedido e informar al cliente
