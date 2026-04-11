@@ -118,7 +118,11 @@ class ManejadorMensajesRegistrados:
                 try:
                     gestor_pedidos.actualizar_estado(id_pedido_activo, EstadoPedido.CANCELADO)
                 except Exception as e:
+                    # Si la cancelación falla, no enviamos enlace_pago_caducado: el pedido sigue
+                    # en CONFIRMANDO_PAGO. El cron cancelar_pedidos_caducados lo rescatará a la hora.
                     logger.error("ERROR_CANCELAR_ENLACE_NULO pedido=%s error=%s", id_pedido_activo, e)
+                    _enviar_error_sistema(numero_cliente)
+                    return "error cancelando pedido", 200
                 _enviar_enlace_pago_caducado(numero_cliente)
                 return "mensaje enviado", 200
             if mensaje_cliente.strip().lower() == "cancelar":
