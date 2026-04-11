@@ -184,8 +184,6 @@ def procesar_pago_monei(data: dict):
         return jsonify({"error": "orderId inválido"}), 400
 
     nombre_usuario = data.get('object', {}).get('description')
-    customer_phone = data.get('object', {}).get('customer', {}).get('phone')
-    customer_address = data.get('object', {}).get('billingDetails', {}).get('address', {}).get("line1")
     importe_euros = data.get('object', {}).get('amount', 0) / 100
 
     if data.get('object', {}).get('status') == 'SUCCEEDED' or data.get('type') == 'charge.succeeded':
@@ -210,13 +208,32 @@ def procesar_pago_monei(data: dict):
             )
             return jsonify({'message': 'Webhook recibido correctamente'}), 200
 
+        # Resolver teléfono y dirección desde el pedido en BD, no desde el payload Monei
+        # (los campos customer.phone / billingDetails son opcionales en Monei y pueden venir
+        # vacíos, lo que provocaba envíos silenciosamente fallidos al cliente).
+        try:
+            pedido = gestor_pedidos.obtener_pedido(order_id)
+        except SQLAlchemyError as e:
+            logger.error(
+                "procesar_pago_monei: pago registrado pero no se pudo cargar pedido %s para notificar: %s",
+                order_id, e,
+            )
+            return jsonify({'message': 'Webhook recibido correctamente'}), 200
+
+        if not pedido:
+            logger.error(
+                "procesar_pago_monei: pedido %s no encontrado tras procesar pago — no se notifica",
+                order_id,
+            )
+            return jsonify({'message': 'Webhook recibido correctamente'}), 200
+
         mensaje = (
             f"❕*Pedido registrado*❕\n      ------------------  \n"
             f"▪️Nombre: *{nombre_usuario}*\n▪️importe: *{importe_euros}*€\n"
             f"▪️ID pedido: *#{order_id}*\n▪️Tiempo estimado: *15m*\n"
-            f"▪️Direccion: 👇🏼 \n\n{customer_address}"
+            f"▪️Direccion: 👇🏼 \n\n{pedido.DireccionEntrega}"
         )
-        enviar_mensaje_whatsapp(mensaje, customer_phone)
+        enviar_mensaje_whatsapp(mensaje, pedido.TelefonoEntrega)
         logger.info("Pedido %s marcado como pagado", order_id)
 
     return jsonify({'message': 'Webhook recibido correctamente'}), 200

@@ -17,6 +17,7 @@ Auditoría del flujo WhatsApp → carrito → pago → notificación. Se listan 
 | B   | Medio     | Pago efectivo            | Falla envío WhatsApp tras confirmar → usuario sin notificación chat    |
 | D   | Bajo      | API carrito              | Race condition en `confirmar_carrito` (sin lock por usuario)           |
 | E   | Cosmético | API cart/payments        | `userId` ausente devuelve 403 en vez de 400                            |
+| F   | Medio     | Webhook Monei            | Reintento de Monei con misma `referencia_externa` reenvía WhatsApp al cliente |
 
 ---
 
@@ -137,6 +138,23 @@ Opción B (sin infra extra): aceptar el fallo silencioso pero hacer que el endpo
 2. Test: petición sin `userId` → 400, no 403.
 
 **Riesgo de regresión:** Nulo.
+
+---
+
+## F — Reintentos de Monei reenvían WhatsApp duplicado (MEDIO)
+
+**Archivo:** `services/inbound_whatsapp.py:174-222`, `managers/pedidos/workflow_mixin.py:182-191`
+
+**Problema:** `procesar_pago_confirmado` es idempotente: si Monei reintenta el webhook con la misma `referencia_externa`, detecta el `Pago` ya existente y devuelve `True` sin mutar nada. Pero `procesar_pago_monei` no distingue ese caso del pago fresh y vuelve a llamar `enviar_mensaje_whatsapp` cada vez. Resultado: el cliente recibe N notificaciones idénticas si Monei reintenta el webhook (cosa que hace por diseño ante 5xx, timeouts, etc.).
+
+**Plan de remediación:**
+
+1. Cambiar la firma de `procesar_pago_confirmado` para devolver `(ok: bool, ya_existia: bool)` o un enum (`PROCESADO`, `YA_PROCESADO`, `RECHAZADO`).
+2. En `procesar_pago_monei`, solo enviar el WhatsApp cuando `ya_existia=False`.
+3. Test: dos llamadas consecutivas con misma `referencia_externa` → solo un envío de WhatsApp.
+4. Test de no regresión: pago fresh sigue notificando.
+
+**Riesgo de regresión:** Medio. Cambiar la firma de `procesar_pago_confirmado` afecta a otros consumidores — buscar usos antes. Si hay muchos, alternativa: dejar la firma intacta y comprobar `Pago` por `referencia_externa` desde el webhook antes de notificar (más feo pero aislado).
 
 ---
 
