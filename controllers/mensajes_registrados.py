@@ -103,6 +103,15 @@ class ManejadorMensajesRegistrados:
             return "mensaje enviado", 200
 
         if estado_del_pedido in (EstadoPedido.ENLACE, EstadoPedido.ENLACE2):
+            if mensaje_cliente.strip().lower() == "cancelar":
+                try:
+                    gestor_pedidos.actualizar_estado(id_pedido_activo, EstadoPedido.CANCELADO)
+                except Exception as e:
+                    logger.error("ERROR_CANCELAR_ENLACE pedido=%s error=%s", id_pedido_activo, e)
+                    _enviar_error_sistema(numero_cliente)
+                    return "error cancelando pedido", 200
+                _enviar_pedido_cancelado(numero_cliente)
+                return "mensaje enviado", 200
             enlace = pedido_activo.enlace
             if not enlace:
                 logger.info("ENLACE_CADUCADO pedido=%s usuario=%s", id_pedido_activo, numero_cliente)
