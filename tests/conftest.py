@@ -19,3 +19,18 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def _flush_fakeredis():
+    """Limpia el fakeredis del singleton redismanager entre tests.
+
+    Sin esto, claves con TTL (locks, anti-spam, etc.) persisten entre tests
+    y provocan falsos negativos cuando dos tests reutilizan el mismo id.
+    """
+    from managers.gestor_redis import redismanager
+    try:
+        redismanager.client.flushall()
+    except Exception:
+        pass
+    yield
