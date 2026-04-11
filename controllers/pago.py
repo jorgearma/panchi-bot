@@ -6,7 +6,10 @@ from tenacity import RetryError
 
 from states import EstadoPedido
 from services.monei_service import crear_pago as monei_crear_pago
-from controllers.pago_notifier import _enviar_confirmacion_efectivo
+from controllers.pago_notifier import (
+    _enviar_confirmacion_efectivo,
+    _job_reintentar_confirmacion_efectivo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +210,24 @@ def iniciar_pago_efectivo(
             "CONFIRMACION_EFECTIVO_WA_FALLIDA pedido=%s error=%s",
             pedido_id, e, exc_info=True
         )
+        # Encolar reintento en RQ con backoff. El frontend ya ve la confirmación
+        # web; este job recupera el envío de WhatsApp si fue un fallo transitorio.
+        try:
+            from message_queue import queue_whatsapp
+            from rq import Retry
+            queue_whatsapp.enqueue(
+                _job_reintentar_confirmacion_efectivo,
+                numero_cliente, nombre_cliente, total_euros, pedido_id, direccion_cliente,
+                retry=Retry(max=3, interval=[30, 120, 600]),
+            )
+            logger.info(
+                "CONFIRMACION_EFECTIVO_WA_REINTENTO_PROGRAMADO pedido=%s", pedido_id
+            )
+        except Exception as enqueue_err:
+            logger.error(
+                "CONFIRMACION_EFECTIVO_WA_REINTENTO_FALLIDO_ENCOLAR pedido=%s error=%s",
+                pedido_id, enqueue_err, exc_info=True
+            )
     # Pedido confirmado en DB — devolver True aunque falle WhatsApp
     logger.info("iniciar_pago_efectivo: pedido %s confirmado contra reembolso", pedido_id)
     return True, f"{public_url}/pago_confirmado?pedido_id={redis_id}"
