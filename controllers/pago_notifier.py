@@ -16,3 +16,15 @@ def _enviar_confirmacion_efectivo(numero_cliente, nombre_cliente, total_euros,
         f"▪️Dirección: 👇🏼 \n\n{direccion_cliente}"
     )
     enviar_mensaje_whatsapp(mensaje, numero_cliente)
+
+
+def _job_reintentar_confirmacion_efectivo(numero_cliente, nombre_cliente, total_euros,
+                                          pedido_id, direccion_cliente):
+    """Job RQ ejecutado tras un fallo síncrono del envío de confirmación efectivo.
+
+    Reintenta el envío del mensaje de confirmación. RQ aplica el backoff
+    configurado por el caller; si todos los reintentos fallan, el job queda
+    en la failed queue para inspección.
+    """
+    _enviar_confirmacion_efectivo(numero_cliente, nombre_cliente, total_euros,
+                                  pedido_id, direccion_cliente)

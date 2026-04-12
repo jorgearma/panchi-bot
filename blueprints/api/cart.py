@@ -42,6 +42,8 @@ def register(bp):
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
         post_user_id = data.get("userId")
+        if post_user_id is None:
+            return jsonify({"error": "Falta userId"}), 400
         if str(post_user_id) != str(token_user_id):
             logger.warning("TOKEN_MISMATCH  endpoint=/api/confirmacion  token_user=%s  post_user=%s  ip=%s", token_user_id, post_user_id, ip)
             return jsonify({"error": "No autorizado"}), 403

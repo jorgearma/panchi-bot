@@ -89,6 +89,7 @@ def create_app(config: dict = None) -> Flask:
     from blueprints.demo import blueprint_demo
     from blueprints.landing import blueprint_landing
     from maps_module.blueprint import blueprint_maps
+    from blueprints.internal import blueprint_internal
 
     app.register_blueprint(blueprint_auth)
     app.register_blueprint(blueprint_webhook)
@@ -105,6 +106,7 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(blueprint_demo)
     app.register_blueprint(blueprint_landing)
     app.register_blueprint(blueprint_maps)
+    app.register_blueprint(blueprint_internal)
 
     @app.context_processor
     def inject_app_mode():

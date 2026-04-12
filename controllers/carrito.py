@@ -3,6 +3,7 @@ import logging
 
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
 from tenacity import RetryError
+from container import redismanager
 from maps_module import geocodificar_direccion
 from states import EstadoPedido
 
@@ -94,6 +95,14 @@ def confirmar_carrito(
         logger.warning("confirmar_carrito: carrito vacío para usuario %s", user_id)
         return False, "El carrito no puede estar vacío"
 
+    # Lock por usuario: dos peticiones simultáneas pueden leer ENLACE y ambas sobreescribir
+    # redisID en BD, dejando una entrada Redis huérfana. TTL corto: si la función crashea,
+    # el lock se libera solo y el usuario puede reintentar.
+    lock_key = f"carrito_lock:{user_id}"
+    if not redismanager.adquirir_lock(lock_key, ttl=3):
+        logger.warning("CARRITO_LOCK_OCUPADO usuario=%s", user_id)
+        return False, "Inténtalo de nuevo"
+
     ok, resultado = _validar_productos(productos_recibidos, gestor_productos)
     if not ok:
         return False, resultado
@@ -129,14 +138,8 @@ def confirmar_carrito(
             "GEOCODIFICACION_FALLIDA pedido=%s dir='%.80s'", pedido_id_db, direccion
         )
 
-    # DB primero: la transición de estado es la operación crítica.
-    try:
-        pedidos_manager.fijar_carrito_confirmado(pedido_id_db, pedido_id_redis, lat=lat, lng=lng)
-    except (SQLAlchemyError, OperationalError, RetryError) as e:
-        logger.error("confirmar_carrito: DB error en fijar_carrito_confirmado pedido=%s: %s", pedido_id_db, e)
-        return False, "Error de base de datos al confirmar el carrito. Intente más tarde."
-
-    # Redis solo si DB confirma — el carrito es cache recuperable.
+    # Redis primero: si falla, la BD no se toca y el pedido sigue en ENLACE (reintentable).
+    # Si la BD falla después, el dato de Redis caduca solo (TTL) sin dejar al usuario bloqueado.
     try:
         cache.set(
             pedido_id_redis,
@@ -153,10 +156,14 @@ def confirmar_carrito(
             ex=3600,
         )
     except Exception as e:
-        logger.error(
-            "CARRITO_REDIS_FALLIDO pedido=%s — cliente bloqueado en /confirmacion_pago hasta intervención: %s",
-            pedido_id_db, e,
-        )
+        logger.error("confirmar_carrito: Redis error pedido=%s — abortando sin tocar BD: %s", pedido_id_db, e)
+        return False, "Error al guardar el carrito. Intente más tarde."
+
+    try:
+        pedidos_manager.fijar_carrito_confirmado(pedido_id_db, pedido_id_redis, lat=lat, lng=lng)
+    except (SQLAlchemyError, OperationalError, RetryError) as e:
+        logger.error("confirmar_carrito: DB error en fijar_carrito_confirmado pedido=%s: %s", pedido_id_db, e)
+        return False, "Error de base de datos al confirmar el carrito. Intente más tarde."
     logger.info("CARRITO_CONFIRMADO pedido_id=%s", pedido_id_db)
 
     confirmacion_url = f"{public_url}/confirmacion_pago?pedido_id={pedido_id_redis}"

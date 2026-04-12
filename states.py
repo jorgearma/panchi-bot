@@ -81,7 +81,7 @@ TRANSICIONES_REGISTRO: dict = {
 TRANSICIONES_PEDIDO: dict = {
     EstadoPedido.PENDIENTE:         [EstadoPedido.ENLACE, EstadoPedido.CANCELADO],
     EstadoPedido.ENLACE:            [EstadoPedido.ENLACE2, EstadoPedido.PENDIENTE, EstadoPedido.CANCELADO],
-    EstadoPedido.ENLACE2:           [EstadoPedido.CONFIRMANDO_PAGO, EstadoPedido.CONTRA_REEMBOLSO, EstadoPedido.ENLACE],
+    EstadoPedido.ENLACE2:           [EstadoPedido.CONFIRMANDO_PAGO, EstadoPedido.CONTRA_REEMBOLSO, EstadoPedido.ENLACE, EstadoPedido.CANCELADO],
     EstadoPedido.CONFIRMANDO_PAGO:  [EstadoPedido.PAGADO, EstadoPedido.CANCELADO],
     EstadoPedido.PAGADO:            [EstadoPedido.EN_PREPARACION, EstadoPedido.REEMBOLSADO],
     EstadoPedido.CONTRA_REEMBOLSO:  [EstadoPedido.EN_PREPARACION, EstadoPedido.CANCELADO],
