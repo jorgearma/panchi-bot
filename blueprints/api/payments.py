@@ -25,6 +25,8 @@ def register(bp):
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
         post_user_id = data.get("userID")
+        if post_user_id is None:
+            return jsonify({"error": "Falta userID"}), 400
         if str(post_user_id) != str(token_user_id):
             logger.warning("TOKEN_MISMATCH  endpoint=/api/agregar_pedido  token_user=%s  post_user=%s  ip=%s", token_user_id, post_user_id, ip)
             return jsonify({"error": "No autorizado"}), 403
@@ -67,6 +69,8 @@ def register(bp):
             return jsonify({"error": "Sesión inválida o expirada"}), 401
 
         post_user_id = data.get("userID")
+        if post_user_id is None:
+            return jsonify({"error": "Falta userID"}), 400
         if str(post_user_id) != str(token_user_id):
             logger.warning("TOKEN_MISMATCH  endpoint=/api/agregar_pedido_efectivo  token_user=%s  post_user=%s  ip=%s", token_user_id, post_user_id, ip)
             return jsonify({"error": "No autorizado"}), 403

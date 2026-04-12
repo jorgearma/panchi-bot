@@ -274,7 +274,7 @@
         if (result.redirect_url) {
           window.location.href = result.redirect_url;
         } else {
-          alert(result.message || 'Pedido enviado correctamente.');
+          alert(result.error || result.message || 'Pedido enviado correctamente.');
         }
       } catch (err) {
         console.error('Error de conexión:', err);

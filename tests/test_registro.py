@@ -28,7 +28,8 @@ def make_redis_manager(estado_redis: dict | str = EstadoRegistro.SALUDO_INICIAL)
         store[NUMERO] = json.dumps(estado_redis)
 
     rm = MagicMock()
-    rm.get.side_effect = lambda k: store.get(k)
+    # _leer_redis usa redismanager.client.get(...) tras el fix c58c9ac
+    rm.client.get.side_effect = lambda k: store.get(k)
     rm.set.side_effect = lambda k, v, ex=None: store.update({k: v})
     return rm
 
@@ -361,13 +362,15 @@ class TestConfirmarDireccionInterno:
         usuario_existente = {"id": 1, "nombre": "Ana García"}
         with patch("container.gestor_usuarios") as mock_gu, \
              patch("container.gestor_pedidos") as mock_gp, \
-             patch("controllers.registro._enviar_mensaje_registro"):
+             patch("controllers.registro._enviar_mensaje_registro"), \
+             patch("controllers.registro.enviar_mensaje_whatsapp"):
             mock_gu.obtener_usuario_completo.return_value = usuario_existente
             mock_gp.hay_pedido_pendiente.return_value = False
             mock_gp.iniciar_pedido.side_effect = SQLAlchemyError("DB caída")
             result = ru._confirmar_direccion("si", ESTADO_COMPLETO)
         assert result[1] == 200
-        rm.delete.assert_not_called()  # Redis no se limpia en error de recuperación
+        # Redis SÍ se limpia en la rama de recuperación fallida (ver registro.py:156)
+        rm.delete.assert_called_once_with(NUMERO)
 
     # -- Caso normal: usuario nuevo --
 
@@ -433,3 +436,152 @@ class TestConfirmarDireccionInterno:
         assert result[1] == 200
         mock_msg.assert_called_once()      # bienvenida sí se envía
         rm.delete.assert_called_once_with(NUMERO)  # Redis se limpia
+
+
+# ---------------------------------------------------------------------------
+# _normalizar (fix #2)
+# ---------------------------------------------------------------------------
+
+class TestNormalizar:
+    @pytest.mark.parametrize("entrada,esperado", [
+        ("Sí.", "sí"),
+        ("  si  ", "si"),
+        ("VALE!!", "vale"),
+        ("Ok,", "ok"),
+        ("de acuerdo", "de acuerdo"),
+        ("", ""),
+        (None, ""),
+        ("¿sí?", "sí"),
+        ("Perfecto…", "perfecto"),
+    ])
+    def test_normaliza_correctamente(self, entrada, esperado):
+        from controllers.registro import _normalizar
+        assert _normalizar(entrada) == esperado
+
+
+# ---------------------------------------------------------------------------
+# ESPERANDO_CONFIRMACION — respuestas positivas amplias (fix #1)
+# ---------------------------------------------------------------------------
+
+class TestEsperandoConfirmacionAmpliado:
+    @pytest.mark.parametrize("respuesta", [
+        "vale", "ok", "claro", "perfecto", "de acuerdo", "dale",
+        "Sí.", "VALE!!", "  si  ", "Ok,",
+    ])
+    def test_respuestas_positivas_amplias_avanzan(self, respuesta):
+        from controllers.registro import manejar_registro
+        rm = make_redis_manager(EstadoRegistro.ESPERANDO_CONFIRMACION)
+        with patch("controllers.registro._solicitar_nombre"):
+            with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
+                manejar_registro(NUMERO, respuesta, rm)
+        estado_guardado = json.loads(rm.set.call_args[0][1])["estado"]
+        assert estado_guardado == EstadoRegistro.ESPERANDO_NOMBRE
+
+    def test_respuesta_ambigua_no_cancela_pide_repetir(self):
+        """Input no afirmativo ni negativo → re-preguntar, sin borrar estado."""
+        from controllers.registro import manejar_registro
+        rm = make_redis_manager(EstadoRegistro.ESPERANDO_CONFIRMACION)
+        with patch("controllers.registro._enviar_registro_pendiente") as mock_pedir:
+            with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
+                result = manejar_registro(NUMERO, "hola qué tal", rm)
+        assert result[1] == 200
+        mock_pedir.assert_called_once_with(NUMERO)
+        rm.delete.assert_not_called()  # no cancela
+        rm.set.assert_not_called()     # no avanza
+
+    @pytest.mark.parametrize("negativa", ["no", "nope", "no gracias", "ahora no", "luego"])
+    def test_respuestas_negativas_cancelan(self, negativa):
+        from controllers.registro import manejar_registro
+        rm = make_redis_manager(EstadoRegistro.ESPERANDO_CONFIRMACION)
+        with patch("controllers.registro._enviar_registro_pendiente"):
+            with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
+                manejar_registro(NUMERO, negativa, rm)
+        rm.delete.assert_called_once_with(NUMERO)
+
+
+# ---------------------------------------------------------------------------
+# Comando cancelar/reiniciar (fix #4)
+# ---------------------------------------------------------------------------
+
+class TestComandoCancelar:
+    @pytest.mark.parametrize("estado", [
+        EstadoRegistro.ESPERANDO_CONFIRMACION,
+        EstadoRegistro.ESPERANDO_NOMBRE,
+        EstadoRegistro.ESPERANDO_DIRECCION,
+        EstadoRegistro.CONFIRMANDO_DIRECCION,
+    ])
+    @pytest.mark.parametrize("comando", ["cancelar", "reiniciar", "reset", "salir", "CANCELAR!"])
+    def test_cancelar_en_cualquier_estado_borra_redis(self, estado, comando):
+        from controllers.registro import manejar_registro
+        rm = make_redis_manager(estado)
+        with patch("controllers.registro._enviar_registro_pendiente"):
+            with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
+                result = manejar_registro(NUMERO, comando, rm)
+        assert result[1] == 200
+        rm.delete.assert_called_once_with(NUMERO)
+
+    def test_cancelar_en_saludo_inicial_no_hace_nada_especial(self):
+        """En SALUDO_INICIAL no hay nada que cancelar: envía bienvenida normal."""
+        from controllers.registro import manejar_registro
+        rm = make_redis_manager(EstadoRegistro.SALUDO_INICIAL)
+        with patch("controllers.registro._enviar_bienvenida") as mock_bv:
+            with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
+                manejar_registro(NUMERO, "cancelar", rm)
+        mock_bv.assert_called_once()
+        rm.delete.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# ESPERANDO_DIRECCION — validar_direccion falla (fix #5)
+# ---------------------------------------------------------------------------
+
+class TestValidarDireccionProtegido:
+    def test_validar_direccion_lanza_excepcion_no_revienta(self):
+        from controllers.registro import manejar_registro
+        rm = make_redis_manager(EstadoRegistro.ESPERANDO_DIRECCION)
+        with patch("controllers.registro.validar_direccion", side_effect=Exception("Maps caído")):
+            with patch("controllers.registro._enviar_direccion_invalida") as mock_env:
+                result = manejar_registro(NUMERO, "Calle Mayor 1", rm)
+        assert result[1] == 200
+        mock_env.assert_called_once_with(NUMERO, None, None)
+        rm.set.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# CONFIRMANDO_DIRECCION — corrección directa con nueva dirección (fix #3)
+# ---------------------------------------------------------------------------
+
+class TestCorreccionDireccionDirecta:
+    def test_texto_con_digitos_se_trata_como_nueva_direccion(self):
+        """Usuario en CONFIRMANDO_DIRECCION escribe otra dirección → reintenta validación."""
+        from controllers.registro import manejar_registro
+        rm = make_redis_manager({
+            "estado": EstadoRegistro.CONFIRMANDO_DIRECCION,
+            "nombre": "Ana",
+            "direccion": "Calle Vieja 1",
+        })
+        with patch("controllers.registro.validar_direccion",
+                   return_value=(True, "Calle Nueva 5", None)) as mock_val:
+            with patch("controllers.registro._enviar_confirmacion_direccion"):
+                result = manejar_registro(NUMERO, "Calle Nueva 5", rm)
+        assert result[1] == 200
+        mock_val.assert_called_once_with("Calle Nueva 5")
+        # Última escritura debe dejar la dirección nueva en CONFIRMANDO_DIRECCION
+        ultima = json.loads(rm.set.call_args[0][1])
+        assert ultima["estado"] == EstadoRegistro.CONFIRMANDO_DIRECCION
+        assert ultima["direccion"] == "Calle Nueva 5"
+
+    def test_texto_sin_digitos_y_no_afirmativo_pide_confirmacion(self):
+        """'quizás' no parece dirección → sigue pidiendo confirmación."""
+        from controllers.registro import manejar_registro
+        rm = make_redis_manager({
+            "estado": EstadoRegistro.CONFIRMANDO_DIRECCION,
+            "nombre": "Ana",
+            "direccion": "Calle Vieja 1",
+        })
+        with patch("controllers.registro._enviar_pedir_confirmacion") as mock_pedir:
+            with patch("controllers.registro_notifier.enviar_mensaje_whatsapp"):
+                result = manejar_registro(NUMERO, "quizás", rm)
+        assert result[1] == 200
+        mock_pedir.assert_called_once_with(NUMERO)
+        rm.set.assert_not_called()

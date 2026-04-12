@@ -6,8 +6,8 @@
 
 ## Responsabilidad
 
-Gestiona el estado conversacional de un usuario durante el flujo de registro: lee, valida, persiste y elimina su estado en Redis. **No decide lógica de negocio** — eso lo hace el controller. Su aportación específica es validar que la transición de estado sea legal antes de persistir.
-
+Gestiona el estado conversacional de un usuario durante el flujo de registro: lee, valida, persiste y elimina su estado en Redis. **No decide lógica de negocio** — eso lo hace el controller. Su aportación específica es validar que la transición de estado sea legal antes de persisir.
+t
 Lo que **no hace**: capturar errores propios, notificar al usuario, ni coordinar pasos del flujo.
 
 ## Dependencias directas
@@ -20,22 +20,13 @@ Lo que **no hace**: capturar errores propios, notificar al usuario, ni coordinar
 
 ## Métodos
 
-### `_leer_redis() → bytes | None` *(privado)*
-
-Lee el valor raw de Redis usando `client.get` directamente (no `redismanager.get`) para que los fallos de Redis lleguen al retry en vez de ser tragados silenciosamente.
-
-- **`@retry`:** 3 intentos, 2s entre ellos.
-- Si agota los reintentos lanza excepción que burbujea desde `obtener_estado`.
-
----
-
 ### `obtener_estado() → dict`
 
-Llama a `_leer_redis()` y deserializa el JSON resultante.
+Lee la clave `<numero_cliente>` de Redis y deserializa el JSON.
 
 - Si la clave no existe devuelve `{"estado": EstadoRegistro.SALUDO_INICIAL}` — estado por defecto para usuarios nuevos.
-- Si el JSON está corrupto lanza excepción inmediatamente (sin reintentos — JSON corrupto no se cura con retries).
-- Si Redis falla, la excepción viene de `_leer_redis` tras agotar sus reintentos.
+- Si Redis falla o el JSON está corrupto lanza excepción (el controller no la captura — burbujea al blueprint).
+- **`@retry`:** 3 intentos, 2s entre ellos.
 - **Usado por:** `controllers/registro.py:131` — una sola lectura al inicio de `manejar_registro`; el dict se reutiliza en todo el flujo sin releer Redis.
 
 ---

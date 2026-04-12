@@ -100,6 +100,22 @@ class RedisManager:
             logger.error("Error al verificar wamid %s: %s", wamid, e)
             return False
 
+    def incrementar_contador_hora(self, numero: str, limite: int = 40) -> bool:
+        """Incrementa el contador de mensajes del usuario en la hora actual.
+
+        Devuelve True si está dentro del límite, False si lo supera.
+        En caso de error Redis deja pasar (fail-open).
+        """
+        key = f"rate:{numero}"
+        try:
+            total = self.client.incr(key)
+            if total == 1:
+                self.client.expire(key, 3600)
+            return total <= limite
+        except redis.RedisError as e:
+            logger.error("Error al incrementar contador rate-limit %s: %s", key, e)
+            return True
+
     def adquirir_lock(self, key: str, ttl: int = 10) -> bool:
         """Intenta adquirir un lock atómico con SET NX. Devuelve True si se adquirió.
 

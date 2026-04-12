@@ -211,7 +211,7 @@ class GestorPedidosLifecycleMixin:
         retry=retry_if_exception_type((SQLAlchemyError, OperationalError)),
     )
     def confirmar_pago_online(
-        self, pedido_id, productos, redirect_url, notas=None
+        self, pedido_id, productos, redirect_url, total, notas=None
     ) -> bool:
         """
         Atomic: replace order lines + transition to CONFIRMANDO_PAGO + save URL.
@@ -228,6 +228,7 @@ class GestorPedidosLifecycleMixin:
             if not self._reemplazar_detalles(pedido, productos):
                 logger.error("confirmar_pago_online: no se encontraron productos válidos")
                 return False
+            pedido.Total = total  # fuente única de verdad: el mismo Decimal enviado a Monei
             if notas:
                 pedido.Notas = notas
             pedido.enlace = redirect_url
@@ -250,7 +251,7 @@ class GestorPedidosLifecycleMixin:
         retry=retry_if_exception_type((SQLAlchemyError, OperationalError)),
     )
     def confirmar_pago_efectivo(
-        self, pedido_id, productos, notas=None
+        self, pedido_id, productos, total, notas=None
     ) -> bool:
         """
         Atomic: replace order lines + set forma_pago + transition to
@@ -264,6 +265,7 @@ class GestorPedidosLifecycleMixin:
             if not self._reemplazar_detalles(pedido, productos):
                 logger.error("confirmar_pago_efectivo: no se encontraron productos válidos")
                 return False
+            pedido.Total = total  # fuente única de verdad: el mismo Decimal validado en el controller
             if notas:
                 pedido.Notas = notas
             pedido.forma_pago = "efectivo"
@@ -308,6 +310,41 @@ class GestorPedidosLifecycleMixin:
             "forma_pago": pedido.forma_pago,
             "reparto": reparto_data,
         }
+
+    def cancelar_pedidos_caducados(self, umbral_minutos: int = 60) -> int:
+        """Cancela en bulk pedidos en ENLACE/ENLACE2/CONFIRMANDO_PAGO con más de umbral_minutos de antigüedad.
+
+        Llamado por el endpoint interno /internal/limpiar-pedidos-caducados desde cron.
+        Devuelve el número de pedidos cancelados.
+        """
+        # CONFIRMANDO_PAGO se incluye para rescatar pedidos atascados cuando el enlace
+        # de Monei caducó y la cancelación interactiva del bot falló (ver bug A).
+        from datetime import datetime, timedelta
+        corte = datetime.utcnow() - timedelta(minutes=umbral_minutos)
+        estados = [
+            EstadoPedido.ENLACE.value,
+            EstadoPedido.ENLACE2.value,
+            EstadoPedido.CONFIRMANDO_PAGO.value,
+        ]
+        try:
+            pedidos = (
+                self.session.query(Pedido)
+                .filter(Pedido.Estado.in_(estados))
+                .filter(Pedido.FechaCreacion < corte)
+                .all()
+            )
+            cancelados = 0
+            for pedido in pedidos:
+                if self._set_estado(pedido, EstadoPedido.CANCELADO, notas="caducado_automatico"):
+                    cancelados += 1
+            if cancelados:
+                self.session.commit()
+            logger.info("cancelar_pedidos_caducados: cancelados=%s", cancelados)
+            return cancelados
+        except SQLAlchemyError as error:
+            self.session.rollback()
+            logger.error("cancelar_pedidos_caducados: error=%s", error)
+            raise
 
     def obtener_pedido(self, pedido_id):
         """Recupera un pedido por id."""

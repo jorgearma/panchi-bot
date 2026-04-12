@@ -8,7 +8,9 @@ from controllers.mensajes_registrados_notifier import (
     _enviar_bienvenida_menu,
     _enviar_enlace_caducado,
     _enviar_enlace_pedido,
-    _enviar_enlace_pago,
+    _enviar_enlace_pago_con_opcion_cancelar,
+    _enviar_pedido_cancelado,
+    _enviar_enlace_pago_caducado,
     _enviar_error_generico,
     _enviar_estado_en_curso,
     _enviar_respuesta_pedido,
@@ -27,7 +29,7 @@ class ManejadorMensajesRegistrados:
         """Abre un pedido nuevo para el usuario y le envía el menú inicial."""
 
         lock_key = f"pedido_lock:{numero_cliente}"
-        if not redismanager.adquirir_lock(lock_key, ttl=10):
+        if not redismanager.adquirir_lock(lock_key, ttl=3):
             logger.info("LOCK_PEDIDO ya activo para %s — ignorando duplicado.", numero_cliente)
             return "mensaje enviado", 200
 
@@ -101,6 +103,15 @@ class ManejadorMensajesRegistrados:
             return "mensaje enviado", 200
 
         if estado_del_pedido in (EstadoPedido.ENLACE, EstadoPedido.ENLACE2):
+            if mensaje_cliente.strip().lower() == "cancelar":
+                try:
+                    gestor_pedidos.actualizar_estado(id_pedido_activo, EstadoPedido.CANCELADO)
+                except Exception as e:
+                    logger.error("ERROR_CANCELAR_ENLACE pedido=%s error=%s", id_pedido_activo, e)
+                    _enviar_error_sistema(numero_cliente)
+                    return "error cancelando pedido", 200
+                _enviar_pedido_cancelado(numero_cliente)
+                return "mensaje enviado", 200
             enlace = pedido_activo.enlace
             if not enlace:
                 logger.info("ENLACE_CADUCADO pedido=%s usuario=%s", id_pedido_activo, numero_cliente)
@@ -113,9 +124,26 @@ class ManejadorMensajesRegistrados:
             enlace_pago = pedido_activo.enlace
             if not enlace_pago:
                 logger.warning("ENLACE_PAGO_NULO pedido=%s usuario=%s", id_pedido_activo, numero_cliente)
-                _enviar_enlace_caducado(numero_cliente)
+                try:
+                    gestor_pedidos.actualizar_estado(id_pedido_activo, EstadoPedido.CANCELADO)
+                except Exception as e:
+                    # Si la cancelación falla, no enviamos enlace_pago_caducado: el pedido sigue
+                    # en CONFIRMANDO_PAGO. El cron cancelar_pedidos_caducados lo rescatará a la hora.
+                    logger.error("ERROR_CANCELAR_ENLACE_NULO pedido=%s error=%s", id_pedido_activo, e)
+                    _enviar_error_sistema(numero_cliente)
+                    return "error cancelando pedido", 200
+                _enviar_enlace_pago_caducado(numero_cliente)
                 return "mensaje enviado", 200
-            _enviar_enlace_pago(enlace_pago, numero_cliente)
+            if mensaje_cliente.strip().lower() == "cancelar":
+                try:
+                    gestor_pedidos.actualizar_estado(id_pedido_activo, EstadoPedido.CANCELADO)
+                except Exception as e:
+                    logger.error("ERROR_CANCELAR_PAGO pedido=%s error=%s", id_pedido_activo, e)
+                    _enviar_error_sistema(numero_cliente)
+                    return "error cancelando pedido", 200
+                _enviar_pedido_cancelado(numero_cliente)
+                return "mensaje enviado", 200
+            _enviar_enlace_pago_con_opcion_cancelar(enlace_pago, numero_cliente)
             return "mensaje enviado", 200
 
         # Pedido activo (pagado, confirmado o en proceso) — bloquear nuevo pedido e informar al cliente

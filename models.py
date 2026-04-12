@@ -15,6 +15,8 @@ class Usuario(Base):
     nombre = Column(String(255), nullable=False)
     numero_cliente = Column(String(50), nullable=False, unique=True)
     direccion = Column(String(255), nullable=True)
+    phone_verified = Column(Boolean, nullable=False, default=False)
+    phone_verified_at = Column(DateTime, nullable=True)
 
     pedidos = relationship("Pedido", back_populates="cliente", cascade="all, delete-orphan")
     incidencias = relationship("Incidencia", back_populates="cliente")
