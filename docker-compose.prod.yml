@@ -1,0 +1,51 @@
+# ─────────────────────────────────────────────────────────────
+# Overrides de PRODUCCIÓN (VPS detrás de Cloudflare Tunnel).
+# Uso:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# El docker-compose.yml base sigue sirviendo para desarrollo local.
+# ─────────────────────────────────────────────────────────────
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"   # que los logs no llenen el disco
+      max-file: "3"
+
+services:
+  app:
+    <<: *logging
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  redis:
+    <<: *logging
+
+  sqlserver:
+    <<: *logging
+    environment:
+      # 3,8 GB de RAM en el VPS → tope para que SQL Server no se lo coma todo
+      MSSQL_MEMORY_LIMIT_MB: "2048"
+
+  worker-1:
+    <<: *logging
+
+  # Con la RAM del VPS basta 1 worker. Para activarlo: --profile extra
+  worker-2:
+    profiles: ["extra"]
+
+  nginx:
+    <<: *logging
+    # Solo localhost: el túnel (cloudflared en el host) entra por aquí.
+    # !override sustituye la lista del base ("80:80", "443:443") en vez de sumarse.
+    ports: !override
+      - "127.0.0.1:8081:80"
+    # Sin /etc/letsencrypt: el HTTPS lo pone Cloudflare
+    volumes: !override
+      - ./nginx.tunnel.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
