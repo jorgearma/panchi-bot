@@ -39,13 +39,6 @@ services:
 
   nginx:
     <<: *logging
-    # Solo localhost: el túnel (cloudflared en el host) entra por aquí.
-    # !override sustituye la lista del base ("80:80", "443:443") en vez de sumarse.
-    ports: !override
-      - "127.0.0.1:8081:80"
-    # Sin /etc/letsencrypt: el HTTPS lo pone Cloudflare
-    volumes: !override
-      - ./nginx.tunnel.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       app:
         condition: service_healthy

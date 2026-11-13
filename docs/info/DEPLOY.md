@@ -1,3 +1,6 @@
+> ⚠️ **OBSOLETO (nov 2026).** Describe el despliegue antiguo (nginx con 80/443 públicos + Let's Encrypt).
+> El despliegue actual (Cloudflare Tunnel, una sola `nginx.conf`) está en el README → "Producción".
+
 # Guía de despliegue — Panchi-Bot (todo en VPS)
 
 Stack completo en un solo VPS: App + Redis + SQL Server + Nginx con HTTPS.

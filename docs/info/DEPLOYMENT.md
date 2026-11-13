@@ -1,3 +1,6 @@
+> ⚠️ **OBSOLETO (nov 2026).** Describe el despliegue antiguo (nginx con 80/443 públicos + Let's Encrypt).
+> El despliegue actual (Cloudflare Tunnel, una sola `nginx.conf`) está en el README → "Producción".
+
 # 🚀 Guía de Despliegue en Servidor con Docker
 
 Esta guía documenta los pasos correctos para desplegar **Panchi-Bot** en un servidor usando Docker Compose.

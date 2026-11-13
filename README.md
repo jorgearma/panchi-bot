@@ -144,9 +144,17 @@ ngrok http 5000
 # Copia la URL HTTPS a PUBLIC_URL en .env
 ```
 
-Si pruebas el stack Docker en local con Nginx, deja `NGINX_CONF=nginx.local.conf` en tu `.env`.
-La configuración de producción vive en `nginx.prod.conf` y solo debe usarse cuando ya tengas
-dominio real y certificados de Let's Encrypt en el VPS.
+Stack Docker en local: `docker compose up -d --build` → `http://localhost:8081`.
+
+### Producción (VPS detrás de Cloudflare Tunnel)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+- `nginx.conf` es la única config de nginx: solo HTTP en `127.0.0.1:8081`; el HTTPS lo pone Cloudflare.
+- `docker-compose.prod.yml` añade: 1 worker, tope de RAM a SQL Server, healthcheck y rotación de logs.
+- En el túnel: `panchibot.es` y `www` → `http://127.0.0.1:8081`.
 
 ## Tests
 
