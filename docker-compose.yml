@@ -16,6 +16,9 @@ services:
   redis:
     image: redis:7.4-alpine
     command: redis-server --appendonly yes --appendfsync everysec --requirepass ${REDIS_PASSWORD}
+    volumes:
+      # Volumen con nombre: la cola y las sesiones sobreviven a un `docker compose down`
+      - redis_data:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
@@ -85,3 +88,4 @@ services:
 
 volumes:
   sqlserver_data:
+  redis_data:
