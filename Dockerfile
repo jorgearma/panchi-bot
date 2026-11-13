@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 # Instala ODBC Driver 18 for SQL Server
 RUN apt-get update && apt-get install -y \

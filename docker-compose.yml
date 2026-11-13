@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     command: redis-server --appendonly yes --appendfsync everysec --requirepass ${REDIS_PASSWORD}
     restart: unless-stopped
     healthcheck:
@@ -24,7 +24,7 @@ services:
       retries: 3
 
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2022-CU28-ubuntu-22.04
     environment:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "${SQL_PWD}"
@@ -73,7 +73,7 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.30-alpine
     ports:
       # Solo localhost: en el VPS entra cloudflared (túnel); en local, http://localhost:8081
       - "127.0.0.1:8081:80"
