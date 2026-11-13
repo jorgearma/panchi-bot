@@ -1,0 +1,18 @@
+# Nada de esto debe acabar dentro de la imagen
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+.claude
+venv
+__pycache__
+*.pyc
+*.log
+*.log.*
+*.bak
+backups
+tests
+docs
+docker-compose*.yml
+nginx.conf
