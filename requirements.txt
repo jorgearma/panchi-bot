@@ -35,7 +35,7 @@ pydantic==2.10.6
 pydantic_core==2.27.2
 PyJWT==2.10.1
 pyodbc==5.2.0
-python-dotenv==1.0.1
+python-dotenv==1.2.4
 redis==5.2.1
 rq==2.3.3
 fakeredis==2.27.0
