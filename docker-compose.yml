@@ -86,7 +86,7 @@ services:
 
   redis:
     <<: *hardening
-    image: redis:7.4-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe
+    image: redis:8.10-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
     # Arranca DIRECTAMENTE como redis (999:1000). Si no, el entrypoint arranca como
     # root y hace chown + su-exec, que necesitan CHOWN/SETUID/SETGID → sin cap_drop ALL.
     user: "999:1000"
