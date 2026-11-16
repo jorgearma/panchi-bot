@@ -7,7 +7,7 @@
 # ─────────────────────────────────────────────────────────────
 
 # ── ETAPA 1: build ───────────────────────────────────────────
-FROM python:3.11-slim-bookworm@sha256:a83ba18aef0f865b1a4a611c2cf460fe446f2795673bbb9fe43be570439e3b39 AS build
+FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9 AS build
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -33,7 +33,7 @@ RUN pip install -r requirements.txt \
  && pip uninstall -y pip
 
 # ── ETAPA 2: imagen final ────────────────────────────────────
-FROM python:3.11-slim-bookworm@sha256:a83ba18aef0f865b1a4a611c2cf460fe446f2795673bbb9fe43be570439e3b39
+FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9
 
 LABEL org.opencontainers.image.title="panchi-bot" \
       org.opencontainers.image.source="https://github.com/jorgearma/panchi-bot"
