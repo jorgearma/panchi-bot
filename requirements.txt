@@ -1,5 +1,5 @@
 gunicorn==23.0.0
-Monei==2.5.2
+Monei==2.8.0
 sentry-sdk==2.54.0
 shapely==2.1.2
 spacy==3.8.11
