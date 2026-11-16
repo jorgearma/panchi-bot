@@ -1,7 +1,8 @@
 # ─────────────────────────────────────────────────────────────
 # Overrides de PRODUCCIÓN (VPS detrás de Cloudflare Tunnel).
 # Uso:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-# El docker-compose.yml base sigue sirviendo para desarrollo local.
+# El endurecimiento (read_only, cap_drop, redes, límites) está en el docker-compose.yml
+# base → se aplica igual en local y en el VPS. Aquí solo lo propio de producción.
 # ─────────────────────────────────────────────────────────────
 
 x-logging: &logging
@@ -12,14 +13,9 @@ x-logging: &logging
       max-file: "3"
 
 services:
+  # El healthcheck de la app viene de la imagen (HEALTHCHECK con Python, sin curl)
   app:
     <<: *logging
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
 
   redis:
     <<: *logging
@@ -29,6 +25,9 @@ services:
     environment:
       # 3,8 GB de RAM en el VPS → tope para que SQL Server no se lo coma todo
       MSSQL_MEMORY_LIMIT_MB: "2048"
+    # Tope duro del contenedor algo por encima del de SQL Server (procesos auxiliares)
+    mem_limit: 2304m
+    memswap_limit: 2304m
 
   worker-1:
     <<: *logging

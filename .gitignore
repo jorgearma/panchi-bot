@@ -39,4 +39,5 @@ cache/
 # Project-specific local notes
 notas.txt
 .codex
-scripts/
+scripts/*
+!scripts/sql/

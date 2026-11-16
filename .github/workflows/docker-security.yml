@@ -1,0 +1,71 @@
+# OWASP Docker #9 (lint + escaneo de vulnerabilidades + secretos) y #13 (SBOM).
+# Las herramientas se ejecutan como imágenes Docker con versión fijada en vez de
+# actions de terceros: menos código ajeno con acceso al repo (supply chain).
+name: docker-security
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"   # lunes 06:00 UTC: CVEs nuevos aunque no haya commits
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: panchi-bot:ci
+  HADOLINT_VERSION: v2.12.0
+  GITLEAKS_VERSION: v8.21.2
+  TRIVY_VERSION: 0.58.1
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # gitleaks revisa todo el historial
+          persist-credentials: false
+
+      # ── Lint del Dockerfile ────────────────────────────────
+      # USER presente, imagen fijada, COPY en vez de ADD, sin curl|bash...
+      - name: hadolint
+        run: docker run --rm -i hadolint/hadolint:${HADOLINT_VERSION} hadolint --failure-threshold warning - < Dockerfile
+
+      # ── Secretos en el repo (incluido el historial) ───────
+      - name: gitleaks
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:${GITLEAKS_VERSION} detect --source /repo --redact -v
+
+      - name: build
+        run: docker build -t "$IMAGE" .
+
+      # ── Misconfiguraciones del Dockerfile/compose ─────────
+      - name: trivy config
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:${TRIVY_VERSION} \
+            config --exit-code 1 --severity HIGH,CRITICAL /src
+
+      # ── CVEs de la imagen ─────────────────────────────────
+      # Falla solo si hay HIGH/CRITICAL con parche disponible.
+      - name: trivy image
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:${TRIVY_VERSION} \
+            image --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL "$IMAGE"
+
+      # ── SBOM (OWASP #13) ──────────────────────────────────
+      - name: sbom (CycloneDX)
+        if: always()
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/out" \
+            aquasec/trivy:${TRIVY_VERSION} \
+            image --format cyclonedx --output /out/sbom.cdx.json "$IMAGE"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          if-no-files-found: ignore

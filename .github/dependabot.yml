@@ -1,0 +1,25 @@
+# OWASP Docker #0/#9/#13: imágenes fijadas por digest (Dockerfile y compose) y
+# dependencias Python con versión exacta. Dependabot abre un PR cuando hay versión
+# nueva → se actualiza sin perder el pin.
+version: 2
+updates:
+  - package-ecosystem: docker          # FROM del Dockerfile
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker-compose  # image: de redis, sqlserver, nginx
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: pip             # requirements.txt
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

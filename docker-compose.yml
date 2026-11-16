@@ -1,25 +1,105 @@
+# ─────────────────────────────────────────────────────────────
+# panchi-bot · endurecido según OWASP Docker Security Cheat Sheet
+# (plantilla: docker-nginx-conf/PLANTILLAS_APP.md)
+#
+# Redes:
+#   web_net      nginx ↔ app. Subred FIJA: nginx.conf solo se fía de
+#                CF-Connecting-IP si la conexión viene de aquí.
+#   egress_net   salida a Internet de los workers (Twilio, Meta, Monei...).
+#   backend_net  internal: true → redis y sqlserver SIN salida a Internet y
+#                SIN alcance desde nginx.
+#
+# Pendiente (otro día): secretos en ficheros (secrets:) en vez de .env / environment.
+# ─────────────────────────────────────────────────────────────
+
+# Endurecimiento común (OWASP #3 #4 #8). YAML anchor → mismo bloque en todos.
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+
+# app y workers: misma imagen, se construye UNA vez
+x-app-base: &app-base
+  <<: *hardening
+  image: panchi-bot:latest
+  init: true                 # tini como PID 1: señales + zombies
+  env_file: .env
+  environment:
+    - TZ=Europe/Madrid
+  depends_on:
+    redis:
+      condition: service_healthy
+    sqlserver:
+      condition: service_healthy
+  restart: unless-stopped
+  pids_limit: 200
+  ulimits:
+    nofile: { soft: 1024, hard: 4096 }
+
 services:
   app:
+    <<: *app-base
     build: .
     expose:
       - "5000"
-    env_file: .env
-    environment:
-      - TZ=Europe/Madrid
-    depends_on:
-      redis:
-        condition: service_healthy
-      sqlserver:
-        condition: service_healthy
-    restart: unless-stopped
+    volumes:
+      # Único sitio escribible además de /tmp. Volumen con nombre: hereda el
+      # dueño appuser (10001) de la imagen la primera vez.
+      - app_logs:/app/logs
+    mem_limit: 1g            # 2 workers gunicorn con el modelo de spaCy cargado
+    memswap_limit: 1g
+    cpus: 1.0
+    networks: [web_net, backend_net]
+
+  # Worker 1: Load balancing (escucha todas las colas)
+  worker-1:
+    <<: *app-base
+    command: ["python", "worker.py"]
+    # El HEALTHCHECK de la imagen comprueba gunicorn; un worker RQ no escucha en :5000
+    healthcheck:
+      disable: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+      - /app/logs:size=32m,uid=10001,gid=10001,mode=0700,noexec,nosuid,nodev
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 1.0
+    networks: [egress_net, backend_net]
+
+  # Worker 2: Load balancing (escucha todas las colas)
+  # Se balancean automáticamente: si worker-1 está ocupado, worker-2 ayuda
+  worker-2:
+    <<: *app-base
+    command: ["python", "worker.py"]
+    healthcheck:
+      disable: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+      - /app/logs:size=32m,uid=10001,gid=10001,mode=0700,noexec,nosuid,nodev
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 1.0
+    networks: [egress_net, backend_net]
 
   redis:
-    image: redis:7.4-alpine
+    <<: *hardening
+    image: redis:7.4-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe
+    # Arranca DIRECTAMENTE como redis (999:1000). Si no, el entrypoint arranca como
+    # root y hace chown + su-exec, que necesitan CHOWN/SETUID/SETGID → sin cap_drop ALL.
+    user: "999:1000"
     command: redis-server --appendonly yes --appendfsync everysec --requirepass ${REDIS_PASSWORD}
     volumes:
       # Volumen con nombre: la cola y las sesiones sobreviven a un `docker compose down`
       - redis_data:/data
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    pids_limit: 100
+    networks: [backend_net]
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -27,10 +107,17 @@ services:
       retries: 3
 
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-CU28-ubuntu-22.04
+    image: mcr.microsoft.com/mssql/server:2022-CU28-ubuntu-22.04@sha256:4525e3efac9f3e241cb003bb2ff2a82818b502f37e12049d788b1a9fa7e13b7f
+    <<: *hardening
+    # La imagen ya corre como mssql (uid 10001). Con read_only arranca bien
+    # (probado 2026-11-16): solo escribe en /var/opt/mssql (volumen) y /tmp.
+    # /opt/mssql/bin/sqlservr trae file capability cap_net_bind_service=ep: si no
+    # está en el bounding set, el kernel NO deja ejecutarlo ("Operation not permitted").
+    # Es la única que se devuelve (permite abrir puertos <1024, nada más).
+    cap_add: [NET_BIND_SERVICE]
     environment:
       ACCEPT_EULA: "Y"
-      SA_PASSWORD: "${SQL_PWD}"
+      SA_PASSWORD: "${SQL_PWD_SA:-${SQL_PWD}}"
       MSSQL_PID: Express
     expose:
       - "1433"
@@ -38,54 +125,58 @@ services:
       - sqlserver_data:/var/opt/mssql
       - ./backups:/var/opt/mssql/backup
       - ./migrations:/migrations:ro
+      - ./scripts/sql:/scripts:ro       # crear_usuario_app.sql
     restart: unless-stopped
+    pids_limit: 300
+    networks: [backend_net]
     healthcheck:
-      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${SQL_PWD}", "-Q", "SELECT 1", "-No"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -Q 'SELECT 1' -No"]
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 30s
 
-  # Worker 1: Load balancing (escucha todas las colas)
-  worker-1:
-    build: .
-    command: python worker.py
-    env_file: .env
-    environment:
-      - TZ=Europe/Madrid
-    depends_on:
-      redis:
-        condition: service_healthy
-      sqlserver:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # Worker 2: Load balancing (escucha todas las colas)
-  # Se balancean automáticamente: si worker-1 está ocupado, worker-2 ayuda
-  worker-2:
-    build: .
-    command: python worker.py
-    env_file: .env
-    environment:
-      - TZ=Europe/Madrid
-    depends_on:
-      redis:
-        condition: service_healthy
-      sqlserver:
-        condition: service_healthy
-    restart: unless-stopped
-
   nginx:
-    image: nginx:1.30-alpine
+    <<: *hardening
+    # Misma base que el portfolio: uid 101, escucha en 8080 (sin capabilities)
+    image: nginxinc/nginx-unprivileged:1.30-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
     ports:
       # Solo localhost: en el VPS entra cloudflared (túnel); en local, http://localhost:8081
-      - "127.0.0.1:8081:80"
+      - "127.0.0.1:8081:8080"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - app
     restart: unless-stopped
+    tmpfs:
+      - /tmp:size=16m,mode=1777,noexec,nosuid,nodev
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.5
+    pids_limit: 100
+    networks: [web_net]
+    healthcheck:
+      # 127.0.0.1 y no localhost: localhost → ::1 y nginx solo escucha IPv4
+      # security.txt lo sirve nginx solo → mide nginx, no la app
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/.well-known/security.txt"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  web_net:
+    name: panchi_web
+    ipam:
+      config:
+        # Si choca con otra red del VPS: cambiarla aquí Y en nginx.conf (set_real_ip_from)
+        - subnet: 172.30.81.0/24
+  egress_net:
+    name: panchi_egress
+  backend_net:
+    name: panchi_backend
+    internal: true
 
 volumes:
   sqlserver_data:
   redis_data:
+  app_logs:

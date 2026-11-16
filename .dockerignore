@@ -1,18 +1,34 @@
-# Nada de esto debe acabar dentro de la imagen
-.env
-.env.*
-!.env.example
-.git
-.gitignore
-.claude
-venv
-__pycache__
-*.pyc
-*.log
-*.log.*
-*.bak
-backups
-tests
-docs
-docker-compose*.yml
-nginx.conf
+# ALLOWLIST: se ignora TODO y solo entra lo que se lista con "!".
+# Un fichero nuevo (.env.prod, dump.sql, clave.pem...) NO se cuela en la imagen
+# por accidente: hay que añadirlo aquí a propósito.
+*
+
+# Código de la app
+!main.py
+!worker.py
+!config.py
+!container.py
+!database.py
+!models.py
+!message_queue.py
+!states.py
+!gunicorn.conf.py
+!requirements.txt
+!blueprints/
+!controllers/
+!managers/
+!maps_module/
+!schemas/
+!services/
+!sms_verification/
+!utils/
+!templates/
+!static/
+
+# Aunque estén dentro de una carpeta permitida, nunca
+**/__pycache__
+**/*.pyc
+**/*.log
+**/.env*
+**/*.pem
+**/*.key
